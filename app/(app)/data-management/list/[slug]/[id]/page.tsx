@@ -292,7 +292,10 @@ export default function DataManagementDetailPage() {
     evidenceFile: null,
   });
 
-  const editable = category?.resource === "pops" || category?.resource === "devices";
+  const canEditAsset = me.role === "admin" || me.role === "user_all_region";
+  const canOpenTopology = me.role === "admin" || me.role === "user_all_region";
+  const canOpenAsBuilt = me.role === "admin" || me.role === "user_all_region";
+  const editable = canEditAsset && (category?.resource === "pops" || category?.resource === "devices");
   const isOdpDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "ODP";
   const isOntDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "ONT";
   const showServicePortRelations = category?.resource === "customers" || isOntDevice;
@@ -1219,12 +1222,12 @@ export default function DataManagementDetailPage() {
             <p className="text-sm text-muted-foreground">{title}</p>
           </div>
           <div className="flex items-center gap-2">
-            {editable && item ? (
+            {canOpenTopology && item ? (
               <Button asChild variant="outline">
                 <Link href={topologyHref}>{category.resource === "devices" ? "Trace Topology" : "Open Topology"}</Link>
               </Button>
             ) : null}
-            {category?.resource === "devices" && item ? (
+            {canOpenAsBuilt && category?.resource === "devices" && item ? (
               <Button asChild variant="outline">
                 <Link href={asBuiltHref}>Open As-Built</Link>
               </Button>

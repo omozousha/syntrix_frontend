@@ -23,13 +23,14 @@ export function AppShell({
   const normalizedRole = normalizeRole(me.role);
   const isSuperAdmin = normalizedRole === "superadmin";
   const isAdminRegion = normalizedRole === "adminregion";
+  const isValidator = normalizedRole === "validator";
   const canReviewValidation = isSuperAdmin || isAdminRegion;
   const menus: AppSidebarMenuItem[] = [
-    { href: "/dashboard", label: "Dashboard" },
+    ...(!isValidator ? [{ href: "/dashboard", label: "Dashboard" }] : []),
     { href: "/data-management", label: "Data Management" },
-    { href: "/data-management/list/odp", label: "ODP List" },
+    ...(isAdminRegion ? [{ href: "/data-management/list/odp", label: "ODP List" }] : []),
     ...(canReviewValidation ? [{ href: "/validation-requests", label: "Validation Requests" }] : []),
-    { href: "/data-management/as-built-documents", label: "As-Built Documents" },
+    ...(!isValidator ? [{ href: "/data-management/as-built-documents", label: "As-Built Documents" }] : []),
     ...(isSuperAdmin ? [{ href: "/master-data", label: "Master Data" }] : []),
     ...(isSuperAdmin ? [{ href: "/audit-trail", label: "Audit Trail" }] : []),
     ...(isSuperAdmin ? [{ href: "/trash", label: "Trash" }] : []),

@@ -177,7 +177,7 @@ export function AppSidebar({
 
       <SidebarFooter className="px-3 pb-3 pt-2">
         <p className="text-[11px] leading-relaxed text-sidebar-foreground/70">
-          <Badge variant="outline">Tip:</Badge> di menu Data Management tersedia sub menu Asset Overview dan Master Data untuk mengelola data referensi.
+          <Badge variant="outline">Tip:</Badge> gunakan Asset Overview untuk membuka ringkasan aset, area kerja role, dan aksi yang tersedia untuk akun ini.
         </p>
       </SidebarFooter>
     </Sidebar>

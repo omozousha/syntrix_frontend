@@ -122,8 +122,21 @@ type FiberCoreItem = {
 
 export default function TopologyWorkspacePage() {
   const searchParams = useSearchParams();
-  const { token } = useSession();
-  const initialRegionId = searchParams.get("region_id") || "all";
+  const { token, me } = useSession();
+  const scopedRegionIds = useMemo(
+    () =>
+      me.role === "user_all_region" || me.role === "user_region"
+        ? (me.app_user.user_region_scopes || [])
+            .map((scope) => String(scope.region_id || "").trim())
+            .filter(Boolean)
+        : [],
+    [me.app_user.user_region_scopes, me.role],
+  );
+  const isScopedRegionRole = me.role === "user_all_region" || me.role === "user_region";
+  const requestedRegionId = searchParams.get("region_id") || "all";
+  const initialRegionId = isScopedRegionRole
+    ? (scopedRegionIds.includes(requestedRegionId) ? requestedRegionId : scopedRegionIds[0] || "all")
+    : requestedRegionId;
   const initialStartDeviceId = searchParams.get("start_device_id") || "";
   const initialEndDeviceId = searchParams.get("end_device_id") || "";
   const initialMaxDepth = searchParams.get("max_depth") || "12";
@@ -192,6 +205,14 @@ export default function TopologyWorkspacePage() {
       cancelled = true;
     };
   }, [token]);
+
+  useEffect(() => {
+    if (!isScopedRegionRole) return;
+    if (!scopedRegionIds.length) return;
+    if (!scopedRegionIds.includes(regionId)) {
+      setRegionId(scopedRegionIds[0]);
+    }
+  }, [isScopedRegionRole, regionId, scopedRegionIds]);
 
   useEffect(() => {
     let cancelled = false;
@@ -280,9 +301,15 @@ export default function TopologyWorkspacePage() {
   }, [regionId, token]);
 
   const regionOptions = useMemo(
-    () => [{ value: "all", label: "Semua Region" }, ...regions.map((r) => ({ value: r.id, label: `${r.region_name} (${r.region_id})` }))],
-    [regions],
+    () => {
+      const options = regions
+        .filter((region) => !isScopedRegionRole || scopedRegionIds.includes(region.id))
+        .map((region) => ({ value: region.id, label: `${region.region_name} (${region.region_id})` }));
+      return isScopedRegionRole ? options : [{ value: "all", label: "Semua Region" }, ...options];
+    },
+    [isScopedRegionRole, regions, scopedRegionIds],
   );
+  const selectedRegionLabel = regionOptions.find((option) => option.value === regionId)?.label || "-";
   const asBuiltHref = useMemo(() => {
     const params = new URLSearchParams();
     if (regionId !== "all") params.set("region_id", regionId);
@@ -598,13 +625,17 @@ export default function TopologyWorkspacePage() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-base">Topology Quality</CardTitle>
               <div className="w-full sm:w-80">
-                <Combobox
-                  value={regionId}
-                  onValueChange={(nextValue) => {
-                    setRegionId(nextValue || "all");
-                  }}
-                  options={regionOptions}
-                />
+                {isScopedRegionRole ? (
+                  <Input value={selectedRegionLabel} disabled aria-label="Region scope" />
+                ) : (
+                  <Combobox
+                    value={regionId}
+                    onValueChange={(nextValue) => {
+                      setRegionId(nextValue || "all");
+                    }}
+                    options={regionOptions}
+                  />
+                )}
               </div>
             </div>
           </CardHeader>

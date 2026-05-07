@@ -138,6 +138,7 @@ export default function OdpFieldValidationPage() {
   const [message, setMessage] = useState("");
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [successDialogText, setSuccessDialogText] = useState("");
+  const [reloadAfterSuccessDialog, setReloadAfterSuccessDialog] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectDialogMessage, setRejectDialogMessage] = useState("");
   const [validationPreviewUrls, setValidationPreviewUrls] = useState<Record<string, string>>({});
@@ -277,6 +278,7 @@ export default function OdpFieldValidationPage() {
     setSavingPortId(port.id);
     setError("");
     setMessage("");
+    setReloadAfterSuccessDialog(false);
     try {
       const payload: Record<string, unknown> = {};
       if (changes.status !== undefined) payload.status = changes.status;
@@ -363,6 +365,7 @@ export default function OdpFieldValidationPage() {
       });
       await refreshValidations();
       setDraft(buildDefaultValidationDraft());
+      setReloadAfterSuccessDialog(true);
       setMessage("Request validasi ODP berhasil dikirim.");
     } catch (err) {
       setError((err as Error).message || "Gagal submit validasi.");
@@ -898,7 +901,15 @@ export default function OdpFieldValidationPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
+      <AlertDialog
+        open={successDialogOpen}
+        onOpenChange={(open) => {
+          setSuccessDialogOpen(open);
+          if (!open && reloadAfterSuccessDialog) {
+            location.reload();
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Berhasil</AlertDialogTitle>

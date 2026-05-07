@@ -82,8 +82,24 @@ export function ProtectedLayoutClient({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (!me) return;
-    if (pathname === "/account-management" && me.role !== "admin") {
+    const adminOnlyPaths = ["/account-management", "/master-data", "/audit-trail", "/trash"];
+    if (adminOnlyPaths.some((path) => pathname.startsWith(path)) && me.role !== "admin") {
       router.replace("/dashboard");
+      return;
+    }
+
+    if (me.role === "user_region") {
+      const validatorBlockedPaths = [
+        "/dashboard",
+        "/validation-requests",
+        "/data-management/as-built",
+        "/data-management/as-built-documents",
+        "/data-management/create",
+        "/data-management/topology",
+      ];
+      if (validatorBlockedPaths.some((path) => pathname.startsWith(path))) {
+        router.replace("/data-management");
+      }
     }
   }, [me, pathname, router]);
 

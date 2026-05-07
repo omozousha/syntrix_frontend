@@ -170,6 +170,7 @@ export default function DataManagementListPage() {
       ? (isExplicitRegionInScope ? explicitRegionId : defaultScopedRegionId)
       : explicitRegionId;
   const canWrite = canWriteResource(me.role, category?.resource || "");
+  const canTraceTopology = me.role === "admin" || me.role === "user_all_region";
   const isMasterCategory = category?.group === "master";
   const canCreateMaster = canWrite && isMasterCategory && me.role === "admin";
   const canBulkToggleStatus = supportsIsActiveResource(category?.resource || "");
@@ -1002,12 +1003,12 @@ export default function DataManagementListPage() {
                           <span>Status: {pick(row, ["status", "status_pop", "is_active"]) || "-"}</span>
                           <span>{formatDateTime(pick(row, ["updated_at", "created_at"]))}</span>
                         </div>
-                        <div className={`mt-3 grid gap-2 ${isOdpCategory ? "grid-cols-2" : "grid-cols-1"}`}>
+                        <div className={`mt-3 grid gap-2 ${isOdpCategory && canTraceTopology ? "grid-cols-2" : "grid-cols-1"}`}>
                           <Button type="button" variant="outline" size="sm" onClick={() => router.push(getDetailHref(row.id))}>
                             <Eye className="mr-1.5 size-3.5" />
                             Detail
                           </Button>
-                          {isOdpCategory ? (
+                          {isOdpCategory && canTraceTopology ? (
                             <Button type="button" variant="outline" size="sm" onClick={() => router.push(getTraceHref(row))}>
                               <Waypoints className="mr-1.5 size-3.5" />
                               Trace
@@ -1057,7 +1058,7 @@ export default function DataManagementListPage() {
                               <Eye className="mr-1 size-4" />
                               Detail
                             </ContextMenuItem>
-                            {category.resource === "devices" ? (
+                            {category.resource === "devices" && canTraceTopology ? (
                               <>
                                 <ContextMenuItem onSelect={() => router.push(getTraceHref(rowItem))}>
                                   <Waypoints className="mr-1 size-4" />
@@ -1996,7 +1997,7 @@ function getRenameConfig(resource: string) {
 function canWriteResource(role: string, resource: string) {
   if (!resource) return false;
   if (resource === "devices") {
-    return role === "admin" || role === "user_region" || role === "user_all_region";
+    return role === "admin" || role === "user_all_region";
   }
   if (["pops", "projects", "poles", "customers", "routes"].includes(resource)) {
     return role === "admin" || role === "user_all_region";

@@ -233,6 +233,13 @@ export default function ValidationRequestsPage() {
     await openEvidence(candidates);
   }
 
+  function closeResultDialog() {
+    setResultDialogOpen(false);
+    if (canAdminRegionQueue || canSuperAdminQueue) {
+      void loadQueue();
+    }
+  }
+
   if (!canAdminRegionQueue && !canSuperAdminQueue) {
     return (
       <ScrollArea className="h-full min-h-0 w-full">
@@ -463,14 +470,23 @@ export default function ValidationRequestsPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        <AlertDialog open={resultDialogOpen} onOpenChange={setResultDialogOpen}>
+        <AlertDialog
+          open={resultDialogOpen}
+          onOpenChange={(open) => {
+            if (open) {
+              setResultDialogOpen(true);
+              return;
+            }
+            closeResultDialog();
+          }}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>{resultDialogTitle}</AlertDialogTitle>
               <AlertDialogDescription>{resultDialogDescription}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogAction onClick={() => setResultDialogOpen(false)}>OK</AlertDialogAction>
+              <AlertDialogAction>OK</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

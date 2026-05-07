@@ -135,6 +135,10 @@ export default function DataManagementPage() {
 
   const [regions, setRegions] = useState<RegionsListResponse["data"]>([]);
   const [assetCategories, setAssetCategories] = useState<DataCategory[]>(ASSET_DATA_CATEGORIES);
+  const focusedAssetCategories = useMemo(
+    () => (isValidator ? assetCategories.filter((category) => category.slug === "odp") : assetCategories),
+    [assetCategories, isValidator],
+  );
   const [globalSummary, setGlobalSummary] = useState<Record<string, CategorySummary>>({});
   const [regionSummaryCache, setRegionSummaryCache] = useState<Record<string, RegionCoreSummary>>({});
   const [regionSummaryLoadingIds, setRegionSummaryLoadingIds] = useState<Set<string>>(new Set());
@@ -643,7 +647,7 @@ export default function DataManagementPage() {
           </div>
           <AddDataMenu
             canCreatePop={isSuperadmin || isAdminRegion}
-            canCreateDevice={isSuperadmin || isAdminRegion || isValidator}
+            canCreateDevice={isSuperadmin || isAdminRegion}
             canManageMaster={isSuperadmin}
           />
         </div>
@@ -857,8 +861,8 @@ export default function DataManagementPage() {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3 px-3 pb-3 pt-0">
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {assetCategories.map((category) => {
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {focusedAssetCategories.map((category) => {
                             const value = focusedRegionDetail?.[category.slug]?.total;
                             const href = `/data-management/list/${category.slug}?region_id=${encodeURIComponent(focusedRegion.id)}`;
                             return (
