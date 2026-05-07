@@ -19,8 +19,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useSession } from "@/components/session-context";
-import { API_BASE_URL, apiFetch, type PaginatedResponse } from "@/lib/api";
+import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-utils";
+import { resolveAttachment } from "@/lib/attachment-utils";
 import { getCategoryBySlug } from "@/lib/data-management-config";
 const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() || "";
 
@@ -37,13 +38,6 @@ type AttachmentRef = {
   id: string;
   name?: string;
 };
-type AttachmentInfo = {
-  id: string;
-  original_name: string;
-  mime_type?: string | null;
-  file_category?: string | null;
-  size_bytes?: number | null;
-};
 type UploadResult = {
   id: string;
   attachment_id: string;
@@ -51,11 +45,6 @@ type UploadResult = {
   mime_type: string;
   file_category: string;
   size_bytes: number;
-};
-type AttachmentListItem = {
-  id: string;
-  attachment_id?: string | null;
-  storage_file_id?: string | null;
 };
 type DevicePort = {
   id: string;
@@ -438,10 +427,10 @@ export default function DataManagementDetailPage() {
         galleryImageAttachments.map(async (attachment) => {
           const resolvedIds = await resolveAttachmentIds(attachment.id, token);
           const candidates = resolvedIds.length ? resolvedIds : [attachment.id];
+          const resolvedMeta = await resolveAttachment(attachment.id, token);
           try {
-            const info = await apiFetch<{ data: AttachmentInfo }>(`/attachments/${candidates[0]}`, { token });
-            if (info?.data?.original_name) {
-              nextNames[attachment.id] = info.data.original_name;
+            if (resolvedMeta?.original_name) {
+              nextNames[attachment.id] = resolvedMeta.original_name;
             } else if (attachment.name) {
               nextNames[attachment.id] = attachment.name;
             }
@@ -1128,22 +1117,7 @@ export default function DataManagementDetailPage() {
   async function handleDownloadValidationEvidence(record: OdpValidationRecord) {
     if (!record.evidence_attachment_id || !token) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/attachments/${record.evidence_attachment_id}/download`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) throw new Error(`Download gagal (${response.status})`);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `${record.validation_id || record.id}-evidence`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
+      await downloadAttachmentFile(record.evidence_attachment_id, token);
     } catch (err) {
       setError((err as Error).message || "Gagal download evidence validasi.");
     }
@@ -3039,36 +3013,9 @@ async function resolveAttachmentIds(identifier: string, token: string): Promise<
   const clean = valueOf(identifier);
   if (!clean) return [];
   const ordered = new Set<string>([clean]);
-
-  try {
-    const byPk = await apiFetch<{ data: AttachmentInfo }>(`/attachments/${encodeURIComponent(clean)}`, { token });
-    const id = valueOf(byPk.data?.id as unknown);
-    if (id) ordered.add(id);
-  } catch {
-    // continue with list lookup
-  }
-
-  try {
-    const byStorage = await apiFetch<PaginatedResponse<AttachmentListItem>>(
-      `/attachments?page=1&limit=1&storage_file_id=${encodeURIComponent(clean)}`,
-      { token },
-    );
-    const id = valueOf(byStorage.data?.[0]?.id);
-    if (id) ordered.add(id);
-  } catch {
-    // ignore
-  }
-
-  try {
-    const byCode = await apiFetch<PaginatedResponse<AttachmentListItem>>(
-      `/attachments?page=1&limit=1&attachment_id=${encodeURIComponent(clean)}`,
-      { token },
-    );
-    const id = valueOf(byCode.data?.[0]?.id);
-    if (id) ordered.add(id);
-  } catch {
-    // ignore
-  }
-
+  const resolved = await resolveAttachment(clean, token);
+  if (resolved?.id) ordered.add(String(resolved.id));
+  if (resolved?.attachment_id) ordered.add(String(resolved.attachment_id));
+  if (resolved?.storage_file_id) ordered.add(String(resolved.storage_file_id));
   return Array.from(ordered);
 }

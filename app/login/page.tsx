@@ -1,84 +1,162 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { loginWithPassword, storeToken, getStoredToken } from "@/lib/session";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import { apiFetch } from "@/lib/api";
+import { loginWithPassword, storeSessionTokens, getStoredToken } from "@/lib/session";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("admin.ops@syntrix.local");
   const [password, setPassword] = useState("");
-  const [status, setStatus] = useState("Silakan login.");
+  const [status, setStatus] = useState("Masukkan akun Anda untuk melanjutkan.");
+  const [statusType, setStatusType] = useState<"default" | "destructive">("default");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const nextParam = searchParams.get("next");
+  const getNextPath = useCallback(() => {
+    if (!nextParam) return "/dashboard";
+    const nextValue = nextParam.trim();
+    if (!nextValue.startsWith("/") || nextValue.startsWith("//")) {
+      return "/dashboard";
+    }
+    return nextValue;
+  }, [nextParam]);
 
   useEffect(() => {
     const token = getStoredToken();
     if (token) {
-      router.replace("/dashboard");
+      router.replace(getNextPath());
     }
-  }, [router]);
+  }, [router, getNextPath]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
-    setStatus("Login...");
+    setStatus("Sedang memproses login...");
+    setStatusType("default");
     try {
-      const token = await loginWithPassword(email, password);
-      storeToken(token);
+      const session = await loginWithPassword(email, password);
+      storeSessionTokens(session);
       setStatus("Login sukses.");
-      router.replace("/dashboard");
+      setStatusType("default");
+      router.replace(getNextPath());
     } catch (error) {
       setStatus(`Login gagal: ${(error as Error).message}`);
+      setStatusType("destructive");
     } finally {
       setLoading(false);
     }
   }
 
+  async function onResetPassword() {
+    if (!email.trim()) {
+      setStatusType("destructive");
+      setStatus("Isi email terlebih dahulu untuk reset password.");
+      return;
+    }
+
+    setResetLoading(true);
+    setStatusType("default");
+    setStatus("Mengirim email reset password...");
+    try {
+      await apiFetch("/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      setStatusType("default");
+      setStatus("Email reset password berhasil dikirim. Silakan cek inbox/spam.");
+    } catch (error) {
+      setStatusType("destructive");
+      setStatus(`Gagal mengirim reset password: ${(error as Error).message}`);
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-10">
-      <div className="mx-auto max-w-md rounded-xl bg-white p-6 shadow-md">
-        <h1 className="text-2xl font-bold text-slate-900">Syntrix Login</h1>
-        <p className="mt-2 text-sm text-slate-600">Login section admin atau user.</p>
-
-        <div className="mt-4 flex gap-2">
-          <button className="rounded bg-slate-200 px-3 py-1 text-sm" onClick={() => setEmail("admin.ops@syntrix.local")}>
-            Admin
-          </button>
-          <button className="rounded bg-slate-200 px-3 py-1 text-sm" onClick={() => setEmail("ops.region@syntrix.local")}>
-            User
-          </button>
+    <main className="grid min-h-dvh lg:grid-cols-2">
+      <section className="hidden border-r bg-muted/30 lg:flex lg:items-center lg:justify-center">
+        <div className="max-w-md space-y-4 px-8">
+          <Badge variant="outline">Syntrix Asset Inventory</Badge>
+          <h1 className="text-3xl font-semibold tracking-tight">Monitoring jaringan fiber lebih rapi dan terstruktur</h1>
+          <p className="text-sm text-muted-foreground">
+            Kelola POP, perangkat aktif/pasif, project, dan customer dari satu dashboard dengan scope region yang aman.
+          </p>
         </div>
+      </section>
 
-        <form onSubmit={onSubmit} className="mt-4 space-y-3">
-          <label className="block text-sm">
-            Email
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-            />
-          </label>
-          <label className="block text-sm">
-            Password
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded bg-teal-700 px-3 py-2 font-medium text-white disabled:opacity-50"
-          >
-            {loading ? "Loading..." : "Login"}
-          </button>
-        </form>
+      <section className="flex items-center justify-center bg-background px-3 py-6 sm:px-6 sm:py-10">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Login Syntrix</CardTitle>
+            <CardDescription>Masuk menggunakan akun yang sudah terdaftar.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Badge variant="outline">Single Login Form</Badge>
 
-        <p className="mt-4 rounded bg-slate-100 p-2 text-xs text-slate-700">{status}</p>
-      </div>
+            <form onSubmit={onSubmit}>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="email">Email</FieldLabel>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    autoComplete="email"
+                    placeholder="nama@domain.com"
+                    required
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="password">Password</FieldLabel>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="current-password"
+                    placeholder="Masukkan password"
+                    required
+                  />
+                </Field>
+
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {loading ? "Memproses..." : "Login"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void onResetPassword()}
+                  disabled={resetLoading}
+                  className="w-full"
+                >
+                  {resetLoading ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {resetLoading ? "Mengirim..." : "Reset Password"}
+                </Button>
+
+              </FieldGroup>
+            </form>
+
+            <Alert variant={statusType}>
+              <AlertTitle>Status</AlertTitle>
+              <AlertDescription>{status}</AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </section>
     </main>
   );
 }

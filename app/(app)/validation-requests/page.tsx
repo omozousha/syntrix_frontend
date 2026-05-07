@@ -11,8 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { apiFetch, type PaginatedResponse } from "@/lib/api";
-import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-utils";
+import { apiFetch } from "@/lib/api";
+import { downloadAttachmentFile, fetchAttachmentBlob, resolveAttachment } from "@/lib/attachment-utils";
 import { mapValidationStatus } from "@/lib/validation-status";
 
 type QueueType = "adminregion" | "superadmin";
@@ -47,10 +47,6 @@ type EvidenceRef = {
   candidates: string[];
   available: boolean;
 };
-type AttachmentListItem = {
-  id: string;
-};
-
 const CHECKLIST_LABELS: Array<{ key: string; label: string }> = [
   { key: "physical_ok", label: "Fisik ODP OK" },
   { key: "splitter_ok", label: "Splitter OK" },
@@ -79,10 +75,46 @@ export default function ValidationRequestsPage() {
   const [evidencePreviewOpen, setEvidencePreviewOpen] = useState(false);
   const [evidencePreviewUrl, setEvidencePreviewUrl] = useState("");
   const [evidencePreviewLabel, setEvidencePreviewLabel] = useState("");
+  const [evidenceThumbUrls, setEvidenceThumbUrls] = useState<Record<string, string>>({});
 
   const selected = useMemo(() => items.find((item) => item.id === selectedId) || items[0] || null, [items, selectedId]);
   const evidenceRefs = useMemo(() => normalizeEvidenceRefs(selected?.evidence_attachments), [selected]);
   const isAdminRegionView = activeQueue === "adminregion";
+
+  useEffect(() => {
+    if (!token || evidenceRefs.length === 0) {
+      setEvidenceThumbUrls({});
+      return;
+    }
+
+    let cancelled = false;
+    const objectUrls: string[] = [];
+
+    async function loadThumbs() {
+      const next: Record<string, string> = {};
+      for (const ref of evidenceRefs) {
+        const resolved = await resolveAttachmentCandidates(ref.candidates, token);
+        for (const candidate of resolved) {
+          try {
+            const { blob } = await fetchAttachmentBlob(candidate, token, "preview");
+            const url = URL.createObjectURL(blob);
+            objectUrls.push(url);
+            next[ref.key] = url;
+            break;
+          } catch {
+            // try next
+          }
+        }
+      }
+      if (!cancelled) setEvidenceThumbUrls(next);
+    }
+
+    void loadThumbs();
+    return () => {
+      cancelled = true;
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [evidenceRefs, token]);
 
   useEffect(() => {
     if (!canAdminRegionQueue && !canSuperAdminQueue) return;
@@ -215,7 +247,7 @@ export default function ValidationRequestsPage() {
 
   return (
     <ScrollArea className="h-full min-h-0 w-full">
-      <div className="space-y-4 pr-3">
+      <div className="space-y-4 px-3 pb-3 md:px-4 md:pb-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Validation Requests</h2>
@@ -228,7 +260,7 @@ export default function ValidationRequestsPage() {
         </div>
 
         <Tabs value={activeQueue} onValueChange={(value) => setActiveQueue(value as QueueType)}>
-          <TabsList>
+          <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
             {canAdminRegionQueue ? <TabsTrigger value="adminregion">Queue Admin Region</TabsTrigger> : null}
             {canSuperAdminQueue ? <TabsTrigger value="superadmin">Queue Superadmin</TabsTrigger> : null}
           </TabsList>
@@ -256,7 +288,7 @@ export default function ValidationRequestsPage() {
                       className={`w-full rounded-md border p-3 text-left transition ${selected?.id === item.id ? "border-primary bg-primary/5" : "bg-background hover:bg-muted/40"}`}
                     >
                       <p className="text-sm font-medium">{getOdpName(item) || "-"}</p>
-                      <p className="text-xs text-muted-foreground">{mapValidationStatus(item.current_status).label} • {getChecklistSummary(item.checklist)} • {getPortSummary(item.payload_snapshot?.device_ports || [])}</p>
+                      <p className="text-xs text-muted-foreground">{mapValidationStatus(item.current_status).label} | {getChecklistSummary(item.checklist)} | {getPortSummary(item.payload_snapshot?.device_ports || [])}</p>
                       <p className="text-xs text-muted-foreground">Updated: {formatDateTime(item.updated_at)}</p>
                     </button>
                   ))
@@ -331,7 +363,7 @@ export default function ValidationRequestsPage() {
                       </div>
                     </div>
 
-                    <details className="rounded-md border p-3">
+                    <details className="min-w-0 rounded-md border p-3">
                       <summary className="cursor-pointer text-sm font-medium">Lihat Data Teknis (raw)</summary>
                       <p className="mb-2 mt-3 text-sm font-medium">Snapshot Device</p>
                       <pre className="max-h-48 overflow-auto rounded bg-muted/40 p-2 text-xs">{JSON.stringify(selected.payload_snapshot?.device || {}, null, 2)}</pre>
@@ -339,29 +371,40 @@ export default function ValidationRequestsPage() {
                       <pre className="max-h-48 overflow-auto rounded bg-muted/40 p-2 text-xs">{JSON.stringify(selected.payload_snapshot?.device_ports || [], null, 2)}</pre>
                     </details>
 
-                    <div className="rounded-md border p-3">
+                    <div className="rounded-md border p-2">
                       <p className="mb-2 text-sm font-medium">Evidence</p>
                       {evidenceRefs.length ? (
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5">
                           {evidenceRefs.map((ref, index) => (
                             <div key={ref.key} className="overflow-hidden rounded-md border bg-muted/30">
-                              <div className="grid size-16 grid-rows-2">
-                                <button
+                              <button
+                                type="button"
+                                onClick={() => void previewEvidence(ref.candidates, `Evidence ${index + 1}`)}
+                                disabled={!ref.available}
+                                className="block size-16 overflow-hidden border-b disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {evidenceThumbUrls[ref.key] ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={evidenceThumbUrls[ref.key]}
+                                    alt={`Evidence ${index + 1}`}
+                                    className="size-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="flex size-full items-center justify-center text-[10px] text-muted-foreground">No preview</span>
+                                )}
+                              </button>
+                              <div className="flex size-16 items-center justify-center p-1">
+                                <Button
                                   type="button"
-                                  onClick={() => void previewEvidence(ref.candidates, `Evidence ${index + 1}`)}
-                                  disabled={!ref.available}
-                                  className="flex items-center justify-center border-b px-1 text-center text-[10px] text-muted-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  {ref.available ? "Preview" : "N/A"}
-                                </button>
-                                <button
-                                  type="button"
+                                  variant="outline"
+                                  size="sm"
                                   onClick={() => void openEvidence(ref.candidates)}
                                   disabled={!ref.available}
-                                  className="flex items-center justify-center px-1 text-center text-[10px] text-muted-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60"
+                                  className="h-5 w-full px-1 text-[9px]"
                                 >
                                   Download
-                                </button>
+                                </Button>
                               </div>
                             </div>
                           ))}
@@ -476,13 +519,13 @@ function normalizeEvidenceRefs(value: ValidationRequestItem["evidence_attachment
     .map((item, index) => {
       if (typeof item === "string") {
         const id = item.trim();
-        if (!id || !isUuid(id)) return null;
+        if (!id) return null;
         return { key: `${id}-${index}`, candidates: [id], available: true };
       }
       if (!item || typeof item !== "object") return null;
       const id = String(item.id || "").trim();
       const attachmentId = String(item.attachment_id || "").trim();
-      const candidates = [id, attachmentId].filter((candidate) => isUuid(candidate));
+      const candidates = [id, attachmentId].filter((candidate) => Boolean(candidate));
       if (candidates.length) {
         return {
           key: `${candidates[0]}-${index}`,
@@ -495,38 +538,14 @@ function normalizeEvidenceRefs(value: ValidationRequestItem["evidence_attachment
     .filter((row): row is EvidenceRef => Boolean(row));
 }
 
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
 async function resolveAttachmentCandidates(candidates: string[], token: string): Promise<string[]> {
   const ordered = new Set<string>(candidates.filter(Boolean));
   for (const candidate of candidates) {
     if (!candidate) continue;
-    try {
-      const byPk = await apiFetch<{ data: { id?: string } }>(`/attachments/${encodeURIComponent(candidate)}`, { token });
-      if (byPk.data?.id) ordered.add(String(byPk.data.id));
-    } catch {
-      // continue
-    }
-    try {
-      const byStorage = await apiFetch<PaginatedResponse<AttachmentListItem>>(
-        `/attachments?page=1&limit=1&storage_file_id=${encodeURIComponent(candidate)}`,
-        { token },
-      );
-      if (byStorage.data?.[0]?.id) ordered.add(String(byStorage.data[0].id));
-    } catch {
-      // continue
-    }
-    try {
-      const byCode = await apiFetch<PaginatedResponse<AttachmentListItem>>(
-        `/attachments?page=1&limit=1&attachment_id=${encodeURIComponent(candidate)}`,
-        { token },
-      );
-      if (byCode.data?.[0]?.id) ordered.add(String(byCode.data[0].id));
-    } catch {
-      // continue
-    }
+    const resolved = await resolveAttachment(candidate, token);
+    if (resolved?.id) ordered.add(String(resolved.id));
+    if (resolved?.attachment_id) ordered.add(String(resolved.attachment_id));
+    if (resolved?.storage_file_id) ordered.add(String(resolved.storage_file_id));
   }
   return Array.from(ordered);
 }
@@ -582,5 +601,5 @@ function getPortSummary(ports: Array<Record<string, unknown>>) {
   const total = stats.find((item) => item.label === "Total")?.value || "0";
   const used = stats.find((item) => item.label === "Used")?.value || "0";
   const idle = stats.find((item) => item.label === "Idle")?.value || "0";
-  return `Port ${used}/${total} used • idle ${idle}`;
+  return `Port ${used}/${total} used | idle ${idle}`;
 }
