@@ -51,7 +51,7 @@ const NAV_DATA: { items: NavMainItem[] } = {
       items: [
         { title: "Asset Overview", url: "/data-management", icon: FolderTree },
         { title: "List ODP", url: "/data-management/list/odp", icon: Workflow },
-        { title: "Validation Requests", url: "/validation-requests", icon: ShieldCheck },
+        { title: "Requests", url: "/validation-requests", icon: ShieldCheck },
         { title: "As-Built Documents", url: "/data-management/as-built-documents", icon: BookMarked },
         { title: "Master Data", url: "/master-data", icon: BookMarked },
         { title: "Audit Trail", url: "/audit-trail", icon: ShieldCheck },

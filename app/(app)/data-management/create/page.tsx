@@ -705,11 +705,17 @@ export default function CreateDataManagementPage() {
         payload.splitter_ratio = nullIfEmpty(form.splitter_ratio);
       }
 
-      await apiFetch("/devices", {
+      const createdDevice = await apiFetch<{ data?: { approval_request?: { request_id?: string | null; id?: string | null } } }>("/devices", {
         method: "POST",
         token,
         body: JSON.stringify(payload),
       });
+
+      if (createdDevice.data?.approval_request) {
+        const requestId = createdDevice.data.approval_request.request_id || createdDevice.data.approval_request.id || "";
+        setSuccessMessage(`Device berhasil dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+        return;
+      }
 
       setSuccessMessage("Device berhasil dibuat.");
       router.push(buildListTarget(`/data-management/list/${toDeviceSlug(form.device_type_key)}`, form.region_id));

@@ -32,6 +32,7 @@ type ValidationRequestItem = {
   submitted_by_user_id?: string | null;
   current_status?: RequestStatus | null;
   payload_snapshot?: {
+    source?: string;
     device?: Record<string, unknown>;
     device_ports?: Array<Record<string, unknown>>;
   } | null;
@@ -78,6 +79,7 @@ export default function ValidationRequestsPage() {
   const [evidenceThumbUrls, setEvidenceThumbUrls] = useState<Record<string, string>>({});
 
   const selected = useMemo(() => items.find((item) => item.id === selectedId) || items[0] || null, [items, selectedId]);
+  const selectedType = getRequestType(selected);
   const evidenceRefs = useMemo(() => normalizeEvidenceRefs(selected?.evidence_attachments), [selected]);
   const isAdminRegionView = activeQueue === "adminregion";
 
@@ -257,8 +259,8 @@ export default function ValidationRequestsPage() {
       <div className="space-y-4 px-3 pb-3 md:px-4 md:pb-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Validation Requests</h2>
-            <p className="text-sm text-muted-foreground">Queue review validasi ODP sebelum masuk asset utama.</p>
+            <h2 className="text-2xl font-semibold tracking-tight">Requests</h2>
+            <p className="text-sm text-muted-foreground">Queue review perubahan aset sebelum masuk data utama.</p>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={() => void loadQueue()} disabled={loading || acting}>
             <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
@@ -276,7 +278,7 @@ export default function ValidationRequestsPage() {
         {success ? <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-700">{success}</p> : null}
         {error ? <p className="rounded-md border border-destructive/20 bg-destructive/5 p-2 text-sm text-destructive">{error}</p> : null}
 
-        {loading ? <AppLoading label="Memuat queue validasi..." /> : null}
+        {loading ? <AppLoading label="Memuat queue request..." /> : null}
 
         {!loading ? (
           <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
@@ -294,8 +296,11 @@ export default function ValidationRequestsPage() {
                       onClick={() => setSelectedId(item.id)}
                       className={`w-full rounded-md border p-3 text-left transition ${selected?.id === item.id ? "border-primary bg-primary/5" : "bg-background hover:bg-muted/40"}`}
                     >
-                      <p className="text-sm font-medium">{getOdpName(item) || "-"}</p>
-                      <p className="text-xs text-muted-foreground">{mapValidationStatus(item.current_status).label} | {getChecklistSummary(item.checklist)} | {getPortSummary(item.payload_snapshot?.device_ports || [])}</p>
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <p className="text-sm font-medium">{getOdpName(item) || "-"}</p>
+                        <Badge variant="outline" className="text-[10px]">{getRequestType(item).label}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{mapValidationStatus(item.current_status).label} | {getRequestSummary(item)}</p>
                       <p className="text-xs text-muted-foreground">Updated: {formatDateTime(item.updated_at)}</p>
                     </button>
                   ))
@@ -310,7 +315,7 @@ export default function ValidationRequestsPage() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <CardTitle className="text-base">{getOdpName(selected) || "Pilih Request"}</CardTitle>
-                    <CardDescription>Review payload, checklist, evidence, lalu approve/reject.</CardDescription>
+                    <CardDescription>{selectedType.description}</CardDescription>
                   </div>
                   {selected ? (
                     <Badge variant="outline" className={mapValidationStatus(selected.current_status).className}>
@@ -323,9 +328,9 @@ export default function ValidationRequestsPage() {
                 {selected ? (
                   <>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                      <Info title="ODP" value={getOdpName(selected)} />
+                      <Info title="Tipe Request" value={selectedType.label} />
+                      <Info title="Device" value={getOdpName(selected)} />
                       <Info title="Updated" value={formatDateTime(selected.updated_at)} />
-                      <Info title="Checklist" value={getChecklistSummary(selected.checklist)} />
                     </div>
 
                     {!isAdminRegionView ? (
@@ -343,31 +348,37 @@ export default function ValidationRequestsPage() {
                       </div>
                     ) : null}
 
-                    <div className="rounded-md border p-3">
-                      <p className="mb-2 text-sm font-medium">Checklist</p>
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {CHECKLIST_LABELS.map((item) => (
-                          <p key={item.key} className="text-xs">
-                            {item.label}:{" "}
-                            <span className={selected.checklist?.[item.key] ? "text-emerald-600" : "text-rose-600"}>
-                              {selected.checklist?.[item.key] ? "OK" : "Belum"}
-                            </span>
-                          </p>
-                        ))}
+                    {selectedType.kind === "field_validation" ? (
+                      <div className="rounded-md border p-3">
+                        <p className="mb-2 text-sm font-medium">Checklist</p>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {CHECKLIST_LABELS.map((item) => (
+                            <p key={item.key} className="text-xs">
+                              {item.label}:{" "}
+                              <span className={selected.checklist?.[item.key] ? "text-emerald-600" : "text-rose-600"}>
+                                {selected.checklist?.[item.key] ? "OK" : "Belum"}
+                              </span>
+                            </p>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">Temuan: {selected.finding_note || "-"}</p>
                       </div>
-                      <p className="mt-2 text-xs text-muted-foreground">Temuan: {selected.finding_note || "-"}</p>
-                    </div>
+                    ) : null}
 
                     <div className="rounded-md border p-3">
                       <p className="mb-2 text-sm font-medium">Ringkasan Port</p>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                        {renderPortStats(selected.payload_snapshot?.device_ports || []).map((stat) => (
-                          <div key={stat.label} className="rounded-md border bg-muted/20 p-2">
-                            <p className="text-[11px] uppercase text-muted-foreground">{stat.label}</p>
-                            <p className="text-base font-semibold">{stat.value}</p>
-                          </div>
-                        ))}
-                      </div>
+                      {selected.payload_snapshot?.device_ports?.length ? (
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                          {renderPortStats(selected.payload_snapshot?.device_ports || []).map((stat) => (
+                            <div key={stat.label} className="rounded-md border bg-muted/20 p-2">
+                              <p className="text-[11px] uppercase text-muted-foreground">{stat.label}</p>
+                              <p className="text-base font-semibold">{stat.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Tidak ada perubahan port pada request ini.</p>
+                      )}
                     </div>
 
                     <details className="min-w-0 rounded-md border p-3">
@@ -588,6 +599,35 @@ function getOdpName(item: ValidationRequestItem | null) {
   const name = String((device.device_name as string) || "").trim();
   if (name) return name;
   return item.request_id || "-";
+}
+
+function getRequestType(item: ValidationRequestItem | null) {
+  const source = String(item?.payload_snapshot?.source || "").trim();
+  if (source === "adminregion-create-device") {
+    return {
+      kind: "create_device" as const,
+      label: "Create Device Request",
+      description: "Review device baru dari adminregion sebelum masuk Asset Overview.",
+    };
+  }
+
+  return {
+    kind: "field_validation" as const,
+    label: "Field Validation Request",
+    description: "Review hasil validasi lapangan, checklist, evidence, lalu approve/reject.",
+  };
+}
+
+function getRequestSummary(item: ValidationRequestItem) {
+  const requestType = getRequestType(item);
+  if (requestType.kind === "create_device") {
+    const device = item.payload_snapshot?.device || {};
+    const totalPorts = device.total_ports ?? "-";
+    const status = device.status ?? "-";
+    return `Status ${status} | Total port ${totalPorts}`;
+  }
+
+  return `${getChecklistSummary(item.checklist)} | ${getPortSummary(item.payload_snapshot?.device_ports || [])}`;
 }
 
 function getChecklistSummary(checklist?: Record<string, boolean> | null) {

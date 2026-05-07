@@ -378,7 +378,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
             </ScrollArea>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/validation-requests")}>
-              Buka halaman Validation Requests
+              Buka halaman Requests
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
