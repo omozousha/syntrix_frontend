@@ -92,6 +92,14 @@ const PASSIVE_TYPES = new Set(["OTB", "ODC", "JC", "ODP", "CABLE"]);
 const MAX_IMAGE_ATTACHMENTS = 10;
 const MAX_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
+function emptyPaginatedResponse<T>(): PaginatedResponse<T> {
+  return {
+    success: true,
+    message: "",
+    data: [],
+  };
+}
+
 function toOptions(
   items: Array<{ value: string; label: string }>,
 ): ComboboxOption[] {
@@ -224,12 +232,18 @@ export default function CreateDataManagementPage() {
 
     async function bootstrap() {
       try {
+        const routeTypesRequest = isRoute
+          ? apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token }).catch(() =>
+              emptyPaginatedResponse<RouteTypeOption>(),
+            )
+          : Promise.resolve(emptyPaginatedResponse<RouteTypeOption>());
+
         const [regionsRes, popsRes, projectsRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, splitterProfilesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
           apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token }),
           apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token }),
           apiFetch<PaginatedResponse<PopTypeOption>>("/popTypes?page=1&limit=200&is_active=true", { token }),
-          apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token }),
+          routeTypesRequest,
           apiFetch<PaginatedResponse<ProvinceOption>>("/provinces?page=1&limit=500&is_active=true", { token }),
           fetchAllPaginated<CityOption>("/cities?is_active=true", token),
           apiFetch<PaginatedResponse<ManufacturerOption>>("/manufacturers?page=1&limit=500", { token }),
@@ -272,7 +286,7 @@ export default function CreateDataManagementPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, me.role, scopeRegionIds]);
+  }, [token, me.role, scopeRegionIds, isRoute]);
 
   useEffect(() => {
     let cancelled = false;
