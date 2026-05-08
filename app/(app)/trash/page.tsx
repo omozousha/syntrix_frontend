@@ -34,14 +34,23 @@ type TrashCategory = {
 };
 
 const TRASH_CATEGORIES: TrashCategory[] = [
+  { slug: "trash-devices", label: "Devices", resource: "devices" },
+  { slug: "trash-device-ports", label: "Device Ports", resource: "devicePorts" },
   ...MASTER_DATA_CATEGORIES.map((item) => ({
     slug: item.slug,
     label: item.label,
     resource: item.resource,
   })),
-  { slug: "trash-devices", label: "Devices", resource: "devices" },
-  { slug: "trash-device-ports", label: "Device Ports", resource: "devicePorts" },
 ];
+
+const ENTITY_TYPE_RESOURCE_MAP: Record<string, string> = {
+  device: "devices",
+  devices: "devices",
+  deviceport: "devicePorts",
+  deviceports: "devicePorts",
+  device_port: "devicePorts",
+  device_ports: "devicePorts",
+};
 
 type GenericItem = Record<string, unknown> & {
   id: string;
@@ -91,7 +100,8 @@ export default function TrashPage() {
     const entityId = String(searchParams.get("entity_id") || "").trim();
 
     if (entityType) {
-      const matchedCategory = TRASH_CATEGORIES.find((item) => item.resource.toLowerCase() === entityType.toLowerCase());
+      const normalizedEntityType = ENTITY_TYPE_RESOURCE_MAP[entityType.toLowerCase()] || entityType;
+      const matchedCategory = TRASH_CATEGORIES.find((item) => item.resource.toLowerCase() === normalizedEntityType.toLowerCase());
       if (matchedCategory) {
         setSelectedCategorySlug(matchedCategory.slug);
       }
