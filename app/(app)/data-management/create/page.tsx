@@ -100,6 +100,14 @@ function emptyPaginatedResponse<T>(): PaginatedResponse<T> {
   };
 }
 
+function optionalPaginatedRequest<T>(
+  enabled: boolean,
+  request: () => Promise<PaginatedResponse<T>>,
+): Promise<PaginatedResponse<T>> {
+  if (!enabled) return Promise.resolve(emptyPaginatedResponse<T>());
+  return request().catch(() => emptyPaginatedResponse<T>());
+}
+
 function toOptions(
   items: Array<{ value: string; label: string }>,
 ): ComboboxOption[] {
@@ -232,24 +240,22 @@ export default function CreateDataManagementPage() {
 
     async function bootstrap() {
       try {
-        const routeTypesRequest = isRoute
-          ? apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token }).catch(() =>
-              emptyPaginatedResponse<RouteTypeOption>(),
-            )
-          : Promise.resolve(emptyPaginatedResponse<RouteTypeOption>());
+        const needsPops = isDevice || isRoute || isProject || isCustomer;
+        const needsProjects = isRoute || isCustomer;
+        const needsDeviceMasterData = isDevice;
 
         const [regionsRes, popsRes, projectsRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, splitterProfilesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
-          apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token }),
-          apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token }),
-          apiFetch<PaginatedResponse<PopTypeOption>>("/popTypes?page=1&limit=200&is_active=true", { token }),
-          routeTypesRequest,
+          optionalPaginatedRequest<PopOption>(needsPops, () => apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token })),
+          optionalPaginatedRequest<ProjectOption>(needsProjects, () => apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token })),
+          optionalPaginatedRequest<PopTypeOption>(isPop, () => apiFetch<PaginatedResponse<PopTypeOption>>("/popTypes?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<RouteTypeOption>(isRoute, () => apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token })),
           apiFetch<PaginatedResponse<ProvinceOption>>("/provinces?page=1&limit=500&is_active=true", { token }),
           fetchAllPaginated<CityOption>("/cities?is_active=true", token),
-          apiFetch<PaginatedResponse<ManufacturerOption>>("/manufacturers?page=1&limit=500", { token }),
-          apiFetch<PaginatedResponse<BrandOption>>("/brands?page=1&limit=500", { token }),
-          apiFetch<PaginatedResponse<AssetModelOption>>("/assetModels?page=1&limit=1000", { token }),
-          apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token }),
+          optionalPaginatedRequest<ManufacturerOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<ManufacturerOption>>("/manufacturers?page=1&limit=500", { token })),
+          optionalPaginatedRequest<BrandOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<BrandOption>>("/brands?page=1&limit=500", { token })),
+          optionalPaginatedRequest<AssetModelOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<AssetModelOption>>("/assetModels?page=1&limit=1000", { token })),
+          optionalPaginatedRequest<SplitterProfileOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token })),
         ]);
 
         if (cancelled) return;
@@ -286,7 +292,7 @@ export default function CreateDataManagementPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, me.role, scopeRegionIds, isRoute]);
+  }, [token, me.role, scopeRegionIds, isCustomer, isDevice, isPop, isProject, isRoute]);
 
   useEffect(() => {
     let cancelled = false;
