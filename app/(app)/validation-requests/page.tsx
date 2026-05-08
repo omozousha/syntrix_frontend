@@ -384,25 +384,30 @@ export default function ValidationRequestsPage() {
                             Review perubahan yang diajukan adminregion sebelum masuk Asset Overview.
                           </p>
                         </div>
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                          {getCreateAssetReviewFields(selected, lookupLabels).map((field) => (
-                            <Info key={field.title} title={field.title} value={field.value} />
-                          ))}
-                        </div>
                         {selected.payload_snapshot?.operation === "update" ? (
                           <div className="mt-3 rounded-md border bg-muted/20 p-2">
                             <p className="mb-2 text-xs font-medium text-muted-foreground">Perubahan Field</p>
-                            <div className="space-y-1">
-                              {getUpdateDiffFields(selected).map((field) => (
-                                <div key={field.key} className="grid grid-cols-1 gap-1 rounded border bg-background p-2 text-xs sm:grid-cols-[160px_1fr_1fr]">
-                                  <span className="font-medium">{field.key}</span>
-                                  <span className="text-muted-foreground">Sebelum: {field.before}</span>
-                                  <span>Sesudah: {field.after}</span>
-                                </div>
-                              ))}
-                            </div>
+                            {getUpdateDiffFields(selected).length ? (
+                              <div className="space-y-1">
+                                {getUpdateDiffFields(selected).map((field) => (
+                                  <div key={field.key} className="grid grid-cols-1 gap-1 rounded border bg-background p-2 text-xs sm:grid-cols-[160px_1fr_1fr]">
+                                    <span className="font-medium">{field.key}</span>
+                                    <span className="text-muted-foreground">Sebelum: {field.before}</span>
+                                    <span>Sesudah: {field.after}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">Tidak ada field yang berubah pada request ini.</p>
+                            )}
                           </div>
-                        ) : null}
+                        ) : (
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                            {getCreateAssetReviewFields(selected, lookupLabels).map((field) => (
+                              <Info key={field.title} title={field.title} value={field.value} />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ) : null}
 
@@ -810,11 +815,38 @@ function getCreateAssetPayload(item: ValidationRequestItem) {
 function getUpdateDiffFields(item: ValidationRequestItem) {
   const changes = item.payload_snapshot?.resource_payload || {};
   const before = item.payload_snapshot?.before || {};
-  return Object.entries(changes).map(([key, after]) => ({
-    key,
-    before: valueText(before[key]),
-    after: valueText(after),
-  }));
+  return Object.entries(changes)
+    .filter(([key, after]) => !areValuesEquivalent(before[key], after))
+    .map(([key, after]) => ({
+      key,
+      before: valueText(before[key]),
+      after: valueText(after),
+    }));
+}
+
+function areValuesEquivalent(before: unknown, after: unknown) {
+  return normalizeComparableValue(before) === normalizeComparableValue(after);
+}
+
+function normalizeComparableValue(value: unknown): string {
+  if (value == null || value === "") return "";
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "string") return value.trim();
+  return stableStringify(value);
+}
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => `${key}:${stableStringify(item)}`)
+      .join(",")}}`;
+  }
+  return String(value ?? "");
 }
 
 function collectLookupIds(item: ValidationRequestItem) {
