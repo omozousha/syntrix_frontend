@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, CircleHelp, ImagePlus, Trash2, X, XCircle } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
@@ -114,6 +114,12 @@ export default function CreateDataManagementPage() {
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const submitLockRef = useRef(false);
+  const [approvalNotice, setApprovalNotice] = useState<{
+    title: string;
+    description: string;
+    redirectTo: string;
+  } | null>(null);
 
   const [regions, setRegions] = useState<RegionsListResponse["data"]>([]);
   const [pops, setPops] = useState<PopOption[]>([]);
@@ -345,6 +351,17 @@ export default function CreateDataManagementPage() {
     return `${basePath}${joiner}region_id=${encodeURIComponent(nextRegionId)}`;
   };
 
+  const openApprovalNotice = (entityLabel: string, requestId: string, redirectTo: string) => {
+    const suffix = requestId ? ` (${requestId})` : "";
+    const description = `${entityLabel} berhasil dikirim ke approval superadmin${suffix}. Data belum masuk asset utama sampai superadmin approve.`;
+    setSuccessMessage(description);
+    setApprovalNotice({
+      title: "Request approval terkirim",
+      description,
+      redirectTo,
+    });
+  };
+
   useEffect(() => {
     const urls = imageFiles.map((file) => URL.createObjectURL(file));
     setImagePreviewUrls(urls);
@@ -401,6 +418,8 @@ export default function CreateDataManagementPage() {
   }
 
   async function submit() {
+    if (saving || submitLockRef.current || approvalNotice) return;
+    submitLockRef.current = true;
     setSaving(true);
     setErrorMessage("");
     setSuccessMessage("");
@@ -506,7 +525,7 @@ export default function CreateDataManagementPage() {
 
         if (createdPop.data?.approval_request) {
           const requestId = getApprovalRequestId(createdPop.data);
-          setSuccessMessage(`POP berhasil dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+          openApprovalNotice("POP", requestId, buildListTarget("/data-management/list/pop", form.region_id));
           return;
         }
 
@@ -540,7 +559,7 @@ export default function CreateDataManagementPage() {
 
         if (createdRoute.data?.approval_request) {
           const requestId = getApprovalRequestId(createdRoute.data);
-          setSuccessMessage(`Route berhasil dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+          openApprovalNotice("Route", requestId, buildListTarget("/data-management/list/route", form.region_id));
           return;
         }
 
@@ -627,7 +646,7 @@ export default function CreateDataManagementPage() {
 
         if (createdProject.data?.approval_request) {
           const requestId = getApprovalRequestId(createdProject.data);
-          setSuccessMessage(`Project berhasil dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+          openApprovalNotice("Project", requestId, buildListTarget("/data-management/list/projects", form.region_id));
           return;
         }
 
@@ -739,7 +758,7 @@ export default function CreateDataManagementPage() {
 
       if (createdDevice.data?.approval_request) {
         const requestId = getApprovalRequestId(createdDevice.data);
-        setSuccessMessage(`Device berhasil dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+        openApprovalNotice("Device", requestId, buildListTarget(`/data-management/list/${toDeviceSlug(form.device_type_key)}`, form.region_id));
         return;
       }
 
@@ -747,6 +766,7 @@ export default function CreateDataManagementPage() {
       router.push(buildListTarget(`/data-management/list/${toDeviceSlug(form.device_type_key)}`, form.region_id));
     } catch (err) {
       setErrorMessage((err as Error).message);
+      submitLockRef.current = false;
     } finally {
       setSaving(false);
     }
@@ -1564,12 +1584,34 @@ export default function CreateDataManagementPage() {
           ) : null}
 
           <div className="flex justify-end">
-            <Button onClick={() => void submit()} disabled={saving}>
+            <Button onClick={() => void submit()} disabled={saving || Boolean(approvalNotice)}>
               {saving ? "Menyimpan..." : isPop ? "Simpan POP" : isRoute ? "Simpan Route" : isProject ? "Simpan Project" : isCustomer ? "Simpan Customer" : "Simpan Device"}
             </Button>
           </div>
         </CardContent>
       </Card>
+
+        <AlertDialog open={Boolean(approvalNotice)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{approvalNotice?.title || "Request approval terkirim"}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {approvalNotice?.description}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction
+                onClick={() => {
+                  const target = approvalNotice?.redirectTo || "/data-management";
+                  setApprovalNotice(null);
+                  router.push(target);
+                }}
+              >
+                Kembali ke list
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <AlertDialog open={customDialogOpen && (isPop || isDevice)} onOpenChange={setCustomDialogOpen}>
         <AlertDialogContent>
