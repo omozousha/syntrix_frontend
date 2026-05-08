@@ -43,6 +43,7 @@ type ProjectOption = {
   pop_id?: string | null;
 };
 type PopTypeOption = { id: string; pop_type_name: string; pop_type_code?: string | null };
+type RouteTypeOption = { id: string; route_type_name: string; route_type_code?: string | null };
 type ProvinceOption = { id: string; province_name: string };
 type CityOption = { id: string; city_name: string; province_id?: string | null };
 type ManufacturerOption = { id: string; manufacturer_name: string; manufacturer_code?: string | null };
@@ -125,6 +126,7 @@ export default function CreateDataManagementPage() {
   const [pops, setPops] = useState<PopOption[]>([]);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [popTypes, setPopTypes] = useState<PopTypeOption[]>([]);
+  const [routeTypes, setRouteTypes] = useState<RouteTypeOption[]>([]);
   const [provinces, setProvinces] = useState<ProvinceOption[]>([]);
   const [cities, setCities] = useState<CityOption[]>([]);
   const [manufacturers, setManufacturers] = useState<ManufacturerOption[]>([]);
@@ -222,11 +224,12 @@ export default function CreateDataManagementPage() {
 
     async function bootstrap() {
       try {
-        const [regionsRes, popsRes, projectsRes, popTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, splitterProfilesRes] = await Promise.all([
+        const [regionsRes, popsRes, projectsRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, splitterProfilesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
           apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token }),
           apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token }),
           apiFetch<PaginatedResponse<PopTypeOption>>("/popTypes?page=1&limit=200&is_active=true", { token }),
+          apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<ProvinceOption>>("/provinces?page=1&limit=500&is_active=true", { token }),
           fetchAllPaginated<CityOption>("/cities?is_active=true", token),
           apiFetch<PaginatedResponse<ManufacturerOption>>("/manufacturers?page=1&limit=500", { token }),
@@ -246,6 +249,7 @@ export default function CreateDataManagementPage() {
         setPops(popsRes.data || []);
         setProjects(projectsRes.data || []);
         setPopTypes(popTypesRes.data || []);
+        setRouteTypes(routeTypesRes.data || []);
         setProvinces(provincesRes.data || []);
         setCities(citiesAll || []);
         setManufacturers(manufacturersRes.data || []);
@@ -878,7 +882,22 @@ export default function CreateDataManagementPage() {
             {isRoute ? (
               <>
                 <Field label="Route Name" value={form.route_name} onChange={(v) => setForm((p) => ({ ...p, route_name: v }))} />
-                <Field label="Route Type" value={form.route_type} onChange={(v) => setForm((p) => ({ ...p, route_type: v }))} placeholder="backbone / distribution / access" />
+                <div className="space-y-1.5">
+                  <FieldLabel label="Route Type" tooltip="Pilih dari master Route Types. Kelola opsinya di Tata Kelola Master Data." />
+                  <Combobox
+                    value={form.route_type || "__none__"}
+                    onValueChange={(value) => setForm((p) => ({ ...p, route_type: value === "__none__" ? "" : value }))}
+                    options={toOptions([
+                      { value: "__none__", label: "None" },
+                      ...routeTypes.map((item) => ({
+                        value: item.route_type_code || item.route_type_name,
+                        label: item.route_type_code ? `${item.route_type_name} (${item.route_type_code})` : item.route_type_name,
+                      })),
+                    ])}
+                    placeholder="Pilih route type"
+                    searchPlaceholder="Cari route type..."
+                  />
+                </div>
                 <div className="space-y-1.5">
                   <FieldLabel label="POP (opsional)" tooltip="Titik POP utama untuk route ini." />
                   <Combobox

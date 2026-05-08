@@ -20,7 +20,7 @@ Status awal: code complete, pushed, menunggu migration backend dan UAT manual.
 | TC-RQ-2 | Validator submit validasi -> adminregion approve -> superadmin approve | Not Run | - | Pastikan dialog sukses refresh halaman. |
 | TC-RQ-3 | Reject wajib note | Not Run | - | 2026-05-08: ditemukan reject superadmin tidak memberi response jelas; dialog reject sudah dibuat menampilkan error inline dan hanya tertutup setelah reject sukses. |
 | TC-RQ-4 | Adminregion create POP/Route/Project request | Not Run | - | Pastikan muncul setelah superadmin approve. |
-| TC-RQ-5 | Adminregion update/archive request | Not Run | - | Pastikan diff tampil sebelum approve. |
+| TC-RQ-5 | Adminregion update/archive request | Not Run | - | Pastikan diff tampil sebelum approve. 2026-05-08: Create Route route_type diubah dari text menjadi combobox master Route Types. |
 | TC-RQ-6 | Role UI | Not Run | - | Validator mobile, adminregion scope, superadmin queue. 2026-05-08: notification dropdown sekarang hanya menampilkan unread, item hilang setelah Mark read/Mark all as read. |
 
 ## Sign-Off
