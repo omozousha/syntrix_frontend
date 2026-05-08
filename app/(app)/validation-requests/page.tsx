@@ -56,6 +56,11 @@ type EvidenceRef = {
   candidates: string[];
   available: boolean;
 };
+type LookupLabels = {
+  regions: Record<string, string>;
+  pops: Record<string, string>;
+  projects: Record<string, string>;
+};
 const CHECKLIST_LABELS: Array<{ key: string; label: string }> = [
   { key: "physical_ok", label: "Fisik ODP OK" },
   { key: "splitter_ok", label: "Splitter OK" },
@@ -86,6 +91,7 @@ export default function ValidationRequestsPage() {
   const [evidencePreviewUrl, setEvidencePreviewUrl] = useState("");
   const [evidencePreviewLabel, setEvidencePreviewLabel] = useState("");
   const [evidenceThumbUrls, setEvidenceThumbUrls] = useState<Record<string, string>>({});
+  const [lookupLabels, setLookupLabels] = useState<LookupLabels>({ regions: {}, pops: {}, projects: {} });
 
   const selected = useMemo(() => items.find((item) => item.id === selectedId) || items[0] || null, [items, selectedId]);
   const selectedType = getRequestType(selected);
@@ -132,6 +138,35 @@ export default function ValidationRequestsPage() {
     void loadQueue();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeQueue, token, canAdminRegionQueue, canSuperAdminQueue]);
+
+  useEffect(() => {
+    if (!selected || !token) return;
+    const lookupIds = collectLookupIds(selected);
+    const missingRegions = lookupIds.regionIds.filter((id) => !lookupLabels.regions[id]);
+    const missingPops = lookupIds.popIds.filter((id) => !lookupLabels.pops[id]);
+    const missingProjects = lookupIds.projectIds.filter((id) => !lookupLabels.projects[id]);
+    if (!missingRegions.length && !missingPops.length && !missingProjects.length) return;
+
+    let cancelled = false;
+    async function loadLookupLabels() {
+      const [regions, pops, projects] = await Promise.all([
+        fetchLookupBatch(missingRegions, token, "regions", formatRegionLabel),
+        fetchLookupBatch(missingPops, token, "pops", formatPopLabel),
+        fetchLookupBatch(missingProjects, token, "projects", formatProjectLabel),
+      ]);
+      if (cancelled) return;
+      setLookupLabels((prev) => ({
+        regions: { ...prev.regions, ...regions },
+        pops: { ...prev.pops, ...pops },
+        projects: { ...prev.projects, ...projects },
+      }));
+    }
+
+    void loadLookupLabels();
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, token, lookupLabels]);
 
   async function loadQueue() {
     setLoading(true);
@@ -308,7 +343,7 @@ export default function ValidationRequestsPage() {
                         <p className="text-sm font-medium">{getOdpName(item) || "-"}</p>
                         <Badge variant="outline" className="text-[10px]">{getRequestType(item).label}</Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">{mapValidationStatus(item.current_status).label} | {getRequestSummary(item)}</p>
+                      <p className="text-xs text-muted-foreground">{mapValidationStatus(item.current_status).label} | {getRequestSummary(item, lookupLabels)}</p>
                       <p className="text-xs text-muted-foreground">Updated: {formatDateTime(item.updated_at)}</p>
                     </button>
                   ))
@@ -350,7 +385,7 @@ export default function ValidationRequestsPage() {
                           </p>
                         </div>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                          {getCreateAssetReviewFields(selected).map((field) => (
+                          {getCreateAssetReviewFields(selected, lookupLabels).map((field) => (
                             <Info key={field.title} title={field.title} value={field.value} />
                           ))}
                         </div>
@@ -691,22 +726,22 @@ function getRequestType(item: ValidationRequestItem | null) {
   };
 }
 
-function getRequestSummary(item: ValidationRequestItem) {
+function getRequestSummary(item: ValidationRequestItem, lookupLabels: LookupLabels) {
   const requestType = getRequestType(item);
   if (requestType.kind === "asset_change") {
     const payload = getCreateAssetPayload(item);
-    return `${requestType.operationLabel} ${requestType.resourceLabel} | Status ${valueText(payload.status || payload.status_pop)} | Region ${valueText(payload.region_id || item.region_id)}`;
+    return `${requestType.operationLabel} ${requestType.resourceLabel} | Status ${valueText(payload.status || payload.status_pop)} | Region ${getRegionText(payload.region_id || item.region_id, lookupLabels)}`;
   }
 
   return `${getChecklistSummary(item.checklist)} | ${getPortSummary(item.payload_snapshot?.device_ports || [])}`;
 }
 
-function getCreateAssetReviewFields(item: ValidationRequestItem) {
+function getCreateAssetReviewFields(item: ValidationRequestItem, lookupLabels: LookupLabels) {
   const payload = getCreateAssetPayload(item);
   const resourceName = String(item.payload_snapshot?.resource_name || "").trim();
   const common = [
-    { title: "Region", value: valueText(payload.region_name || payload.region_id || item.region_id) },
-    { title: "POP", value: valueText(payload.pop_name || payload.pop_id) },
+    { title: "Region", value: getRegionText(payload.region_name || payload.region_id || item.region_id, lookupLabels) },
+    { title: "POP", value: getPopText(payload.pop_name || payload.pop_id, lookupLabels) },
     { title: "Status", value: valueText(payload.status || payload.status_pop) },
   ];
 
@@ -727,7 +762,7 @@ function getCreateAssetReviewFields(item: ValidationRequestItem) {
       { title: "Route Name", value: valueText(payload.route_name) },
       { title: "Route Type", value: valueText(payload.route_type) },
       ...common,
-      { title: "Project", value: valueText(payload.project_id) },
+      { title: "Project", value: getProjectText(payload.project_id, lookupLabels) },
       { title: "Distance", value: valueText(payload.distance_meters) },
     ];
   }
@@ -749,7 +784,7 @@ function getCreateAssetReviewFields(item: ValidationRequestItem) {
     { title: "Device Type", value: valueText(payload.device_type_key) },
     { title: "Device Name", value: valueText(payload.device_name) },
     ...common,
-    { title: "Project", value: valueText(payload.project_id) },
+    { title: "Project", value: getProjectText(payload.project_id, lookupLabels) },
     { title: "Total Port", value: valueText(payload.total_ports) },
     { title: "Used Port", value: valueText(payload.used_ports) },
     { title: "Splitter Ratio", value: valueText(payload.splitter_ratio) },
@@ -780,6 +815,85 @@ function getUpdateDiffFields(item: ValidationRequestItem) {
     before: valueText(before[key]),
     after: valueText(after),
   }));
+}
+
+function collectLookupIds(item: ValidationRequestItem) {
+  const payload = getCreateAssetPayload(item);
+  return {
+    regionIds: uniqueIds([payload.region_id, item.region_id]),
+    popIds: uniqueIds([payload.pop_id]),
+    projectIds: uniqueIds([payload.project_id]),
+  };
+}
+
+function uniqueIds(values: unknown[]) {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => String(value || "").trim())
+        .filter((value) => value && value !== "-"),
+    ),
+  );
+}
+
+async function fetchLookupBatch(
+  ids: string[],
+  token: string,
+  resource: "regions" | "pops" | "projects",
+  formatter: (item: Record<string, unknown>) => string,
+) {
+  const entries = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const result = await apiFetch<{ data?: Record<string, unknown> }>(`/${resource}/${encodeURIComponent(id)}`, { token });
+        const label = result.data ? formatter(result.data) : "";
+        return [id, label || shortId(id)] as const;
+      } catch {
+        return [id, shortId(id)] as const;
+      }
+    }),
+  );
+  return Object.fromEntries(entries);
+}
+
+function formatRegionLabel(item: Record<string, unknown>) {
+  const name = valueText(item.region_name);
+  const code = valueText(item.region_code);
+  return code !== "-" ? `${name} (${code})` : name;
+}
+
+function formatPopLabel(item: Record<string, unknown>) {
+  const name = valueText(item.pop_name);
+  const code = valueText(item.pop_code);
+  return code !== "-" ? `${name} (${code})` : name;
+}
+
+function formatProjectLabel(item: Record<string, unknown>) {
+  const name = valueText(item.project_name);
+  const code = valueText(item.project_code || item.project_id);
+  return code !== "-" ? `${name} (${code})` : name;
+}
+
+function getRegionText(value: unknown, lookupLabels: LookupLabels) {
+  const id = String(value || "").trim();
+  if (!id) return "-";
+  return lookupLabels.regions[id] || valueText(value);
+}
+
+function getPopText(value: unknown, lookupLabels: LookupLabels) {
+  const id = String(value || "").trim();
+  if (!id) return "-";
+  return lookupLabels.pops[id] || valueText(value);
+}
+
+function getProjectText(value: unknown, lookupLabels: LookupLabels) {
+  const id = String(value || "").trim();
+  if (!id) return "-";
+  return lookupLabels.projects[id] || valueText(value);
+}
+
+function shortId(value: string) {
+  return value.length > 13 ? `${value.slice(0, 8)}...${value.slice(-4)}` : value;
 }
 
 function nonEmptyObject(value?: Record<string, unknown>) {
