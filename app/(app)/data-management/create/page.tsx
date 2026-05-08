@@ -1109,12 +1109,19 @@ export default function CreateDataManagementPage() {
                         { value: "inactive", label: "inactive" },
                         { value: "maintenance", label: "maintenance" },
                       ])
-                    : isRoute || isProject
+                    : isRoute
                     ? toOptions([
                         { value: "planning", label: "planning" },
                         { value: "active", label: "active" },
-                        { value: "on_hold", label: "on_hold" },
-                        { value: "completed", label: "completed" },
+                        { value: "maintenance", label: "maintenance" },
+                        { value: "closed", label: "closed" },
+                      ])
+                    : isProject
+                    ? toOptions([
+                        { value: "planning", label: "planning" },
+                        { value: "running", label: "running" },
+                        { value: "done", label: "done" },
+                        { value: "hold", label: "hold" },
                         { value: "cancelled", label: "cancelled" },
                       ])
                     : isCustomer
