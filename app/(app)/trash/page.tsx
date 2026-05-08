@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { RotateCcw, Trash2 } from "lucide-react";
+import { Archive, RotateCcw, Search, ShieldAlert, Trash2, X } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
 import { SimpleTable } from "@/components/simple-table";
 import {
@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { ContextMenuItem, ContextMenuLabel, ContextMenuSeparator } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { MASTER_DATA_CATEGORIES } from "@/lib/data-management-config";
@@ -33,7 +35,9 @@ type TrashCategory = {
   resource: string;
 };
 
-const TRASH_CATEGORIES: TrashCategory[] = [
+const ALL_TRASH_CATEGORY: TrashCategory = { slug: "all", label: "All", resource: "all" };
+
+const TRASH_RESOURCE_CATEGORIES: TrashCategory[] = [
   { slug: "trash-devices", label: "Devices", resource: "devices" },
   { slug: "trash-device-ports", label: "Device Ports", resource: "devicePorts" },
   ...MASTER_DATA_CATEGORIES.map((item) => ({
@@ -42,6 +46,8 @@ const TRASH_CATEGORIES: TrashCategory[] = [
     resource: item.resource,
   })),
 ];
+
+const TRASH_CATEGORIES: TrashCategory[] = [ALL_TRASH_CATEGORY, ...TRASH_RESOURCE_CATEGORIES];
 
 const ENTITY_TYPE_RESOURCE_MAP: Record<string, string> = {
   device: "devices",
@@ -56,6 +62,8 @@ type GenericItem = Record<string, unknown> & {
   id: string;
   deleted_at?: string | null;
   deleted_by_user_id?: string | null;
+  __trashLabel?: string;
+  __trashResource?: string;
 };
 
 type UserItem = {
@@ -68,7 +76,7 @@ export default function TrashPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { token, me } = useSession();
-  const [selectedCategorySlug, setSelectedCategorySlug] = useState(TRASH_CATEGORIES[0]?.slug || "");
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState(ALL_TRASH_CATEGORY.slug);
   const [rows, setRows] = useState<GenericItem[]>([]);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -101,7 +109,7 @@ export default function TrashPage() {
 
     if (entityType) {
       const normalizedEntityType = ENTITY_TYPE_RESOURCE_MAP[entityType.toLowerCase()] || entityType;
-      const matchedCategory = TRASH_CATEGORIES.find((item) => item.resource.toLowerCase() === normalizedEntityType.toLowerCase());
+      const matchedCategory = TRASH_RESOURCE_CATEGORIES.find((item) => item.resource.toLowerCase() === normalizedEntityType.toLowerCase());
       if (matchedCategory) {
         setSelectedCategorySlug(matchedCategory.slug);
       }
@@ -144,6 +152,43 @@ export default function TrashPage() {
       setLoading(true);
       setError("");
       try {
+        if (selectedCategory.slug === ALL_TRASH_CATEGORY.slug) {
+          const perCategoryLimit = page * limit;
+          const results = await Promise.allSettled(
+            TRASH_RESOURCE_CATEGORIES.map(async (category) => {
+              const query = new URLSearchParams({
+                page: "1",
+                limit: String(perCategoryLimit),
+                include_deleted: "true",
+                archived_only: "true",
+              });
+              if (search.trim()) query.set("q", search.trim());
+              const payload = await apiFetch<PaginatedResponse<GenericItem>>(`/${category.resource}?${query.toString()}`, { token });
+              return {
+                category,
+                data: (payload.data || []).map((item) => ({
+                  ...item,
+                  __trashLabel: category.label,
+                  __trashResource: category.resource,
+                })),
+                total: payload.meta?.total ?? payload.data?.length ?? 0,
+              };
+            }),
+          );
+
+          if (cancelled) return;
+          const successfulResults = results
+            .filter((result): result is PromiseFulfilledResult<{ category: TrashCategory; data: GenericItem[]; total: number }> => result.status === "fulfilled")
+            .map((result) => result.value);
+          const combinedRows = successfulResults
+            .flatMap((result) => result.data)
+            .sort((a, b) => getTimeValue(b.deleted_at) - getTimeValue(a.deleted_at));
+          const start = (page - 1) * limit;
+          setRows(combinedRows.slice(start, start + limit));
+          setTotal(successfulResults.reduce((sum, result) => sum + result.total, 0));
+          return;
+        }
+
         const query = new URLSearchParams({
           page: String(page),
           limit: String(limit),
@@ -153,7 +198,7 @@ export default function TrashPage() {
         if (search.trim()) query.set("q", search.trim());
         const payload = await apiFetch<PaginatedResponse<GenericItem>>(`/${selectedCategory.resource}?${query.toString()}`, { token });
         if (cancelled) return;
-        setRows(payload.data || []);
+        setRows((payload.data || []).map((item) => ({ ...item, __trashLabel: selectedCategory.label, __trashResource: selectedCategory.resource })));
         setTotal(payload.meta?.total ?? payload.data?.length ?? 0);
       } catch (err) {
         if (!cancelled) setError((err as Error).message || "Gagal memuat trash data.");
@@ -177,10 +222,16 @@ export default function TrashPage() {
   const someCurrentRowsSelected = rows.some((row) => selectedIds.has(row.id));
   const singlePurgeReady = purgeConfirmInput.trim().toUpperCase() === "PURGE";
   const bulkPurgeReady = bulkPurgeConfirmInput.trim().toUpperCase() === "PURGE";
+  const selectedRows = useMemo(() => rows.filter((row) => selectedIds.has(row.id)), [rows, selectedIds]);
+  const latestDeletedAt = useMemo(() => rows[0]?.deleted_at || null, [rows]);
+  const activeFilterCount = (search.trim() ? 1 : 0) + ((searchParams.get("entity_type") || searchParams.get("entity_id")) ? 1 : 0);
+  const pageStart = total === 0 ? 0 : (page - 1) * limit + 1;
+  const pageEnd = Math.min(page * limit, total);
 
   const selectAllHeader = useMemo(
     () => (
       <div className="flex items-center justify-center">
+        <span className="sr-only">Pilih</span>
         <input
           type="checkbox"
           checked={allCurrentRowsSelected}
@@ -206,8 +257,12 @@ export default function TrashPage() {
   );
 
   const headers = useMemo(
-    () => [selectAllHeader, "Identifier", "Name", "Deleted At", "Deleted By"],
+    () => [selectAllHeader, "Data", "Kategori", "Dihapus Pada", "Dihapus Oleh"],
     [selectAllHeader],
+  );
+  const columnVisibilityLabels = useMemo(
+    () => ["Pilih", "Data", "Kategori", "Dihapus Pada", "Dihapus Oleh"],
+    [],
   );
 
   const tableRows = useMemo(
@@ -230,12 +285,17 @@ export default function TrashPage() {
             className="size-4 cursor-pointer rounded border-input bg-background text-primary"
           />
         </div>,
-        getIdentifier(selectedCategory.resource, item),
-        getDisplayName(selectedCategory.resource, item),
+        <div key={`data-${item.id}`} className="min-w-0">
+          <p className="truncate font-medium">{getDisplayName(getItemResource(selectedCategory, item), item)}</p>
+          <p className="truncate text-xs text-muted-foreground">{getIdentifier(getItemResource(selectedCategory, item), item)}</p>
+        </div>,
+        <Badge key={`resource-${item.id}`} variant="outline" className="font-normal">
+          {getItemLabel(selectedCategory, item)}
+        </Badge>,
         formatDateTime(item.deleted_at),
         resolveUser(item.deleted_by_user_id, userMap),
       ]),
-    [rows, selectedIds, selectedCategory.resource, userMap],
+    [rows, selectedIds, selectedCategory, userMap],
   );
 
   async function handleRestore(item: GenericItem) {
@@ -243,7 +303,7 @@ export default function TrashPage() {
     setActionLoading(true);
     setError("");
     try {
-      await apiFetch(`/${selectedCategory.resource}/${item.id}/restore`, {
+      await apiFetch(`/${getItemResource(selectedCategory, item)}/${item.id}/restore`, {
         method: "POST",
         token,
       });
@@ -256,7 +316,7 @@ export default function TrashPage() {
       setRows((prev) => prev.filter((row) => row.id !== item.id));
       setTotal((prev) => Math.max(0, prev - 1));
       setResultDialogTitle("Restore Berhasil");
-      setResultDialogDescription(`Item ${getDisplayName(selectedCategory.resource, item)} berhasil direstore.`);
+      setResultDialogDescription(`Item ${getDisplayName(getItemResource(selectedCategory, item), item)} berhasil direstore.`);
       setResultDialogOpen(true);
     } catch (err) {
       const message = (err as Error).message || "Gagal restore data.";
@@ -279,7 +339,7 @@ export default function TrashPage() {
     try {
       await Promise.all(
         selectedRows.map((row) =>
-          apiFetch(`/${selectedCategory.resource}/${row.id}/restore`, {
+          apiFetch(`/${getItemResource(selectedCategory, row)}/${row.id}/restore`, {
             method: "POST",
             token,
           }),
@@ -308,7 +368,7 @@ export default function TrashPage() {
     setActionLoading(true);
     setError("");
     try {
-      await apiFetch(`/${selectedCategory.resource}/${item.id}/purge`, {
+      await apiFetch(`/${getItemResource(selectedCategory, item)}/${item.id}/purge`, {
         method: "POST",
         body: JSON.stringify({ confirm: "PURGE" }),
         token,
@@ -323,7 +383,7 @@ export default function TrashPage() {
       setRows((prev) => prev.filter((row) => row.id !== item.id));
       setTotal((prev) => Math.max(0, prev - 1));
       setResultDialogTitle("Purge Berhasil");
-      setResultDialogDescription(`Item ${getDisplayName(selectedCategory.resource, item)} berhasil dihapus permanen.`);
+      setResultDialogDescription(`Item ${getDisplayName(getItemResource(selectedCategory, item), item)} berhasil dihapus permanen.`);
       setResultDialogOpen(true);
     } catch (err) {
       const message = (err as Error).message || "Gagal purge permanen.";
@@ -346,7 +406,7 @@ export default function TrashPage() {
     try {
       await Promise.all(
         selectedRows.map((row) =>
-          apiFetch(`/${selectedCategory.resource}/${row.id}/purge`, {
+          apiFetch(`/${getItemResource(selectedCategory, row)}/${row.id}/purge`, {
             method: "POST",
             body: JSON.stringify({ confirm: "PURGE" }),
             token,
@@ -388,31 +448,78 @@ export default function TrashPage() {
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 pr-3">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-normal">Trash</h1>
+            <Badge variant="outline" className="font-normal">Admin Only</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Review data terarsip, restore item yang masih dibutuhkan, atau purge permanen dengan konfirmasi.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-xs uppercase text-muted-foreground">Kategori</p>
+              <p className="mt-1 text-lg font-semibold">{selectedCategory.label}</p>
+              <p className="text-xs text-muted-foreground">
+                {selectedCategory.slug === ALL_TRASH_CATEGORY.slug ? "Semua kategori trash" : selectedCategory.resource}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-xs uppercase text-muted-foreground">Total Arsip</p>
+              <p className="mt-1 text-lg font-semibold">{total}</p>
+              <p className="text-xs text-muted-foreground">{pageStart}-{pageEnd} tampil</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-xs uppercase text-muted-foreground">Item Terpilih</p>
+              <p className="mt-1 text-lg font-semibold">{selectedIds.size}</p>
+              <p className="text-xs text-muted-foreground">Terakhir: {formatDateTime(latestDeletedAt)}</p>
+            </CardContent>
+          </Card>
+        </div>
+
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <CardTitle>Trash Management</CardTitle>
-                <CardDescription>Kelola master data yang sudah di-archive dan lakukan restore cepat.</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Archive className="size-4" />
+                  Arsip Data
+                </CardTitle>
+                <CardDescription>Pilih kategori, cari item, lalu restore atau purge dari menu aksi.</CardDescription>
               </div>
-              <Badge variant="outline">Admin Only</Badge>
+              {activeFilterCount ? <Badge variant="outline">{activeFilterCount} filter aktif</Badge> : null}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-                <Combobox
-                  value={selectedCategory.slug}
-                  onValueChange={(value) => {
-                    setSelectedCategorySlug(value);
-                    setPage(1);
-                    setSelectedIds(new Set());
-                  }}
-                  options={TRASH_CATEGORIES.map((item) => ({ value: item.slug, label: item.label }))}
-                />
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[220px_1fr_160px_auto_auto]">
+              <Combobox
+                value={selectedCategory.slug}
+                onValueChange={(value) => {
+                  setSelectedCategorySlug(value);
+                  setPage(1);
+                  setSelectedIds(new Set());
+                }}
+                options={TRASH_CATEGORIES.map((item) => ({ value: item.slug, label: item.label }))}
+                placeholder="Pilih kategori"
+                searchPlaceholder="Cari kategori..."
+              />
               <Input
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Cari data terarsip..."
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    setPage(1);
+                    setSearch(searchInput.trim());
+                  }
+                }}
+                placeholder="Cari nama, ID, kode, atau UUID..."
               />
               <Combobox
                 value={String(limit)}
@@ -425,28 +532,57 @@ export default function TrashPage() {
                   { value: "20", label: "20 / halaman" },
                   { value: "50", label: "50 / halaman" },
                 ]}
+                placeholder="Rows"
               />
               <Button
+                type="button"
                 onClick={() => {
                   setPage(1);
                   setSearch(searchInput.trim());
                 }}
               >
-                Terapkan Filter
+                <Search className="mr-1 size-4" />
+                Terapkan
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSelectedCategorySlug(ALL_TRASH_CATEGORY.slug);
+                  setSearchInput("");
+                  setSearch("");
+                  setPage(1);
+                  setSelectedIds(new Set());
+                }}
+                disabled={loading}
+              >
+                <X className="mr-1 size-4" />
+                Reset
               </Button>
             </div>
-
             {(searchParams.get("entity_type") || searchParams.get("entity_id")) ? (
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>Preset filter:</span>
-                {searchParams.get("entity_type") ? <Badge variant="outline">entity: {searchParams.get("entity_type")}</Badge> : null}
-                {searchParams.get("entity_id") ? <Badge variant="outline">id: {searchParams.get("entity_id")}</Badge> : null}
-              </div>
+              <Alert>
+                <Search className="size-4" />
+                <AlertTitle>Preset dari halaman sebelumnya</AlertTitle>
+                <AlertDescription>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {searchParams.get("entity_type") ? <Badge variant="outline">entity: {searchParams.get("entity_type")}</Badge> : null}
+                    {searchParams.get("entity_id") ? <Badge variant="outline">id: {searchParams.get("entity_id")}</Badge> : null}
+                  </div>
+                </AlertDescription>
+              </Alert>
             ) : null}
 
+            <Separator />
+
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
-              <span className="text-muted-foreground">Item terpilih: {selectedIds.size}</span>
-              <div className="flex items-center gap-2">
+              <div className="space-y-0.5">
+                <p className="font-medium">Bulk Action</p>
+                <p className="text-xs text-muted-foreground">
+                  {selectedIds.size ? `${selectedIds.size} item siap diproses` : "Pilih item dari tabel untuk bulk restore atau purge."}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -455,7 +591,7 @@ export default function TrashPage() {
                   onClick={() => setBulkRestoreOpen(true)}
                 >
                   <RotateCcw className="mr-1 size-4" />
-                  Restore Selected
+                  Restore
                 </Button>
                 <Button
                   type="button"
@@ -465,23 +601,46 @@ export default function TrashPage() {
                   onClick={() => setBulkPurgeOpen(true)}
                 >
                   <Trash2 className="mr-1 size-4" />
-                  Purge Selected
+                  Purge
                 </Button>
                 <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} disabled={selectedIds.size === 0}>
-                  Clear Selection
+                  Clear
                 </Button>
               </div>
             </div>
 
+            {selectedRows.length ? (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedRows.slice(0, 4).map((row) => (
+                  <Badge key={row.id} variant="secondary" className="max-w-60 truncate font-normal">
+                    {getDisplayName(getItemResource(selectedCategory, row), row)}
+                  </Badge>
+                ))}
+                {selectedRows.length > 4 ? <Badge variant="outline">+{selectedRows.length - 4}</Badge> : null}
+              </div>
+            ) : null}
+
             {loading ? (
               <AppLoading label="Memuat data trash..." />
             ) : error ? (
-              <AppLoading label={error} />
+              <Alert variant="destructive">
+                <ShieldAlert className="size-4" />
+                <AlertTitle>Gagal memuat trash</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : rows.length === 0 ? (
+              <div className="rounded-md border border-dashed p-8 text-center">
+                <Archive className="mx-auto mb-2 size-8 text-muted-foreground" />
+                <p className="font-medium">Trash kosong untuk filter ini.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Ubah kategori atau kosongkan pencarian untuk melihat data arsip lain.</p>
+              </div>
             ) : (
               <SimpleTable
                 headers={headers}
                 rows={tableRows}
-                tableLabel="Trash Columns"
+                tableLabel="Kolom Arsip Data"
+                columnVisibilityLabel="Column"
+                columnVisibilityLabels={columnVisibilityLabels}
                 enableColumnVisibility
                 enableSorting
                 disableSortColumns={[0]}
@@ -494,7 +653,7 @@ export default function TrashPage() {
                       <ContextMenuItem
                         onSelect={() =>
                           router.push(
-                            `/audit-trail?entity_type=${encodeURIComponent(selectedCategory.resource)}&entity_id=${encodeURIComponent(row.id)}`,
+                            `/audit-trail?entity_type=${encodeURIComponent(getItemResource(selectedCategory, row))}&entity_id=${encodeURIComponent(row.id)}`,
                           )
                         }
                       >
@@ -521,14 +680,19 @@ export default function TrashPage() {
               />
             )}
 
-            <div className="flex items-center justify-end gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
-                Prev
-              </Button>
-              <span className="text-sm text-muted-foreground">Page {page}</span>
-              <Button variant="outline" size="sm" disabled={loading || page * limit >= total} onClick={() => setPage((prev) => prev + 1)}>
-                Next
-              </Button>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-muted-foreground">
+                Menampilkan {pageStart}-{pageEnd} dari {total}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
+                  Prev
+                </Button>
+                <span className="text-sm text-muted-foreground">Page {page}</span>
+                <Button variant="outline" size="sm" disabled={loading || page * limit >= total} onClick={() => setPage((prev) => prev + 1)}>
+                  Next
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -583,7 +747,7 @@ export default function TrashPage() {
           <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
             <p className="font-medium text-destructive">Aksi permanen</p>
             <p className="text-muted-foreground">
-              Item: <span className="font-medium">{purgeTarget ? getDisplayName(selectedCategory.resource, purgeTarget) : "-"}</span>
+              Item: <span className="font-medium">{purgeTarget ? getDisplayName(getItemResource(selectedCategory, purgeTarget), purgeTarget) : "-"}</span>
             </p>
           </div>
           <Input
@@ -665,6 +829,14 @@ export default function TrashPage() {
   );
 }
 
+function getItemResource(selectedCategory: TrashCategory, item: GenericItem) {
+  return item.__trashResource || selectedCategory.resource;
+}
+
+function getItemLabel(selectedCategory: TrashCategory, item: GenericItem) {
+  return item.__trashLabel || selectedCategory.label;
+}
+
 function getIdentifier(resource: string, item: GenericItem) {
   if (resource === "devices") return pick(item, ["device_id", "device_code"]);
   if (resource === "devicePorts") return pick(item, ["port_id", "port_label", "port_index"]);
@@ -716,4 +888,10 @@ function formatDateTime(value?: string | null) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function getTimeValue(value?: string | null) {
+  if (!value) return 0;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }

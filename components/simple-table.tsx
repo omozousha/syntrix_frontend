@@ -40,6 +40,8 @@ export function SimpleTable({
   disableSortColumns = [],
   enableColumnVisibility = false,
   tableLabel = "Table",
+  columnVisibilityLabel = "Columns",
+  columnVisibilityLabels,
 }: {
   headers: ReactNode[];
   rows: CellValue[][];
@@ -51,6 +53,8 @@ export function SimpleTable({
   disableSortColumns?: number[];
   enableColumnVisibility?: boolean;
   tableLabel?: string;
+  columnVisibilityLabel?: string;
+  columnVisibilityLabels?: string[];
 }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({});
@@ -104,7 +108,7 @@ export function SimpleTable({
             <DropdownMenuTrigger asChild>
               <Button type="button" variant="outline" size="sm" className="gap-2">
                 <SlidersHorizontal className="size-4" />
-                Columns
+                {columnVisibilityLabel}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
@@ -119,7 +123,7 @@ export function SimpleTable({
                     checked={column.getIsVisible()}
                     onCheckedChange={(value) => column.toggleVisibility(!!value)}
                   >
-                    {getHeaderLabel(column.columnDef.header, column.id)}
+                    {getHeaderLabel(column.columnDef.header, column.id, columnVisibilityLabels)}
                   </DropdownMenuCheckboxItem>
                 ))}
             </DropdownMenuContent>
@@ -236,7 +240,9 @@ function extractText(node: ReactNode): string {
   return "";
 }
 
-function getHeaderLabel(header: unknown, fallbackId: string) {
+function getHeaderLabel(header: unknown, fallbackId: string, columnVisibilityLabels?: string[]) {
+  const columnIndex = Number(fallbackId.replace(/^col_/, ""));
+  if (Number.isInteger(columnIndex) && columnVisibilityLabels?.[columnIndex]) return columnVisibilityLabels[columnIndex];
   if (typeof header === "string" && header.trim()) return header;
   if (typeof header === "number") return String(header);
   const fromNode = extractText(header as ReactNode).trim();
