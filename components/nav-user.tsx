@@ -211,9 +211,10 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
         if (newlyArrived.length) {
           const latest = newlyArrived[0];
           const urgentLabel = latest.urgent ? " (URGENT)" : "";
-          const showToast = latest.urgent ? toast.warning : toast.success;
-          showToast(`Ada request approval baru${urgentLabel}`, {
-            description: `${latest.request_id || latest.id} masuk ke ${notificationQueueLabel}.`,
+          const statusMeta = getNotificationStatusMeta(latest.current_status);
+          const showToast = statusMeta.variant === "warning" || latest.urgent ? toast.warning : toast.success;
+          showToast(`${statusMeta.title}${urgentLabel}`, {
+            description: `${latest.request_id || latest.id} ${statusMeta.description} ${notificationQueueLabel}.`,
             action: {
               label: "Buka",
               onClick: () => router.push("/requests"),
@@ -335,7 +336,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
                   <span className="text-muted-foreground">Memuat ringkasan...</span>
                 ) : (
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                    <span>Pending: {digest?.pending_total ?? 0}</span>
+                    <span>Inbox: {digest?.pending_total ?? 0}</span>
                     <span>Unread: {digest?.unread_total ?? 0}</span>
                     <span>Urgent: {digest?.urgent_total ?? 0}</span>
                     <span>Update: {digest?.updated_in_window ?? 0}</span>
@@ -382,7 +383,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
                     );
                   })
                 ) : (
-                  <p className="px-2 py-1 text-xs text-muted-foreground">Belum ada request pending.</p>
+                  <p className="px-2 py-1 text-xs text-muted-foreground">Belum ada notifikasi request.</p>
                 )}
               </div>
             </ScrollArea>
@@ -476,6 +477,35 @@ function getNotificationRequestType(item: ValidationRequestNotificationItem) {
     return `${getOperationLabel(item.payload_snapshot?.operation)} ${item.payload_snapshot?.resource_label || "Asset"}`;
   }
   return "Field Validation";
+}
+
+function getNotificationStatusMeta(status?: string | null) {
+  if (status === "validated") {
+    return {
+      title: "Request di-approve superadmin",
+      description: "sudah selesai di",
+      variant: "success" as const,
+    };
+  }
+  if (status === "rejected_by_superadmin") {
+    return {
+      title: "Request di-reject superadmin",
+      description: "perlu ditinjau dari",
+      variant: "warning" as const,
+    };
+  }
+  if (status === "ongoing_validated") {
+    return {
+      title: "Ada hasil validasi baru",
+      description: "masuk ke",
+      variant: "success" as const,
+    };
+  }
+  return {
+    title: "Ada request approval baru",
+    description: "masuk ke",
+    variant: "success" as const,
+  };
 }
 
 function getOperationLabel(operation?: string | null) {
