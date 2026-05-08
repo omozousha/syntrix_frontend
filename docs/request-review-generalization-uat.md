@@ -1,6 +1,6 @@
 # Request Review Generalization UAT
 
-Gunakan akun di `docs/account-credentials.md`. Pastikan migration backend terbaru sudah dijalankan sebelum mulai.
+Gunakan akun di `docs/account-credentials.md`. Jalankan preflight di `docs/request-review-generalization-preflight.md` dan pastikan migration backend terbaru sudah dijalankan sebelum mulai.
 
 ## TC-RQ-1 - Adminregion Create ODP
 

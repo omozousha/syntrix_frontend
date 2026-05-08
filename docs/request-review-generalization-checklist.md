@@ -34,6 +34,7 @@ Tujuan: menjadikan halaman request sebagai pusat approval semua perubahan aset, 
 
 - [x] UAT checklist dibuat di `docs/request-review-generalization-uat.md`.
 - [x] UAT execution log dibuat di `docs/request-review-generalization-uat-execution-log.md`.
+- [x] Preflight checklist dibuat di `docs/request-review-generalization-preflight.md`.
 - [ ] TC-RQ-1 adminregion create ODP, superadmin menerima notifikasi, request tampil jelas, approve, asset muncul.
 - [ ] TC-RQ-2 validator submit validasi, adminregion review, superadmin final approve, status menjadi validated.
 - [ ] TC-RQ-3 reject wajib note dan kembali ke role sebelumnya.

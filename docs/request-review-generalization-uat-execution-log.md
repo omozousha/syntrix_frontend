@@ -8,7 +8,9 @@ Status awal: code complete, pushed, menunggu migration backend dan UAT manual.
 
 - [x] Frontend lint untuk halaman request, create/list data management, validator field ODP, nav/sidebar.
 - [x] Backend syntax check untuk resource controller, validation controller, validation service.
+- [x] Preflight checklist tersedia di `docs/request-review-generalization-preflight.md`.
 - [ ] Migration backend `20260507_generalize_validation_requests_entity.sql` sudah dijalankan di database target.
+- [ ] Preflight SQL constraint check sudah sesuai expected result.
 
 ## Execution Matrix
 
@@ -31,5 +33,5 @@ Status awal: code complete, pushed, menunggu migration backend dan UAT manual.
 ## Known Preconditions
 
 - Backend deployment harus sudah berisi commit `68f7727`.
-- Frontend deployment harus sudah berisi commit `cddab04`.
+- Frontend deployment harus sudah berisi commit `c55bf5f`.
 - Database target harus menjalankan migration `20260507_generalize_validation_requests_entity.sql`.
