@@ -60,6 +60,12 @@ type SplitterProfileOption = {
   output_port_count?: number | null;
   is_active?: boolean | null;
 };
+type ApprovalResponse = {
+  approval_request?: {
+    request_id?: string | null;
+    id?: string | null;
+  } | null;
+};
 
 type CustomFieldDefinition = {
   id: string;
@@ -202,6 +208,8 @@ export default function CreateDataManagementPage() {
     () => new Set((me.app_user.user_region_scopes || []).map((scope) => scope.region_id)),
     [me.app_user.user_region_scopes],
   );
+  const isFixedRegionRole = me.role === "user_all_region" || me.role === "user_region";
+  const selectedRegionLabel = regions.find((region) => region.id === form.region_id)?.region_name || "-";
 
   useEffect(() => {
     let cancelled = false;
@@ -224,7 +232,7 @@ export default function CreateDataManagementPage() {
         if (cancelled) return;
 
         let nextRegions = regionsRes.data || [];
-        if (me.role === "user_region") {
+        if (me.role === "user_region" || me.role === "user_all_region") {
           nextRegions = nextRegions.filter((region) => scopeRegionIds.has(region.id));
         }
 
@@ -490,11 +498,17 @@ export default function CreateDataManagementPage() {
           };
         }
 
-        await apiFetch("/pops", {
+        const createdPop = await apiFetch<{ data?: ApprovalResponse }>("/pops", {
           method: "POST",
           token,
           body: JSON.stringify(payload),
         });
+
+        if (createdPop.data?.approval_request) {
+          const requestId = getApprovalRequestId(createdPop.data);
+          setSuccessMessage(`POP berhasil dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+          return;
+        }
 
         setSuccessMessage("POP berhasil dibuat.");
         router.push(buildListTarget("/data-management/list/pop", form.region_id));
@@ -518,11 +532,17 @@ export default function CreateDataManagementPage() {
           custom_fields: {},
         };
 
-        await apiFetch("/routes", {
+        const createdRoute = await apiFetch<{ data?: ApprovalResponse }>("/routes", {
           method: "POST",
           token,
           body: JSON.stringify(payload),
         });
+
+        if (createdRoute.data?.approval_request) {
+          const requestId = getApprovalRequestId(createdRoute.data);
+          setSuccessMessage(`Route berhasil dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+          return;
+        }
 
         setSuccessMessage("Route berhasil dibuat.");
         router.push(buildListTarget("/data-management/list/route", form.region_id));
@@ -599,11 +619,17 @@ export default function CreateDataManagementPage() {
           };
         }
 
-        await apiFetch("/projects", {
+        const createdProject = await apiFetch<{ data?: ApprovalResponse }>("/projects", {
           method: "POST",
           token,
           body: JSON.stringify(payload),
         });
+
+        if (createdProject.data?.approval_request) {
+          const requestId = getApprovalRequestId(createdProject.data);
+          setSuccessMessage(`Project berhasil dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+          return;
+        }
 
         setSuccessMessage("Project berhasil dibuat.");
         router.push(buildListTarget("/data-management/list/projects", form.region_id));
@@ -705,14 +731,14 @@ export default function CreateDataManagementPage() {
         payload.splitter_ratio = nullIfEmpty(form.splitter_ratio);
       }
 
-      const createdDevice = await apiFetch<{ data?: { approval_request?: { request_id?: string | null; id?: string | null } } }>("/devices", {
+      const createdDevice = await apiFetch<{ data?: ApprovalResponse }>("/devices", {
         method: "POST",
         token,
         body: JSON.stringify(payload),
       });
 
       if (createdDevice.data?.approval_request) {
-        const requestId = createdDevice.data.approval_request.request_id || createdDevice.data.approval_request.id || "";
+        const requestId = getApprovalRequestId(createdDevice.data);
         setSuccessMessage(`Device berhasil dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
         return;
       }
@@ -962,20 +988,24 @@ export default function CreateDataManagementPage() {
             ) : null}
 
             <div className="space-y-1.5">
-              <FieldLabel label="Region" tooltip="Region wajib dipilih. Untuk user regional, hanya region yang diizinkan yang ditampilkan." />
-              <Combobox
-                value={form.region_id || "__none__"}
-                onValueChange={(v) => setForm((p) => ({ ...p, region_id: v === "__none__" ? "" : v }))}
-                options={toOptions([
-                  { value: "__none__", label: "Pilih region" },
-                  ...regions.map((region) => ({
-                    value: region.id,
-                    label: region.region_name,
-                  })),
-                ])}
-                placeholder="Pilih region"
-                searchPlaceholder="Cari region..."
-              />
+              <FieldLabel label="Region" tooltip={isFixedRegionRole ? "Region terkunci mengikuti scope akun." : "Region wajib dipilih."} />
+              {isFixedRegionRole ? (
+                <Input value={selectedRegionLabel} disabled />
+              ) : (
+                <Combobox
+                  value={form.region_id || "__none__"}
+                  onValueChange={(v) => setForm((p) => ({ ...p, region_id: v === "__none__" ? "" : v }))}
+                  options={toOptions([
+                    { value: "__none__", label: "Pilih region" },
+                    ...regions.map((region) => ({
+                      value: region.id,
+                      label: region.region_name,
+                    })),
+                  ])}
+                  placeholder="Pilih region"
+                  searchPlaceholder="Cari region..."
+                />
+              )}
             </div>
 
             <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
@@ -1872,6 +1902,10 @@ function numberOrNull(value: string) {
   if (!value.trim()) return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function getApprovalRequestId(value?: ApprovalResponse | null) {
+  return value?.approval_request?.request_id || value?.approval_request?.id || "";
 }
 
 function validateCoordinateFormat(value: string, kind: "longitude" | "latitude") {

@@ -403,17 +403,17 @@ export default function OdpFieldValidationPage() {
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="w-full space-y-4 px-3 pb-3 md:px-4 md:pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <Button asChild variant="outline" size="sm">
+        <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+            <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
               <Link href={`/data-management/list/odp/${device.id}`}>
                 <ArrowLeft className="mr-2 size-4" />
                 Detail ODP
               </Link>
             </Button>
-            <Badge variant="outline">QR Scan Result</Badge>
+            <Badge variant="outline" className="w-fit">QR Scan Result</Badge>
           </div>
-          <Button type="button" variant="ghost" size="sm" onClick={() => location.reload()}>
+          <Button type="button" variant="ghost" size="sm" onClick={() => location.reload()} className="w-full sm:w-auto">
             <RefreshCw className="mr-2 size-4" />
             Refresh
           </Button>
@@ -437,7 +437,7 @@ export default function OdpFieldValidationPage() {
                   <CardDescription className="break-all">{device.device_id || device.id}</CardDescription>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:min-w-[520px]">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:min-w-[520px] lg:grid-cols-5">
                 <Metric label="Total" value={summary.total} />
                 <Metric label="Used" value={summary.used} />
                 <Metric label="Idle" value={summary.idle} />
@@ -786,7 +786,7 @@ export default function OdpFieldValidationPage() {
                   disabled={submitting}
                   onChange={(event) => setDraft((prev) => ({ ...prev, evidenceFile: event.target.files?.[0] || null }))}
                 />
-                <Button type="button" onClick={() => void submitValidation()} disabled={submitting} className="w-full">
+                <Button type="button" onClick={() => void submitValidation()} disabled={submitting} className="h-11 w-full sm:h-10">
                   {submitting ? <RefreshCw className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
                   Submit Validasi
                 </Button>
@@ -926,9 +926,9 @@ export default function OdpFieldValidationPage() {
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md border bg-muted/30 p-3">
+    <div className="rounded-md border bg-muted/30 p-2 sm:p-3">
       <p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
-      <p className="text-2xl font-semibold">{value}</p>
+      <p className="text-xl font-semibold sm:text-2xl">{value}</p>
     </div>
   );
 }

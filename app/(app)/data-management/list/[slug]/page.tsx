@@ -67,6 +67,12 @@ type GenericItem = Record<string, unknown> & {
 };
 
 type LookupOption = { id: string; label: string };
+type ApprovalResponse = {
+  approval_request?: {
+    request_id?: string | null;
+    id?: string | null;
+  } | null;
+};
 type RelationMaps = {
   manufacturers: Record<string, string>;
   brands: Record<string, string>;
@@ -123,6 +129,7 @@ export default function DataManagementListPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [refreshSeed, setRefreshSeed] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [renameTarget, setRenameTarget] = useState<GenericItem | null>(null);
@@ -632,8 +639,9 @@ export default function DataManagementListPage() {
 
     setActionLoading(true);
     setError("");
+    setSuccess("");
     try {
-      await apiFetch(`/${category.resource}/${renameTarget.id}`, {
+      const result = await apiFetch<{ data?: ApprovalResponse }>(`/${category.resource}/${renameTarget.id}`, {
         method: "PATCH",
         token,
         body: JSON.stringify({
@@ -641,7 +649,12 @@ export default function DataManagementListPage() {
         }),
       });
       setRenameTarget(null);
-      setRefreshSeed((prev) => prev + 1);
+      if (result.data?.approval_request) {
+        const requestId = getApprovalRequestId(result.data);
+        setSuccess(`${category.label} rename dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+      } else {
+        setRefreshSeed((prev) => prev + 1);
+      }
     } catch (err) {
       setError((err as Error).message || "Gagal melakukan rename.");
     } finally {
@@ -654,13 +667,19 @@ export default function DataManagementListPage() {
 
     setActionLoading(true);
     setError("");
+    setSuccess("");
     try {
-      await apiFetch(`/${category.resource}/${deleteTarget.id}`, {
+      const result = await apiFetch<{ data?: ApprovalResponse }>(`/${category.resource}/${deleteTarget.id}`, {
         method: "DELETE",
         token,
       });
       setDeleteTarget(null);
-      setRefreshSeed((prev) => prev + 1);
+      if (result.data?.approval_request) {
+        const requestId = getApprovalRequestId(result.data);
+        setSuccess(`${category.label} ${isSoftDeleteResource ? "archive" : "delete"} dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+      } else {
+        setRefreshSeed((prev) => prev + 1);
+      }
     } catch (err) {
       setError((err as Error).message || "Gagal menghapus data.");
     } finally {
@@ -686,14 +705,20 @@ export default function DataManagementListPage() {
     }
 
     setActionLoading(true);
+    setSuccess("");
     try {
-      await apiFetch(`/${category.resource}/${quickEditTarget.id}`, {
+      const result = await apiFetch<{ data?: ApprovalResponse }>(`/${category.resource}/${quickEditTarget.id}`, {
         method: "PATCH",
         token,
         body: JSON.stringify(payload),
       });
       setQuickEditTarget(null);
-      setRefreshSeed((prev) => prev + 1);
+      if (result.data?.approval_request) {
+        const requestId = getApprovalRequestId(result.data);
+        setSuccess(`${category.label} update dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+      } else {
+        setRefreshSeed((prev) => prev + 1);
+      }
     } catch (err) {
       setQuickEditError((err as Error).message || "Gagal memperbarui data.");
     } finally {
@@ -959,6 +984,10 @@ export default function DataManagementListPage() {
                 Terapkan Filter
               </Button>
             </div>
+
+            {success ? (
+              <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-700">{success}</p>
+            ) : null}
 
             {loading ? (
               <AppLoading label="Sedang memuat data list..." />
@@ -1992,6 +2021,10 @@ function getRenameConfig(resource: string) {
   if (resource === "provinces") return { field: "province_name", label: "nama provinsi" };
   if (resource === "cities") return { field: "city_name", label: "nama kota/kabupaten" };
   return null;
+}
+
+function getApprovalRequestId(value?: ApprovalResponse | null) {
+  return value?.approval_request?.request_id || value?.approval_request?.id || "";
 }
 
 function canWriteResource(role: string, resource: string) {

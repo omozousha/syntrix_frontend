@@ -880,7 +880,7 @@ export default function DataManagementPage() {
                           {isAdminRegion ? (
                             <>
                               <Button asChild variant="outline" size="sm" className="justify-between">
-                                <Link href="/validation-requests">
+                                <Link href="/requests">
                                   <span>Approval Queue</span>
                                   <span>Open</span>
                                 </Link>

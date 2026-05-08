@@ -92,6 +92,7 @@ export function ProtectedLayoutClient({ children }: { children: React.ReactNode 
       const validatorBlockedPaths = [
         "/dashboard",
         "/validation-requests",
+        "/requests",
         "/data-management/as-built",
         "/data-management/as-built-documents",
         "/data-management/create",

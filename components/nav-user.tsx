@@ -31,6 +31,12 @@ type ValidationRequestNotificationItem = {
   request_id?: string | null;
   current_status?: string | null;
   region_id?: string | null;
+  payload_snapshot?: {
+    source?: string | null;
+    operation?: string | null;
+    resource_label?: string | null;
+    device?: Record<string, unknown> | null;
+  } | null;
   updated_at?: string | null;
   unread?: boolean;
   urgent?: boolean;
@@ -210,7 +216,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
             description: `${latest.request_id || latest.id} masuk ke ${notificationQueueLabel}.`,
             action: {
               label: "Buka",
-              onClick: () => router.push("/validation-requests"),
+              onClick: () => router.push("/requests"),
             },
           });
         }
@@ -351,15 +357,19 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
                 ) : notifications.length ? (
                   notifications.map((item) => {
                     const mappedStatus = mapValidationStatus(item.current_status);
+                    const requestType = getNotificationRequestType(item);
                     return (
                       <DropdownMenuItem
                         key={item.id}
                         className={`flex cursor-pointer flex-col items-start gap-0.5 ${item.unread ? "bg-primary/5" : ""}`}
                         onClick={() => {
                           void markOneAsRead(item.id);
-                          router.push("/validation-requests");
+                          router.push("/requests");
                         }}
                       >
+                        <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">
+                          {requestType}
+                        </Badge>
                         <span className="text-xs font-medium">
                           {item.request_id || item.id} {item.unread ? <span className="text-primary">•</span> : null}
                           {item.urgent ? <span className="ml-1 text-amber-600">URGENT</span> : null}
@@ -377,7 +387,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
               </div>
             </ScrollArea>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/validation-requests")}>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/requests")}>
               Buka halaman Requests
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -453,6 +463,26 @@ function formatAge(ageMinutes: number) {
   const days = Math.floor(hours / 24);
   const remHours = hours % 24;
   return `${days}h ${remHours}j`;
+}
+
+function getNotificationRequestType(item: ValidationRequestNotificationItem) {
+  const source = String(item.payload_snapshot?.source || "").trim();
+  if (source === "adminregion-create-device") return "Create Device";
+  if (
+    source === "adminregion-create-resource" ||
+    source === "adminregion-update-resource" ||
+    source === "adminregion-archive-resource"
+  ) {
+    return `${getOperationLabel(item.payload_snapshot?.operation)} ${item.payload_snapshot?.resource_label || "Asset"}`;
+  }
+  return "Field Validation";
+}
+
+function getOperationLabel(operation?: string | null) {
+  if (operation === "update") return "Update";
+  if (operation === "archive") return "Archive";
+  if (operation === "delete") return "Delete";
+  return "Create";
 }
 
 function getInitials(fullName: string) {

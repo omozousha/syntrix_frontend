@@ -33,7 +33,15 @@ type ValidationRequestItem = {
   current_status?: RequestStatus | null;
   payload_snapshot?: {
     source?: string;
+    operation?: string;
+    resource_name?: string;
+    resource_label?: string;
+    resource_payload?: Record<string, unknown>;
+    before?: Record<string, unknown>;
     device?: Record<string, unknown>;
+    pop?: Record<string, unknown>;
+    route?: Record<string, unknown>;
+    project?: Record<string, unknown>;
     device_ports?: Array<Record<string, unknown>>;
   } | null;
   evidence_attachments?: Array<{ id?: string; attachment_id?: string; name?: string } | string> | null;
@@ -333,6 +341,36 @@ export default function ValidationRequestsPage() {
                       <Info title="Updated" value={formatDateTime(selected.updated_at)} />
                     </div>
 
+                    {selectedType.kind === "asset_change" ? (
+                      <div className="rounded-md border p-3">
+                        <div className="mb-3">
+                          <p className="text-sm font-medium">{selectedType.operationLabel} {selectedType.resourceLabel}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Review perubahan yang diajukan adminregion sebelum masuk Asset Overview.
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                          {getCreateAssetReviewFields(selected).map((field) => (
+                            <Info key={field.title} title={field.title} value={field.value} />
+                          ))}
+                        </div>
+                        {selected.payload_snapshot?.operation === "update" ? (
+                          <div className="mt-3 rounded-md border bg-muted/20 p-2">
+                            <p className="mb-2 text-xs font-medium text-muted-foreground">Perubahan Field</p>
+                            <div className="space-y-1">
+                              {getUpdateDiffFields(selected).map((field) => (
+                                <div key={field.key} className="grid grid-cols-1 gap-1 rounded border bg-background p-2 text-xs sm:grid-cols-[160px_1fr_1fr]">
+                                  <span className="font-medium">{field.key}</span>
+                                  <span className="text-muted-foreground">Sebelum: {field.before}</span>
+                                  <span>Sesudah: {field.after}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
                     {!isAdminRegionView ? (
                       <div className="flex flex-wrap gap-2">
                         <Button asChild type="button" size="sm" variant="outline">
@@ -384,7 +422,7 @@ export default function ValidationRequestsPage() {
                     <details className="min-w-0 rounded-md border p-3">
                       <summary className="cursor-pointer text-sm font-medium">Lihat Data Teknis (raw)</summary>
                       <p className="mb-2 mt-3 text-sm font-medium">Snapshot Device</p>
-                      <pre className="max-h-48 overflow-auto rounded bg-muted/40 p-2 text-xs">{JSON.stringify(selected.payload_snapshot?.device || {}, null, 2)}</pre>
+                      <pre className="max-h-48 overflow-auto rounded bg-muted/40 p-2 text-xs">{JSON.stringify(getCreateAssetPayload(selected), null, 2)}</pre>
                       <p className="mb-2 mt-3 text-sm font-medium">Snapshot Ports</p>
                       <pre className="max-h-48 overflow-auto rounded bg-muted/40 p-2 text-xs">{JSON.stringify(selected.payload_snapshot?.device_ports || [], null, 2)}</pre>
                     </details>
@@ -595,24 +633,42 @@ function Info({ title, value }: { title: string; value: string }) {
 
 function getOdpName(item: ValidationRequestItem | null) {
   if (!item) return "-";
-  const device = item.payload_snapshot?.device || {};
-  const name = String((device.device_name as string) || "").trim();
+  const payload = getCreateAssetPayload(item);
+  const name = String(
+    payload.device_name ||
+      payload.pop_name ||
+      payload.route_name ||
+      payload.project_name ||
+      "",
+  ).trim();
   if (name) return name;
   return item.request_id || "-";
 }
 
 function getRequestType(item: ValidationRequestItem | null) {
   const source = String(item?.payload_snapshot?.source || "").trim();
-  if (source === "adminregion-create-device") {
+  if (
+    source === "adminregion-create-device" ||
+    source === "adminregion-create-resource" ||
+    source === "adminregion-update-resource" ||
+    source === "adminregion-archive-resource"
+  ) {
+    const resourceLabel = valueText(item?.payload_snapshot?.resource_label || "Device");
+    const operation = String(item?.payload_snapshot?.operation || "create").trim();
+    const operationLabel = getOperationLabel(operation);
     return {
-      kind: "create_device" as const,
-      label: "Create Device Request",
-      description: "Review device baru dari adminregion sebelum masuk Asset Overview.",
+      kind: "asset_change" as const,
+      resourceLabel,
+      operationLabel,
+      label: `${operationLabel} ${resourceLabel} Request`,
+      description: `Review ${operationLabel.toLowerCase()} ${resourceLabel.toLowerCase()} dari adminregion sebelum masuk Asset Overview.`,
     };
   }
 
   return {
     kind: "field_validation" as const,
+    resourceLabel: "Device",
+    operationLabel: "Validation",
     label: "Field Validation Request",
     description: "Review hasil validasi lapangan, checklist, evidence, lalu approve/reject.",
   };
@@ -620,14 +676,111 @@ function getRequestType(item: ValidationRequestItem | null) {
 
 function getRequestSummary(item: ValidationRequestItem) {
   const requestType = getRequestType(item);
-  if (requestType.kind === "create_device") {
-    const device = item.payload_snapshot?.device || {};
-    const totalPorts = device.total_ports ?? "-";
-    const status = device.status ?? "-";
-    return `Status ${status} | Total port ${totalPorts}`;
+  if (requestType.kind === "asset_change") {
+    const payload = getCreateAssetPayload(item);
+    return `${requestType.operationLabel} ${requestType.resourceLabel} | Status ${valueText(payload.status || payload.status_pop)} | Region ${valueText(payload.region_id || item.region_id)}`;
   }
 
   return `${getChecklistSummary(item.checklist)} | ${getPortSummary(item.payload_snapshot?.device_ports || [])}`;
+}
+
+function getCreateAssetReviewFields(item: ValidationRequestItem) {
+  const payload = getCreateAssetPayload(item);
+  const resourceName = String(item.payload_snapshot?.resource_name || "").trim();
+  const common = [
+    { title: "Region", value: valueText(payload.region_name || payload.region_id || item.region_id) },
+    { title: "POP", value: valueText(payload.pop_name || payload.pop_id) },
+    { title: "Status", value: valueText(payload.status || payload.status_pop) },
+  ];
+
+  if (resourceName === "pops" || item.payload_snapshot?.pop) {
+    return [
+      { title: "POP Name", value: valueText(payload.pop_name) },
+      { title: "POP Code", value: valueText(payload.pop_code) },
+      ...common,
+      { title: "POP Type", value: valueText(payload.pop_type) },
+      { title: "Longitude", value: valueText(payload.longitude) },
+      { title: "Latitude", value: valueText(payload.latitude) },
+      { title: "Address", value: valueText(payload.address) },
+    ];
+  }
+
+  if (resourceName === "routes" || item.payload_snapshot?.route) {
+    return [
+      { title: "Route Name", value: valueText(payload.route_name) },
+      { title: "Route Type", value: valueText(payload.route_type) },
+      ...common,
+      { title: "Project", value: valueText(payload.project_id) },
+      { title: "Distance", value: valueText(payload.distance_meters) },
+    ];
+  }
+
+  if (resourceName === "projects" || item.payload_snapshot?.project) {
+    return [
+      { title: "Project Name", value: valueText(payload.project_name) },
+      ...common,
+      { title: "Vendor", value: valueText(payload.vendor_name) },
+      { title: "BAST", value: valueText(payload.bast_number) },
+      { title: "SPK", value: valueText(payload.spk_number) },
+      { title: "Start Date", value: valueText(payload.start_date) },
+      { title: "End Date", value: valueText(payload.end_date) },
+      { title: "Budget", value: valueText(payload.budget_value) },
+    ];
+  }
+
+  return [
+    { title: "Device Type", value: valueText(payload.device_type_key) },
+    { title: "Device Name", value: valueText(payload.device_name) },
+    ...common,
+    { title: "Project", value: valueText(payload.project_id) },
+    { title: "Total Port", value: valueText(payload.total_ports) },
+    { title: "Used Port", value: valueText(payload.used_ports) },
+    { title: "Splitter Ratio", value: valueText(payload.splitter_ratio) },
+    { title: "Serial Number", value: valueText(payload.serial_number) },
+    { title: "Longitude", value: valueText(payload.longitude) },
+    { title: "Latitude", value: valueText(payload.latitude) },
+    { title: "Address", value: valueText(payload.address) },
+  ];
+}
+
+function getCreateAssetPayload(item: ValidationRequestItem) {
+  return (
+    nonEmptyObject(item.payload_snapshot?.resource_payload) ||
+    item.payload_snapshot?.device ||
+    item.payload_snapshot?.pop ||
+    item.payload_snapshot?.route ||
+    item.payload_snapshot?.project ||
+    item.payload_snapshot?.before ||
+    {}
+  );
+}
+
+function getUpdateDiffFields(item: ValidationRequestItem) {
+  const changes = item.payload_snapshot?.resource_payload || {};
+  const before = item.payload_snapshot?.before || {};
+  return Object.entries(changes).map(([key, after]) => ({
+    key,
+    before: valueText(before[key]),
+    after: valueText(after),
+  }));
+}
+
+function nonEmptyObject(value?: Record<string, unknown>) {
+  if (!value || !Object.keys(value).length) return null;
+  return value;
+}
+
+function getOperationLabel(operation: string) {
+  if (operation === "update") return "Update";
+  if (operation === "archive") return "Archive";
+  if (operation === "delete") return "Delete";
+  return "Create";
+}
+
+function valueText(value: unknown) {
+  if (value === null || value === undefined || value === "") return "-";
+  if (typeof value === "boolean") return value ? "Ya" : "Tidak";
+  return String(value);
 }
 
 function getChecklistSummary(checklist?: Record<string, boolean> | null) {
