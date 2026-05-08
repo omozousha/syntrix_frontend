@@ -78,6 +78,7 @@ export default function ValidationRequestsPage() {
   const [success, setSuccess] = useState("");
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
+  const [rejectError, setRejectError] = useState("");
   const [resultDialogOpen, setResultDialogOpen] = useState(false);
   const [resultDialogTitle, setResultDialogTitle] = useState("");
   const [resultDialogDescription, setResultDialogDescription] = useState("");
@@ -179,12 +180,13 @@ export default function ValidationRequestsPage() {
     if (!selected) return;
     const note = rejectNote.trim();
     if (note.length < 10) {
-      setError("Catatan reject minimal 10 karakter.");
+      setRejectError("Catatan reject minimal 10 karakter.");
       return;
     }
     setActing(true);
     setError("");
     setSuccess("");
+    setRejectError("");
     try {
       const path =
         activeQueue === "adminregion"
@@ -202,9 +204,7 @@ export default function ValidationRequestsPage() {
     } catch (err) {
       const message = (err as Error).message || "Reject gagal.";
       setError(message);
-      setResultDialogTitle("Reject Gagal");
-      setResultDialogDescription(message);
-      setResultDialogOpen(true);
+      setRejectError(message);
     } finally {
       setActing(false);
     }
@@ -496,7 +496,16 @@ export default function ValidationRequestsPage() {
           </div>
         ) : null}
 
-        <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <AlertDialog
+          open={rejectDialogOpen}
+          onOpenChange={(open) => {
+            if (acting) return;
+            setRejectDialogOpen(open);
+            if (!open) {
+              setRejectError("");
+            }
+          }}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Reject Request</AlertDialogTitle>
@@ -504,17 +513,25 @@ export default function ValidationRequestsPage() {
             </AlertDialogHeader>
             <textarea
               value={rejectNote}
-              onChange={(event) => setRejectNote(event.target.value)}
+              onChange={(event) => {
+                setRejectNote(event.target.value);
+                if (rejectError) setRejectError("");
+              }}
               placeholder="Tulis alasan reject..."
               className="min-h-24 w-full rounded-md border bg-background p-2 text-sm outline-none ring-0"
             />
+            {rejectError ? (
+              <p className="rounded-md border border-destructive/20 bg-destructive/5 p-2 text-sm text-destructive">
+                {rejectError}
+              </p>
+            ) : null}
             <AlertDialogFooter>
               <Button type="button" variant="outline" onClick={() => setRejectDialogOpen(false)} disabled={acting}>
                 Batal
               </Button>
-              <AlertDialogAction onClick={() => void rejectSelected()} disabled={acting}>
-                Submit Reject
-              </AlertDialogAction>
+              <Button type="button" variant="destructive" onClick={() => void rejectSelected()} disabled={acting}>
+                {acting ? "Memproses..." : "Submit Reject"}
+              </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

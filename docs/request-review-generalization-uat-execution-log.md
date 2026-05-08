@@ -18,7 +18,7 @@ Status awal: code complete, pushed, menunggu migration backend dan UAT manual.
 | --- | --- | --- | --- | --- |
 | TC-RQ-1 | Adminregion create ODP -> superadmin approve -> asset muncul | Not Run | - | 2026-05-08: ditemukan submit create tidak memberi dialog/redirect dan bisa membuat request duplikat; frontend dikunci dengan approval success dialog, backend mengembalikan request aktif yang sama untuk retry create. |
 | TC-RQ-2 | Validator submit validasi -> adminregion approve -> superadmin approve | Not Run | - | Pastikan dialog sukses refresh halaman. |
-| TC-RQ-3 | Reject wajib note | Not Run | - | Uji adminregion dan superadmin. |
+| TC-RQ-3 | Reject wajib note | Not Run | - | 2026-05-08: ditemukan reject superadmin tidak memberi response jelas; dialog reject sudah dibuat menampilkan error inline dan hanya tertutup setelah reject sukses. |
 | TC-RQ-4 | Adminregion create POP/Route/Project request | Not Run | - | Pastikan muncul setelah superadmin approve. |
 | TC-RQ-5 | Adminregion update/archive request | Not Run | - | Pastikan diff tampil sebelum approve. |
 | TC-RQ-6 | Role UI | Not Run | - | Validator mobile, adminregion scope, superadmin queue. |
