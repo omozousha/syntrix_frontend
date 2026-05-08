@@ -1247,19 +1247,13 @@ export default function CreateDataManagementPage() {
                   value={form.pln_wattage}
                   onChange={(v) => setForm((p) => ({ ...p, pln_wattage: v }))}
                 />
-                <Field
-                  label="POP Type (text fallback)"
-                  value={form.pop_type}
-                  onChange={(v) => setForm((p) => ({ ...p, pop_type: v }))}
-                  placeholder="opsional jika belum ada di master"
-                />
                 <div className="space-y-1.5">
-                  <FieldLabel label="POP Type (Master)" tooltip="Pilih dari master POP types. Nama akan otomatis mengisi field pop_type." />
+                  <FieldLabel label="POP Type" tooltip="Pilih dari master POP Types. Kelola opsinya di Tata Kelola Master Data." />
                   <Combobox
                     value={form.pop_type_id || "__none__"}
                     onValueChange={(value) => {
                       if (value === "__none__") {
-                        setForm((p) => ({ ...p, pop_type_id: "" }));
+                        setForm((p) => ({ ...p, pop_type_id: "", pop_type: "" }));
                         return;
                       }
                       const selected = popTypes.find((item) => item.id === value);
@@ -1273,7 +1267,7 @@ export default function CreateDataManagementPage() {
                       { value: "__none__", label: "None" },
                       ...popTypes.map((item) => ({
                         value: item.id,
-                        label: item.pop_type_name,
+                        label: item.pop_type_code ? `${item.pop_type_name} (${item.pop_type_code})` : item.pop_type_name,
                       })),
                     ])}
                     placeholder="Pilih POP type"
