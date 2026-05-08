@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, ChevronDown, LogOut, Moon, Sun, User } from "lucide-react";
+import { Bell, Check, ChevronDown, LogOut, Moon, Sun, User } from "lucide-react";
 import { toast } from "sonner";
 import type { SessionUser } from "@/lib/session";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -196,18 +196,19 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
         if (cancelled) return;
 
         const rows = result.data?.items || [];
+        const unreadRows = rows.filter((row) => row.unread);
         const unread = Number(result.data?.unread_count || 0);
-        setNotifications(rows);
+        setNotifications(unreadRows);
         setUnreadCount(unread);
 
-        const nextUnreadIds = new Set(rows.filter((row) => row.unread).map((row) => String(row.id)));
+        const nextUnreadIds = new Set(unreadRows.map((row) => String(row.id)));
         if (firstNotificationLoadRef.current) {
           firstNotificationLoadRef.current = false;
           seenUnreadIdsRef.current = nextUnreadIds;
           return;
         }
 
-        const newlyArrived = rows.filter((row) => row.unread && !seenUnreadIdsRef.current.has(String(row.id)));
+        const newlyArrived = unreadRows.filter((row) => !seenUnreadIdsRef.current.has(String(row.id)));
         if (newlyArrived.length) {
           const latest = newlyArrived[0];
           const urgentLabel = latest.urgent ? " (URGENT)" : "";
@@ -266,8 +267,9 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
   async function markOneAsRead(requestId: string) {
     try {
       await apiFetch(`/validation-requests/notifications/${requestId}/read`, { method: "POST", token });
-      setNotifications((prev) => prev.map((item) => (item.id === requestId ? { ...item, unread: false } : item)));
+      setNotifications((prev) => prev.filter((item) => item.id !== requestId));
       setUnreadCount((prev) => Math.max(0, prev - 1));
+      seenUnreadIdsRef.current.delete(requestId);
     } catch {
       // noop
     }
@@ -280,8 +282,9 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
         token,
         body: selectedRegionId ? { region_id: selectedRegionId } : {},
       });
-      setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
+      setNotifications([]);
       setUnreadCount(0);
+      seenUnreadIdsRef.current.clear();
       toast.success("Semua notifikasi ditandai sudah dibaca.");
     } catch {
       toast.error("Gagal menandai semua notifikasi.");
@@ -379,11 +382,25 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
                           {mappedStatus.label} • {formatDateTime(item.updated_at)}
                           {item.age_minutes ? ` • ${formatAge(item.age_minutes)}` : ""}
                         </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="mt-1 h-6 px-2 text-[11px]"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            void markOneAsRead(item.id);
+                          }}
+                        >
+                          <Check className="mr-1 size-3" />
+                          Mark read
+                        </Button>
                       </DropdownMenuItem>
                     );
                   })
                 ) : (
-                  <p className="px-2 py-1 text-xs text-muted-foreground">Belum ada notifikasi request.</p>
+                  <p className="px-2 py-1 text-xs text-muted-foreground">Tidak ada notifikasi baru.</p>
                 )}
               </div>
             </ScrollArea>
