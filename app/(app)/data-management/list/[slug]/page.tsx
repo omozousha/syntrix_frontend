@@ -1399,7 +1399,7 @@ function renderCreateFields(
         </div>
         <div className="space-y-1.5">
           <Label>Route Type Code</Label>
-          <Input value={form.route_type_code || ""} onChange={(e) => setValue("route_type_code", e.target.value.toUpperCase())} placeholder="Contoh: BACKBONE" />
+          <Input value={form.route_type_code || ""} onChange={(e) => setValue("route_type_code", e.target.value.toUpperCase())} placeholder="Contoh: BB" />
         </div>
       </>
     );
