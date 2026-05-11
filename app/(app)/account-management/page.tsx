@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, MailCheck, MailWarning, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { Eye, EyeOff, MailCheck, MailWarning, Send, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -61,6 +61,24 @@ const ROLE_LABELS: Record<string, string> = {
   user_region: "Validator",
 };
 
+async function fetchAllRegions(token: string) {
+  const limit = 100;
+  const allRegions: RegionsListResponse["data"] = [];
+  let page = 1;
+  let total = 0;
+
+  do {
+    const response = await apiFetch<RegionsListResponse>(`/regions?page=${page}&limit=${limit}`, { token });
+    const rows = response.data || [];
+    allRegions.push(...rows);
+    total = response.meta?.total ?? allRegions.length;
+    page += 1;
+    if (!rows.length) break;
+  } while (allRegions.length < total);
+
+  return allRegions;
+}
+
 export default function AccountManagementPage() {
   const router = useRouter();
   const { token, me } = useSession();
@@ -108,6 +126,7 @@ export default function AccountManagementPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [resendLoadingId, setResendLoadingId] = useState<string | null>(null);
 
   const scopedRegionIds = useMemo(
     () => new Set((me.app_user.user_region_scopes || []).map((scope) => scope.region_id)),
@@ -148,12 +167,12 @@ export default function AccountManagementPage() {
   );
 
   const refreshUsersAndRegions = useCallback(async () => {
-    const [usersRes, regionsRes] = await Promise.all([
+    const [usersRes, regionsData] = await Promise.all([
       apiFetch<UsersListResponse>("/users?page=1&limit=100", { token }),
-      apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
+      fetchAllRegions(token),
     ]);
     setUsers(usersRes.data || []);
-    setRegions(regionsRes.data || []);
+    setRegions(regionsData);
   }, [token]);
 
   useEffect(() => {
@@ -415,6 +434,25 @@ export default function AccountManagementPage() {
     }
   }
 
+  async function resendVerification(user: UserRow) {
+    setResendLoadingId(user.id);
+    setMessage("");
+    setErrorMessage("");
+
+    try {
+      await apiFetch(`/users/${user.id}/resend-verification`, {
+        method: "POST",
+        token,
+      });
+      await refreshUsersAndRegions();
+      setMessage(`Email verifikasi untuk ${user.email} berhasil dikirim ulang.`);
+    } catch (error) {
+      setErrorMessage((error as Error).message);
+    } finally {
+      setResendLoadingId(null);
+    }
+  }
+
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 pr-3">
@@ -493,6 +531,9 @@ export default function AccountManagementPage() {
                   options={filterRoleOptions}
                   disabled={isAdminRegion}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Region mengikuti Master Data Regions dan otomatis ter-refresh saat halaman dimuat.
+                </p>
               </div>
 
               <div className="flex items-end">
@@ -524,6 +565,18 @@ export default function AccountManagementPage() {
                 item.default_region_id ? regionMap.get(item.default_region_id) || item.default_region_id : "-",
                 item.is_active ? <Badge key="active">Active</Badge> : <Badge key="inactive" variant="secondary">Inactive</Badge>,
                 <div key={item.id} className="flex flex-wrap gap-2">
+                  {getVerificationState(item) !== "verified" ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1"
+                      onClick={() => void resendVerification(item)}
+                      disabled={!canManageUser(item) || resendLoadingId === item.id}
+                    >
+                      <Send className="size-3.5" />
+                      {resendLoadingId === item.id ? "Sending..." : "Resend"}
+                    </Button>
+                  ) : null}
                   <Button size="sm" variant="outline" onClick={() => openEditDrawer(item)} disabled={!canManageUser(item)}>
                     Edit
                   </Button>
@@ -597,6 +650,9 @@ export default function AccountManagementPage() {
                   placeholder="Pilih region"
                   searchPlaceholder="Cari region..."
                 />
+                <p className="text-xs text-muted-foreground">
+                  Daftar region diambil dari Master Data Regions. Adminregion hanya melihat region yang menjadi scope-nya.
+                </p>
               </div>
 
               <PasswordField
@@ -670,6 +726,9 @@ export default function AccountManagementPage() {
                   placeholder="Pilih region"
                   searchPlaceholder="Cari region..."
                 />
+                <p className="text-xs text-muted-foreground">
+                  Daftar region diambil dari Master Data Regions. Adminregion hanya melihat region yang menjadi scope-nya.
+                </p>
               </div>
 
               <div className="space-y-1.5">
