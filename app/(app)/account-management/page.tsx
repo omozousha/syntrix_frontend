@@ -530,11 +530,11 @@ export default function AccountManagementPage() {
           </Alert>
         ) : null}
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard icon={<Users className="size-4" />} label="Total Account" value={stats.total} />
-          <MetricCard icon={<MailCheck className="size-4" />} label="Verified Email" value={stats.verified} />
-          <MetricCard icon={<ShieldCheck className="size-4" />} label="Active" value={stats.active} />
-          <MetricCard icon={<MailWarning className="size-4" />} label="Pending Verify" value={stats.pending} />
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard icon={<Users className="size-3.5" />} label="Total Account" value={stats.total} />
+          <MetricCard icon={<MailCheck className="size-3.5" />} label="Verified Email" value={stats.verified} />
+          <MetricCard icon={<ShieldCheck className="size-3.5" />} label="Active" value={stats.active} />
+          <MetricCard icon={<MailWarning className="size-3.5" />} label="Pending Verify" value={stats.pending} />
         </div>
 
         <Card>
@@ -873,12 +873,12 @@ export default function AccountManagementPage() {
 function MetricCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
     <Card>
-      <CardContent className="flex items-center justify-between gap-3 p-4">
+      <CardContent className="flex items-center justify-between gap-2 p-3">
         <div>
-          <p className="text-xs font-medium uppercase text-muted-foreground">{label}</p>
-          <p className="text-2xl font-semibold">{value}</p>
+          <p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
+          <p className="text-xl font-semibold">{value}</p>
         </div>
-        <div className="rounded-md border bg-muted p-2 text-muted-foreground">{icon}</div>
+        <div className="rounded-md border bg-muted p-1.5 text-muted-foreground">{icon}</div>
       </CardContent>
     </Card>
   );
