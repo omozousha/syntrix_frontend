@@ -249,7 +249,7 @@ export default function AccountManagementPage() {
   if (loading) {
     return (
       <ScrollArea className="h-full min-h-0 w-full">
-        <div className="pr-3">
+        <div className="px-3 pb-3 md:px-4 md:pb-4">
           <AppLoading label="Sedang memuat data akun dan region..." />
         </div>
       </ScrollArea>
@@ -499,7 +499,7 @@ export default function AccountManagementPage() {
 
   return (
     <ScrollArea className="h-full min-h-0 w-full">
-      <div className="space-y-4 pr-3">
+      <div className="space-y-4 px-3 pb-3 md:px-4 md:pb-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Account Management</h2>
@@ -509,7 +509,7 @@ export default function AccountManagementPage() {
                 : "Kelola akun validator di region yang menjadi tanggung jawab Anda."}
             </p>
           </div>
-          <Button onClick={openCreateDrawer} className="gap-2">
+          <Button size="sm" onClick={openCreateDrawer} className="gap-2">
             <UserPlus className="size-4" />
             Create Account
           </Button>
@@ -530,15 +530,15 @@ export default function AccountManagementPage() {
           </Alert>
         ) : null}
 
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard icon={<Users className="size-3.5" />} label="Total Account" value={stats.total} />
           <MetricCard icon={<MailCheck className="size-3.5" />} label="Verified Email" value={stats.verified} />
           <MetricCard icon={<ShieldCheck className="size-3.5" />} label="Active" value={stats.active} />
           <MetricCard icon={<MailWarning className="size-3.5" />} label="Pending Verify" value={stats.pending} />
         </div>
 
-        <Card>
-          <CardHeader>
+        <Card size="sm">
+          <CardHeader className="pb-1">
             <CardTitle>User Accounts</CardTitle>
             <CardDescription>List user aplikasi, scope region, status aktif, dan status verifikasi email.</CardDescription>
           </CardHeader>
@@ -872,7 +872,7 @@ export default function AccountManagementPage() {
 
 function MetricCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <Card>
+    <Card size="sm">
       <CardContent className="flex items-center justify-between gap-2 p-3">
         <div>
           <p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
