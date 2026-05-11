@@ -61,6 +61,43 @@ Checklist minimal yang disarankan:
 - Kondisi sekitar lokasi dapat dikenali.
 - Catatan temuan diisi jika ada perbedaan data.
 
+Template form validasi ODP yang dibakukan:
+
+- Tanggal Validasi.
+- ID Inventory.
+- Nama ODP Lama.
+- Nama ODP Baru.
+- POP.
+- Alamat.
+- Longlat.
+- Pemeriksaan awal:
+  - Foto keseluruhan ODP sebelum pemeriksaan jarak dekat.
+  - Foto keseluruhan ODP sebelum pemeriksaan jarak jauh dengan tiang.
+  - Foto bagian dalam ODP sebelum pemeriksaan close up.
+  - Foto tampak kanan dan kiri.
+- Checklist kondisi:
+  - Box ODP: Baik/Rusak/Keterangan + foto.
+  - Label ODP: Baik/Rusak/Keterangan + foto.
+  - Kebersihan ODP: Bersih/Kotor/Keterangan + foto.
+  - Pigtail dan Adapter: Lengkap/Tidak lengkap/Keterangan + foto.
+  - Kerapihan Kabel: Rapi/Tidak rapi/Keterangan + foto.
+- Kapasitas dan okupansi port:
+  - Tipe ODP.
+  - Kapasitas ODP.
+  - Kapasitas splitter.
+  - Jumlah port aktif.
+  - Jumlah port kosong.
+  - Jumlah port rusak.
+- Redaman:
+  - Port 1 sampai mengikuti kapasitas ODP aktual, misalnya 8 atau 16 port.
+
+Keputusan implementasi:
+
+- Validator boleh mengusulkan perubahan nama ODP, splitter ratio, kapasitas ODP, status port, dan redaman per port sesuai kondisi lapangan.
+- Perubahan tersebut masuk ke snapshot request validasi, bukan langsung menulis ke asset utama.
+- Setelah approval final superadmin, sistem menerapkan field asset utama yang relevan: nama ODP, splitter ratio, total port, used port, dan status port.
+- Redaman per port disimpan sebagai snapshot validasi terlebih dahulu sampai model database redaman final diputuskan.
+
 Aturan checklist:
 
 - Checklist disimpan sebagai snapshot pada request validasi.
@@ -254,12 +291,14 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 
 ### Phase 2 - Checklist & Evidence Standard
 
-- [ ] Definisikan template checklist ODP resmi.
+- [x] Definisikan template checklist ODP resmi.
 - [ ] Tambahkan kategori evidence ODP.
 - [ ] Tambahkan validasi minimal evidence sebelum submit.
 - [ ] Pastikan evidence request aktif hanya evidence submit terakhir.
 - [ ] Pastikan evidence lama tetap tampil di histori validasi.
-- [ ] Tampilkan checklist snapshot di review adminregion/superadmin.
+- [x] Tampilkan checklist snapshot di review adminregion/superadmin.
+- [x] Tambahkan input nama ODP baru, splitter ratio, kapasitas ODP, status port, dan redaman per port ke snapshot validasi.
+- [x] Terapkan nama ODP, splitter ratio, total port, used port, dan status port setelah approval final.
 - [ ] Tampilkan detail validasi terakhir sebagai referensi read-only.
 
 ### Phase 3 - Resubmit Workflow

@@ -29,6 +29,11 @@ type DeviceItem = Record<string, unknown> & {
   validation_date?: string | null;
   total_ports?: number | null;
   used_ports?: number | null;
+  splitter_ratio?: string | null;
+  pop_id?: string | null;
+  address?: string | null;
+  longitude?: number | string | null;
+  latitude?: number | string | null;
   image_attachments?: unknown;
 };
 
@@ -62,6 +67,12 @@ type ValidationDraft = Record<ChecklistKey, boolean> & {
   status: ValidationStatus;
   findings: string;
   evidenceFile: File | null;
+  deviceNameNew: string;
+  splitterRatio: string;
+  totalPortsActual: string;
+  odpType: string;
+  portStatuses: Record<string, string>;
+  portAttenuations: Record<string, string>;
 };
 type ValidationRecord = {
   id: string;
@@ -72,6 +83,12 @@ type ValidationRecord = {
   evidence_attachment_id?: string | null;
   payload?: {
     checklist?: Partial<Record<ChecklistKey, boolean>>;
+    field_validation?: {
+      new_device_name?: string | null;
+      odp_type?: string | null;
+      splitter_ratio?: string | null;
+      total_ports?: number | null;
+    };
     port_summary?: {
       total?: number;
       used?: number;
@@ -88,6 +105,12 @@ type ValidationRequestItem = {
   finding_note?: string | null;
   checklist?: Partial<Record<ChecklistKey, boolean>> | null;
   payload_snapshot?: {
+    field_validation?: {
+      new_device_name?: string | null;
+      odp_type?: string | null;
+      splitter_ratio?: string | null;
+      total_ports?: number | null;
+    };
     port_summary?: {
       total?: number;
       used?: number;
@@ -210,13 +233,14 @@ export default function OdpFieldValidationPage() {
         const latestLegacyValidation = validationResult.data?.[0] || null;
         const latestSnapshot = latestRequestValidation || latestLegacyValidation;
         setDevice(loadedDevice);
-        setPorts((portResult.data || []).sort((a, b) => Number(a.port_index) - Number(b.port_index)));
+        const loadedPorts = (portResult.data || []).sort((a, b) => Number(a.port_index) - Number(b.port_index));
+        setPorts(loadedPorts);
         setValidations(mappedRequestValidations.length ? mappedRequestValidations : validationResult.data || []);
         setCustomers(customersResult.data || []);
         setOntDevices((ontResult.data || []).filter((item) => String(item.device_type_key || "").toUpperCase() === "ONT"));
         setValidationRequests(requestItems);
         setLastValidationSnapshot(latestSnapshot);
-        setDraft(buildDefaultValidationDraft());
+        setDraft(buildDefaultValidationDraft(loadedDevice, loadedPorts));
       } catch (err) {
         if (!cancelled) setError((err as Error).message || "Gagal memuat ODP.");
       } finally {
@@ -295,6 +319,15 @@ export default function OdpFieldValidationPage() {
           .map((item) => (item.id === port.id ? { ...item, ...result.data } : item))
           .sort((a, b) => Number(a.port_index) - Number(b.port_index)),
       );
+      if (changes.status !== undefined) {
+        setDraft((prev) => ({
+          ...prev,
+          portStatuses: {
+            ...prev.portStatuses,
+            [String(port.port_index)]: String(changes.status || "idle"),
+          },
+        }));
+      }
       setMessage(`Port ${formatOdpPortLabel(port)} tersimpan.`);
     } catch (err) {
       const messageText = (err as Error).message || "Gagal menyimpan port.";
@@ -328,6 +361,9 @@ export default function OdpFieldValidationPage() {
         uploadedEvidenceName = upload.original_name || null;
       }
 
+      const totalPortsActual = normalizePortCapacity(draft.totalPortsActual, summary.total || 8);
+      const validationPortPayload = buildValidationPortPayload(ports, draft, totalPortsActual);
+      const portSummary = summarizeValidationPortPayload(validationPortPayload);
       const evidenceAttachments = evidenceAttachmentId
         ? [{ id: evidenceAttachmentId, attachment_id: evidenceAttachmentCode || undefined, name: uploadedEvidenceName || undefined }]
         : [];
@@ -349,22 +385,34 @@ export default function OdpFieldValidationPage() {
             source: "field-mode",
             device: {
               id: device.id,
-              used_ports: summarizePorts(ports, device).used,
-              total_ports: summarizePorts(ports, device).total,
+              device_name: draft.deviceNameNew.trim() || device.device_name || null,
+              splitter_ratio: nullIfEmpty(draft.splitterRatio),
+              total_ports: totalPortsActual,
+              used_ports: portSummary.used,
+              address: device.address || null,
+              longitude: device.longitude ?? null,
+              latitude: device.latitude ?? null,
             },
-            device_ports: ports.map((port) => ({
-              id: port.id,
-              port_index: port.port_index,
-              status: port.status || "idle",
-              customer_id: port.customer_id || null,
-              ont_device_id: port.ont_device_id || null,
-              notes: (port.notes || "").trim() || null,
-            })),
+            field_validation: {
+              validation_date: new Date().toISOString().slice(0, 10),
+              inventory_id: device.device_id || null,
+              old_device_name: device.device_name || null,
+              new_device_name: draft.deviceNameNew.trim() || device.device_name || null,
+              pop_id: device.pop_id || null,
+              address: device.address || null,
+              longlat: [device.longitude, device.latitude].filter((value) => value != null && value !== "").join(", ") || null,
+              odp_type: nullIfEmpty(draft.odpType),
+              splitter_ratio: nullIfEmpty(draft.splitterRatio),
+              total_ports: totalPortsActual,
+              port_summary: portSummary,
+            },
+            port_summary: portSummary,
+            device_ports: validationPortPayload,
           },
         },
       });
       await refreshValidations();
-      setDraft(buildDefaultValidationDraft());
+      setDraft(buildDefaultValidationDraft(device, ports));
       setReloadAfterSuccessDialog(true);
       setMessage("Request validasi ODP berhasil dikirim.");
     } catch (err) {
@@ -697,6 +745,58 @@ export default function OdpFieldValidationPage() {
                   Form ini untuk validasi baru. Data histori akan muncul setelah submit pertama.
                 </div>
               )}
+
+              <div className="rounded-md border bg-background p-3">
+                <p className="mb-3 text-sm font-medium">Identitas dan Kapasitas Aktual</p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                  <InfoField label="Tanggal Validasi" value={formatDate(new Date().toISOString())} />
+                  <InfoField label="ID Inventory" value={device.device_id || "-"} />
+                  <InfoField label="Nama ODP Lama" value={device.device_name || "-"} />
+                  <InfoField label="POP" value={String(device.pop_id || "-")} />
+                  <InfoField label="Alamat" value={device.address || "-"} />
+                  <InfoField label="Longlat" value={[device.longitude, device.latitude].filter((value) => value != null && value !== "").join(", ") || "-"} />
+                  <div className="space-y-1">
+                    <Label>Nama ODP Baru</Label>
+                    <Input
+                      value={draft.deviceNameNew}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, deviceNameNew: event.target.value }))}
+                      disabled={submitting}
+                      placeholder="Nama ODP sesuai lapangan"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Tipe ODP</Label>
+                    <Input
+                      value={draft.odpType}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, odpType: event.target.value }))}
+                      disabled={submitting}
+                      placeholder="Contoh: ODP 8 port"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Kapasitas ODP</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={64}
+                      value={draft.totalPortsActual}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, totalPortsActual: event.target.value }))}
+                      disabled={submitting}
+                      placeholder="8 / 16"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Kapasitas Splitter</Label>
+                    <Input
+                      value={draft.splitterRatio}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, splitterRatio: event.target.value }))}
+                      disabled={submitting}
+                      placeholder="Contoh: 1:8"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
                 {CHECKLIST.map((item) => (
                   <label key={item.key} className="flex min-h-11 items-center gap-2 rounded-md border bg-background p-3 text-sm">
@@ -775,6 +875,46 @@ export default function OdpFieldValidationPage() {
                     disabled={submitting}
                     placeholder="Catatan kondisi lapangan"
                   />
+                </div>
+              </div>
+
+              <div className="rounded-md border bg-background p-3">
+                <p className="mb-1 text-sm font-medium">Redaman dan Status Port</p>
+                <p className="mb-3 text-xs text-muted-foreground">Port mengikuti kapasitas aktual. Redaman tersimpan sebagai snapshot validasi.</p>
+                <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1">
+                  {buildValidationPortIndexes(draft.totalPortsActual, summary.total || 8).map((portIndex) => {
+                    const existing = ports.find((port) => Number(port.port_index) === portIndex);
+                    const key = String(portIndex);
+                    return (
+                      <div key={`measure-${key}`} className="grid grid-cols-[72px_1fr_92px] items-center gap-2 rounded-md border p-2">
+                        <p className="text-sm font-medium">Port {portIndex}</p>
+                        <Combobox
+                          value={draft.portStatuses[key] || existing?.status || "idle"}
+                          onValueChange={(status) =>
+                            setDraft((prev) => ({
+                              ...prev,
+                              portStatuses: { ...prev.portStatuses, [key]: status },
+                            }))
+                          }
+                          disabled={submitting}
+                          triggerClassName="h-9"
+                          options={PORT_STATUS_OPTIONS.map((status) => ({ value: status, label: status }))}
+                        />
+                        <Input
+                          value={draft.portAttenuations[key] || ""}
+                          onChange={(event) =>
+                            setDraft((prev) => ({
+                              ...prev,
+                              portAttenuations: { ...prev.portAttenuations, [key]: event.target.value },
+                            }))
+                          }
+                          disabled={submitting}
+                          placeholder="dB"
+                          className="h-9"
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -933,6 +1073,15 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
+function InfoField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border bg-muted/20 px-3 py-2">
+      <p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
+      <p className="break-words text-sm">{value || "-"}</p>
+    </div>
+  );
+}
+
 function summarizePorts(ports: DevicePort[], device: DeviceItem | null) {
   const total = ports.length || Number(device?.total_ports || 0) || 0;
   const used = ports.filter((port) => port.status === "used").length || Number(device?.used_ports || 0) || 0;
@@ -945,6 +1094,65 @@ function summarizePorts(ports: DevicePort[], device: DeviceItem | null) {
     reserved,
     down,
   };
+}
+
+function normalizePortCapacity(value: string, fallback: number) {
+  const parsed = Number(value);
+  if (Number.isInteger(parsed) && parsed > 0) return Math.min(parsed, 64);
+  return Math.max(1, Math.min(Number(fallback) || 8, 64));
+}
+
+function buildValidationPortIndexes(value: string, fallback: number) {
+  const total = normalizePortCapacity(value, fallback);
+  return Array.from({ length: total }, (_, index) => index + 1);
+}
+
+function buildPortStatusMap(ports: DevicePort[]) {
+  return ports.reduce<Record<string, string>>((acc, port) => {
+    acc[String(port.port_index)] = port.status || "idle";
+    return acc;
+  }, {});
+}
+
+function buildValidationPortPayload(ports: DevicePort[], draft: ValidationDraft, totalPorts: number) {
+  return Array.from({ length: totalPorts }, (_, index) => {
+    const portIndex = index + 1;
+    const existing = ports.find((port) => Number(port.port_index) === portIndex);
+    const key = String(portIndex);
+    const attenuationValue = nullIfEmpty(draft.portAttenuations[key]);
+    const attenuationDb = attenuationValue == null ? null : Number(attenuationValue);
+    return {
+      id: existing?.id || null,
+      port_index: portIndex,
+      port_label: existing?.port_label || `#${portIndex}`,
+      status: draft.portStatuses[key] || existing?.status || "idle",
+      customer_id: existing?.customer_id || null,
+      ont_device_id: existing?.ont_device_id || null,
+      notes: (existing?.notes || "").trim() || null,
+      attenuation_db: Number.isFinite(attenuationDb) ? attenuationDb : null,
+    };
+  });
+}
+
+function summarizeValidationPortPayload(ports: Array<{ status?: string | null }>) {
+  const total = ports.length;
+  const used = ports.filter((port) => port.status === "used").length;
+  const reserved = ports.filter((port) => port.status === "reserved").length;
+  const down = ports.filter((port) => port.status === "down" || port.status === "maintenance").length;
+  return {
+    total,
+    used,
+    idle: Math.max(0, total - used - reserved - down),
+    reserved,
+    down,
+    broken: down,
+    empty: Math.max(0, total - used - reserved - down),
+  };
+}
+
+function nullIfEmpty(value?: string | null) {
+  const text = String(value || "").trim();
+  return text ? text : null;
 }
 
 function statusDot(status?: string | null) {
@@ -999,6 +1207,7 @@ function mapValidationRequestToRecord(item: ValidationRequestItem): ValidationRe
       null,
     payload: {
       checklist: item.checklist || {},
+      field_validation: item.payload_snapshot?.field_validation || {},
       port_summary: item.payload_snapshot?.port_summary || {},
     },
   };
@@ -1010,7 +1219,7 @@ function mapRequestStatusToValidationStatus(status?: string | null): ValidationS
   return "invalid";
 }
 
-function buildDefaultValidationDraft(): ValidationDraft {
+function buildDefaultValidationDraft(device?: DeviceItem | null, ports: DevicePort[] = []): ValidationDraft {
   return {
     physical_ok: false,
     splitter_ok: false,
@@ -1020,11 +1229,18 @@ function buildDefaultValidationDraft(): ValidationDraft {
     status: "invalid",
     findings: "",
     evidenceFile: null,
+    deviceNameNew: String(device?.device_name || ""),
+    splitterRatio: String(device?.splitter_ratio || ""),
+    totalPortsActual: String(ports.length || device?.total_ports || 8),
+    odpType: "",
+    portStatuses: buildPortStatusMap(ports),
+    portAttenuations: {},
   };
 }
 
 function buildDraftFromSnapshot(snapshot: ValidationRecord): ValidationDraft {
   const checklist = snapshot.payload?.checklist || {};
+  const fieldValidation = snapshot.payload?.field_validation || {};
   const nextChecklist = {
     physical_ok: Boolean(checklist.physical_ok),
     splitter_ok: Boolean(checklist.splitter_ok),
@@ -1037,6 +1253,12 @@ function buildDraftFromSnapshot(snapshot: ValidationRecord): ValidationDraft {
     status: deriveStatusFromChecklist(nextChecklist),
     findings: snapshot.findings || "",
     evidenceFile: null,
+    deviceNameNew: String(fieldValidation.new_device_name || ""),
+    splitterRatio: String(fieldValidation.splitter_ratio || ""),
+    totalPortsActual: String(fieldValidation.total_ports || 8),
+    odpType: String(fieldValidation.odp_type || ""),
+    portStatuses: {},
+    portAttenuations: {},
   };
 }
 

@@ -39,6 +39,8 @@ type ValidationRequestItem = {
     resource_payload?: Record<string, unknown>;
     before?: Record<string, unknown>;
     device?: Record<string, unknown>;
+    field_validation?: Record<string, unknown>;
+    port_summary?: Record<string, unknown>;
     pop?: Record<string, unknown>;
     route?: Record<string, unknown>;
     project?: Record<string, unknown>;
@@ -427,19 +429,29 @@ export default function ValidationRequestsPage() {
                     ) : null}
 
                     {selectedType.kind === "field_validation" ? (
-                      <div className="rounded-md border p-3">
-                        <p className="mb-2 text-sm font-medium">Checklist</p>
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          {CHECKLIST_LABELS.map((item) => (
-                            <p key={item.key} className="text-xs">
-                              {item.label}:{" "}
-                              <span className={selected.checklist?.[item.key] ? "text-emerald-600" : "text-rose-600"}>
-                                {selected.checklist?.[item.key] ? "OK" : "Belum"}
-                              </span>
-                            </p>
-                          ))}
+                      <div className="space-y-3">
+                        <div className="rounded-md border p-3">
+                          <p className="mb-2 text-sm font-medium">Data Validasi Lapangan</p>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                            {getFieldValidationReviewFields(selected).map((field) => (
+                              <Info key={field.title} title={field.title} value={field.value} />
+                            ))}
+                          </div>
                         </div>
-                        <p className="mt-2 text-xs text-muted-foreground">Temuan: {selected.finding_note || "-"}</p>
+                        <div className="rounded-md border p-3">
+                          <p className="mb-2 text-sm font-medium">Checklist</p>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {CHECKLIST_LABELS.map((item) => (
+                              <p key={item.key} className="text-xs">
+                                {item.label}:{" "}
+                                <span className={selected.checklist?.[item.key] ? "text-emerald-600" : "text-rose-600"}>
+                                  {selected.checklist?.[item.key] ? "OK" : "Belum"}
+                                </span>
+                              </p>
+                            ))}
+                          </div>
+                          <p className="mt-2 text-xs text-muted-foreground">Temuan: {selected.finding_note || "-"}</p>
+                        </div>
                       </div>
                     ) : null}
 
@@ -797,6 +809,25 @@ function getCreateAssetReviewFields(item: ValidationRequestItem, lookupLabels: L
     { title: "Longitude", value: valueText(payload.longitude) },
     { title: "Latitude", value: valueText(payload.latitude) },
     { title: "Address", value: valueText(payload.address) },
+  ];
+}
+
+function getFieldValidationReviewFields(item: ValidationRequestItem) {
+  const field = item.payload_snapshot?.field_validation || {};
+  const summary = item.payload_snapshot?.port_summary || {};
+  return [
+    { title: "Tanggal Validasi", value: valueText(field.validation_date) },
+    { title: "ID Inventory", value: valueText(field.inventory_id) },
+    { title: "Nama ODP Lama", value: valueText(field.old_device_name) },
+    { title: "Nama ODP Baru", value: valueText(field.new_device_name) },
+    { title: "POP", value: valueText(field.pop_id) },
+    { title: "Longlat", value: valueText(field.longlat) },
+    { title: "Tipe ODP", value: valueText(field.odp_type) },
+    { title: "Splitter", value: valueText(field.splitter_ratio) },
+    { title: "Kapasitas", value: valueText(field.total_ports) },
+    { title: "Port Aktif", value: valueText(summary.used) },
+    { title: "Port Kosong", value: valueText(summary.empty ?? summary.idle) },
+    { title: "Port Rusak", value: valueText(summary.broken ?? summary.down) },
   ];
 }
 
