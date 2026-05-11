@@ -415,7 +415,7 @@ export default function DataManagementListPage() {
     if (category.resource === "poles") return [selectAllHeader, "Pole ID", "Pole Number", "Region", "Status", "Updated"];
     if (category.resource === "customers") return [selectAllHeader, "Customer ID", "Name", "Service", "Status", "Updated"];
     if (category.resource === "routes") return [selectAllHeader, "Route ID", "Route Name", "Region", "Status", "Updated"];
-    if (category.resource === "regions") return [selectAllHeader, "Region ID", "Region Name", "Color", "Updated"];
+    if (category.resource === "regions") return [selectAllHeader, "Region ID", "Inventory Code", "Region Name", "Color", "Updated"];
     if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Inventory Code", "Asset Group", "Status", "Updated"];
     if (category.resource === "popTypes") return [selectAllHeader, "Code", "POP Type", "Status", "Updated"];
     if (category.resource === "routeTypes") return [selectAllHeader, "Code", "Route Type", "Status", "Updated"];
@@ -509,6 +509,7 @@ export default function DataManagementListPage() {
         return [
           selectCell,
           pick(item, ["region_id"]),
+          pick(item, ["inventory_region_code"]),
           withArchivedLabel(item, pick(item, ["region_name"])),
           <div key={`region-color-${String(item.id)}`} className="flex items-center justify-center">
             <span
@@ -1319,6 +1320,13 @@ function renderCreateFields(
           <Input value={form.region_name || ""} onChange={(e) => setValue("region_name", e.target.value)} placeholder="Contoh: Jawa Barat" />
         </div>
         <div className="space-y-1.5">
+          <Label>Inventory Region Code</Label>
+          <Input value={form.inventory_region_code || "Otomatis"} disabled />
+          <p className="text-xs text-muted-foreground">
+            Diisi otomatis dari nomor regional berikutnya yang belum dipakai.
+          </p>
+        </div>
+        <div className="space-y-1.5">
           <Label>Region Color</Label>
           <RegionColorPickerField value={form.region_color || ""} onChange={(value) => setValue("region_color", value)} />
         </div>
@@ -1355,15 +1363,10 @@ function renderCreateFields(
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Inventory Type Code *</Label>
-          <Input
-            value={form.inventory_type_code || ""}
-            onChange={(e) => setValue("inventory_type_code", e.target.value.replace(/\D/g, "").slice(0, 3))}
-            placeholder="Contoh: 010"
-            maxLength={3}
-          />
+          <Label>Inventory Type Code</Label>
+          <Input value={form.inventory_type_code || "Otomatis"} disabled />
           <p className="text-xs text-muted-foreground">
-            Dipakai untuk format Device ID Inventory, contoh ODP = 010.
+            Diisi otomatis dari nomor tipe perangkat berikutnya yang belum dipakai.
           </p>
         </div>
         <div className="space-y-1.5">
@@ -1574,7 +1577,7 @@ function renderCreateFields(
 }
 
 function getCreateDefaults(resource: string): Record<string, string> {
-  if (resource === "deviceTypes") return { asset_group: "active", inventory_type_code: "", icon_name: "HardDrive", is_active: "true", sort_order: "0" };
+  if (resource === "deviceTypes") return { asset_group: "active", icon_name: "HardDrive", is_active: "true", sort_order: "0" };
   if (resource === "popTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "routeTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "splitterProfiles") return { input_port_count: "1", output_port_count: "8", is_active: "true" };
@@ -1870,11 +1873,10 @@ function buildCreatePayload(resource: string, form: Record<string, string>) {
     return payload;
   }
   if (resource === "deviceTypes") {
-    if (!trim("device_type_key") || !trim("device_type_name") || !trim("asset_group") || !trim("inventory_type_code")) return null;
+    if (!trim("device_type_key") || !trim("device_type_name") || !trim("asset_group")) return null;
     assign("device_type_key");
     assign("device_type_name");
     assign("asset_group");
-    assign("inventory_type_code");
     assign("icon_name");
     assign("description");
     payload.sort_order = Number(trim("sort_order") || "0");
