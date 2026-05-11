@@ -416,7 +416,7 @@ export default function DataManagementListPage() {
     if (category.resource === "customers") return [selectAllHeader, "Customer ID", "Name", "Service", "Status", "Updated"];
     if (category.resource === "routes") return [selectAllHeader, "Route ID", "Route Name", "Region", "Status", "Updated"];
     if (category.resource === "regions") return [selectAllHeader, "Region ID", "Region Name", "Color", "Updated"];
-    if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Asset Group", "Status", "Updated"];
+    if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Inventory Code", "Asset Group", "Status", "Updated"];
     if (category.resource === "popTypes") return [selectAllHeader, "Code", "POP Type", "Status", "Updated"];
     if (category.resource === "routeTypes") return [selectAllHeader, "Code", "Route Type", "Status", "Updated"];
     if (category.resource === "manufacturers") return [selectAllHeader, "Code", "Manufacturer", "Updated"];
@@ -526,6 +526,7 @@ export default function DataManagementListPage() {
           renderDeviceIconCell(pick(item, ["icon_name"])),
           pick(item, ["device_type_key"]),
           withArchivedLabel(item, pick(item, ["device_type_name"])),
+          pick(item, ["inventory_type_code"]),
           pick(item, ["asset_group"]),
           pick(item, ["is_active"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
@@ -1354,6 +1355,18 @@ function renderCreateFields(
           />
         </div>
         <div className="space-y-1.5">
+          <Label>Inventory Type Code *</Label>
+          <Input
+            value={form.inventory_type_code || ""}
+            onChange={(e) => setValue("inventory_type_code", e.target.value.replace(/\D/g, "").slice(0, 3))}
+            placeholder="Contoh: 010"
+            maxLength={3}
+          />
+          <p className="text-xs text-muted-foreground">
+            Dipakai untuk format Device ID Inventory, contoh ODP = 010.
+          </p>
+        </div>
+        <div className="space-y-1.5">
           <Label>Icon</Label>
           <Combobox
             value={form.icon_name || "HardDrive"}
@@ -1561,7 +1574,7 @@ function renderCreateFields(
 }
 
 function getCreateDefaults(resource: string): Record<string, string> {
-  if (resource === "deviceTypes") return { asset_group: "active", icon_name: "HardDrive", is_active: "true", sort_order: "0" };
+  if (resource === "deviceTypes") return { asset_group: "active", inventory_type_code: "", icon_name: "HardDrive", is_active: "true", sort_order: "0" };
   if (resource === "popTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "routeTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "splitterProfiles") return { input_port_count: "1", output_port_count: "8", is_active: "true" };
@@ -1857,10 +1870,11 @@ function buildCreatePayload(resource: string, form: Record<string, string>) {
     return payload;
   }
   if (resource === "deviceTypes") {
-    if (!trim("device_type_key") || !trim("device_type_name") || !trim("asset_group")) return null;
+    if (!trim("device_type_key") || !trim("device_type_name") || !trim("asset_group") || !trim("inventory_type_code")) return null;
     assign("device_type_key");
     assign("device_type_name");
     assign("asset_group");
+    assign("inventory_type_code");
     assign("icon_name");
     assign("description");
     payload.sort_order = Number(trim("sort_order") || "0");
