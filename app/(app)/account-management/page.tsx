@@ -345,10 +345,10 @@ export default function AccountManagementPage() {
 
       await refreshUsersAndRegions();
       setCreateOpen(false);
-      setMessage(`Akun ${createForm.email.trim()} berhasil dibuat. Email verifikasi sudah dikirim.`);
+      setMessage(`Akses Syntrix untuk ${createForm.email.trim()} berhasil dibuat. Jika email ini pernah diverifikasi, statusnya akan langsung Verified.`);
       showResponseDialog(
         "Create Account Berhasil",
-        `Akun ${createForm.email.trim()} berhasil dibuat. Email verifikasi sudah dikirim.`,
+        `Akses Syntrix untuk ${createForm.email.trim()} berhasil dibuat. Jika email ini pernah diverifikasi di Nhost Auth, akun akan langsung berstatus Verified. Jika belum, gunakan tombol Resend untuk mengirim email verifikasi.`,
         "success",
       );
     } catch (error) {
@@ -468,7 +468,7 @@ export default function AccountManagementPage() {
     try {
       await apiFetch(`/users/${deleteTarget.id}`, { method: "DELETE", token });
       await refreshUsersAndRegions();
-      setMessage(`Akun ${deleteTarget.email} berhasil dihapus.`);
+      setMessage(`Akses Syntrix untuk ${deleteTarget.email} berhasil dihapus. Identitas Nhost Auth tetap disimpan.`);
       setDeleteOpen(false);
       setDeleteTarget(null);
     } catch (error) {
@@ -632,15 +632,6 @@ export default function AccountManagementPage() {
             />
           </CardContent>
         </Card>
-
-        <Alert>
-          <MailCheck className="size-4" />
-          <AlertTitle>Form verifikasi email</AlertTitle>
-          <AlertDescription>
-            Template email verifikasi diedit dari Nhost Dashboard di menu Auth / Email Templates. Di aplikasi ini kita hanya
-            mengirim email verifikasi dan menampilkan status verified dari data auth.
-          </AlertDescription>
-        </Alert>
 
         <Sheet open={createOpen} onOpenChange={setCreateOpen}>
           <SheetContent side="right" className="w-full sm:max-w-md">
@@ -830,9 +821,10 @@ export default function AccountManagementPage() {
         <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Hapus Account?</AlertDialogTitle>
+              <AlertDialogTitle>Hapus Akses Syntrix?</AlertDialogTitle>
               <AlertDialogDescription>
-                Akun <span className="font-medium">{deleteTarget?.email || "-"}</span> akan dihapus dari app user Syntrix.
+                Akses Syntrix untuk <span className="font-medium">{deleteTarget?.email || "-"}</span> akan dihapus dari aplikasi.
+                Identitas Nhost Auth dan status verifikasi email tetap disimpan.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -845,7 +837,7 @@ export default function AccountManagementPage() {
                 }}
                 disabled={deleteLoading}
               >
-                {deleteLoading ? "Menghapus..." : "Ya, Hapus"}
+                {deleteLoading ? "Menghapus..." : "Ya, Hapus Akses"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
