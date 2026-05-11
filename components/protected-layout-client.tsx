@@ -82,8 +82,13 @@ export function ProtectedLayoutClient({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (!me) return;
-    const adminOnlyPaths = ["/account-management", "/master-data", "/audit-trail", "/trash"];
+    const adminOnlyPaths = ["/master-data", "/audit-trail", "/trash"];
     if (adminOnlyPaths.some((path) => pathname.startsWith(path)) && me.role !== "admin") {
+      router.replace("/dashboard");
+      return;
+    }
+
+    if (pathname.startsWith("/account-management") && !["admin", "user_all_region"].includes(me.role)) {
       router.replace("/dashboard");
       return;
     }

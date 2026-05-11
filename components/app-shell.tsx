@@ -35,7 +35,7 @@ export function AppShell({
     ...(isSuperAdmin ? [{ href: "/audit-trail", label: "Audit Trail" }] : []),
     ...(isSuperAdmin ? [{ href: "/trash", label: "Trash" }] : []),
     { href: "/maps", label: "Maps" },
-    ...(isSuperAdmin ? [{ href: "/account-management", label: "Account Management" }] : []),
+    ...(isSuperAdmin || isAdminRegion ? [{ href: "/account-management", label: "Account Management" }] : []),
   ];
 
   const breadcrumbs = buildBreadcrumbs(pathname);

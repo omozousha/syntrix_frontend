@@ -207,12 +207,18 @@ export type DevicesListResponse = PaginatedResponse<{
 export type UsersListResponse = PaginatedResponse<{
     id: string;
     user_code: string;
+    auth_user_id?: string | null;
     full_name: string;
     email: string;
     role_name: string;
     avatar_attachment_id?: string | null;
     is_active: boolean;
     default_region_id: string | null;
+    metadata?: Record<string, unknown> | null;
+    email_verified?: boolean;
+    verification_status?: "verified" | "pending" | "unverified" | string;
+    created_at?: string;
+    updated_at?: string;
   }>;
 
 export type RegionsListResponse = PaginatedResponse<{
