@@ -82,18 +82,19 @@ Template form validasi ODP yang dibakukan:
   - Pigtail dan Adapter: Lengkap/Tidak lengkap/Keterangan + foto.
   - Kerapihan Kabel: Rapi/Tidak rapi/Keterangan + foto.
 - Kapasitas dan okupansi port:
-  - Tipe ODP.
+  - Tipe ODP dari master data: ODP PB, ODP CA, ODP US.
+  - Jenis instalasi dari master data: Aerial, Pedestrial.
   - Kapasitas ODP.
   - Kapasitas splitter.
   - Jumlah port aktif.
   - Jumlah port kosong.
   - Jumlah port rusak.
-- Redaman:
-  - Port 1 sampai mengikuti kapasitas ODP aktual, misalnya 8 atau 16 port.
+- Port ODP:
+  - Status port dan redaman per port mengikuti kapasitas ODP aktual, misalnya 8 atau 16 port.
 
 Keputusan implementasi:
 
-- Validator boleh mengusulkan perubahan nama ODP, splitter ratio, kapasitas ODP, status port, dan redaman per port sesuai kondisi lapangan.
+- Validator boleh mengusulkan perubahan nama ODP, tipe ODP, jenis instalasi, splitter ratio, kapasitas ODP, status port, dan redaman per port sesuai kondisi lapangan.
 - Perubahan tersebut masuk ke snapshot request validasi, bukan langsung menulis ke asset utama.
 - Setelah approval final superadmin, sistem menerapkan field asset utama yang relevan: nama ODP, splitter ratio, total port, used port, dan status port.
 - Redaman per port disimpan sebagai snapshot validasi terlebih dahulu sampai model database redaman final diputuskan.
@@ -297,7 +298,7 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 - [ ] Pastikan evidence request aktif hanya evidence submit terakhir.
 - [ ] Pastikan evidence lama tetap tampil di histori validasi.
 - [x] Tampilkan checklist snapshot di review adminregion/superadmin.
-- [x] Tambahkan input nama ODP baru, splitter ratio, kapasitas ODP, status port, dan redaman per port ke snapshot validasi.
+- [x] Tambahkan input nama ODP baru, tipe ODP, jenis instalasi, splitter ratio, kapasitas ODP, status port, dan redaman per port ke snapshot validasi.
 - [x] Terapkan nama ODP, splitter ratio, total port, used port, dan status port setelah approval final.
 - [ ] Tampilkan detail validasi terakhir sebagai referensi read-only.
 

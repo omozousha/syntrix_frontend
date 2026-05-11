@@ -13,6 +13,8 @@ export type DataCategory = {
     | "deviceTypes"
     | "popTypes"
     | "routeTypes"
+    | "odpTypes"
+    | "installationTypes"
     | "manufacturers"
     | "brands"
     | "assetModels"
@@ -43,6 +45,8 @@ export const DATA_CATEGORIES: DataCategory[] = [
   { slug: "master-device-types", label: "Device Types", description: "Master tipe perangkat", resource: "deviceTypes", group: "master" },
   { slug: "master-pop-types", label: "POP Types", description: "Master tipe POP", resource: "popTypes", group: "master" },
   { slug: "master-route-types", label: "Route Types", description: "Master tipe route", resource: "routeTypes", group: "master" },
+  { slug: "master-odp-types", label: "ODP Types", description: "Master tipe ODP", resource: "odpTypes", group: "master" },
+  { slug: "master-installation-types", label: "Installation Types", description: "Master jenis instalasi", resource: "installationTypes", group: "master" },
   { slug: "master-manufacturers", label: "Manufacturers", description: "Master manufacturer", resource: "manufacturers", group: "master" },
   { slug: "master-brands", label: "Brands", description: "Master brand", resource: "brands", group: "master" },
   { slug: "master-models", label: "Models", description: "Master model perangkat", resource: "assetModels", group: "master" },

@@ -60,6 +60,8 @@ type OntOption = {
   device_type_key?: string | null;
   region_id?: string | null;
 };
+type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
+type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
 
 type ValidationStatus = "valid" | "warning" | "invalid";
 type ChecklistKey = "physical_ok" | "splitter_ok" | "port_mapping_ok" | "qr_label_ok" | "label_ok";
@@ -71,6 +73,7 @@ type ValidationDraft = Record<ChecklistKey, boolean> & {
   splitterRatio: string;
   totalPortsActual: string;
   odpType: string;
+  installationType: string;
   portStatuses: Record<string, string>;
   portAttenuations: Record<string, string>;
 };
@@ -86,6 +89,7 @@ type ValidationRecord = {
     field_validation?: {
       new_device_name?: string | null;
       odp_type?: string | null;
+      installation_type?: string | null;
       splitter_ratio?: string | null;
       total_ports?: number | null;
     };
@@ -108,6 +112,7 @@ type ValidationRequestItem = {
     field_validation?: {
       new_device_name?: string | null;
       odp_type?: string | null;
+      installation_type?: string | null;
       splitter_ratio?: string | null;
       total_ports?: number | null;
     };
@@ -154,6 +159,8 @@ export default function OdpFieldValidationPage() {
   const [validationRequests, setValidationRequests] = useState<ValidationRequestItem[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [ontDevices, setOntDevices] = useState<OntOption[]>([]);
+  const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
+  const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingPortId, setSavingPortId] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -204,7 +211,7 @@ export default function OdpFieldValidationPage() {
       setLoading(true);
       setError("");
       try {
-        const [deviceResult, portResult, validationResult, customersResult, ontResult, requestResult] = await Promise.all([
+        const [deviceResult, portResult, validationResult, customersResult, ontResult, odpTypesResult, installationTypesResult, requestResult] = await Promise.all([
           apiFetch<{ data: DeviceItem }>(`/devices/${id}`, { token }),
           apiFetch<PaginatedResponse<DevicePort>>(`/devicePorts?page=1&limit=200&device_id=${encodeURIComponent(id)}`, { token }),
           apiFetch<PaginatedResponse<ValidationRecord>>(
@@ -213,6 +220,8 @@ export default function OdpFieldValidationPage() {
           ),
           apiFetch<PaginatedResponse<CustomerOption>>("/customers?page=1&limit=500", { token }),
           apiFetch<PaginatedResponse<OntOption>>("/devices?page=1&limit=500&device_type_key=ONT", { token }),
+          optionalPaginatedRequest<OdpTypeOption>(() => apiFetch<PaginatedResponse<OdpTypeOption>>("/odpTypes?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<InstallationTypeOption>(() => apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token })),
           apiFetch<{ data: ValidationRequestItem[] }>(`/validation-requests?entity_id=${encodeURIComponent(id)}`, { token }),
         ]);
         if (cancelled) return;
@@ -238,6 +247,8 @@ export default function OdpFieldValidationPage() {
         setValidations(mappedRequestValidations.length ? mappedRequestValidations : validationResult.data || []);
         setCustomers(customersResult.data || []);
         setOntDevices((ontResult.data || []).filter((item) => String(item.device_type_key || "").toUpperCase() === "ONT"));
+        setOdpTypes(odpTypesResult.data || []);
+        setInstallationTypes(installationTypesResult.data || []);
         setValidationRequests(requestItems);
         setLastValidationSnapshot(latestSnapshot);
         setDraft(buildDefaultValidationDraft(loadedDevice, loadedPorts));
@@ -402,6 +413,7 @@ export default function OdpFieldValidationPage() {
               address: device.address || null,
               longlat: [device.longitude, device.latitude].filter((value) => value != null && value !== "").join(", ") || null,
               odp_type: nullIfEmpty(draft.odpType),
+              installation_type: nullIfEmpty(draft.installationType),
               splitter_ratio: nullIfEmpty(draft.splitterRatio),
               total_ports: totalPortsActual,
               port_summary: portSummary,
@@ -795,11 +807,30 @@ export default function OdpFieldValidationPage() {
                   </div>
                   <div className="space-y-1">
                     <Label>Tipe ODP</Label>
-                    <Input
+                    <Combobox
                       value={draft.odpType}
-                      onChange={(event) => setDraft((prev) => ({ ...prev, odpType: event.target.value }))}
+                      onValueChange={(value) => setDraft((prev) => ({ ...prev, odpType: value }))}
                       disabled={submitting}
+                      options={odpTypes.map((item) => ({
+                        value: item.odp_type_name,
+                        label: [item.odp_type_name, item.odp_type_code].filter(Boolean).join(" - "),
+                      }))}
                       placeholder="Contoh: ODP 8 port"
+                      searchPlaceholder="Cari tipe ODP..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Jenis Instalasi</Label>
+                    <Combobox
+                      value={draft.installationType}
+                      onValueChange={(value) => setDraft((prev) => ({ ...prev, installationType: value }))}
+                      disabled={submitting}
+                      options={installationTypes.map((item) => ({
+                        value: item.installation_type_name,
+                        label: [item.installation_type_name, item.installation_type_code].filter(Boolean).join(" - "),
+                      }))}
+                      placeholder="Contoh: Aerial"
+                      searchPlaceholder="Cari jenis instalasi..."
                     />
                   </div>
                   <div className="space-y-1">
@@ -1222,6 +1253,7 @@ function buildDefaultValidationDraft(device?: DeviceItem | null, ports: DevicePo
     splitterRatio: String(device?.splitter_ratio || ""),
     totalPortsActual: String(ports.length || device?.total_ports || 8),
     odpType: "",
+    installationType: "",
     portStatuses: buildPortStatusMap(ports),
     portAttenuations: {},
   };
@@ -1246,6 +1278,7 @@ function buildDraftFromSnapshot(snapshot: ValidationRecord): ValidationDraft {
     splitterRatio: String(fieldValidation.splitter_ratio || ""),
     totalPortsActual: String(fieldValidation.total_ports || 8),
     odpType: String(fieldValidation.odp_type || ""),
+    installationType: String(fieldValidation.installation_type || ""),
     portStatuses: {},
     portAttenuations: {},
   };
@@ -1284,4 +1317,12 @@ async function uploadAttachment({ token, file, entityId }: { token: string; file
   });
 
   return response.data;
+}
+
+function optionalPaginatedRequest<T>(request: () => Promise<PaginatedResponse<T>>): Promise<PaginatedResponse<T>> {
+  return request().catch(() => ({
+    success: true,
+    message: "",
+    data: [],
+  }));
 }

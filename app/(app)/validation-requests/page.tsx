@@ -823,6 +823,7 @@ function getFieldValidationReviewFields(item: ValidationRequestItem) {
     { title: "POP", value: valueText(field.pop_id) },
     { title: "Longlat", value: valueText(field.longlat) },
     { title: "Tipe ODP", value: valueText(field.odp_type) },
+    { title: "Jenis Instalasi", value: valueText(field.installation_type) },
     { title: "Splitter", value: valueText(field.splitter_ratio) },
     { title: "Kapasitas", value: valueText(field.total_ports) },
     { title: "Port Aktif", value: valueText(summary.used) },

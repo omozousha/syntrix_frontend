@@ -419,6 +419,8 @@ export default function DataManagementListPage() {
     if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Inventory Code", "Asset Group", "Status", "Updated"];
     if (category.resource === "popTypes") return [selectAllHeader, "Code", "POP Type", "Status", "Updated"];
     if (category.resource === "routeTypes") return [selectAllHeader, "Code", "Route Type", "Status", "Updated"];
+    if (category.resource === "odpTypes") return [selectAllHeader, "Code", "ODP Type", "Status", "Updated"];
+    if (category.resource === "installationTypes") return [selectAllHeader, "Code", "Installation Type", "Status", "Updated"];
     if (category.resource === "manufacturers") return [selectAllHeader, "Code", "Manufacturer", "Updated"];
     if (category.resource === "brands") return [selectAllHeader, "Code", "Brand", "Manufacturer", "Updated"];
     if (category.resource === "assetModels") return [selectAllHeader, "Code", "Model", "Brand", "Updated"];
@@ -547,6 +549,24 @@ export default function DataManagementListPage() {
           selectCell,
           pick(item, ["route_type_code"]),
           withArchivedLabel(item, pick(item, ["route_type_name"])),
+          pick(item, ["is_active"]),
+          formatDateTime(pick(item, ["updated_at", "created_at"])),
+        ];
+      }
+      if (category.resource === "odpTypes") {
+        return [
+          selectCell,
+          pick(item, ["odp_type_code"]),
+          withArchivedLabel(item, pick(item, ["odp_type_name"])),
+          pick(item, ["is_active"]),
+          formatDateTime(pick(item, ["updated_at", "created_at"])),
+        ];
+      }
+      if (category.resource === "installationTypes") {
+        return [
+          selectCell,
+          pick(item, ["installation_type_code"]),
+          withArchivedLabel(item, pick(item, ["installation_type_name"])),
           pick(item, ["is_active"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -1421,6 +1441,36 @@ function renderCreateFields(
     );
   }
 
+  if (resource === "odpTypes") {
+    return (
+      <>
+        <div className="space-y-1.5">
+          <Label>ODP Type Name *</Label>
+          <Input value={form.odp_type_name || ""} onChange={(e) => setValue("odp_type_name", e.target.value)} placeholder="Contoh: ODP PB" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>ODP Type Code</Label>
+          <Input value={form.odp_type_code || ""} onChange={(e) => setValue("odp_type_code", e.target.value.toUpperCase())} placeholder="Contoh: ODP_PB" />
+        </div>
+      </>
+    );
+  }
+
+  if (resource === "installationTypes") {
+    return (
+      <>
+        <div className="space-y-1.5">
+          <Label>Installation Type Name *</Label>
+          <Input value={form.installation_type_name || ""} onChange={(e) => setValue("installation_type_name", e.target.value)} placeholder="Contoh: Aerial" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Installation Type Code</Label>
+          <Input value={form.installation_type_code || ""} onChange={(e) => setValue("installation_type_code", e.target.value.toUpperCase())} placeholder="Contoh: AERIAL" />
+        </div>
+      </>
+    );
+  }
+
   if (resource === "manufacturers") {
     return (
       <>
@@ -1580,6 +1630,8 @@ function getCreateDefaults(resource: string): Record<string, string> {
   if (resource === "deviceTypes") return { asset_group: "active", icon_name: "HardDrive", is_active: "true", sort_order: "0" };
   if (resource === "popTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "routeTypes") return { is_active: "true", sort_order: "0" };
+  if (resource === "odpTypes") return { is_active: "true", sort_order: "0" };
+  if (resource === "installationTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "splitterProfiles") return { input_port_count: "1", output_port_count: "8", is_active: "true" };
   if (resource === "provinces") return { is_active: "true" };
   if (resource === "cities") return { is_active: "true" };
@@ -1805,6 +1857,24 @@ function buildEditFormFromItem(resource: string, item: GenericItem): Record<stri
       is_active: readBool("is_active", true),
     };
   }
+  if (resource === "odpTypes") {
+    return {
+      odp_type_name: read("odp_type_name"),
+      odp_type_code: read("odp_type_code"),
+      description: read("description"),
+      sort_order: read("sort_order") || "0",
+      is_active: readBool("is_active", true),
+    };
+  }
+  if (resource === "installationTypes") {
+    return {
+      installation_type_name: read("installation_type_name"),
+      installation_type_code: read("installation_type_code"),
+      description: read("description"),
+      sort_order: read("sort_order") || "0",
+      is_active: readBool("is_active", true),
+    };
+  }
   if (resource === "manufacturers") {
     return {
       manufacturer_name: read("manufacturer_name"),
@@ -1896,6 +1966,24 @@ function buildCreatePayload(resource: string, form: Record<string, string>) {
     if (!trim("route_type_name")) return null;
     assign("route_type_name");
     assign("route_type_code");
+    assign("description");
+    payload.sort_order = Number(trim("sort_order") || "0");
+    payload.is_active = (trim("is_active") || "true") !== "false";
+    return payload;
+  }
+  if (resource === "odpTypes") {
+    if (!trim("odp_type_name")) return null;
+    assign("odp_type_name");
+    assign("odp_type_code");
+    assign("description");
+    payload.sort_order = Number(trim("sort_order") || "0");
+    payload.is_active = (trim("is_active") || "true") !== "false";
+    return payload;
+  }
+  if (resource === "installationTypes") {
+    if (!trim("installation_type_name")) return null;
+    assign("installation_type_name");
+    assign("installation_type_code");
     assign("description");
     payload.sort_order = Number(trim("sort_order") || "0");
     payload.is_active = (trim("is_active") || "true") !== "false";
@@ -2076,6 +2164,8 @@ function getRenameConfig(resource: string) {
   if (resource === "deviceTypes") return { field: "device_type_name", label: "nama tipe perangkat" };
   if (resource === "popTypes") return { field: "pop_type_name", label: "nama tipe POP" };
   if (resource === "routeTypes") return { field: "route_type_name", label: "nama tipe route" };
+  if (resource === "odpTypes") return { field: "odp_type_name", label: "nama tipe ODP" };
+  if (resource === "installationTypes") return { field: "installation_type_name", label: "nama jenis instalasi" };
   if (resource === "manufacturers") return { field: "manufacturer_name", label: "nama manufacturer" };
   if (resource === "brands") return { field: "brand_name", label: "nama brand" };
   if (resource === "assetModels") return { field: "model_name", label: "nama model" };
@@ -2100,11 +2190,11 @@ function canWriteResource(role: string, resource: string) {
 }
 
 function supportsIsActiveResource(resource: string) {
-  return ["deviceTypes", "popTypes", "routeTypes", "splitterProfiles", "provinces", "cities"].includes(resource);
+  return ["deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "splitterProfiles", "provinces", "cities"].includes(resource);
 }
 
 function supportsSoftDeleteResource(resource: string) {
-  return ["regions", "deviceTypes", "popTypes", "routeTypes", "manufacturers", "brands", "assetModels", "provinces", "cities"].includes(resource);
+  return ["regions", "deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "manufacturers", "brands", "assetModels", "provinces", "cities"].includes(resource);
 }
 
 function isArchived(item: Record<string, unknown>) {
