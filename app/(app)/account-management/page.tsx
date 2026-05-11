@@ -55,6 +55,13 @@ type CreateFormState = {
   default_region_id: string;
 };
 
+type ResponseDialogState = {
+  open: boolean;
+  title: string;
+  description: string;
+  variant: "success" | "error";
+};
+
 const ROLE_LABELS: Record<string, string> = {
   admin: "Superadmin",
   user_all_region: "Admin Region",
@@ -95,6 +102,12 @@ export default function AccountManagementPage() {
 
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [responseDialog, setResponseDialog] = useState<ResponseDialogState>({
+    open: false,
+    title: "",
+    description: "",
+    variant: "success",
+  });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createSaving, setCreateSaving] = useState(false);
@@ -272,6 +285,15 @@ export default function AccountManagementPage() {
     return "";
   }
 
+  function showResponseDialog(title: string, description: string, variant: ResponseDialogState["variant"]) {
+    setResponseDialog({
+      open: true,
+      title,
+      description,
+      variant,
+    });
+  }
+
   async function submitCreate() {
     setCreateSaving(true);
     setMessage("");
@@ -283,21 +305,25 @@ export default function AccountManagementPage() {
     if (!createForm.full_name.trim() || !createForm.email.trim() || !createForm.password) {
       setCreateSaving(false);
       setErrorMessage("Full name, email, dan password wajib diisi.");
+      showResponseDialog("Create Account Gagal", "Full name, email, dan password wajib diisi.", "error");
       return;
     }
     if (createForm.password.length < 8) {
       setCreateSaving(false);
       setErrorMessage("Password minimal 8 karakter.");
+      showResponseDialog("Create Account Gagal", "Password minimal 8 karakter.", "error");
       return;
     }
     if (createForm.password !== createForm.confirm_password) {
       setCreateSaving(false);
       setErrorMessage("Konfirmasi password tidak sama.");
+      showResponseDialog("Create Account Gagal", "Konfirmasi password tidak sama.", "error");
       return;
     }
     if (assignmentError) {
       setCreateSaving(false);
       setErrorMessage(assignmentError);
+      showResponseDialog("Create Account Gagal", assignmentError, "error");
       return;
     }
 
@@ -320,8 +346,15 @@ export default function AccountManagementPage() {
       await refreshUsersAndRegions();
       setCreateOpen(false);
       setMessage(`Akun ${createForm.email.trim()} berhasil dibuat. Email verifikasi sudah dikirim.`);
+      showResponseDialog(
+        "Create Account Berhasil",
+        `Akun ${createForm.email.trim()} berhasil dibuat. Email verifikasi sudah dikirim.`,
+        "success",
+      );
     } catch (error) {
-      setErrorMessage((error as Error).message);
+      const description = (error as Error).message;
+      setErrorMessage(description);
+      showResponseDialog("Create Account Gagal", description, "error");
     } finally {
       setCreateSaving(false);
     }
@@ -357,22 +390,30 @@ export default function AccountManagementPage() {
     if (assignmentError) {
       setEditSaving(false);
       setErrorMessage(assignmentError);
+      showResponseDialog("Edit Account Gagal", assignmentError, "error");
       return;
     }
     if (hasPasswordInput) {
       if (editForm.new_password.length < 8) {
         setEditSaving(false);
         setErrorMessage("Password baru minimal 8 karakter.");
+        showResponseDialog("Edit Account Gagal", "Password baru minimal 8 karakter.", "error");
         return;
       }
       if (editForm.new_password !== editForm.confirm_password) {
         setEditSaving(false);
         setErrorMessage("Konfirmasi password tidak sama.");
+        showResponseDialog("Edit Account Gagal", "Konfirmasi password tidak sama.", "error");
         return;
       }
       if (editTarget.id !== me.app_user.id) {
         setEditSaving(false);
         setErrorMessage("Untuk keamanan, ganti password hanya bisa untuk akun yang sedang login.");
+        showResponseDialog(
+          "Edit Account Gagal",
+          "Untuk keamanan, ganti password hanya bisa untuk akun yang sedang login.",
+          "error",
+        );
         return;
       }
     }
@@ -399,10 +440,13 @@ export default function AccountManagementPage() {
 
       await refreshUsersAndRegions();
       setMessage(`Akun ${editTarget.email} berhasil diupdate.`);
+      showResponseDialog("Edit Account Berhasil", `Akun ${editTarget.email} berhasil diupdate.`, "success");
       setEditOpen(false);
       setEditTarget(null);
     } catch (error) {
-      setErrorMessage((error as Error).message);
+      const description = (error as Error).message;
+      setErrorMessage(description);
+      showResponseDialog("Edit Account Gagal", description, "error");
     } finally {
       setEditSaving(false);
     }
@@ -802,6 +846,29 @@ export default function AccountManagementPage() {
                 disabled={deleteLoading}
               >
                 {deleteLoading ? "Menghapus..." : "Ya, Hapus"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog
+          open={responseDialog.open}
+          onOpenChange={(open) => setResponseDialog((prev) => ({ ...prev, open }))}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{responseDialog.title}</AlertDialogTitle>
+              <AlertDialogDescription>{responseDialog.description}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction
+                className={
+                  responseDialog.variant === "error"
+                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    : undefined
+                }
+              >
+                OK
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
