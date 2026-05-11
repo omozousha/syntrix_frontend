@@ -57,8 +57,8 @@ Gunakan akun di `docs/account-credentials.md`. Jalankan preflight di `docs/reque
 
 ## TC-RQ-6 - Role UI
 
-- [ ] Validator hanya melihat menu yang relevan untuk field workflow.
-- [ ] Validator field ODP nyaman di mobile: toolbar, metric, port card, submit button tidak overlap.
-- [ ] Adminregion hanya melihat data dan request region terkait.
-- [ ] Superadmin melihat queue final approval lintas region.
-- [ ] Superadmin tidak melihat submenu List ODP.
+- [x] Validator hanya melihat menu yang relevan untuk field workflow.
+- [x] Validator field ODP nyaman di mobile: toolbar, metric, port card, submit button tidak overlap.
+- [x] Adminregion hanya melihat data dan request region terkait.
+- [x] Superadmin melihat queue final approval lintas region.
+- [x] Superadmin tidak melihat submenu List ODP.
