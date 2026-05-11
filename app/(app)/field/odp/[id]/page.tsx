@@ -531,7 +531,7 @@ export default function OdpFieldValidationPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <CardTitle className="text-base">Port ODP</CardTitle>
-                    <CardDescription>Status dan catatan aktual per port.</CardDescription>
+                    <CardDescription>Status, redaman, dan catatan aktual per port.</CardDescription>
                   </div>
                   <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                     <LegendDot className="bg-emerald-500" label="used" />
@@ -542,84 +542,113 @@ export default function OdpFieldValidationPage() {
                 </div>
               </CardHeader>
               <CardContent className="px-3 pb-3">
-                {ports.length ? (
+                {buildValidationPortIndexes(draft.totalPortsActual, summary.total || 8).length ? (
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                    {ports.map((port) => (
-                      <div key={port.id} className="rounded-md border bg-background p-3">
+                    {buildValidationPortIndexes(draft.totalPortsActual, summary.total || 8).map((portIndex) => {
+                      const port = ports.find((item) => Number(item.port_index) === portIndex);
+                      const key = String(portIndex);
+                      return (
+                      <div key={port?.id || `draft-port-${key}`} className="rounded-md border bg-background p-3">
                         <div className="mb-3 flex items-center justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{formatOdpPortLabel(port)}</p>
+                            <p className="truncate text-sm font-medium">{port ? formatOdpPortLabel(port) : `#${portIndex}`}</p>
                             <p className="truncate text-xs text-muted-foreground">
-                              {describePortAssignmentState(port)}
+                              {port ? describePortAssignmentState(port) : "Port baru dari kapasitas aktual"}
                             </p>
                           </div>
-                          <span className={`h-3 w-3 shrink-0 rounded-full ${statusDot(port.status)}`} />
+                          <span className={`h-3 w-3 shrink-0 rounded-full ${statusDot(draft.portStatuses[key] || port?.status)}`} />
                         </div>
                         <div className="grid grid-cols-1 gap-2">
                           <Combobox
-                            value={port.status || "idle"}
-                            onValueChange={(status) => void updatePort(port, { status })}
-                            disabled={savingPortId === port.id}
+                            value={draft.portStatuses[key] || port?.status || "idle"}
+                            onValueChange={(status) => {
+                              setDraft((prev) => ({
+                                ...prev,
+                                portStatuses: { ...prev.portStatuses, [key]: status },
+                              }));
+                              if (port) void updatePort(port, { status });
+                            }}
+                            disabled={savingPortId === port?.id}
                             triggerClassName="h-9"
                             options={PORT_STATUS_OPTIONS.map((status) => ({ value: status, label: status }))}
                           />
-                          <Combobox
-                            value={port.customer_id || "__none__"}
-                            onValueChange={(value) => {
-                              const customerId = value === "__none__" ? null : value;
-                              const changes: Partial<DevicePort> = { customer_id: customerId };
-                              if (customerId) changes.status = "used";
-                              if (!customerId && !port.ont_device_id) changes.status = "idle";
-                              void updatePort(port, changes);
-                            }}
-                            disabled={savingPortId === port.id}
-                            triggerClassName="h-9"
-                            options={[
-                              { value: "__none__", label: "Tanpa customer" },
-                              ...customers.map((item) => ({
-                                value: item.id,
-                                label: [item.customer_name, item.customer_id || item.customer_number].filter(Boolean).join(" - ") || item.id,
-                              })),
-                            ]}
-                            searchPlaceholder="Cari customer..."
-                          />
-                          <Combobox
-                            value={port.ont_device_id || "__none__"}
-                            onValueChange={(value) => {
-                              const ontDeviceId = value === "__none__" ? null : value;
-                              const changes: Partial<DevicePort> = { ont_device_id: ontDeviceId };
-                              if (ontDeviceId) changes.status = "used";
-                              if (!ontDeviceId && !port.customer_id) changes.status = "idle";
-                              void updatePort(port, changes);
-                            }}
-                            disabled={savingPortId === port.id}
-                            triggerClassName="h-9"
-                            options={[
-                              { value: "__none__", label: "Tanpa ONT" },
-                              ...ontDevices
-                                .filter((item) => !device?.region_id || !item.region_id || item.region_id === device.region_id)
-                                .map((item) => ({
-                                  value: item.id,
-                                  label: [item.device_name, item.device_id].filter(Boolean).join(" - ") || item.id,
-                                })),
-                            ]}
-                            searchPlaceholder="Cari ONT..."
-                          />
+                          {port ? (
+                            <>
+                              <Combobox
+                                value={port.customer_id || "__none__"}
+                                onValueChange={(value) => {
+                                  const customerId = value === "__none__" ? null : value;
+                                  const changes: Partial<DevicePort> = { customer_id: customerId };
+                                  if (customerId) changes.status = "used";
+                                  if (!customerId && !port.ont_device_id) changes.status = "idle";
+                                  void updatePort(port, changes);
+                                }}
+                                disabled={savingPortId === port.id}
+                                triggerClassName="h-9"
+                                options={[
+                                  { value: "__none__", label: "Tanpa customer" },
+                                  ...customers.map((item) => ({
+                                    value: item.id,
+                                    label: [item.customer_name, item.customer_id || item.customer_number].filter(Boolean).join(" - ") || item.id,
+                                  })),
+                                ]}
+                                searchPlaceholder="Cari customer..."
+                              />
+                              <Combobox
+                                value={port.ont_device_id || "__none__"}
+                                onValueChange={(value) => {
+                                  const ontDeviceId = value === "__none__" ? null : value;
+                                  const changes: Partial<DevicePort> = { ont_device_id: ontDeviceId };
+                                  if (ontDeviceId) changes.status = "used";
+                                  if (!ontDeviceId && !port.customer_id) changes.status = "idle";
+                                  void updatePort(port, changes);
+                                }}
+                                disabled={savingPortId === port.id}
+                                triggerClassName="h-9"
+                                options={[
+                                  { value: "__none__", label: "Tanpa ONT" },
+                                  ...ontDevices
+                                    .filter((item) => !device?.region_id || !item.region_id || item.region_id === device.region_id)
+                                    .map((item) => ({
+                                      value: item.id,
+                                      label: [item.device_name, item.device_id].filter(Boolean).join(" - ") || item.id,
+                                    })),
+                                ]}
+                                searchPlaceholder="Cari ONT..."
+                              />
+                            </>
+                          ) : null}
+                          <div className="space-y-1">
+                            <Label>Redaman Port</Label>
+                            <Input
+                              value={draft.portAttenuations[key] || ""}
+                              onChange={(event) =>
+                                setDraft((prev) => ({
+                                  ...prev,
+                                  portAttenuations: { ...prev.portAttenuations, [key]: event.target.value },
+                                }))
+                              }
+                              disabled={submitting}
+                              placeholder="dB"
+                              className="h-9"
+                            />
+                          </div>
                           <Input
-                            key={`${port.id}-${port.notes || ""}`}
-                            defaultValue={port.notes || ""}
+                            key={`${port?.id || key}-${port?.notes || ""}`}
+                            defaultValue={port?.notes || ""}
                             onBlur={(event) => {
-                              if (event.target.value !== (port.notes || "")) {
+                              if (port && event.target.value !== (port.notes || "")) {
                                 void updatePort(port, { notes: event.target.value });
                               }
                             }}
-                            disabled={savingPortId === port.id}
+                            disabled={!port || savingPortId === port.id}
                             placeholder="Catatan port"
                             className="h-9"
                           />
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 ) : (
                   <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">Port ODP belum tersedia.</p>
@@ -875,46 +904,6 @@ export default function OdpFieldValidationPage() {
                     disabled={submitting}
                     placeholder="Catatan kondisi lapangan"
                   />
-                </div>
-              </div>
-
-              <div className="rounded-md border bg-background p-3">
-                <p className="mb-1 text-sm font-medium">Redaman dan Status Port</p>
-                <p className="mb-3 text-xs text-muted-foreground">Port mengikuti kapasitas aktual. Redaman tersimpan sebagai snapshot validasi.</p>
-                <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1">
-                  {buildValidationPortIndexes(draft.totalPortsActual, summary.total || 8).map((portIndex) => {
-                    const existing = ports.find((port) => Number(port.port_index) === portIndex);
-                    const key = String(portIndex);
-                    return (
-                      <div key={`measure-${key}`} className="grid grid-cols-[72px_1fr_92px] items-center gap-2 rounded-md border p-2">
-                        <p className="text-sm font-medium">Port {portIndex}</p>
-                        <Combobox
-                          value={draft.portStatuses[key] || existing?.status || "idle"}
-                          onValueChange={(status) =>
-                            setDraft((prev) => ({
-                              ...prev,
-                              portStatuses: { ...prev.portStatuses, [key]: status },
-                            }))
-                          }
-                          disabled={submitting}
-                          triggerClassName="h-9"
-                          options={PORT_STATUS_OPTIONS.map((status) => ({ value: status, label: status }))}
-                        />
-                        <Input
-                          value={draft.portAttenuations[key] || ""}
-                          onChange={(event) =>
-                            setDraft((prev) => ({
-                              ...prev,
-                              portAttenuations: { ...prev.portAttenuations, [key]: event.target.value },
-                            }))
-                          }
-                          disabled={submitting}
-                          placeholder="dB"
-                          className="h-9"
-                        />
-                      </div>
-                    );
-                  })}
                 </div>
               </div>
 
