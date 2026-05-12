@@ -237,6 +237,22 @@ export default function OdpFieldValidationPage() {
   const latestRequest = validationRequests[0] || null;
   const deviceValidationUi = mapValidationStatus(String(device?.validation_status || "unvalidated"));
   const requestValidationUi = latestRequest ? mapValidationStatus(latestRequest.current_status) : null;
+  const latestRequestStatus = String(latestRequest?.current_status || "");
+  const isRejectedByAdminregion = latestRequestStatus === "rejected_by_adminregion";
+  const isRejectedBySuperadmin = latestRequestStatus === "rejected_by_superadmin";
+  const isPendingSuperadmin = latestRequestStatus === "pending_async";
+  const latestRejectNote = isRejectedByAdminregion
+    ? latestRequest?.adminregion_review_note
+    : isRejectedBySuperadmin
+      ? latestRequest?.superadmin_review_note
+      : null;
+  const submitBlockedMessage = isPendingSuperadmin
+    ? "Request sedang menunggu review superadmin. Tunggu keputusan sebelum submit ulang."
+    : isRejectedBySuperadmin
+      ? "Request ditolak superadmin. Adminregion perlu review dan resubmit ke superadmin."
+      : "";
+  const isSubmitBlocked = Boolean(submitBlockedMessage);
+  const submitButtonLabel = isRejectedByAdminregion ? "Resubmit Validasi" : "Submit Validasi";
   const selectedSplitterProfile = useMemo(
     () => splitterProfiles.find((item) => item.ratio_label === draft.splitterRatio) || null,
     [splitterProfiles, draft.splitterRatio],
@@ -788,10 +804,24 @@ export default function OdpFieldValidationPage() {
 
           <Card className="order-1 xl:sticky xl:top-4 xl:order-2">
             <CardHeader className="px-3 py-2">
-              <CardTitle className="text-base">Submit Validasi</CardTitle>
+              <CardTitle className="text-base">{isRejectedByAdminregion ? "Resubmit Validasi" : "Submit Validasi"}</CardTitle>
               <CardDescription>Checklist aktual, temuan, dan evidence lapangan.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 px-3 pb-3">
+              {latestRejectNote ? (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  <p className="font-medium">{isRejectedByAdminregion ? "Catatan reject adminregion" : "Catatan reject superadmin"}</p>
+                  <p className="mt-1">{latestRejectNote}</p>
+                  {isRejectedByAdminregion ? (
+                    <p className="mt-2 text-amber-800">
+                      Submit ulang akan memakai data asset saat ini dan mengganti snapshot request aktif.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              {submitBlockedMessage ? (
+                <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">{submitBlockedMessage}</p>
+              ) : null}
               {lastValidationSnapshot ? (
                 <div className="space-y-2 rounded-md border bg-muted/20 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -831,7 +861,7 @@ export default function OdpFieldValidationPage() {
                       variant="ghost"
                       size="sm"
                       disabled={submitting}
-                      onClick={() => setDraft(buildDefaultValidationDraft())}
+                      onClick={() => setDraft(buildDefaultValidationDraft(device, ports))}
                     >
                       Reset Form
                     </Button>
@@ -1047,9 +1077,9 @@ export default function OdpFieldValidationPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-2">
-                <Button type="button" onClick={() => void submitValidation()} disabled={submitting} className="h-11 w-full sm:h-10">
+                <Button type="button" onClick={() => void submitValidation()} disabled={submitting || isSubmitBlocked} className="h-11 w-full sm:h-10">
                   {submitting ? <RefreshCw className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
-                  Submit Validasi
+                  {submitButtonLabel}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">Evidence diambil dari foto pemeriksaan awal dan checklist kondisi. Semua item wajib diisi sebelum submit.</p>

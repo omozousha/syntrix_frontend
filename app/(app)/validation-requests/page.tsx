@@ -92,6 +92,7 @@ export default function ValidationRequestsPage() {
   const selectedType = getRequestType(selected);
   const evidenceRefs = useMemo(() => normalizeEvidenceRefs(selected?.evidence_attachments), [selected]);
   const isAdminRegionView = activeQueue === "adminregion";
+  const isRejectedBySuperadmin = selected?.current_status === "rejected_by_superadmin";
 
   useEffect(() => {
     if (!token || evidenceRefs.length === 0) {
@@ -235,6 +236,30 @@ export default function ValidationRequestsPage() {
       const message = (err as Error).message || "Reject gagal.";
       setError(message);
       setRejectError(message);
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function resubmitSelected() {
+    if (!selected) return;
+    setActing(true);
+    setError("");
+    setSuccess("");
+    try {
+      await apiFetch(`/validation-requests/${selected.id}/adminregion/resubmit`, { method: "POST", token });
+      const message = `Request ${selected.request_id || selected.id} berhasil di-resubmit ke superadmin.`;
+      setSuccess(message);
+      setResultDialogTitle("Resubmit Berhasil");
+      setResultDialogDescription(message);
+      setResultDialogOpen(true);
+      await loadQueue();
+    } catch (err) {
+      const message = (err as Error).message || "Resubmit gagal.";
+      setError(message);
+      setResultDialogTitle("Resubmit Gagal");
+      setResultDialogDescription(message);
+      setResultDialogOpen(true);
     } finally {
       setActing(false);
     }
@@ -513,16 +538,25 @@ export default function ValidationRequestsPage() {
                       <p className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">Catatan Superadmin: {selected.superadmin_review_note}</p>
                     ) : null}
 
-                    <div className="flex flex-wrap gap-2">
-                      <Button type="button" onClick={() => void approveSelected()} disabled={acting}>
-                        <Check className="mr-2 size-4" />
-                        Approve
-                      </Button>
-                      <Button type="button" variant="destructive" onClick={() => setRejectDialogOpen(true)} disabled={acting}>
-                        <X className="mr-2 size-4" />
-                        Reject
-                      </Button>
-                    </div>
+                    {isRejectedBySuperadmin && isAdminRegionView ? (
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" onClick={() => void resubmitSelected()} disabled={acting}>
+                          <RefreshCw className="mr-2 size-4" />
+                          Resubmit ke Superadmin
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" onClick={() => void approveSelected()} disabled={acting}>
+                          <Check className="mr-2 size-4" />
+                          Approve
+                        </Button>
+                        <Button type="button" variant="destructive" onClick={() => setRejectDialogOpen(true)} disabled={acting}>
+                          <X className="mr-2 size-4" />
+                          Reject
+                        </Button>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">Pilih request di panel kiri.</p>

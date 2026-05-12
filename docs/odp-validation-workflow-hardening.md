@@ -313,13 +313,13 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 
 ### Phase 3 - Resubmit Workflow
 
-- [ ] Tampilkan banner reject note di field validation untuk validator.
-- [ ] Tampilkan banner reject note di request/adminregion review.
-- [ ] Tambahkan action resubmit validator setelah reject adminregion.
-- [ ] Tambahkan action resubmit adminregion setelah reject superadmin.
-- [ ] Pastikan form validasi memakai data asset terakhir sebagai default.
-- [ ] Pastikan temuan/evidence lama tidak otomatis menjadi input aktif.
-- [ ] Catat semua resubmit di audit trail.
+- [x] Tampilkan banner reject note di field validation untuk validator.
+- [x] Tampilkan banner reject note di request/adminregion review.
+- [x] Tambahkan action resubmit validator setelah reject adminregion.
+- [x] Tambahkan action resubmit adminregion setelah reject superadmin.
+- [x] Pastikan form validasi memakai data asset terakhir sebagai default.
+- [x] Pastikan temuan/evidence lama tidak otomatis menjadi input aktif.
+- [x] Catat semua resubmit di audit trail.
 
 ### Phase 4 - ODP Quality Work Queue
 
