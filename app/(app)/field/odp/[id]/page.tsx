@@ -410,7 +410,9 @@ export default function OdpFieldValidationPage() {
             source: "field-mode",
             device: {
               id: device.id,
-              device_name: draft.deviceNameNew.trim() || device.device_name || null,
+              ...(draft.deviceNameNew.trim() && draft.deviceNameNew.trim() !== String(device.device_name || "").trim()
+                ? { device_name: draft.deviceNameNew.trim() }
+                : {}),
               splitter_ratio: nullIfEmpty(draft.splitterRatio),
               total_ports: totalPortsActual,
               used_ports: portSummary.used,
@@ -422,7 +424,7 @@ export default function OdpFieldValidationPage() {
               validation_date: new Date().toISOString().slice(0, 10),
               inventory_id: device.device_id || null,
               old_device_name: device.device_name || null,
-              new_device_name: draft.deviceNameNew.trim() || device.device_name || null,
+              new_device_name: draft.deviceNameNew.trim() && draft.deviceNameNew.trim() !== String(device.device_name || "").trim() ? draft.deviceNameNew.trim() : null,
               pop_id: device.pop_id || null,
               pop_name: getPopDisplayName(pop),
               address: device.address || null,

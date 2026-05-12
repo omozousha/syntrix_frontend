@@ -714,12 +714,12 @@ export default function CreateDataManagementPage() {
         return;
       }
 
-      if (!form.device_name || !form.region_id || !form.device_type_key) {
-        throw new Error("Device Name, Device Type, dan Region wajib diisi.");
+      if ((!form.device_name && form.device_type_key !== "ODP") || !form.region_id || !form.device_type_key) {
+        throw new Error("Device Name, Device Type, dan Region wajib diisi. Untuk ODP, Device Name boleh dikosongkan.");
       }
 
       const payload: Record<string, unknown> = {
-        device_name: form.device_name.trim(),
+        device_name: form.device_name.trim() || null,
         device_type_key: form.device_type_key,
         asset_group: PASSIVE_TYPES.has(form.device_type_key) ? "passive" : "active",
         region_id: form.region_id,
@@ -877,7 +877,7 @@ export default function CreateDataManagementPage() {
 
             {isDevice ? (
               <>
-                <Field label="Device Name" value={form.device_name} onChange={(v) => setForm((p) => ({ ...p, device_name: v }))} />
+                <Field label={form.device_type_key === "ODP" ? "Device Name (opsional)" : "Device Name"} value={form.device_name} onChange={(v) => setForm((p) => ({ ...p, device_name: v }))} />
                 <div className="space-y-1.5">
                   <FieldLabel label="POP (opsional)" tooltip="Hubungkan device ke POP jika perangkat berada di POP tertentu." />
                   <Combobox
