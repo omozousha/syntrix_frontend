@@ -832,7 +832,7 @@ export default function OdpFieldValidationPage() {
                         value: item.odp_type_name,
                         label: [item.odp_type_name, item.odp_type_code].filter(Boolean).join(" - "),
                       }))}
-                      placeholder="Contoh: ODP 8 port"
+                      placeholder="Contoh: ODP Pole Box"
                       searchPlaceholder="Cari tipe ODP..."
                     />
                   </div>

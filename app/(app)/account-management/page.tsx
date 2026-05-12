@@ -575,9 +575,6 @@ export default function AccountManagementPage() {
                   options={filterRoleOptions}
                   disabled={isAdminRegion}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Region mengikuti Master Data Regions dan otomatis ter-refresh saat halaman dimuat.
-                </p>
               </div>
 
               <div className="flex items-end">
