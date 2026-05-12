@@ -69,7 +69,8 @@ Template form validasi ODP yang dibakukan:
 - Nama ODP Baru.
 - POP.
 - Alamat.
-- Longlat.
+- Longitude.
+- Latitude.
 - Pemeriksaan awal:
   - Foto keseluruhan ODP sebelum pemeriksaan jarak dekat.
   - Foto keseluruhan ODP sebelum pemeriksaan jarak jauh dengan tiang.

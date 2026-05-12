@@ -97,6 +97,8 @@ type ValidationRecord = {
       pop_name?: string | null;
       odp_type?: string | null;
       installation_type?: string | null;
+      longitude?: number | string | null;
+      latitude?: number | string | null;
       splitter_ratio?: string | null;
       total_ports?: number | null;
     };
@@ -121,6 +123,8 @@ type ValidationRequestItem = {
       pop_name?: string | null;
       odp_type?: string | null;
       installation_type?: string | null;
+      longitude?: number | string | null;
+      latitude?: number | string | null;
       splitter_ratio?: string | null;
       total_ports?: number | null;
     };
@@ -428,7 +432,8 @@ export default function OdpFieldValidationPage() {
               pop_id: device.pop_id || null,
               pop_name: getPopDisplayName(pop),
               address: device.address || null,
-              longlat: [device.longitude, device.latitude].filter((value) => value != null && value !== "").join(", ") || null,
+              longitude: device.longitude ?? null,
+              latitude: device.latitude ?? null,
               odp_type: nullIfEmpty(draft.odpType),
               installation_type: nullIfEmpty(draft.installationType),
               splitter_ratio: nullIfEmpty(draft.splitterRatio),
@@ -812,7 +817,8 @@ export default function OdpFieldValidationPage() {
                   <InfoField label="Nama ODP Lama" value={device.device_name || "-"} />
                   <InfoField label="POP" value={getPopDisplayName(pop) || String(device.pop_id || "-")} />
                   <InfoField label="Alamat" value={device.address || "-"} />
-                  <InfoField label="Longlat" value={[device.longitude, device.latitude].filter((value) => value != null && value !== "").join(", ") || "-"} />
+                  <InfoField label="Longitude" value={device.longitude ?? "-"} />
+                  <InfoField label="Latitude" value={device.latitude ?? "-"} />
                   <div className="space-y-1">
                     <Label>Nama ODP Baru</Label>
                     <Input
