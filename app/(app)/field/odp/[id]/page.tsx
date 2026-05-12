@@ -68,6 +68,12 @@ type PopItem = {
 };
 type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
+type SplitterProfileOption = {
+  id: string;
+  ratio_label: string;
+  output_port_count?: number | null;
+  is_active?: boolean | null;
+};
 
 type ValidationStatus = "valid" | "warning" | "invalid";
 type ChecklistKey = "physical_ok" | "splitter_ok" | "port_mapping_ok" | "qr_label_ok" | "label_ok";
@@ -174,6 +180,7 @@ export default function OdpFieldValidationPage() {
   const [pop, setPop] = useState<PopItem | null>(null);
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
+  const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingPortId, setSavingPortId] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -209,6 +216,24 @@ export default function OdpFieldValidationPage() {
   const latestRequest = validationRequests[0] || null;
   const deviceValidationUi = mapValidationStatus(String(device?.validation_status || "unvalidated"));
   const requestValidationUi = latestRequest ? mapValidationStatus(latestRequest.current_status) : null;
+  const selectedSplitterProfile = useMemo(
+    () => splitterProfiles.find((item) => item.ratio_label === draft.splitterRatio) || null,
+    [splitterProfiles, draft.splitterRatio],
+  );
+  const odpCapacityOptions = useMemo(() => {
+    const selectedOutput = Number(selectedSplitterProfile?.output_port_count || 0);
+    if (Number.isFinite(selectedOutput) && selectedOutput > 0) {
+      if (selectedOutput < 16) return [selectedOutput];
+      const presets = [8, 16, 32, 64].filter((value) => value <= selectedOutput);
+      if (!presets.includes(selectedOutput)) presets.push(selectedOutput);
+      return Array.from(new Set(presets)).sort((a, b) => a - b);
+    }
+
+    const outputs = splitterProfiles
+      .map((item) => Number(item.output_port_count || 0))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    return Array.from(new Set(outputs.concat([8, 16]))).sort((a, b) => a - b);
+  }, [selectedSplitterProfile, splitterProfiles]);
 
   useEffect(() => {
     if (!message) return;
@@ -224,7 +249,7 @@ export default function OdpFieldValidationPage() {
       setLoading(true);
       setError("");
       try {
-        const [deviceResult, portResult, validationResult, customersResult, ontResult, odpTypesResult, installationTypesResult, requestResult] = await Promise.all([
+        const [deviceResult, portResult, validationResult, customersResult, ontResult, odpTypesResult, installationTypesResult, splitterProfilesResult, requestResult] = await Promise.all([
           apiFetch<{ data: DeviceItem }>(`/devices/${id}`, { token }),
           apiFetch<PaginatedResponse<DevicePort>>(`/devicePorts?page=1&limit=200&device_id=${encodeURIComponent(id)}`, { token }),
           apiFetch<PaginatedResponse<ValidationRecord>>(
@@ -235,6 +260,7 @@ export default function OdpFieldValidationPage() {
           apiFetch<PaginatedResponse<OntOption>>("/devices?page=1&limit=500&device_type_key=ONT", { token }),
           optionalPaginatedRequest<OdpTypeOption>(() => apiFetch<PaginatedResponse<OdpTypeOption>>("/odpTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<InstallationTypeOption>(() => apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<SplitterProfileOption>(() => apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token })),
           apiFetch<{ data: ValidationRequestItem[] }>(`/validation-requests?entity_id=${encodeURIComponent(id)}`, { token }),
         ]);
         if (cancelled) return;
@@ -267,6 +293,7 @@ export default function OdpFieldValidationPage() {
         setOntDevices((ontResult.data || []).filter((item) => String(item.device_type_key || "").toUpperCase() === "ONT"));
         setOdpTypes(odpTypesResult.data || []);
         setInstallationTypes(installationTypesResult.data || []);
+        setSplitterProfiles(splitterProfilesResult.data || []);
         setValidationRequests(requestItems);
         setLastValidationSnapshot(latestSnapshot);
         setDraft(buildDefaultValidationDraft(loadedDevice, loadedPorts));
@@ -858,23 +885,39 @@ export default function OdpFieldValidationPage() {
                   </div>
                   <div className="space-y-1">
                     <Label>Kapasitas ODP</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={64}
+                    <Combobox
                       value={draft.totalPortsActual}
-                      onChange={(event) => setDraft((prev) => ({ ...prev, totalPortsActual: event.target.value }))}
+                      onValueChange={(value) => setDraft((prev) => ({ ...prev, totalPortsActual: value }))}
                       disabled={submitting}
-                      placeholder="8 / 16"
+                      options={odpCapacityOptions.map((port) => ({
+                        value: String(port),
+                        label: `${port} port`,
+                      }))}
+                      placeholder="Pilih kapasitas ODP"
+                      searchPlaceholder="Cari kapasitas ODP..."
                     />
                   </div>
                   <div className="space-y-1">
                     <Label>Kapasitas Splitter</Label>
-                    <Input
+                    <Combobox
                       value={draft.splitterRatio}
-                      onChange={(event) => setDraft((prev) => ({ ...prev, splitterRatio: event.target.value }))}
+                      onValueChange={(value) => {
+                        const profile = splitterProfiles.find((item) => item.ratio_label === value) || null;
+                        const output = Number(profile?.output_port_count || 0);
+                        const autoTotal = Number.isFinite(output) && output > 0 ? (output >= 16 ? 8 : output) : 0;
+                        setDraft((prev) => ({
+                          ...prev,
+                          splitterRatio: value,
+                          totalPortsActual: autoTotal ? String(autoTotal) : prev.totalPortsActual,
+                        }));
+                      }}
                       disabled={submitting}
-                      placeholder="Contoh: 1:8"
+                      options={splitterProfiles.map((item) => ({
+                        value: item.ratio_label,
+                        label: item.output_port_count ? `${item.ratio_label} (${item.output_port_count} port)` : item.ratio_label,
+                      }))}
+                      placeholder="Pilih kapasitas splitter"
+                      searchPlaceholder="Cari kapasitas splitter..."
                     />
                   </div>
                 </div>

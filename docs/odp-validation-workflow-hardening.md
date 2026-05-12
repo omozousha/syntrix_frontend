@@ -85,8 +85,8 @@ Template form validasi ODP yang dibakukan:
 - Kapasitas dan okupansi port:
   - Tipe ODP dari master data: ODP PB, ODP CA, ODP US.
   - Jenis instalasi dari master data: Aerial, Pedestrial.
-  - Kapasitas ODP.
-  - Kapasitas splitter.
+  - Kapasitas ODP dari master data Splitter Profiles.
+  - Kapasitas splitter dari master data Splitter Profiles.
   - Jumlah port aktif.
   - Jumlah port kosong.
   - Jumlah port rusak.
