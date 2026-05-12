@@ -81,6 +81,8 @@ type ValidationDraft = Record<ChecklistKey, boolean> & {
   status: ValidationStatus;
   findings: string;
   evidenceFile: File | null;
+  initialPhotos: Record<InspectionPhotoKey, File | null>;
+  conditionChecks: Record<ConditionCheckKey, ConditionCheckDraft>;
   deviceNameNew: string;
   splitterRatio: string;
   totalPortsActual: string;
@@ -89,6 +91,14 @@ type ValidationDraft = Record<ChecklistKey, boolean> & {
   portStatuses: Record<string, string>;
   portAttenuations: Record<string, string>;
 };
+type InspectionPhotoKey = "overall_near" | "overall_far_pole" | "inside_closeup" | "side_views";
+type ConditionCheckKey = "box_odp" | "label_odp" | "cleanliness" | "pigtail_adapter" | "cable_neatness";
+type ConditionCheckDraft = {
+  condition: string;
+  note: string;
+  photo: File | null;
+};
+type UploadedEvidenceRef = { id?: string | null; attachment_id?: string | null; name?: string | null };
 type ValidationRecord = {
   id: string;
   validation_id?: string | null;
@@ -164,6 +174,19 @@ const CHECKLIST: Array<{ key: ChecklistKey; label: string }> = [
   { key: "port_mapping_ok", label: "Mapping port OK" },
   { key: "qr_label_ok", label: "QR terpasang" },
   { key: "label_ok", label: "Label terbaca" },
+];
+const INITIAL_PHOTO_ITEMS: Array<{ key: InspectionPhotoKey; label: string }> = [
+  { key: "overall_near", label: "Foto keseluruhan ODP jarak dekat" },
+  { key: "overall_far_pole", label: "Foto keseluruhan ODP jarak jauh dengan tiang" },
+  { key: "inside_closeup", label: "Foto bagian dalam ODP close up" },
+  { key: "side_views", label: "Foto tampak kanan dan kiri" },
+];
+const CONDITION_CHECK_ITEMS: Array<{ key: ConditionCheckKey; label: string; options: string[] }> = [
+  { key: "box_odp", label: "Box ODP", options: ["Baik", "Rusak"] },
+  { key: "label_odp", label: "Label ODP", options: ["Baik", "Rusak"] },
+  { key: "cleanliness", label: "Kebersihan ODP", options: ["Bersih", "Kotor"] },
+  { key: "pigtail_adapter", label: "Pigtail dan Adapter", options: ["Lengkap", "Tidak lengkap"] },
+  { key: "cable_neatness", label: "Kerapihan Kabel", options: ["Rapi", "Tidak rapi"] },
 ];
 
 export default function OdpFieldValidationPage() {
@@ -403,26 +426,20 @@ export default function OdpFieldValidationPage() {
     setError("");
     setMessage("");
     try {
-      let evidenceAttachmentId: string | null = null;
-      let evidenceAttachmentCode: string | null = null;
-      let uploadedEvidenceName: string | null = null;
+      const evidenceAttachments: UploadedEvidenceRef[] = [];
       if (draft.evidenceFile) {
         const upload = await uploadAttachment({
           token,
           file: draft.evidenceFile,
           entityId: device.id,
         });
-        evidenceAttachmentId = upload.id || null;
-        evidenceAttachmentCode = upload.attachment_id || null;
-        uploadedEvidenceName = upload.original_name || null;
+        evidenceAttachments.push({ id: upload.id, attachment_id: upload.attachment_id, name: upload.original_name });
       }
+      const fieldInspection = await uploadInspectionEvidence({ token, deviceId: device.id, draft, evidenceAttachments });
 
       const totalPortsActual = normalizePortCapacity(draft.totalPortsActual, summary.total || 8);
       const validationPortPayload = buildValidationPortPayload(ports, draft, totalPortsActual);
       const portSummary = summarizeValidationPortPayload(validationPortPayload);
-      const evidenceAttachments = evidenceAttachmentId
-        ? [{ id: evidenceAttachmentId, attachment_id: evidenceAttachmentCode || undefined, name: uploadedEvidenceName || undefined }]
-        : [];
       await apiFetch("/validation-requests", {
         method: "POST",
         token,
@@ -467,6 +484,7 @@ export default function OdpFieldValidationPage() {
               total_ports: totalPortsActual,
               port_summary: portSummary,
             },
+            field_inspection: fieldInspection,
             port_summary: portSummary,
             device_ports: validationPortPayload,
           },
@@ -923,6 +941,101 @@ export default function OdpFieldValidationPage() {
                 </div>
               </div>
 
+              <div className="rounded-md border bg-background p-3">
+                <p className="mb-3 text-sm font-medium">Pemeriksaan Awal</p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  {INITIAL_PHOTO_ITEMS.map((item) => (
+                    <div key={item.key} className="space-y-1">
+                      <Label>{item.label}</Label>
+                      <Input
+                        key={draft.initialPhotos[item.key]?.name || `empty-${item.key}`}
+                        type="file"
+                        accept="image/*"
+                        disabled={submitting}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] || null;
+                          setDraft((prev) => ({
+                            ...prev,
+                            initialPhotos: { ...prev.initialPhotos, [item.key]: file },
+                          }));
+                        }}
+                      />
+                      {draft.initialPhotos[item.key] ? (
+                        <p className="truncate text-xs text-muted-foreground">{draft.initialPhotos[item.key]?.name}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-md border bg-background p-3">
+                <p className="mb-3 text-sm font-medium">Checklist Kondisi</p>
+                <div className="space-y-3">
+                  {CONDITION_CHECK_ITEMS.map((item) => {
+                    const check = draft.conditionChecks[item.key];
+                    return (
+                      <div key={item.key} className="rounded-md border p-2">
+                        <p className="mb-2 text-sm font-medium">{item.label}</p>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                          <div className="space-y-1">
+                            <Label>Kondisi</Label>
+                            <Combobox
+                              value={check.condition}
+                              onValueChange={(condition) => setDraft((prev) => ({
+                                ...prev,
+                                conditionChecks: {
+                                  ...prev.conditionChecks,
+                                  [item.key]: { ...prev.conditionChecks[item.key], condition },
+                                },
+                              }))}
+                              disabled={submitting}
+                              options={item.options.map((option) => ({ value: option, label: option }))}
+                              placeholder="Pilih kondisi"
+                              searchPlaceholder="Cari kondisi..."
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Keterangan</Label>
+                            <Input
+                              value={check.note}
+                              onChange={(event) => setDraft((prev) => ({
+                                ...prev,
+                                conditionChecks: {
+                                  ...prev.conditionChecks,
+                                  [item.key]: { ...prev.conditionChecks[item.key], note: event.target.value },
+                                },
+                              }))}
+                              disabled={submitting}
+                              placeholder="Keterangan lapangan"
+                            />
+                          </div>
+                          <div className="space-y-1 sm:col-span-2 xl:col-span-1">
+                            <Label>Foto</Label>
+                            <Input
+                              key={check.photo?.name || `empty-${item.key}-photo`}
+                              type="file"
+                              accept="image/*"
+                              disabled={submitting}
+                              onChange={(event) => {
+                                const file = event.target.files?.[0] || null;
+                                setDraft((prev) => ({
+                                  ...prev,
+                                  conditionChecks: {
+                                    ...prev.conditionChecks,
+                                    [item.key]: { ...prev.conditionChecks[item.key], photo: file },
+                                  },
+                                }));
+                              }}
+                            />
+                            {check.photo ? <p className="truncate text-xs text-muted-foreground">{check.photo.name}</p> : null}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
                 {CHECKLIST.map((item) => (
                   <label key={item.key} className="flex min-h-11 items-center gap-2 rounded-md border bg-background p-3 text-sm">
@@ -1315,6 +1428,8 @@ function buildDefaultValidationDraft(device?: DeviceItem | null, ports: DevicePo
     status: "invalid",
     findings: "",
     evidenceFile: null,
+    initialPhotos: buildEmptyInitialPhotos(),
+    conditionChecks: buildEmptyConditionChecks(),
     deviceNameNew: String(device?.device_name || ""),
     splitterRatio: String(device?.splitter_ratio || ""),
     totalPortsActual: String(ports.length || device?.total_ports || 8),
@@ -1340,6 +1455,8 @@ function buildDraftFromSnapshot(snapshot: ValidationRecord): ValidationDraft {
     status: deriveStatusFromChecklist(nextChecklist),
     findings: snapshot.findings || "",
     evidenceFile: null,
+    initialPhotos: buildEmptyInitialPhotos(),
+    conditionChecks: buildEmptyConditionChecks(),
     deviceNameNew: String(fieldValidation.new_device_name || ""),
     splitterRatio: String(fieldValidation.splitter_ratio || ""),
     totalPortsActual: String(fieldValidation.total_ports || 8),
@@ -1348,6 +1465,20 @@ function buildDraftFromSnapshot(snapshot: ValidationRecord): ValidationDraft {
     portStatuses: {},
     portAttenuations: {},
   };
+}
+
+function buildEmptyInitialPhotos(): Record<InspectionPhotoKey, File | null> {
+  return INITIAL_PHOTO_ITEMS.reduce((acc, item) => {
+    acc[item.key] = null;
+    return acc;
+  }, {} as Record<InspectionPhotoKey, File | null>);
+}
+
+function buildEmptyConditionChecks(): Record<ConditionCheckKey, ConditionCheckDraft> {
+  return CONDITION_CHECK_ITEMS.reduce((acc, item) => {
+    acc[item.key] = { condition: "", note: "", photo: null };
+    return acc;
+  }, {} as Record<ConditionCheckKey, ConditionCheckDraft>);
 }
 
 function formatDateTime(value?: string | null) {
@@ -1388,6 +1519,51 @@ async function uploadAttachment({ token, file, entityId }: { token: string; file
   });
 
   return response.data;
+}
+
+async function uploadInspectionEvidence({
+  token,
+  deviceId,
+  draft,
+  evidenceAttachments,
+}: {
+  token: string;
+  deviceId: string;
+  draft: ValidationDraft;
+  evidenceAttachments: UploadedEvidenceRef[];
+}) {
+  const initial_photos: Record<string, { label: string; attachment?: UploadedEvidenceRef }> = {};
+  const condition_checks: Record<string, { label: string; condition: string | null; note: string | null; attachment?: UploadedEvidenceRef }> = {};
+
+  for (const item of INITIAL_PHOTO_ITEMS) {
+    const file = draft.initialPhotos[item.key];
+    if (!file) {
+      initial_photos[item.key] = { label: item.label };
+      continue;
+    }
+    const upload = await uploadAttachment({ token, file, entityId: deviceId });
+    const attachment = { id: upload.id, attachment_id: upload.attachment_id, name: upload.original_name };
+    evidenceAttachments.push(attachment);
+    initial_photos[item.key] = { label: item.label, attachment };
+  }
+
+  for (const item of CONDITION_CHECK_ITEMS) {
+    const check = draft.conditionChecks[item.key];
+    let attachment: UploadedEvidenceRef | undefined;
+    if (check.photo) {
+      const upload = await uploadAttachment({ token, file: check.photo, entityId: deviceId });
+      attachment = { id: upload.id, attachment_id: upload.attachment_id, name: upload.original_name };
+      evidenceAttachments.push(attachment);
+    }
+    condition_checks[item.key] = {
+      label: item.label,
+      condition: nullIfEmpty(check.condition),
+      note: nullIfEmpty(check.note),
+      ...(attachment ? { attachment } : {}),
+    };
+  }
+
+  return { initial_photos, condition_checks };
 }
 
 function optionalPaginatedRequest<T>(request: () => Promise<PaginatedResponse<T>>): Promise<PaginatedResponse<T>> {

@@ -40,6 +40,7 @@ type ValidationRequestItem = {
     before?: Record<string, unknown>;
     device?: Record<string, unknown>;
     field_validation?: Record<string, unknown>;
+    field_inspection?: Record<string, unknown>;
     port_summary?: Record<string, unknown>;
     pop?: Record<string, unknown>;
     route?: Record<string, unknown>;
@@ -452,6 +453,7 @@ export default function ValidationRequestsPage() {
                           </div>
                           <p className="mt-2 text-xs text-muted-foreground">Temuan: {selected.finding_note || "-"}</p>
                         </div>
+                        <FieldInspectionReview inspection={selected.payload_snapshot?.field_inspection} />
                       </div>
                     ) : null}
 
@@ -833,6 +835,51 @@ function getFieldValidationReviewFields(item: ValidationRequestItem) {
   ];
 }
 
+function FieldInspectionReview({ inspection }: { inspection?: Record<string, unknown> | null }) {
+  const initialPhotos = objectRecordValues(inspection?.initial_photos);
+  const conditionChecks = objectRecordValues(inspection?.condition_checks);
+
+  if (!initialPhotos.length && !conditionChecks.length) return null;
+
+  return (
+    <div className="rounded-md border p-3">
+      <p className="mb-2 text-sm font-medium">Pemeriksaan Lapangan</p>
+      {initialPhotos.length ? (
+        <div className="mb-3">
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Pemeriksaan awal</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {initialPhotos.map((item, index) => (
+              <div key={`${valueText(item.label)}-${index}`} className="rounded-md border bg-muted/20 p-2">
+                <p className="text-xs font-medium">{valueText(item.label)}</p>
+                <p className="text-xs text-muted-foreground">Foto: {getInspectionAttachmentName(item.attachment)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {conditionChecks.length ? (
+        <div>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Checklist kondisi</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {conditionChecks.map((item, index) => (
+              <div key={`${valueText(item.label)}-${index}`} className="rounded-md border bg-muted/20 p-2">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-medium">{valueText(item.label)}</p>
+                  <Badge variant="outline" className="shrink-0 text-[10px]">
+                    {valueText(item.condition)}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">Keterangan: {valueText(item.note)}</p>
+                <p className="text-xs text-muted-foreground">Foto: {getInspectionAttachmentName(item.attachment)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function getCreateAssetPayload(item: ValidationRequestItem) {
   return (
     nonEmptyObject(item.payload_snapshot?.resource_payload) ||
@@ -964,6 +1011,19 @@ function shortId(value: string) {
 function nonEmptyObject(value?: Record<string, unknown>) {
   if (!value || !Object.keys(value).length) return null;
   return value;
+}
+
+function objectRecordValues(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  return Object.values(value as Record<string, unknown>).filter(
+    (item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item),
+  );
+}
+
+function getInspectionAttachmentName(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "-";
+  const attachment = value as Record<string, unknown>;
+  return valueText(attachment.name || attachment.attachment_id || attachment.id);
 }
 
 function getOperationLabel(operation: string) {

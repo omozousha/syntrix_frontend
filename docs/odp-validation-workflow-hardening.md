@@ -96,6 +96,7 @@ Template form validasi ODP yang dibakukan:
 Keputusan implementasi:
 
 - Validator boleh mengusulkan perubahan nama ODP, tipe ODP, jenis instalasi, splitter ratio, kapasitas ODP, status port, dan redaman per port sesuai kondisi lapangan.
+- Validator mengisi pemeriksaan awal dan checklist kondisi ODP sebagai snapshot request validasi, termasuk lampiran foto per item.
 - Perubahan tersebut masuk ke snapshot request validasi, bukan langsung menulis ke asset utama.
 - Setelah approval final superadmin, sistem menerapkan field asset utama yang relevan: nama ODP, splitter ratio, total port, used port, dan status port.
 - Redaman per port disimpan sebagai snapshot validasi terlebih dahulu sampai model database redaman final diputuskan.
@@ -294,11 +295,13 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 ### Phase 2 - Checklist & Evidence Standard
 
 - [x] Definisikan template checklist ODP resmi.
-- [ ] Tambahkan kategori evidence ODP.
+- [x] Tambahkan kategori evidence ODP untuk pemeriksaan awal dan checklist kondisi.
 - [ ] Tambahkan validasi minimal evidence sebelum submit.
 - [ ] Pastikan evidence request aktif hanya evidence submit terakhir.
 - [ ] Pastikan evidence lama tetap tampil di histori validasi.
 - [x] Tampilkan checklist snapshot di review adminregion/superadmin.
+- [x] Tambahkan pemeriksaan awal dan checklist kondisi ODP lengkap dengan foto ke snapshot validasi.
+- [x] Tampilkan pemeriksaan awal dan checklist kondisi di review adminregion/superadmin.
 - [x] Tambahkan input nama ODP baru, tipe ODP, jenis instalasi, splitter ratio, kapasitas ODP, status port, dan redaman per port ke snapshot validasi.
 - [x] Terapkan nama ODP, splitter ratio, total port, used port, dan status port setelah approval final.
 - [ ] Tampilkan detail validasi terakhir sebagai referensi read-only.
