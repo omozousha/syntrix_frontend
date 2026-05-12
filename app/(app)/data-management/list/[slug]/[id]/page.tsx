@@ -164,6 +164,35 @@ type OdpFieldInspectionPayload = {
   initial_photos?: Record<string, { label?: string; attachment?: { id?: string | null; attachment_id?: string | null; name?: string | null } }>;
   condition_checks?: Record<string, { label?: string; condition?: string | null; note?: string | null; attachment?: { id?: string | null; attachment_id?: string | null; name?: string | null } }>;
 };
+type OdpEvidenceAttachment = {
+  id?: string | null;
+  attachment_id?: string | null;
+  name?: string | null;
+  original_name?: string | null;
+};
+type OdpFieldValidationPayload = {
+  validation_date?: string | null;
+  inventory_id?: string | null;
+  old_device_name?: string | null;
+  new_device_name?: string | null;
+  pop_id?: string | null;
+  pop_name?: string | null;
+  address?: string | null;
+  longitude?: string | number | null;
+  latitude?: string | number | null;
+  odp_type?: string | null;
+  installation_type?: string | null;
+  splitter_ratio?: string | null;
+  total_ports?: number | null;
+};
+type OdpValidationPortSnapshot = {
+  id?: string | null;
+  port_index?: number | null;
+  port_label?: string | null;
+  status?: string | null;
+  attenuation_db?: number | null;
+  notes?: string | null;
+};
 type OdpValidationRecord = {
   id: string;
   validation_id?: string | null;
@@ -177,6 +206,7 @@ type OdpValidationRecord = {
   payload?: {
     checklist?: Partial<Record<OdpValidationChecklistKey, boolean>>;
     field_inspection?: OdpFieldInspectionPayload;
+    field_validation?: OdpFieldValidationPayload;
     port_summary?: {
       total?: number;
       used?: number;
@@ -184,9 +214,12 @@ type OdpValidationRecord = {
       reserved?: number;
       down?: number;
     };
+    device_ports?: OdpValidationPortSnapshot[];
     direct_link?: string;
   } | null;
   evidence_attachment_id?: string | null;
+  evidence_attachments?: OdpEvidenceAttachment[] | null;
+  request_status?: string | null;
   tags?: string[] | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -201,6 +234,7 @@ type ValidationRequestRecord = {
   checklist?: Partial<Record<OdpValidationChecklistKey, boolean>> | null;
   payload_snapshot?: {
     field_inspection?: OdpFieldInspectionPayload;
+    field_validation?: OdpFieldValidationPayload;
     port_summary?: {
       total?: number;
       used?: number;
@@ -208,8 +242,9 @@ type ValidationRequestRecord = {
       reserved?: number;
       down?: number;
     };
+    device_ports?: OdpValidationPortSnapshot[];
   } | null;
-  evidence_attachments?: Array<{ attachment_id?: string | null; id?: string | null }> | null;
+  evidence_attachments?: OdpEvidenceAttachment[] | null;
 };
 type ServicePortRelation = DevicePort & {
   odpDevice?: {
@@ -380,16 +415,7 @@ export default function DataManagementDetailPage() {
   );
   const validationImageAttachments = useMemo<AttachmentRef[]>(
     () =>
-      (odpValidations || [])
-        .map((record, index) => {
-          const id = String(record.evidence_attachment_id || "").trim();
-          if (!id) return null;
-          return {
-            id,
-            name: record.validation_id ? `${record.validation_id}-evidence` : `validation-evidence-${index + 1}`,
-          } satisfies AttachmentRef;
-        })
-        .filter((row): row is AttachmentRef => Boolean(row)),
+      (odpValidations || []).flatMap((record, index) => extractValidationImageAttachments(record, index)),
     [odpValidations],
   );
   const galleryImageAttachments = useMemo<AttachmentRef[]>(() => {
@@ -678,17 +704,21 @@ export default function DataManagementDetailPage() {
             entity_id: activeItem.id,
             validation_type: "field-audit",
             status: mapValidationRequestStatusToFieldStatus(request.current_status),
+            request_status: request.current_status || null,
             validated_at: request.updated_at || request.created_at || null,
             findings: request.finding_note || null,
             payload: {
               checklist: request.checklist || {},
               field_inspection: request.payload_snapshot?.field_inspection || {},
+              field_validation: request.payload_snapshot?.field_validation || {},
               port_summary: request.payload_snapshot?.port_summary || {},
+              device_ports: request.payload_snapshot?.device_ports || [],
             },
             evidence_attachment_id:
               request.evidence_attachments?.[0]?.id ||
               request.evidence_attachments?.[0]?.attachment_id ||
               null,
+            evidence_attachments: request.evidence_attachments || [],
             created_at: request.created_at || null,
             updated_at: request.updated_at || null,
           }));
@@ -1298,6 +1328,7 @@ export default function DataManagementDetailPage() {
                   relationLabels={relationLabels}
                   isOdpDevice={isOdpDevice}
                   splitterProfiles={splitterProfiles}
+                  latestFieldValidation={odpValidations[0]?.payload?.field_validation || null}
                 />
               ) : null}
 
@@ -1713,6 +1744,10 @@ function OdpOperationsPanel({
   const [validationOpen, setValidationOpen] = useState(false);
   const defaultOdpPortId = (ports.find((port) => (port.status || "").toLowerCase() === "idle") || ports[0])?.id || "";
   const effectiveDraftTargetPortId = draftTargetPortId || defaultOdpPortId;
+  const latestPortSnapshotByIndex = useMemo(() => {
+    const latest = validationHistory.find((record) => record.payload?.device_ports?.length);
+    return new Map((latest?.payload?.device_ports || []).map((port) => [Number(port.port_index), port]));
+  }, [validationHistory]);
 
   return (
     <div className="space-y-3">
@@ -1917,11 +1952,13 @@ function OdpOperationsPanel({
                 <AppLoading label="Memuat port ODP..." />
               ) : ports.length ? (
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                  {ports.map((port) => (
+                  {ports.map((port) => {
+                    const portSnapshot = latestPortSnapshotByIndex.get(Number(port.port_index));
+                    return (
                     <div key={port.id} className="rounded-md border bg-background p-3">
                       <div className="mb-3 flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">#{port.port_index}</p>
+                          <p className="truncate text-sm font-medium">{port.port_label || `#${port.port_index}`}</p>
                           <p className="truncate text-xs text-muted-foreground">
                             {describePortAssignmentState(port)}
                           </p>
@@ -1940,6 +1977,15 @@ function OdpOperationsPanel({
                             <Trash2 className="size-4" />
                           </Button>
                         </div>
+                      </div>
+                      <div className="mb-2 grid grid-cols-2 gap-2 text-xs">
+                        <RelationInfo label="Status Aktual" value={port.status || "idle"} />
+                        <RelationInfo
+                          label="Redaman Terakhir"
+                          value={portSnapshot?.attenuation_db == null ? "-" : `${portSnapshot.attenuation_db} dB`}
+                        />
+                        <RelationInfo label="Status Validasi" value={portSnapshot?.status || "-"} />
+                        <RelationInfo label="Catatan" value={portSnapshot?.notes || port.notes || "-"} />
                       </div>
                       <div className="grid grid-cols-1 gap-2">
                         <Combobox
@@ -1993,7 +2039,8 @@ function OdpOperationsPanel({
                         />
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               ) : (
                 <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
@@ -2075,7 +2122,10 @@ function OdpOperationsPanel({
                   <AppLoading label="Memuat histori validasi..." />
                 ) : validationHistory.length ? (
                   <div className="space-y-2">
-                    {validationHistory.map((record) => (
+                    {validationHistory.map((record, index) => {
+                      const evidenceCount = extractValidationImageAttachments(record, index).length;
+                      const validation = record.payload?.field_validation;
+                      return (
                       <div key={record.id} className="rounded-md border bg-background p-3">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="min-w-0">
@@ -2083,9 +2133,17 @@ function OdpOperationsPanel({
                               <Badge variant={record.status === "valid" ? "default" : "outline"}>
                                 {record.status || "-"}
                               </Badge>
+                              {record.request_status ? (
+                                <Badge variant="outline">{mapValidationStatusLabel(record.request_status)}</Badge>
+                              ) : null}
                               <p className="text-xs text-muted-foreground">
                                 {record.validation_id || record.id} - {formatDateTime(valueOf(record.validated_at || record.created_at))}
                               </p>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                              <span>Nama: {valueOf(validation?.new_device_name || validation?.old_device_name, "-")}</span>
+                              <span>Tanggal validasi: {formatDate(valueOf(validation?.validation_date))}</span>
+                              <span>Evidence: {evidenceCount}</span>
                             </div>
                             {record.findings ? <p className="mt-2 text-sm">{record.findings}</p> : null}
                           </div>
@@ -2093,23 +2151,27 @@ function OdpOperationsPanel({
                             type="button"
                             variant="outline"
                             size="sm"
-                            disabled={!record.evidence_attachment_id}
+                            disabled={!evidenceCount}
                             onClick={() => onDownloadValidationEvidence(record)}
                           >
                             <Download className="mr-1.5 size-3.5" />
-                            Evidence
+                            Evidence ({evidenceCount})
                           </Button>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                           <span>Kondisi {formatOdpInspectionSummary(record.payload?.field_inspection)}</span>
+                          <span>Splitter {valueOf(record.payload?.field_validation?.splitter_ratio, "-")}</span>
                           <span>Total {record.payload?.port_summary?.total ?? "-"}</span>
                           <span>Used {record.payload?.port_summary?.used ?? "-"}</span>
                           <span>Idle {record.payload?.port_summary?.idle ?? "-"}</span>
                           <span>Down {record.payload?.port_summary?.down ?? "-"}</span>
                         </div>
+                        <OdpFieldValidationSummary validation={record.payload?.field_validation} />
+                        <OdpPortSnapshotSummary ports={record.payload?.device_ports} />
                         <OdpInspectionSummary inspection={record.payload?.field_inspection} />
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 ) : (
                   <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
@@ -2146,11 +2208,70 @@ function OdpInspectionSummary({ inspection }: { inspection?: OdpFieldInspectionP
   );
 }
 
+function OdpFieldValidationSummary({ validation }: { validation?: OdpFieldValidationPayload | null }) {
+  if (!validation || !Object.keys(validation).length) return null;
+
+  const fields = [
+    { label: "Tanggal", value: formatDate(valueOf(validation.validation_date)) },
+    { label: "Inventory", value: valueOf(validation.inventory_id, "-") },
+    { label: "Nama Lama", value: valueOf(validation.old_device_name, "-") },
+    { label: "Nama Baru", value: valueOf(validation.new_device_name, "-") },
+    { label: "POP", value: valueOf(validation.pop_name || validation.pop_id, "-") },
+    { label: "Tipe ODP", value: valueOf(validation.odp_type, "-") },
+    { label: "Instalasi", value: valueOf(validation.installation_type, "-") },
+    { label: "Splitter", value: valueOf(validation.splitter_ratio, "-") },
+    { label: "Kapasitas", value: valueOf(validation.total_ports, "-") },
+    { label: "Longitude", value: valueOf(validation.longitude, "-") },
+    { label: "Latitude", value: valueOf(validation.latitude, "-") },
+  ];
+
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-3 xl:grid-cols-4">
+      {fields.map((field) => (
+        <RelationInfo key={field.label} label={field.label} value={field.value} />
+      ))}
+    </div>
+  );
+}
+
+function OdpPortSnapshotSummary({ ports }: { ports?: OdpValidationPortSnapshot[] | null }) {
+  if (!ports?.length) return null;
+
+  return (
+    <div className="mt-2 rounded-md border bg-muted/10 p-2">
+      <p className="mb-1.5 text-xs font-medium">Snapshot Port & Redaman</p>
+      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
+        {ports.map((port, index) => (
+          <div key={`${port.id || port.port_index || index}`} className="rounded border bg-background px-2 py-1.5 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate font-medium">{port.port_label || `Port ${port.port_index || index + 1}`}</span>
+              <span className="text-muted-foreground">{port.status || "-"}</span>
+            </div>
+            <p className="mt-1 text-muted-foreground">
+              Redaman: {port.attenuation_db == null ? "-" : `${port.attenuation_db} dB`}
+            </p>
+            {port.notes ? <p className="mt-1 text-muted-foreground">Catatan: {port.notes}</p> : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function formatOdpInspectionSummary(inspection?: OdpFieldInspectionPayload | null) {
   const checks = Object.values(inspection?.condition_checks || {});
   if (!checks.length) return "-";
   const good = checks.filter((item) => isGoodOdpInspectionCondition(item.condition)).length;
   return `${good}/${checks.length} baik`;
+}
+
+function mapValidationStatusLabel(status: string) {
+  if (status === "ongoing_validated") return "Pending Adminregion";
+  if (status === "pending_async") return "Pending Superadmin";
+  if (status === "validated") return "Validated";
+  if (status === "rejected_by_adminregion") return "Rejected Adminregion";
+  if (status === "rejected_by_superadmin") return "Rejected Superadmin";
+  return status || "-";
 }
 
 function isGoodOdpInspectionCondition(value?: string | null) {
@@ -2266,6 +2387,32 @@ function RelationInfo({ label, value }: { label: string; value: string }) {
       <p className="mt-0.5 truncate font-medium">{value}</p>
     </div>
   );
+}
+
+function extractValidationImageAttachments(record: OdpValidationRecord, recordIndex: number): AttachmentRef[] {
+  const refs: AttachmentRef[] = [];
+  const seen = new Set<string>();
+  const baseName = record.validation_id || `validation-${recordIndex + 1}`;
+  const pushRef = (id: unknown, name: unknown) => {
+    const normalizedId = String(id || "").trim();
+    if (!normalizedId || seen.has(normalizedId)) return;
+    seen.add(normalizedId);
+    refs.push({ id: normalizedId, name: String(name || `${baseName}-evidence-${refs.length + 1}`) });
+  };
+
+  (record.evidence_attachments || []).forEach((attachment, index) => {
+    pushRef(attachment.id || attachment.attachment_id, attachment.original_name || attachment.name || `${baseName}-evidence-${index + 1}`);
+  });
+  pushRef(record.evidence_attachment_id, `${baseName}-evidence`);
+
+  Object.values(record.payload?.field_inspection?.initial_photos || {}).forEach((item) => {
+    pushRef(item.attachment?.id || item.attachment?.attachment_id, item.attachment?.name || item.label);
+  });
+  Object.values(record.payload?.field_inspection?.condition_checks || {}).forEach((item) => {
+    pushRef(item.attachment?.id || item.attachment?.attachment_id, item.attachment?.name || item.label);
+  });
+
+  return refs;
 }
 
 function LegendDot({ className, label }: { className: string; label: string }) {
@@ -2392,6 +2539,7 @@ function DeviceDetailForm({
   relationLabels,
   isOdpDevice,
   splitterProfiles,
+  latestFieldValidation,
 }: {
   form: EditableForm;
   onChange: (next: EditableForm | ((prev: EditableForm) => EditableForm)) => void;
@@ -2399,6 +2547,7 @@ function DeviceDetailForm({
   relationLabels: RelationLabels;
   isOdpDevice: boolean;
   splitterProfiles: SplitterProfileOption[];
+  latestFieldValidation?: OdpFieldValidationPayload | null;
 }) {
   const selectedSplitterProfile =
     splitterProfiles.find((item) => item.ratio_label === form.splitter_ratio) || null;
@@ -2416,12 +2565,21 @@ function DeviceDetailForm({
     <div className="space-y-3">
       <Card>
         <CardHeader className="px-3 py-2">
-          <CardTitle className="text-sm">Identitas Device</CardTitle>
+          <CardTitle className="text-sm">{isOdpDevice ? "Identitas ODP" : "Identitas Device"}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
-          <Field label="Device ID" value={form.device_id} disabled compact />
-          <Field label="Device Name" value={form.device_name} onChange={(v) => onChange((p) => ({ ...p, device_name: v }))} disabled={!editing} compact />
-          <Field label="Device Type" value={form.device_type_key} disabled compact />
+          <Field label={isOdpDevice ? "ID Inventory" : "Device ID"} value={form.device_id} disabled compact />
+          <Field label={isOdpDevice ? "Nama ODP" : "Device Name"} value={form.device_name} onChange={(v) => onChange((p) => ({ ...p, device_name: v }))} disabled={!editing} compact />
+          {isOdpDevice ? (
+            <DisplayField label="Nama ODP Baru" value={valueOf(latestFieldValidation?.new_device_name, "-")} compact />
+          ) : null}
+          {isOdpDevice ? (
+            <DisplayField label="Tipe ODP" value={valueOf(latestFieldValidation?.odp_type, "-")} compact />
+          ) : null}
+          {isOdpDevice ? (
+            <DisplayField label="Jenis Instalasi" value={valueOf(latestFieldValidation?.installation_type, "-")} compact />
+          ) : null}
+          <Field label={isOdpDevice ? "Kategori Device" : "Device Type"} value={form.device_type_key} disabled compact />
           <Field label="Asset Group" value={form.asset_group} disabled compact />
           <SelectField
             label="Status"
@@ -2431,14 +2589,16 @@ function DeviceDetailForm({
             disabled={!editing}
             compact
           />
-          <Field
-            label="Installation Date"
-            type="date"
-            value={form.installation_date}
-            onChange={(v) => onChange((p) => ({ ...p, installation_date: v }))}
-            disabled={!editing}
-            compact
-          />
+          {!isOdpDevice ? (
+            <Field
+              label="Installation Date"
+              type="date"
+              value={form.installation_date}
+              onChange={(v) => onChange((p) => ({ ...p, installation_date: v }))}
+              disabled={!editing}
+              compact
+            />
+          ) : null}
           <SelectField
             label="Validation Status"
             value={form.validation_status}
@@ -2490,7 +2650,7 @@ function DeviceDetailForm({
           )}
           {needsPortPresetSelector ? (
             <div className="space-y-1">
-              <Label>Total Ports</Label>
+              <Label>{isOdpDevice ? "Kapasitas ODP" : "Total Ports"}</Label>
               <Combobox
                 value={form.total_ports || "__none__"}
                 onValueChange={(value) => onChange((p) => ({ ...p, total_ports: value === "__none__" ? "" : value }))}
@@ -2507,11 +2667,11 @@ function DeviceDetailForm({
               />
             </div>
           ) : (
-            <Field label="Total Ports" type="number" value={form.total_ports} onChange={(v) => onChange((p) => ({ ...p, total_ports: v }))} disabled={!editing} compact />
+            <Field label={isOdpDevice ? "Kapasitas ODP" : "Total Ports"} type="number" value={form.total_ports} onChange={(v) => onChange((p) => ({ ...p, total_ports: v }))} disabled={!editing} compact />
           )}
-          <Field label="Used Ports" type="number" value={form.used_ports} onChange={(v) => onChange((p) => ({ ...p, used_ports: v }))} disabled={!editing} compact />
+          <Field label={isOdpDevice ? "Port Aktif" : "Used Ports"} type="number" value={form.used_ports} onChange={(v) => onChange((p) => ({ ...p, used_ports: v }))} disabled={!editing} compact />
           <div className="space-y-1">
-            <Label>Splitter Ratio</Label>
+            <Label>{isOdpDevice ? "Kapasitas Splitter" : "Splitter Ratio"}</Label>
             <Combobox
               value={form.splitter_ratio || "__none__"}
               onValueChange={(value) => {

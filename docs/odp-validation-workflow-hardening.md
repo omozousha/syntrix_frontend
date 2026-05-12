@@ -307,6 +307,10 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 - [x] Tambahkan pemeriksaan awal dan checklist kondisi ODP lengkap dengan foto ke snapshot validasi.
 - [x] Tampilkan pemeriksaan awal dan checklist kondisi di review adminregion/superadmin.
 - [x] Tampilkan ringkasan checklist kondisi format baru di detail ODP.
+- [x] Tampilkan snapshot field validasi dan redaman per port di histori detail ODP.
+- [x] Gabungkan evidence foto validasi format baru ke mini gallery detail ODP.
+- [x] Samakan port detail ODP dengan konteks form validasi: status aktual, status validasi, redaman terakhir, dan catatan.
+- [x] Samakan histori form validasi dengan histori detail ODP: workflow status, field snapshot, evidence count, port/redaman, dan checklist.
 - [x] Tambahkan input nama ODP baru, tipe ODP, jenis instalasi, splitter ratio, kapasitas ODP, status port, dan redaman per port ke snapshot validasi.
 - [x] Terapkan nama ODP, splitter ratio, total port, used port, dan status port setelah approval final.
 - [x] Tampilkan detail validasi terakhir sebagai referensi read-only.
