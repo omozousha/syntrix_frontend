@@ -32,9 +32,9 @@ const MASTER_SECTIONS: Array<{
   },
   {
     title: "Referensi Perangkat",
-    description: "Referensi tipe perangkat sebagai fondasi inventaris dan provisioning.",
+    description: "Referensi tipe perangkat, ODP, instalasi, model, dan splitter sebagai fondasi inventaris.",
     icon: Boxes,
-    slugs: ["master-device-types", "master-models", "master-splitter-profiles"],
+    slugs: ["master-device-types", "master-odp-types", "master-installation-types", "master-models", "master-splitter-profiles"],
   },
   {
     title: "Referensi Vendor",
