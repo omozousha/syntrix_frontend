@@ -820,7 +820,7 @@ function getFieldValidationReviewFields(item: ValidationRequestItem) {
     { title: "ID Inventory", value: valueText(field.inventory_id) },
     { title: "Nama ODP Lama", value: valueText(field.old_device_name) },
     { title: "Nama ODP Baru", value: valueText(field.new_device_name) },
-    { title: "POP", value: valueText(field.pop_id) },
+    { title: "POP", value: valueText(field.pop_name || field.pop_id) },
     { title: "Longlat", value: valueText(field.longlat) },
     { title: "Tipe ODP", value: valueText(field.odp_type) },
     { title: "Jenis Instalasi", value: valueText(field.installation_type) },

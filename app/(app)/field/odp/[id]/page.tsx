@@ -60,6 +60,12 @@ type OntOption = {
   device_type_key?: string | null;
   region_id?: string | null;
 };
+type PopItem = {
+  id: string;
+  pop_id?: string | null;
+  pop_code?: string | null;
+  pop_name?: string | null;
+};
 type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
 
@@ -88,6 +94,7 @@ type ValidationRecord = {
     checklist?: Partial<Record<ChecklistKey, boolean>>;
     field_validation?: {
       new_device_name?: string | null;
+      pop_name?: string | null;
       odp_type?: string | null;
       installation_type?: string | null;
       splitter_ratio?: string | null;
@@ -111,6 +118,7 @@ type ValidationRequestItem = {
   payload_snapshot?: {
     field_validation?: {
       new_device_name?: string | null;
+      pop_name?: string | null;
       odp_type?: string | null;
       installation_type?: string | null;
       splitter_ratio?: string | null;
@@ -159,6 +167,7 @@ export default function OdpFieldValidationPage() {
   const [validationRequests, setValidationRequests] = useState<ValidationRequestItem[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [ontDevices, setOntDevices] = useState<OntOption[]>([]);
+  const [pop, setPop] = useState<PopItem | null>(null);
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,6 +235,10 @@ export default function OdpFieldValidationPage() {
         ]);
         if (cancelled) return;
         const loadedDevice = deviceResult.data;
+        const loadedPop = loadedDevice.pop_id
+          ? await optionalResourceRequest<PopItem>(() => apiFetch<{ data: PopItem }>(`/pops/${encodeURIComponent(String(loadedDevice.pop_id))}`, { token }))
+          : null;
+        if (cancelled) return;
         if (me.role === "user_region") {
           const allowedRegionIds = new Set((me.app_user.user_region_scopes || []).map((scope) => scope.region_id));
           const deviceRegionId = String(loadedDevice.region_id || "");
@@ -242,6 +255,7 @@ export default function OdpFieldValidationPage() {
         const latestLegacyValidation = validationResult.data?.[0] || null;
         const latestSnapshot = latestRequestValidation || latestLegacyValidation;
         setDevice(loadedDevice);
+        setPop(loadedPop);
         const loadedPorts = (portResult.data || []).sort((a, b) => Number(a.port_index) - Number(b.port_index));
         setPorts(loadedPorts);
         setValidations(mappedRequestValidations.length ? mappedRequestValidations : validationResult.data || []);
@@ -410,6 +424,7 @@ export default function OdpFieldValidationPage() {
               old_device_name: device.device_name || null,
               new_device_name: draft.deviceNameNew.trim() || device.device_name || null,
               pop_id: device.pop_id || null,
+              pop_name: getPopDisplayName(pop),
               address: device.address || null,
               longlat: [device.longitude, device.latitude].filter((value) => value != null && value !== "").join(", ") || null,
               odp_type: nullIfEmpty(draft.odpType),
@@ -793,7 +808,7 @@ export default function OdpFieldValidationPage() {
                   <InfoField label="Tanggal Validasi" value={formatDate(new Date().toISOString())} />
                   <InfoField label="ID Inventory" value={device.device_id || "-"} />
                   <InfoField label="Nama ODP Lama" value={device.device_name || "-"} />
-                  <InfoField label="POP" value={String(device.pop_id || "-")} />
+                  <InfoField label="POP" value={getPopDisplayName(pop) || String(device.pop_id || "-")} />
                   <InfoField label="Alamat" value={device.address || "-"} />
                   <InfoField label="Longlat" value={[device.longitude, device.latitude].filter((value) => value != null && value !== "").join(", ") || "-"} />
                   <div className="space-y-1">
@@ -1303,6 +1318,11 @@ function formatDate(value?: string | null) {
   }).format(date);
 }
 
+function getPopDisplayName(pop?: PopItem | null) {
+  if (!pop) return "";
+  return [pop.pop_name, pop.pop_code || pop.pop_id].filter(Boolean).join(" - ");
+}
+
 async function uploadAttachment({ token, file, entityId }: { token: string; file: File; entityId: string }) {
   const formData = new FormData();
   formData.append("file", file);
@@ -1325,4 +1345,8 @@ function optionalPaginatedRequest<T>(request: () => Promise<PaginatedResponse<T>
     message: "",
     data: [],
   }));
+}
+
+function optionalResourceRequest<T>(request: () => Promise<{ data: T }>): Promise<T | null> {
+  return request().then((result) => result.data).catch(() => null);
 }
