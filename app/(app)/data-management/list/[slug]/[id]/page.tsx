@@ -160,6 +160,10 @@ type OdpValidationDraft = {
   evidenceFile: File | null;
 };
 type OdpValidationChecklistKey = "physical_ok" | "splitter_ok" | "port_mapping_ok" | "qr_label_ok" | "label_ok";
+type OdpFieldInspectionPayload = {
+  initial_photos?: Record<string, { label?: string; attachment?: { id?: string | null; attachment_id?: string | null; name?: string | null } }>;
+  condition_checks?: Record<string, { label?: string; condition?: string | null; note?: string | null; attachment?: { id?: string | null; attachment_id?: string | null; name?: string | null } }>;
+};
 type OdpValidationRecord = {
   id: string;
   validation_id?: string | null;
@@ -172,6 +176,7 @@ type OdpValidationRecord = {
   findings?: string | null;
   payload?: {
     checklist?: Partial<Record<OdpValidationChecklistKey, boolean>>;
+    field_inspection?: OdpFieldInspectionPayload;
     port_summary?: {
       total?: number;
       used?: number;
@@ -195,6 +200,7 @@ type ValidationRequestRecord = {
   finding_note?: string | null;
   checklist?: Partial<Record<OdpValidationChecklistKey, boolean>> | null;
   payload_snapshot?: {
+    field_inspection?: OdpFieldInspectionPayload;
     port_summary?: {
       total?: number;
       used?: number;
@@ -676,6 +682,7 @@ export default function DataManagementDetailPage() {
             findings: request.finding_note || null,
             payload: {
               checklist: request.checklist || {},
+              field_inspection: request.payload_snapshot?.field_inspection || {},
               port_summary: request.payload_snapshot?.port_summary || {},
             },
             evidence_attachment_id:
@@ -2051,7 +2058,7 @@ function OdpOperationsPanel({
                   className="h-9 text-xs"
                 />
                 <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                  Checklist & evidence file dinonaktifkan.
+                  Checklist format baru tersedia di halaman Field Validation.
                 </div>
                 <Button type="button" onClick={onSubmitValidation} disabled={submittingValidation || !editing} className="h-9">
                   <ImagePlus className="mr-2 size-4" />
@@ -2094,11 +2101,13 @@ function OdpOperationsPanel({
                           </Button>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                          <span>Kondisi {formatOdpInspectionSummary(record.payload?.field_inspection)}</span>
                           <span>Total {record.payload?.port_summary?.total ?? "-"}</span>
                           <span>Used {record.payload?.port_summary?.used ?? "-"}</span>
                           <span>Idle {record.payload?.port_summary?.idle ?? "-"}</span>
                           <span>Down {record.payload?.port_summary?.down ?? "-"}</span>
                         </div>
+                        <OdpInspectionSummary inspection={record.payload?.field_inspection} />
                       </div>
                     ))}
                   </div>
@@ -2114,6 +2123,38 @@ function OdpOperationsPanel({
       </Card>
     </div>
   );
+}
+
+function OdpInspectionSummary({ inspection }: { inspection?: OdpFieldInspectionPayload | null }) {
+  const checks = Object.values(inspection?.condition_checks || {});
+  if (!checks.length) return null;
+
+  return (
+    <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+      {checks.map((item, index) => (
+        <div key={`${item.label || "condition"}-${index}`} className="rounded border bg-muted/20 px-2 py-1.5 text-xs">
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate">{item.label || "Checklist kondisi"}</span>
+            <span className={isGoodOdpInspectionCondition(item.condition) ? "text-emerald-700" : "text-amber-700"}>
+              {item.condition || "-"}
+            </span>
+          </div>
+          {item.note ? <p className="mt-1 text-muted-foreground">Keterangan: {item.note}</p> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function formatOdpInspectionSummary(inspection?: OdpFieldInspectionPayload | null) {
+  const checks = Object.values(inspection?.condition_checks || {});
+  if (!checks.length) return "-";
+  const good = checks.filter((item) => isGoodOdpInspectionCondition(item.condition)).length;
+  return `${good}/${checks.length} baik`;
+}
+
+function isGoodOdpInspectionCondition(value?: string | null) {
+  return ["Baik", "Bersih", "Lengkap", "Rapi"].includes(String(value || ""));
 }
 
 function OdpMetric({ label, value, tone }: { label: string; value: number; tone?: "used" | "idle" | "reserved" | "down" }) {

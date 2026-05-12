@@ -107,6 +107,8 @@ Aturan checklist:
 - Checklist lama tetap bisa dilihat di histori.
 - Checklist request baru tidak otomatis membawa temuan lama sebagai nilai aktif.
 - Temuan validasi terakhir boleh tampil sebagai referensi read-only.
+- Form validasi aktif menggunakan checklist kondisi format baru; checklist lama hanya menjadi ringkasan turunan untuk kompatibilitas API.
+- Semua foto pemeriksaan awal, kondisi per item, dan keterangan wajib diisi sebelum submit; item bermasalah wajib memiliki keterangan.
 
 ### 3. Evidence Requirement Perlu Diperketat
 
@@ -296,15 +298,18 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 
 - [x] Definisikan template checklist ODP resmi.
 - [x] Tambahkan kategori evidence ODP untuk pemeriksaan awal dan checklist kondisi.
-- [ ] Tambahkan validasi minimal evidence sebelum submit.
+- [x] Tambahkan validasi minimal evidence sebelum submit.
+- [x] Hapus checklist lama dari UI form validasi dan approval, gunakan checklist kondisi format baru.
+- [x] Tambahkan validasi wajib foto pemeriksaan, kondisi, keterangan bermasalah, master data, dan redaman angka sebelum submit.
 - [ ] Pastikan evidence request aktif hanya evidence submit terakhir.
 - [ ] Pastikan evidence lama tetap tampil di histori validasi.
 - [x] Tampilkan checklist snapshot di review adminregion/superadmin.
 - [x] Tambahkan pemeriksaan awal dan checklist kondisi ODP lengkap dengan foto ke snapshot validasi.
 - [x] Tampilkan pemeriksaan awal dan checklist kondisi di review adminregion/superadmin.
+- [x] Tampilkan ringkasan checklist kondisi format baru di detail ODP.
 - [x] Tambahkan input nama ODP baru, tipe ODP, jenis instalasi, splitter ratio, kapasitas ODP, status port, dan redaman per port ke snapshot validasi.
 - [x] Terapkan nama ODP, splitter ratio, total port, used port, dan status port setelah approval final.
-- [ ] Tampilkan detail validasi terakhir sebagai referensi read-only.
+- [x] Tampilkan detail validasi terakhir sebagai referensi read-only.
 
 ### Phase 3 - Resubmit Workflow
 

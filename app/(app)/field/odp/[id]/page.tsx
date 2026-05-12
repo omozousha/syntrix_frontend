@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Camera, Download, RefreshCw, Save } from "lucide-react";
+import { ArrowLeft, Download, RefreshCw, Save } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
@@ -76,11 +76,8 @@ type SplitterProfileOption = {
 };
 
 type ValidationStatus = "valid" | "warning" | "invalid";
-type ChecklistKey = "physical_ok" | "splitter_ok" | "port_mapping_ok" | "qr_label_ok" | "label_ok";
-type ValidationDraft = Record<ChecklistKey, boolean> & {
-  status: ValidationStatus;
+type ValidationDraft = {
   findings: string;
-  evidenceFile: File | null;
   initialPhotos: Record<InspectionPhotoKey, File | null>;
   conditionChecks: Record<ConditionCheckKey, ConditionCheckDraft>;
   deviceNameNew: string;
@@ -99,6 +96,10 @@ type ConditionCheckDraft = {
   photo: File | null;
 };
 type UploadedEvidenceRef = { id?: string | null; attachment_id?: string | null; name?: string | null };
+type FieldInspectionSnapshot = {
+  initial_photos?: Record<string, { label?: string; attachment?: UploadedEvidenceRef }>;
+  condition_checks?: Record<string, { label?: string; condition?: string | null; note?: string | null; attachment?: UploadedEvidenceRef }>;
+};
 type ValidationRecord = {
   id: string;
   validation_id?: string | null;
@@ -107,7 +108,8 @@ type ValidationRecord = {
   findings?: string | null;
   evidence_attachment_id?: string | null;
   payload?: {
-    checklist?: Partial<Record<ChecklistKey, boolean>>;
+    checklist?: Record<string, boolean>;
+    field_inspection?: FieldInspectionSnapshot;
     field_validation?: {
       new_device_name?: string | null;
       pop_name?: string | null;
@@ -132,8 +134,9 @@ type ValidationRequestItem = {
   request_id?: string | null;
   current_status?: string | null;
   finding_note?: string | null;
-  checklist?: Partial<Record<ChecklistKey, boolean>> | null;
+  checklist?: Record<string, boolean> | null;
   payload_snapshot?: {
+    field_inspection?: FieldInspectionSnapshot;
     field_validation?: {
       new_device_name?: string | null;
       pop_name?: string | null;
@@ -168,13 +171,6 @@ type UploadResult = {
 };
 
 const PORT_STATUS_OPTIONS = ["idle", "used", "reserved", "down", "maintenance"];
-const CHECKLIST: Array<{ key: ChecklistKey; label: string }> = [
-  { key: "physical_ok", label: "Fisik ODP OK" },
-  { key: "splitter_ok", label: "Splitter OK" },
-  { key: "port_mapping_ok", label: "Mapping port OK" },
-  { key: "qr_label_ok", label: "QR terpasang" },
-  { key: "label_ok", label: "Label terbaca" },
-];
 const INITIAL_PHOTO_ITEMS: Array<{ key: InspectionPhotoKey; label: string }> = [
   { key: "overall_near", label: "Foto keseluruhan ODP jarak dekat" },
   { key: "overall_far_pole", label: "Foto keseluruhan ODP jarak jauh dengan tiang" },
@@ -188,6 +184,7 @@ const CONDITION_CHECK_ITEMS: Array<{ key: ConditionCheckKey; label: string; opti
   { key: "pigtail_adapter", label: "Pigtail dan Adapter", options: ["Lengkap", "Tidak lengkap"] },
   { key: "cable_neatness", label: "Kerapihan Kabel", options: ["Rapi", "Tidak rapi"] },
 ];
+const GOOD_CONDITION_VALUES = new Set(["Baik", "Bersih", "Lengkap", "Rapi"]);
 
 export default function OdpFieldValidationPage() {
   const params = useParams<{ id: string }>();
@@ -223,7 +220,8 @@ export default function OdpFieldValidationPage() {
 
   const summary = useMemo(() => summarizePorts(ports, device), [ports, device]);
   const isOdp = String(device?.device_type_key || "").toUpperCase() === "ODP";
-  const checkedCount = CHECKLIST.filter((item) => draft[item.key]).length;
+  const inspectionStatus = deriveStatusFromConditionChecks(draft.conditionChecks);
+  const inspectionSummary = summarizeConditionChecks(draft.conditionChecks);
   const previewableRecords = useMemo(
     () =>
       validations
@@ -426,32 +424,24 @@ export default function OdpFieldValidationPage() {
     setError("");
     setMessage("");
     try {
-      const evidenceAttachments: UploadedEvidenceRef[] = [];
-      if (draft.evidenceFile) {
-        const upload = await uploadAttachment({
-          token,
-          file: draft.evidenceFile,
-          entityId: device.id,
-        });
-        evidenceAttachments.push({ id: upload.id, attachment_id: upload.attachment_id, name: upload.original_name });
+      const validationError = validateDraftBeforeSubmit(draft, summary.total || Number(device.total_ports || 0));
+      if (validationError) {
+        setError(validationError);
+        return;
       }
+      const evidenceAttachments: UploadedEvidenceRef[] = [];
       const fieldInspection = await uploadInspectionEvidence({ token, deviceId: device.id, draft, evidenceAttachments });
 
       const totalPortsActual = normalizePortCapacity(draft.totalPortsActual, summary.total || 8);
       const validationPortPayload = buildValidationPortPayload(ports, draft, totalPortsActual);
       const portSummary = summarizeValidationPortPayload(validationPortPayload);
+      const checklist = buildLegacyChecklistFromInspection(draft.conditionChecks, validationPortPayload);
       await apiFetch("/validation-requests", {
         method: "POST",
         token,
         body: {
           entity_id: device.id,
-          checklist: {
-            physical_ok: draft.physical_ok,
-            splitter_ok: draft.splitter_ok,
-            port_mapping_ok: draft.port_mapping_ok,
-            qr_label_ok: draft.qr_label_ok,
-            label_ok: draft.label_ok,
-          },
+          checklist,
           finding_note: draft.findings.trim() || null,
           evidence_attachments: evidenceAttachments,
           payload_snapshot: {
@@ -470,6 +460,7 @@ export default function OdpFieldValidationPage() {
             },
             field_validation: {
               validation_date: new Date().toISOString().slice(0, 10),
+              validation_status: inspectionStatus,
               inventory_id: device.device_id || null,
               old_device_name: device.device_name || null,
               new_device_name: draft.deviceNameNew.trim() && draft.deviceNameNew.trim() !== String(device.device_name || "").trim() ? draft.deviceNameNew.trim() : null,
@@ -576,7 +567,7 @@ export default function OdpFieldValidationPage() {
         </Card>
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start">
-          <div className="space-y-4">
+          <div className="order-2 space-y-4 xl:order-1">
             <Card>
               <CardHeader className="px-3 py-2">
                 <CardTitle className="text-base">Status Request Validasi</CardTitle>
@@ -783,7 +774,7 @@ export default function OdpFieldValidationPage() {
                         </button>
                       ) : null}
                       <p className="mt-2 text-xs text-muted-foreground">
-                        Checklist {countChecked(record.payload?.checklist)}/{CHECKLIST.length} - Used {record.payload?.port_summary?.used ?? "-"} - Idle{" "}
+                        Kondisi {formatInspectionSummary(record.payload?.field_inspection)} - Used {record.payload?.port_summary?.used ?? "-"} - Idle{" "}
                         {record.payload?.port_summary?.idle ?? "-"}
                       </p>
                     </div>
@@ -795,7 +786,7 @@ export default function OdpFieldValidationPage() {
             </Card>
           </div>
 
-          <Card className="xl:sticky xl:top-4">
+          <Card className="order-1 xl:sticky xl:top-4 xl:order-2">
             <CardHeader className="px-3 py-2">
               <CardTitle className="text-base">Submit Validasi</CardTitle>
               <CardDescription>Checklist aktual, temuan, dan evidence lapangan.</CardDescription>
@@ -815,9 +806,7 @@ export default function OdpFieldValidationPage() {
                   {lastValidationSnapshot.findings ? (
                     <p className="text-xs text-muted-foreground">Temuan: {lastValidationSnapshot.findings}</p>
                   ) : null}
-                  <p className="text-xs text-muted-foreground">
-                    Checklist {countChecked(lastValidationSnapshot.payload?.checklist)}/{CHECKLIST.length}
-                  </p>
+                  <p className="text-xs text-muted-foreground">Kondisi {formatInspectionSummary(lastValidationSnapshot.payload?.field_inspection)}</p>
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
@@ -855,8 +844,11 @@ export default function OdpFieldValidationPage() {
               )}
 
               <div className="rounded-md border bg-background p-3">
-                <p className="mb-3 text-sm font-medium">Identitas dan Kapasitas Aktual</p>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">Identitas dan Kapasitas Aktual</p>
+                  <Badge variant="outline" className="shrink-0">{inspectionStatus}</Badge>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
                   <InfoField label="Tanggal Validasi" value={formatDate(new Date().toISOString())} />
                   <InfoField label="ID Inventory" value={device.device_id || "-"} />
                   <InfoField label="Nama ODP Lama" value={device.device_name || "-"} />
@@ -943,7 +935,7 @@ export default function OdpFieldValidationPage() {
 
               <div className="rounded-md border bg-background p-3">
                 <p className="mb-3 text-sm font-medium">Pemeriksaan Awal</p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="grid grid-cols-1 gap-3">
                   {INITIAL_PHOTO_ITEMS.map((item) => (
                     <div key={item.key} className="space-y-1">
                       <Label>{item.label}</Label>
@@ -976,7 +968,7 @@ export default function OdpFieldValidationPage() {
                     return (
                       <div key={item.key} className="rounded-md border p-2">
                         <p className="mb-2 text-sm font-medium">{item.label}</p>
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                        <div className="grid grid-cols-1 gap-2">
                           <div className="space-y-1">
                             <Label>Kondisi</Label>
                             <Combobox
@@ -1009,7 +1001,7 @@ export default function OdpFieldValidationPage() {
                               placeholder="Keterangan lapangan"
                             />
                           </div>
-                          <div className="space-y-1 sm:col-span-2 xl:col-span-1">
+                          <div className="space-y-1">
                             <Label>Foto</Label>
                             <Input
                               key={check.photo?.name || `empty-${item.key}-photo`}
@@ -1036,75 +1028,12 @@ export default function OdpFieldValidationPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                {CHECKLIST.map((item) => (
-                  <label key={item.key} className="flex min-h-11 items-center gap-2 rounded-md border bg-background p-3 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={draft[item.key]}
-                      disabled={submitting}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        setDraft((prev) => {
-                          const nextChecklist = {
-                            physical_ok: item.key === "physical_ok" ? checked : prev.physical_ok,
-                            splitter_ok: item.key === "splitter_ok" ? checked : prev.splitter_ok,
-                            port_mapping_ok: item.key === "port_mapping_ok" ? checked : prev.port_mapping_ok,
-                            qr_label_ok: item.key === "qr_label_ok" ? checked : prev.qr_label_ok,
-                            label_ok: item.key === "label_ok" ? checked : prev.label_ok,
-                          };
-                          return {
-                            ...prev,
-                            ...nextChecklist,
-                            status: deriveStatusFromChecklist(nextChecklist),
-                          };
-                        });
-                      }}
-                      className="size-4"
-                    />
-                    {item.label}
-                  </label>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[180px_1fr] xl:grid-cols-1">
-                <div className="space-y-1">
-                  <Label>Status</Label>
-                  <Combobox
-                    value={draft.status}
-                    onValueChange={(status) => {
-                      const nextStatus = status as ValidationStatus;
-                      if (nextStatus === "valid") {
-                        const nextChecklist = {
-                          physical_ok: true,
-                          splitter_ok: true,
-                          port_mapping_ok: true,
-                          qr_label_ok: true,
-                          label_ok: true,
-                        };
-                        setDraft((prev) => ({ ...prev, ...nextChecklist, status: "valid" }));
-                        return;
-                      }
-                      if (nextStatus === "invalid") {
-                        const nextChecklist = {
-                          physical_ok: false,
-                          splitter_ok: false,
-                          port_mapping_ok: false,
-                          qr_label_ok: false,
-                          label_ok: false,
-                        };
-                        setDraft((prev) => ({ ...prev, ...nextChecklist, status: "invalid" }));
-                        return;
-                      }
-                      setDraft((prev) => ({ ...prev, status: "warning" }));
-                    }}
-                    disabled={submitting}
-                    options={[
-                      { value: "valid", label: "Valid" },
-                      { value: "warning", label: "Warning" },
-                      { value: "invalid", label: "Invalid" },
-                    ]}
-                  />
+              <div className="grid grid-cols-1 gap-2">
+                <div className="rounded-md border bg-muted/20 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">Ringkasan Checklist Kondisi</p>
+                  <p className="mt-1 text-sm">
+                    {inspectionSummary.good}/{CONDITION_CHECK_ITEMS.length} kondisi baik, {inspectionSummary.issue} perlu perhatian.
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <Label>Temuan</Label>
@@ -1118,27 +1047,12 @@ export default function OdpFieldValidationPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-2">
-                <Input
-                  key={draft.evidenceFile?.name || "empty-evidence"}
-                  type="file"
-                  accept="image/*"
-                  disabled={submitting}
-                  onChange={(event) => setDraft((prev) => ({ ...prev, evidenceFile: event.target.files?.[0] || null }))}
-                />
                 <Button type="button" onClick={() => void submitValidation()} disabled={submitting} className="h-11 w-full sm:h-10">
                   {submitting ? <RefreshCw className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
                   Submit Validasi
                 </Button>
               </div>
-              {draft.evidenceFile ? (
-                <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Camera className="size-3.5" />
-                  {draft.evidenceFile.name}
-                </p>
-              ) : null}
-              <p className="text-xs text-muted-foreground">
-                Checklist tercentang: {checkedCount}/{CHECKLIST.length}. Status valid otomatis saat semua checklist tercentang.
-              </p>
+              <p className="text-xs text-muted-foreground">Evidence diambil dari foto pemeriksaan awal dan checklist kondisi. Semua item wajib diisi sebelum submit.</p>
             </CardContent>
           </Card>
         </div>
@@ -1173,18 +1087,8 @@ export default function OdpFieldValidationPage() {
                 <p className="font-medium">{lastValidationSnapshot.status || "-"}</p>
               </div>
               <div className="rounded-md border bg-background p-3">
-                <p className="text-xs text-muted-foreground">Checklist</p>
-                <div className="mt-2 grid gap-1.5">
-                  {CHECKLIST.map((item) => {
-                    const checked = Boolean(lastValidationSnapshot.payload?.checklist?.[item.key]);
-                    return (
-                      <div key={`latest-${item.key}`} className="flex items-center justify-between gap-2 rounded border px-2 py-1.5 text-xs">
-                        <span>{item.label}</span>
-                        <span className={checked ? "text-emerald-700" : "text-rose-700"}>{checked ? "OK" : "Belum"}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+                <p className="text-xs text-muted-foreground">Pemeriksaan Lapangan</p>
+                <InspectionSnapshotSummary inspection={lastValidationSnapshot.payload?.field_inspection} />
               </div>
               <div className="grid grid-cols-2 gap-2 rounded-md border bg-background p-3 text-xs">
                 <p>Total: {lastValidationSnapshot.payload?.port_summary?.total ?? "-"}</p>
@@ -1281,6 +1185,42 @@ function InfoField({ label, value }: { label: string; value: string }) {
   );
 }
 
+function InspectionSnapshotSummary({ inspection }: { inspection?: FieldInspectionSnapshot | null }) {
+  const photos = Object.values(inspection?.initial_photos || {});
+  const checks = Object.values(inspection?.condition_checks || {});
+  if (!photos.length && !checks.length) {
+    return <p className="mt-2 text-xs text-muted-foreground">Belum ada detail pemeriksaan format baru.</p>;
+  }
+
+  return (
+    <div className="mt-2 space-y-2">
+      {photos.length ? (
+        <div className="grid gap-1.5">
+          {photos.map((item, index) => (
+            <div key={`${item.label || "photo"}-${index}`} className="flex items-center justify-between gap-2 rounded border px-2 py-1.5 text-xs">
+              <span>{item.label || "Foto pemeriksaan"}</span>
+              <span className={item.attachment ? "text-emerald-700" : "text-rose-700"}>{item.attachment ? "Ada foto" : "Belum ada"}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {checks.length ? (
+        <div className="grid gap-1.5">
+          {checks.map((item, index) => (
+            <div key={`${item.label || "condition"}-${index}`} className="rounded border px-2 py-1.5 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span>{item.label || "Checklist kondisi"}</span>
+                <span className={isGoodCondition(item.condition) ? "text-emerald-700" : "text-amber-700"}>{item.condition || "-"}</span>
+              </div>
+              {item.note ? <p className="mt-1 text-muted-foreground">Keterangan: {item.note}</p> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function summarizePorts(ports: DevicePort[], device: DeviceItem | null) {
   const total = ports.length || Number(device?.total_ports || 0) || 0;
   const used = ports.filter((port) => port.status === "used").length || Number(device?.used_ports || 0) || 0;
@@ -1370,11 +1310,6 @@ function LegendDot({ className, label }: { className: string; label: string }) {
   );
 }
 
-function countChecked(checklist?: Partial<Record<ChecklistKey, boolean>>) {
-  if (!checklist) return 0;
-  return CHECKLIST.filter((item) => Boolean(checklist[item.key])).length;
-}
-
 function formatOdpPortLabel(port: DevicePort) {
   const index = Number(port.port_index);
   if (Number.isFinite(index) && index > 0) return `#${index}`;
@@ -1384,13 +1319,6 @@ function formatOdpPortLabel(port: DevicePort) {
 function describePortAssignmentState(port: DevicePort) {
   if (port.customer_id || port.ont_device_id) return "Endpoint terhubung";
   return "Belum terhubung customer/ONT";
-}
-
-function deriveStatusFromChecklist(checklist: Partial<Record<ChecklistKey, boolean>>) {
-  const checked = CHECKLIST.filter((item) => Boolean(checklist[item.key])).length;
-  if (checked === CHECKLIST.length) return "valid" as ValidationStatus;
-  if (checked === 0) return "invalid" as ValidationStatus;
-  return "warning" as ValidationStatus;
 }
 
 function mapValidationRequestToRecord(item: ValidationRequestItem): ValidationRecord {
@@ -1406,6 +1334,7 @@ function mapValidationRequestToRecord(item: ValidationRequestItem): ValidationRe
       null,
     payload: {
       checklist: item.checklist || {},
+      field_inspection: item.payload_snapshot?.field_inspection || {},
       field_validation: item.payload_snapshot?.field_validation || {},
       port_summary: item.payload_snapshot?.port_summary || {},
     },
@@ -1420,14 +1349,7 @@ function mapRequestStatusToValidationStatus(status?: string | null): ValidationS
 
 function buildDefaultValidationDraft(device?: DeviceItem | null, ports: DevicePort[] = []): ValidationDraft {
   return {
-    physical_ok: false,
-    splitter_ok: false,
-    port_mapping_ok: false,
-    qr_label_ok: false,
-    label_ok: false,
-    status: "invalid",
     findings: "",
-    evidenceFile: null,
     initialPhotos: buildEmptyInitialPhotos(),
     conditionChecks: buildEmptyConditionChecks(),
     deviceNameNew: String(device?.device_name || ""),
@@ -1441,22 +1363,12 @@ function buildDefaultValidationDraft(device?: DeviceItem | null, ports: DevicePo
 }
 
 function buildDraftFromSnapshot(snapshot: ValidationRecord): ValidationDraft {
-  const checklist = snapshot.payload?.checklist || {};
   const fieldValidation = snapshot.payload?.field_validation || {};
-  const nextChecklist = {
-    physical_ok: Boolean(checklist.physical_ok),
-    splitter_ok: Boolean(checklist.splitter_ok),
-    port_mapping_ok: Boolean(checklist.port_mapping_ok),
-    qr_label_ok: Boolean(checklist.qr_label_ok),
-    label_ok: Boolean(checklist.label_ok),
-  };
+  const conditionChecks = buildConditionChecksFromSnapshot(snapshot.payload?.field_inspection);
   return {
-    ...nextChecklist,
-    status: deriveStatusFromChecklist(nextChecklist),
     findings: snapshot.findings || "",
-    evidenceFile: null,
     initialPhotos: buildEmptyInitialPhotos(),
-    conditionChecks: buildEmptyConditionChecks(),
+    conditionChecks,
     deviceNameNew: String(fieldValidation.new_device_name || ""),
     splitterRatio: String(fieldValidation.splitter_ratio || ""),
     totalPortsActual: String(fieldValidation.total_ports || 8),
@@ -1479,6 +1391,86 @@ function buildEmptyConditionChecks(): Record<ConditionCheckKey, ConditionCheckDr
     acc[item.key] = { condition: "", note: "", photo: null };
     return acc;
   }, {} as Record<ConditionCheckKey, ConditionCheckDraft>);
+}
+
+function buildConditionChecksFromSnapshot(inspection?: FieldInspectionSnapshot | null): Record<ConditionCheckKey, ConditionCheckDraft> {
+  const checks = buildEmptyConditionChecks();
+  const snapshotChecks = inspection?.condition_checks || {};
+  for (const item of CONDITION_CHECK_ITEMS) {
+    const snapshot = snapshotChecks[item.key];
+    checks[item.key] = {
+      condition: String(snapshot?.condition || ""),
+      note: String(snapshot?.note || ""),
+      photo: null,
+    };
+  }
+  return checks;
+}
+
+function isGoodCondition(value?: string | null) {
+  return GOOD_CONDITION_VALUES.has(String(value || ""));
+}
+
+function summarizeConditionChecks(checks: Record<ConditionCheckKey, ConditionCheckDraft>) {
+  const rows = CONDITION_CHECK_ITEMS.map((item) => checks[item.key]);
+  const filled = rows.filter((item) => item.condition).length;
+  const good = rows.filter((item) => isGoodCondition(item.condition)).length;
+  return {
+    filled,
+    good,
+    issue: Math.max(0, filled - good),
+  };
+}
+
+function deriveStatusFromConditionChecks(checks: Record<ConditionCheckKey, ConditionCheckDraft>): ValidationStatus {
+  const summary = summarizeConditionChecks(checks);
+  if (summary.filled < CONDITION_CHECK_ITEMS.length) return "invalid";
+  if (summary.issue > 0) return "warning";
+  return "valid";
+}
+
+function formatInspectionSummary(inspection?: FieldInspectionSnapshot | null) {
+  const checks = Object.values(inspection?.condition_checks || {});
+  if (!checks.length) return "-";
+  const good = checks.filter((item) => isGoodCondition(item.condition)).length;
+  return `${good}/${checks.length} baik`;
+}
+
+function validateDraftBeforeSubmit(draft: ValidationDraft, fallbackTotalPorts: number) {
+  if (!draft.odpType.trim()) return "Tipe ODP wajib dipilih.";
+  if (!draft.installationType.trim()) return "Jenis instalasi wajib dipilih.";
+  if (!draft.splitterRatio.trim()) return "Kapasitas splitter wajib dipilih.";
+  const totalPorts = normalizePortCapacity(draft.totalPortsActual, fallbackTotalPorts || 8);
+  if (!Number.isInteger(totalPorts) || totalPorts <= 0) return "Kapasitas ODP tidak valid.";
+
+  const missingPhoto = INITIAL_PHOTO_ITEMS.find((item) => !draft.initialPhotos[item.key]);
+  if (missingPhoto) return `${missingPhoto.label} wajib dilampirkan.`;
+
+  for (const item of CONDITION_CHECK_ITEMS) {
+    const check = draft.conditionChecks[item.key];
+    if (!check.condition) return `Kondisi ${item.label} wajib dipilih.`;
+    if (!check.photo) return `Foto ${item.label} wajib dilampirkan.`;
+    if (!isGoodCondition(check.condition) && !check.note.trim()) return `Keterangan ${item.label} wajib diisi jika kondisi bermasalah.`;
+  }
+
+  for (const [portIndex, value] of Object.entries(draft.portAttenuations)) {
+    if (!value.trim()) continue;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return `Redaman port ${portIndex} harus berupa angka.`;
+  }
+
+  return "";
+}
+
+function buildLegacyChecklistFromInspection(checks: Record<ConditionCheckKey, ConditionCheckDraft>, ports: Array<Record<string, unknown>>) {
+  const hasDownPort = ports.some((port) => ["down", "maintenance"].includes(String(port.status || "").toLowerCase()));
+  return {
+    physical_ok: isGoodCondition(checks.box_odp.condition) && isGoodCondition(checks.cleanliness.condition),
+    splitter_ok: isGoodCondition(checks.pigtail_adapter.condition),
+    port_mapping_ok: !hasDownPort,
+    qr_label_ok: isGoodCondition(checks.label_odp.condition),
+    label_ok: isGoodCondition(checks.label_odp.condition) && isGoodCondition(checks.cable_neatness.condition),
+  };
 }
 
 function formatDateTime(value?: string | null) {

@@ -64,14 +64,6 @@ type LookupLabels = {
   pops: Record<string, string>;
   projects: Record<string, string>;
 };
-const CHECKLIST_LABELS: Array<{ key: string; label: string }> = [
-  { key: "physical_ok", label: "Fisik ODP OK" },
-  { key: "splitter_ok", label: "Splitter OK" },
-  { key: "port_mapping_ok", label: "Mapping port OK" },
-  { key: "qr_label_ok", label: "QR terpasang" },
-  { key: "label_ok", label: "Label terbaca" },
-];
-
 export default function ValidationRequestsPage() {
   const { token, me } = useSession();
   const normalizedRole = normalizeRole(me.role);
@@ -439,21 +431,11 @@ export default function ValidationRequestsPage() {
                             ))}
                           </div>
                         </div>
-                        <div className="rounded-md border p-3">
-                          <p className="mb-2 text-sm font-medium">Checklist</p>
-                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            {CHECKLIST_LABELS.map((item) => (
-                              <p key={item.key} className="text-xs">
-                                {item.label}:{" "}
-                                <span className={selected.checklist?.[item.key] ? "text-emerald-600" : "text-rose-600"}>
-                                  {selected.checklist?.[item.key] ? "OK" : "Belum"}
-                                </span>
-                              </p>
-                            ))}
-                          </div>
-                          <p className="mt-2 text-xs text-muted-foreground">Temuan: {selected.finding_note || "-"}</p>
-                        </div>
                         <FieldInspectionReview inspection={selected.payload_snapshot?.field_inspection} />
+                        <div className="rounded-md border p-3">
+                          <p className="mb-2 text-sm font-medium">Temuan</p>
+                          <p className="text-xs text-muted-foreground">{selected.finding_note || "-"}</p>
+                        </div>
                       </div>
                     ) : null}
 
@@ -752,7 +734,7 @@ function getRequestSummary(item: ValidationRequestItem, lookupLabels: LookupLabe
     return `${requestType.operationLabel} ${requestType.resourceLabel} | Status ${valueText(payload.status || payload.status_pop)} | Region ${getRegionText(payload.region_id || item.region_id, lookupLabels)}`;
   }
 
-  return `${getChecklistSummary(item.checklist)} | ${getPortSummary(item.payload_snapshot?.device_ports || [])}`;
+  return `${getInspectionSummary(item.payload_snapshot?.field_inspection)} | ${getPortSummary(item.payload_snapshot?.device_ports || [])}`;
 }
 
 function getCreateAssetReviewFields(item: ValidationRequestItem, lookupLabels: LookupLabels) {
@@ -1026,6 +1008,13 @@ function getInspectionAttachmentName(value: unknown) {
   return valueText(attachment.name || attachment.attachment_id || attachment.id);
 }
 
+function getInspectionSummary(inspection?: Record<string, unknown> | null) {
+  const checks = objectRecordValues(inspection?.condition_checks);
+  if (!checks.length) return "Kondisi -";
+  const good = checks.filter((item) => ["Baik", "Bersih", "Lengkap", "Rapi"].includes(String(item.condition || ""))).length;
+  return `Kondisi ${good}/${checks.length} baik`;
+}
+
 function getOperationLabel(operation: string) {
   if (operation === "update") return "Update";
   if (operation === "archive") return "Archive";
@@ -1037,12 +1026,6 @@ function valueText(value: unknown) {
   if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "boolean") return value ? "Ya" : "Tidak";
   return String(value);
-}
-
-function getChecklistSummary(checklist?: Record<string, boolean> | null) {
-  const rows = CHECKLIST_LABELS.map((item) => Boolean(checklist?.[item.key]));
-  const checked = rows.filter(Boolean).length;
-  return `${checked}/${rows.length} OK`;
 }
 
 function renderPortStats(ports: Array<Record<string, unknown>>) {
