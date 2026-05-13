@@ -227,6 +227,7 @@ export default function OdpFieldValidationPage() {
   const [lastValidationDialogOpen, setLastValidationDialogOpen] = useState(false);
   const [lastValidationSnapshot, setLastValidationSnapshot] = useState<ValidationRecord | null>(null);
   const [draft, setDraft] = useState<ValidationDraft>(buildDefaultValidationDraft());
+  const [portStatusFilter, setPortStatusFilter] = useState("all");
 
   const summary = useMemo(() => summarizePorts(ports, device), [ports, device]);
   const isOdp = String(device?.device_type_key || "").toUpperCase() === "ODP";
@@ -263,6 +264,20 @@ export default function OdpFieldValidationPage() {
       : "";
   const isSubmitBlocked = Boolean(submitBlockedMessage);
   const submitButtonLabel = isRejectedByAdminregion ? "Resubmit Validasi" : "Submit Validasi";
+  const validationPortIndexes = useMemo(
+    () => buildValidationPortIndexes(draft.totalPortsActual, summary.total || 8),
+    [draft.totalPortsActual, summary.total],
+  );
+  const filteredValidationPortIndexes = useMemo(
+    () =>
+      validationPortIndexes.filter((portIndex) => {
+        if (portStatusFilter === "all") return true;
+        const port = ports.find((item) => Number(item.port_index) === portIndex);
+        const key = String(portIndex);
+        return String(draft.portStatuses[key] || port?.status || "idle") === portStatusFilter;
+      }),
+    [draft.portStatuses, portStatusFilter, ports, validationPortIndexes],
+  );
   const selectedSplitterProfile = useMemo(
     () => splitterProfiles.find((item) => item.ratio_label === draft.splitterRatio) || null,
     [splitterProfiles, draft.splitterRatio],
@@ -551,19 +566,24 @@ export default function OdpFieldValidationPage() {
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="w-full space-y-4 px-3 pb-3 md:px-4 md:pb-4">
         <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
-            <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm" className="min-w-0 flex-1 sm:flex-none">
               <Link href={`/data-management/list/odp/${device.id}`}>
                 <ArrowLeft className="mr-2 size-4" />
                 Detail ODP
               </Link>
             </Button>
-            <Badge variant="outline" className="w-fit">QR Scan Result</Badge>
+            <Button type="button" variant="ghost" size="icon" onClick={() => location.reload()} className="shrink-0 sm:hidden" title="Refresh">
+              <RefreshCw className="size-4" />
+            </Button>
           </div>
-          <Button type="button" variant="ghost" size="sm" onClick={() => location.reload()} className="w-full sm:w-auto">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Badge variant="outline" className="w-fit">QR Scan Result</Badge>
+            <Button type="button" variant="ghost" size="sm" onClick={() => location.reload()} className="hidden sm:inline-flex">
             <RefreshCw className="mr-2 size-4" />
             Refresh
-          </Button>
+            </Button>
+          </div>
         </div>
 
         {message ? <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-700">{message}</p> : null}
@@ -573,18 +593,19 @@ export default function OdpFieldValidationPage() {
           <CardHeader className="px-3 py-2">
             <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
               <div className="min-w-0 space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={isOdp ? "default" : "outline"}>{device.device_type_key || "-"}</Badge>
-                  <Badge variant="outline" className={deviceValidationUi.className}>{deviceValidationUi.label}</Badge>
-                  {latestRequest && requestValidationUi ? <Badge variant="outline" className={requestValidationUi.className}>Request: {requestValidationUi.label}</Badge> : null}
-                  {device.validation_date ? <Badge variant="outline">Validated {formatDate(device.validation_date)}</Badge> : null}
-                </div>
+                <OdpMobileStatusHeader
+                  deviceType={device.device_type_key || "-"}
+                  isOdp={isOdp}
+                  deviceStatus={deviceValidationUi}
+                  requestStatus={requestValidationUi}
+                  validationDate={device.validation_date}
+                />
                 <div>
                   <CardTitle className="text-xl md:text-2xl">{device.device_name || "ODP"}</CardTitle>
                   <CardDescription className="break-all">{device.device_id || device.id}</CardDescription>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:min-w-[520px] lg:grid-cols-5">
+              <div className="grid grid-flow-col auto-cols-[minmax(104px,1fr)] gap-2 overflow-x-auto pb-1 sm:grid-flow-row sm:grid-cols-3 sm:overflow-visible sm:pb-0 lg:min-w-[520px] lg:grid-cols-5">
                 <Metric label="Total" value={summary.total} />
                 <Metric label="Used" value={summary.used} />
                 <Metric label="Idle" value={summary.idle} />
@@ -630,7 +651,7 @@ export default function OdpFieldValidationPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <CardTitle className="text-base">Port ODP</CardTitle>
-                    <CardDescription>Status, redaman, dan catatan aktual per port.</CardDescription>
+                    <CardDescription>Status, redaman, dan catatan aktual per port. {filteredValidationPortIndexes.length}/{validationPortIndexes.length} tampil.</CardDescription>
                   </div>
                   <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                     <LegendDot className="bg-emerald-500" label="used" />
@@ -640,15 +661,25 @@ export default function OdpFieldValidationPage() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="px-3 pb-3">
-                {buildValidationPortIndexes(draft.totalPortsActual, summary.total || 8).length ? (
+              <CardContent className="space-y-2 px-3 pb-3">
+                <Combobox
+                  value={portStatusFilter}
+                  onValueChange={setPortStatusFilter}
+                  triggerClassName="h-9 text-xs"
+                  options={[
+                    { value: "all", label: "Semua status port" },
+                    ...PORT_STATUS_OPTIONS.map((status) => ({ value: status, label: status })),
+                  ]}
+                  searchPlaceholder="Filter status port..."
+                />
+                {validationPortIndexes.length ? (
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                    {buildValidationPortIndexes(draft.totalPortsActual, summary.total || 8).map((portIndex) => {
+                    {filteredValidationPortIndexes.map((portIndex) => {
                       const port = ports.find((item) => Number(item.port_index) === portIndex);
                       const key = String(portIndex);
                       return (
-                      <div key={port?.id || `draft-port-${key}`} className="rounded-md border bg-background p-3">
-                        <div className="mb-3 flex items-center justify-between gap-2">
+                      <div key={port?.id || `draft-port-${key}`} className="rounded-md border bg-background p-2.5 sm:p-3">
+                        <div className="mb-2 flex items-center justify-between gap-2">
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium">{port ? formatOdpPortLabel(port) : `#${portIndex}`}</p>
                             <p className="truncate text-xs text-muted-foreground">
@@ -748,6 +779,9 @@ export default function OdpFieldValidationPage() {
                       </div>
                     );
                     })}
+                    {!filteredValidationPortIndexes.length ? (
+                      <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">Tidak ada port dengan status filter ini.</p>
+                    ) : null}
                   </div>
                 ) : (
                   <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">Port ODP belum tersedia.</p>
@@ -1003,25 +1037,18 @@ export default function OdpFieldValidationPage() {
                 <p className="mb-3 text-sm font-medium">Pemeriksaan Awal</p>
                 <div className="grid grid-cols-1 gap-3">
                   {INITIAL_PHOTO_ITEMS.map((item) => (
-                    <div key={item.key} className="space-y-1">
-                      <RequiredLabel>{item.label}</RequiredLabel>
-                      <Input
-                        key={draft.initialPhotos[item.key]?.name || `empty-${item.key}`}
-                        type="file"
-                        accept="image/*"
-                        disabled={submitting}
-                        onChange={(event) => {
-                          const file = event.target.files?.[0] || null;
-                          setDraft((prev) => ({
-                            ...prev,
-                            initialPhotos: { ...prev.initialPhotos, [item.key]: file },
-                          }));
-                        }}
-                      />
-                      {draft.initialPhotos[item.key] ? (
-                        <p className="truncate text-xs text-muted-foreground">{draft.initialPhotos[item.key]?.name}</p>
-                      ) : null}
-                    </div>
+                    <EvidenceFileInput
+                      key={item.key}
+                      label={item.label}
+                      file={draft.initialPhotos[item.key]}
+                      disabled={submitting}
+                      onChange={(file) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          initialPhotos: { ...prev.initialPhotos, [item.key]: file },
+                        }))
+                      }
+                    />
                   ))}
                 </div>
               </div>
@@ -1070,26 +1097,21 @@ export default function OdpFieldValidationPage() {
                               placeholder="Keterangan lapangan"
                             />
                           </div>
-                          <div className="space-y-1">
-                            <RequiredLabel>Foto</RequiredLabel>
-                            <Input
-                              key={check.photo?.name || `empty-${item.key}-photo`}
-                              type="file"
-                              accept="image/*"
-                              disabled={submitting}
-                              onChange={(event) => {
-                                const file = event.target.files?.[0] || null;
-                                setDraft((prev) => ({
-                                  ...prev,
-                                  conditionChecks: {
-                                    ...prev.conditionChecks,
-                                    [item.key]: { ...prev.conditionChecks[item.key], photo: file },
-                                  },
-                                }));
-                              }}
-                            />
-                            {check.photo ? <p className="truncate text-xs text-muted-foreground">{check.photo.name}</p> : null}
-                          </div>
+                          <EvidenceFileInput
+                            label="Foto"
+                            file={check.photo}
+                            disabled={submitting}
+                            compact
+                            onChange={(file) =>
+                              setDraft((prev) => ({
+                                ...prev,
+                                conditionChecks: {
+                                  ...prev.conditionChecks,
+                                  [item.key]: { ...prev.conditionChecks[item.key], photo: file },
+                                },
+                              }))
+                            }
+                          />
                         </div>
                       </div>
                     );
@@ -1256,11 +1278,69 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
+function OdpMobileStatusHeader({
+  deviceType,
+  isOdp,
+  deviceStatus,
+  requestStatus,
+  validationDate,
+}: {
+  deviceType: string;
+  isOdp: boolean;
+  deviceStatus: ReturnType<typeof mapValidationStatus>;
+  requestStatus: ReturnType<typeof mapValidationStatus> | null;
+  validationDate?: string | null;
+}) {
+  return (
+    <div className="rounded-md border bg-muted/20 p-2 sm:border-0 sm:bg-transparent sm:p-0">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Badge variant={isOdp ? "default" : "outline"}>{deviceType}</Badge>
+        <Badge variant="outline" className={deviceStatus.className}>{deviceStatus.label}</Badge>
+        {requestStatus ? <Badge variant="outline" className={requestStatus.className}>Request: {requestStatus.label}</Badge> : null}
+      </div>
+      {validationDate ? (
+        <p className="mt-1 text-[11px] text-muted-foreground">Validated {formatDate(validationDate)}</p>
+      ) : null}
+    </div>
+  );
+}
+
 function InfoField({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md border bg-muted/20 px-3 py-2">
       <p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
       <p className="break-words text-sm">{value || "-"}</p>
+    </div>
+  );
+}
+
+function EvidenceFileInput({
+  label,
+  file,
+  disabled,
+  onChange,
+  compact = false,
+}: {
+  label: string;
+  file: File | null;
+  disabled: boolean;
+  onChange: (file: File | null) => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className={`rounded-md border bg-muted/10 p-2 ${compact ? "" : "sm:p-3"}`}>
+      <RequiredLabel>{label}</RequiredLabel>
+      <Input
+        key={file?.name || `empty-${label}`}
+        type="file"
+        accept="image/*"
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.files?.[0] || null)}
+        className="mt-1.5 h-10 text-xs"
+      />
+      <p className={`mt-1 truncate text-xs ${file ? "text-foreground" : "text-muted-foreground"}`}>
+        {file ? file.name : "Belum ada foto"}
+      </p>
     </div>
   );
 }

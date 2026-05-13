@@ -40,13 +40,34 @@ const ACTION_OPTIONS = [
   { value: "delete:", label: "Delete" },
   { value: "restore:", label: "Restore" },
   { value: "purge:", label: "Purge" },
-  { value: "validation_request_submitted", label: "Validation Submitted" },
-  { value: "validation_request_approved_by_adminregion", label: "Validation Approved Adminregion" },
-  { value: "validation_request_rejected_by_adminregion", label: "Validation Rejected Adminregion" },
-  { value: "validation_request_approved_by_superadmin", label: "Validation Approved Superadmin" },
-  { value: "validation_request_rejected_by_superadmin", label: "Validation Rejected Superadmin" },
-  { value: "validation_request_applied_to_asset", label: "Validation Applied To Asset" },
+  { value: "validation_request_submitted", label: "ODP - Submit Validasi" },
+  { value: "validation_request_resubmitted_by_validator", label: "ODP - Resubmit Validator" },
+  { value: "validation_request_approved_by_adminregion", label: "ODP - Approve Adminregion" },
+  { value: "validation_request_rejected_by_adminregion", label: "ODP - Reject Adminregion" },
+  { value: "validation_request_resubmitted_by_adminregion", label: "ODP - Resubmit Adminregion" },
+  { value: "validation_request_approved_by_superadmin", label: "ODP - Approve Superadmin" },
+  { value: "validation_request_rejected_by_superadmin", label: "ODP - Reject Superadmin" },
+  { value: "validation_request_applied_to_asset", label: "ODP - Apply ke Asset" },
 ];
+
+const ACTION_LABELS: Record<string, string> = {
+  validation_request_submitted: "ODP validation submitted",
+  validation_request_resubmitted_by_validator: "ODP validation resubmitted by validator",
+  validation_request_approved_by_adminregion: "ODP validation approved by adminregion",
+  validation_request_rejected_by_adminregion: "ODP validation rejected by adminregion",
+  validation_request_resubmitted_by_adminregion: "ODP validation resubmitted by adminregion",
+  validation_request_approved_by_superadmin: "ODP validation approved by superadmin",
+  validation_request_rejected_by_superadmin: "ODP validation rejected by superadmin",
+  validation_request_applied_to_asset: "ODP validation applied to asset",
+};
+
+const ENTITY_LABELS: Record<string, string> = {
+  validation_requests: "Validation Request",
+  devicePorts: "Device Port",
+  deviceTypes: "Device Type",
+  popTypes: "POP Type",
+  assetModels: "Asset Model",
+};
 
 export default function AuditTrailPage() {
   const searchParams = useSearchParams();
@@ -287,9 +308,10 @@ function formatDateTime(value?: string | null) {
 function formatAction(value?: string | null) {
   const text = (value || "").trim();
   if (!text) return "-";
+  if (ACTION_LABELS[text]) return ACTION_LABELS[text];
   const [action, entity] = text.split(":");
-  if (!entity) return text;
-  return `${action.replaceAll("_", " ")} • ${entity}`;
+  if (!entity) return toTitleCase(text.replaceAll("_", " "));
+  return `${toTitleCase(action.replaceAll("_", " "))} - ${formatEntityType(entity)}`;
 }
 
 function formatActorName(actorUserId: string | null | undefined, userMap: Record<string, string>) {
@@ -312,6 +334,7 @@ function formatEntityName(item: AuditLogItem) {
 
   if (!entityType) return item.entity_id || "-";
 
+  if (entityType === "validation_requests") return pick("request_id") || item.entity_id || "-";
   if (entityType === "regions") return pick("region_name") || item.entity_id || "-";
   if (entityType === "deviceTypes") return pick("device_type_name", "device_type_key") || item.entity_id || "-";
   if (entityType === "popTypes") return pick("pop_type_name", "pop_type_code") || item.entity_id || "-";
@@ -329,4 +352,16 @@ function formatEntityName(item: AuditLogItem) {
   if (entityType === "validations") return pick("validation_id", "validation_type", "status") || item.entity_id || "-";
 
   return item.entity_id || "-";
+}
+
+function formatEntityType(value: string) {
+  return ENTITY_LABELS[value] || toTitleCase(value.replaceAll("_", " "));
+}
+
+function toTitleCase(value: string) {
+  return value
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }

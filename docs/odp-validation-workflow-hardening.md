@@ -283,6 +283,246 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 - Tambahkan UAT case untuk ODP Quality queue.
 - Update checklist setelah manual test.
 
+## Rencana Redesign Form Validasi ODP - Adaptive UI
+
+### Latar Belakang
+
+Form validasi ODP sudah memuat seluruh kebutuhan teknis: identitas asset, pemeriksaan awal, checklist kondisi, port, redaman, evidence, histori, dan resubmit. Setelah semua kebutuhan tersebut digabung dalam satu halaman panjang, pengalaman mobile menjadi kurang efisien karena validator harus scroll jauh untuk berpindah antar area kerja.
+
+Perubahan berikutnya perlu mengubah form validasi dari halaman panjang menjadi workspace berbasis section. Tujuannya bukan mengubah kontrak data, tetapi membuat pengisian lebih terstruktur, ringkas, dan mudah diaudit.
+
+### Prinsip Desain
+
+- **Adaptive UI**: layout menyesuaikan perangkat, bukan sekadar responsive grid.
+- **Section-first workflow**: setiap kelompok kerja memiliki ruang sendiri, status kelengkapan sendiri, dan error sendiri.
+- **Technical wording**: label memakai bahasa operasional yang lebih presisi agar cocok untuk validator, adminregion, dan superadmin.
+- **No payload churn**: struktur payload submit tetap memakai `field_inspection`, `field_validation`, `device_ports`, dan `port_summary`.
+- **Review parity**: urutan section di form validasi harus mudah dicocokkan dengan halaman request approval dan histori detail ODP.
+- **Mobile-first execution**: validator mobile harus bisa berpindah section tanpa mencari field lewat scroll panjang.
+
+### Struktur Section Baru
+
+#### 1. Ringkasan ODP
+
+Tujuan: memberi konteks sebelum validator mengisi data.
+
+Konten:
+
+- Status validasi asset.
+- Status request aktif.
+- Nama ODP dan inventory ID.
+- Ringkasan port: total, used, idle, reserved, down.
+- Catatan reject terakhir jika ada.
+- Akses cepat ke detail validasi terakhir.
+
+Catatan UI:
+
+- Read-only.
+- Desktop dapat menjadi summary panel.
+- Mobile menjadi section pertama yang ringkas.
+
+#### 2. Identitas & Kapasitas Aktual
+
+Tujuan: menampung koreksi master data ODP yang ditemukan di lapangan.
+
+Konten:
+
+- Nama ODP baru.
+- Tipe ODP.
+- Jenis instalasi.
+- Splitter ratio.
+- Kapasitas ODP aktual.
+- POP dan inventory ID sebagai referensi read-only.
+
+Catatan UI:
+
+- Semua field wajib memiliki required badge kecil.
+- Progress section dapat berupa `5/5 lengkap`.
+- Error section harus mengarah langsung ke field yang belum valid.
+
+#### 3. Pemeriksaan Awal
+
+Tujuan: mengumpulkan foto pembuka yang membuktikan konteks lapangan.
+
+Konten:
+
+- Foto keseluruhan ODP jarak dekat.
+- Foto keseluruhan ODP jarak jauh dengan tiang.
+- Foto bagian dalam ODP close up.
+- Foto tampak kanan dan kiri.
+
+Catatan UI:
+
+- Uploader dibuat compact dengan status `Belum ada foto` atau nama file.
+- Mobile sebaiknya menggunakan card uploader satu kolom.
+- Desktop dapat memakai grid dua kolom.
+
+#### 4. Checklist Kondisi
+
+Tujuan: mencatat kondisi fisik dan teknis ODP.
+
+Konten:
+
+- Box ODP.
+- Label ODP.
+- Kebersihan ODP.
+- Pigtail dan adapter.
+- Kerapihan kabel.
+- Kondisi, keterangan, dan foto per item.
+
+Catatan UI:
+
+- Section badge menampilkan ringkasan seperti `4/5 baik` dan `1 perlu perhatian`.
+- Jika kondisi tidak baik, keterangan teknis wajib diisi.
+- Error section harus menyebut item bermasalah.
+
+#### 5. Port & Redaman
+
+Tujuan: mencatat status port dan nilai redaman sesuai kapasitas aktual.
+
+Konten:
+
+- Filter status port.
+- Status port per index.
+- Customer/ONT jika ada.
+- Redaman per port.
+- Catatan port.
+
+Catatan UI:
+
+- Mobile memakai card list dengan filter.
+- Desktop dapat memakai grid/card multi kolom.
+- Section badge menampilkan `x/y redaman lengkap`.
+
+#### 6. Review & Submit
+
+Tujuan: memastikan validator melihat ringkasan teknis sebelum submit/resubmit.
+
+Konten:
+
+- Ringkasan identitas dan kapasitas.
+- Ringkasan pemeriksaan awal.
+- Ringkasan checklist kondisi.
+- Ringkasan port dan redaman.
+- Daftar field belum lengkap per section.
+- Tombol `Submit Validasi` atau `Resubmit Validasi`.
+
+Catatan UI:
+
+- Tombol submit utama dipusatkan di section ini.
+- Mobile boleh memiliki CTA ringkas, tetapi tidak boleh menutup konten aktif.
+- Dialog validasi wajib menyebut section dan field yang bermasalah.
+
+### Pola Adaptive UI
+
+Desktop:
+
+- Gunakan layout dua area: navigation/summary di kiri atau atas, content section di kanan.
+- Section navigation boleh memakai tabs horizontal atau sidebar ringan.
+- Summary status tetap terlihat tanpa memenuhi layar.
+
+Tablet:
+
+- Gunakan tabs horizontal scroll.
+- Content tetap satu section aktif.
+- Hindari nested card berlebihan.
+
+Mobile:
+
+- Gunakan segmented tabs horizontal sticky di atas content.
+- Setiap tab menampilkan badge kecil: complete, warning, atau count.
+- Hanya satu section aktif tampil, sehingga validator tidak scroll seluruh form.
+- Error submit otomatis memindahkan user ke section yang bermasalah.
+
+### Dampak Perubahan
+
+#### Halaman Field Validation ODP
+
+File utama:
+
+- `app/(app)/field/odp/[id]/page.tsx`
+
+Dampak:
+
+- Perlu memecah form panjang menjadi section components.
+- Perlu state `activeSection`.
+- Perlu helper progress per section.
+- Perlu helper error routing per section.
+- Perlu review summary sebelum submit.
+- Validasi submit tetap memakai data draft yang sama.
+
+#### Halaman Request Approval
+
+File utama:
+
+- `app/(app)/validation-requests/page.tsx`
+
+Dampak:
+
+- Tidak perlu perubahan payload.
+- Urutan review field validation sebaiknya disamakan dengan section baru.
+- Label section di approval perlu mengikuti bahasa teknis yang sama.
+- Evidence tetap dibedakan sebagai evidence untuk field validation, attachment untuk create/update/archive.
+
+#### Halaman Detail ODP
+
+File utama:
+
+- `app/(app)/data-management/list/[slug]/[id]/page.tsx`
+
+Dampak:
+
+- Histori validasi sebaiknya memakai urutan section yang sama.
+- Ringkasan port, checklist, dan evidence tetap membaca snapshot existing.
+- Tidak perlu perubahan backend jika snapshot tidak berubah.
+
+#### Notification dan Audit Trail
+
+File utama:
+
+- `components/nav-user.tsx`
+- `app/(app)/audit-trail/page.tsx`
+
+Dampak:
+
+- Tidak perlu perubahan besar.
+- Jika label section baru muncul di event/user message, wording perlu disamakan.
+- Notification tetap fokus jenis request, status workflow, dan role reviewer.
+
+#### Backend
+
+File utama:
+
+- `src/modules/validation/validation.controller.js`
+- `src/modules/validation/validation.service.js`
+
+Dampak:
+
+- Tidak diperlukan perubahan jika payload tetap sama.
+- Backend hanya perlu disentuh jika nanti ada field baru atau status baru.
+
+### Todo Redesign Form Validasi ODP
+
+- [ ] Definisikan enum section form validasi: `summary`, `identity`, `initial_inspection`, `condition_check`, `ports`, `review_submit`.
+- [ ] Tambahkan state active section dan section navigation.
+- [ ] Buat progress helper untuk tiap section.
+- [ ] Buat error helper yang memetakan field wajib ke section.
+- [ ] Pecah `Ringkasan ODP` menjadi komponen read-only.
+- [ ] Pecah `Identitas & Kapasitas Aktual` menjadi komponen form.
+- [ ] Pecah `Pemeriksaan Awal` menjadi komponen uploader.
+- [ ] Pecah `Checklist Kondisi` menjadi komponen checklist teknis.
+- [ ] Pecah `Port & Redaman` menjadi komponen port editor.
+- [ ] Tambahkan `Review & Submit` dengan summary dan daftar blocking issue.
+- [ ] Ubah dialog validasi wajib agar menampilkan section dan field yang belum lengkap.
+- [ ] Pastikan error submit memindahkan user ke section bermasalah.
+- [ ] Pastikan mobile hanya menampilkan satu section aktif.
+- [ ] Pastikan desktop tetap efisien untuk review cepat.
+- [ ] Pastikan payload submit tidak berubah.
+- [ ] Samakan label section di halaman request approval.
+- [ ] Samakan label section di histori detail ODP.
+- [ ] Uji viewport mobile untuk validator.
+- [ ] Update checklist implementasi setelah manual test.
+
 ## Todo Checklist
 
 ### Phase 1 - Status & Lifecycle Display
@@ -291,6 +531,7 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 - [x] Tambahkan badge status di list ODP.
 - [x] Tambahkan timeline status di detail ODP.
 - [x] Tambahkan status penanggung jawab berikutnya di request card.
+- [x] Sesuaikan notification inbox dengan jenis request, status workflow, dan role reviewer.
 - [x] Tampilkan reject note terakhir di detail ODP.
 - [x] Pastikan refresh state setelah submit, approve, reject, dan resubmit.
 
@@ -342,22 +583,22 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 
 ### Phase 5 - Mobile UX Hardening
 
-- [ ] Buat status header ODP mobile-friendly.
-- [ ] Buat submit bar sticky di mobile.
-- [ ] Buat checklist mobile-friendly.
-- [ ] Buat evidence uploader per kategori.
-- [ ] Buat port card dengan filter status.
+- [x] Buat status header ODP mobile-friendly.
+- [x] Buat submit bar sticky di mobile.
+- [x] Buat checklist mobile-friendly.
+- [x] Buat evidence uploader per kategori.
+- [x] Buat port card dengan filter status.
 - [ ] Uji tampilan validator di viewport mobile.
 
 ### Phase 6 - Audit Trail & UAT
 
-- [ ] Rapikan label audit trail ODP workflow.
-- [ ] Tambahkan UAT lifecycle ODP.
-- [ ] Tambahkan UAT checklist/evidence minimal.
-- [ ] Tambahkan UAT reject/resubmit.
-- [ ] Tambahkan UAT ODP Quality work queue.
-- [ ] Update dokumen checklist setelah manual test.
-- [ ] Catat hasil sign-off user.
+- [x] Rapikan label audit trail ODP workflow.
+- [x] Tambahkan UAT lifecycle ODP.
+- [x] Tambahkan UAT checklist/evidence minimal.
+- [x] Tambahkan UAT reject/resubmit.
+- [x] Tambahkan UAT ODP Quality work queue.
+- [x] Update dokumen checklist setelah manual test.
+- [x] Catat hasil sign-off user.
 
 ## Catatan Keputusan
 

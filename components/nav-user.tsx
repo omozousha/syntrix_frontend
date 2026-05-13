@@ -24,6 +24,7 @@ import {
 const THEME_KEY = "syntrix_theme";
 const AVATAR_CACHE_PREFIX = "syntrix_avatar_cache";
 const NOTIFICATION_POLL_INTERVAL_MS = 20_000;
+const REQUESTS_PATH = "/requests";
 const avatarBlobUrlCache = new Map<string, string>();
 
 type ValidationRequestNotificationItem = {
@@ -36,6 +37,7 @@ type ValidationRequestNotificationItem = {
     operation?: string | null;
     resource_label?: string | null;
     device?: Record<string, unknown> | null;
+    resource?: Record<string, unknown> | null;
   } | null;
   updated_at?: string | null;
   unread?: boolean;
@@ -212,13 +214,13 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
         if (newlyArrived.length) {
           const latest = newlyArrived[0];
           const urgentLabel = latest.urgent ? " (URGENT)" : "";
-          const statusMeta = getNotificationStatusMeta(latest.current_status);
-          const showToast = statusMeta.variant === "warning" || latest.urgent ? toast.warning : toast.success;
-          showToast(`${statusMeta.title}${urgentLabel}`, {
-            description: `${latest.request_id || latest.id} ${statusMeta.description} ${notificationQueueLabel}.`,
+          const copy = getNotificationCopy(latest, normalizedRole);
+          const showToast = copy.variant === "warning" || latest.urgent ? toast.warning : toast.success;
+          showToast(`${copy.toastTitle}${urgentLabel}`, {
+            description: `${latest.request_id || latest.id} - ${copy.stageLabel}.`,
             action: {
               label: "Buka",
-              onClick: () => router.push("/requests"),
+              onClick: () => router.push(REQUESTS_PATH),
             },
           });
         }
@@ -239,7 +241,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [token, canReviewValidation, router, notificationQueueLabel, selectedRegionId]);
+  }, [token, canReviewValidation, router, normalizedRole, selectedRegionId]);
 
   useEffect(() => {
     if (!canReviewValidation) return;
@@ -307,7 +309,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
             <DropdownMenuLabel className="flex items-center justify-between">
-              <span>Approval Inbox</span>
+              <span>Request Inbox</span>
               <Badge variant="outline">{notificationQueueLabel}</Badge>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -361,26 +363,34 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
                 ) : notifications.length ? (
                   notifications.map((item) => {
                     const mappedStatus = mapValidationStatus(item.current_status);
-                    const requestType = getNotificationRequestType(item);
+                    const copy = getNotificationCopy(item, normalizedRole);
                     return (
                       <DropdownMenuItem
                         key={item.id}
                         className={`flex cursor-pointer flex-col items-start gap-0.5 ${item.unread ? "bg-primary/5" : ""}`}
                         onClick={() => {
                           void markOneAsRead(item.id);
-                          router.push("/requests");
+                          router.push(REQUESTS_PATH);
                         }}
                       >
-                        <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">
-                          {requestType}
-                        </Badge>
-                        <span className="text-xs font-medium">
-                          {item.request_id || item.id} {item.unread ? <span className="text-primary">•</span> : null}
+                        <div className="flex w-full items-center justify-between gap-2">
+                          <Badge variant="outline" className="h-4 max-w-[150px] px-1 text-[10px] font-normal">
+                            <span className="truncate">{copy.requestType}</span>
+                          </Badge>
+                          <Badge variant="outline" className={mappedStatus.className}>
+                            {mappedStatus.label}
+                          </Badge>
+                        </div>
+                        <span className="line-clamp-1 text-xs font-medium">
+                          {copy.title} {item.unread ? <span className="text-primary">*</span> : null}
                           {item.urgent ? <span className="ml-1 text-amber-600">URGENT</span> : null}
                         </span>
+                        <span className="line-clamp-1 text-[11px] text-muted-foreground">
+                          {item.request_id || item.id} - {copy.stageLabel}
+                        </span>
                         <span className="text-[11px] text-muted-foreground">
-                          {mappedStatus.label} • {formatDateTime(item.updated_at)}
-                          {item.age_minutes ? ` • ${formatAge(item.age_minutes)}` : ""}
+                          {formatDateTime(item.updated_at)}
+                          {item.age_minutes ? ` - ${formatAge(item.age_minutes)}` : ""}
                         </span>
                         <Button
                           type="button"
@@ -405,7 +415,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
               </div>
             </ScrollArea>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/requests")}>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push(REQUESTS_PATH)}>
               Buka halaman Requests
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -483,46 +493,59 @@ function formatAge(ageMinutes: number) {
   return `${days}h ${remHours}j`;
 }
 
+function getNotificationCopy(item: ValidationRequestNotificationItem, role: string) {
+  const requestType = getNotificationRequestType(item);
+  const targetName = getNotificationTargetName(item);
+  const stageLabel = getNotificationStageLabel(item.current_status, role);
+  const title = targetName ? `${requestType}: ${targetName}` : requestType;
+  const isWarning = String(item.current_status || "").startsWith("rejected");
+
+  return {
+    requestType,
+    title,
+    stageLabel,
+    toastTitle: isWarning ? `${requestType} perlu tindak lanjut` : `${requestType} masuk inbox`,
+    variant: isWarning ? ("warning" as const) : ("success" as const),
+  };
+}
+
 function getNotificationRequestType(item: ValidationRequestNotificationItem) {
   const source = String(item.payload_snapshot?.source || "").trim();
-  if (source === "adminregion-create-device") return "Create Device";
+  if (source === "adminregion-create-device") return "Create Device Request";
   if (
     source === "adminregion-create-resource" ||
     source === "adminregion-update-resource" ||
     source === "adminregion-archive-resource"
   ) {
-    return `${getOperationLabel(item.payload_snapshot?.operation)} ${item.payload_snapshot?.resource_label || "Asset"}`;
+    return `${getOperationLabel(item.payload_snapshot?.operation)} ${item.payload_snapshot?.resource_label || "Asset"} Request`;
   }
-  return "Field Validation";
+  return "Field Validation Request";
 }
 
-function getNotificationStatusMeta(status?: string | null) {
-  if (status === "validated") {
-    return {
-      title: "Request di-approve superadmin",
-      description: "sudah selesai di",
-      variant: "success" as const,
-    };
-  }
-  if (status === "rejected_by_superadmin") {
-    return {
-      title: "Request di-reject superadmin",
-      description: "perlu ditinjau dari",
-      variant: "warning" as const,
-    };
-  }
-  if (status === "ongoing_validated") {
-    return {
-      title: "Ada hasil validasi baru",
-      description: "masuk ke",
-      variant: "success" as const,
-    };
-  }
-  return {
-    title: "Ada request approval baru",
-    description: "masuk ke",
-    variant: "success" as const,
-  };
+function getNotificationTargetName(item: ValidationRequestNotificationItem) {
+  const payload = item.payload_snapshot || {};
+  const device = payload.device || {};
+  const resource = payload.resource || {};
+  return pickText(
+    device.device_name,
+    device.new_device_name,
+    device.device_id,
+    resource.device_name,
+    resource.pop_name,
+    resource.route_name,
+    resource.project_name,
+    resource.name,
+    payload.resource_label,
+  );
+}
+
+function getNotificationStageLabel(status: string | null | undefined, role: string) {
+  if (status === "ongoing_validated") return role === "adminregion" ? "Menunggu review Admin Region" : "Dalam review Admin Region";
+  if (status === "pending_async") return role === "superadmin" ? "Menunggu approval Superadmin" : "Dalam review Superadmin";
+  if (status === "rejected_by_adminregion") return "Ditolak Admin Region";
+  if (status === "rejected_by_superadmin") return "Ditolak Superadmin, perlu resubmit Admin Region";
+  if (status === "validated") return "Selesai disetujui Superadmin";
+  return "Menunggu review";
 }
 
 function getOperationLabel(operation?: string | null) {
@@ -530,6 +553,15 @@ function getOperationLabel(operation?: string | null) {
   if (operation === "archive") return "Archive";
   if (operation === "delete") return "Delete";
   return "Create";
+}
+
+function pickText(...values: unknown[]) {
+  for (const value of values) {
+    if (value === null || value === undefined) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return "";
 }
 
 function getInitials(fullName: string) {
