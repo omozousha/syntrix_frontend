@@ -36,12 +36,31 @@ type DevicePortItem = {
   notes?: string | null;
 };
 
+type ValidationQualityRequest = {
+  id: string;
+  request_id?: string | null;
+  entity_id?: string | null;
+  current_status?: string | null;
+  payload_snapshot?: {
+    field_validation?: {
+      old_device_name?: string | null;
+      new_device_name?: string | null;
+    };
+  } | null;
+  evidence_attachments?: Array<{ id?: string | null; attachment_id?: string | null }> | null;
+};
+
 type IssueKey =
   | "odp-without-ports"
   | "odp-pending-validation"
   | "odp-used-without-endpoint"
   | "odp-assigned-not-used"
-  | "odp-down-maintenance";
+  | "odp-down-maintenance"
+  | "odp-pending-adminregion"
+  | "odp-pending-superadmin"
+  | "odp-rejected-adminregion"
+  | "odp-rejected-superadmin"
+  | "odp-evidence-missing";
 
 type IssueRow = {
   rowId: string;
@@ -54,6 +73,7 @@ type IssueRow = {
   note: string;
   auditEntityType: string;
   auditEntityId: string;
+  requestStatus?: string;
 };
 
 type SortMode = "severity_then_odp" | "odp_id_asc" | "odp_id_desc" | "port_status";
@@ -64,6 +84,11 @@ const ISSUE_OPTIONS: Array<{ key: IssueKey; label: string; severity: "high" | "m
   { key: "odp-used-without-endpoint", label: "Port used tanpa Customer/ONT", severity: "high" },
   { key: "odp-assigned-not-used", label: "Port assigned tapi status bukan used", severity: "high" },
   { key: "odp-down-maintenance", label: "Port down/maintenance", severity: "medium" },
+  { key: "odp-pending-adminregion", label: "Pending Admin Region", severity: "medium" },
+  { key: "odp-pending-superadmin", label: "Pending Superadmin", severity: "medium" },
+  { key: "odp-rejected-adminregion", label: "Rejected Admin Region", severity: "high" },
+  { key: "odp-rejected-superadmin", label: "Rejected Superadmin", severity: "high" },
+  { key: "odp-evidence-missing", label: "Evidence kurang", severity: "high" },
 ];
 
 export default function OdpQualityPage() {
@@ -161,7 +186,7 @@ export default function OdpQualityPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
           {ISSUE_OPTIONS.map((option) => {
             const href = `/data-management/odp-quality?issue=${encodeURIComponent(option.key)}${regionId ? `&region_id=${encodeURIComponent(regionId)}` : ""}`;
             const isActive = option.key === activeIssue;
@@ -253,6 +278,9 @@ export default function OdpQualityPage() {
                       <span className="font-medium">Port:</span> {row.portLabel}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">{row.note}</p>
+                    {row.requestStatus ? (
+                      <p className="mt-1 text-[11px] text-muted-foreground">Workflow: {row.requestStatus}</p>
+                    ) : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button asChild variant="outline" size="sm">
                         <Link href={`/data-management/list/odp/${row.odpId}`}>Open ODP</Link>
@@ -309,6 +337,22 @@ async function loadData(
     });
 
     let rows: IssueRow[] = [];
+    if (isWorkflowIssue(issue)) {
+      const queue = toQualityQueueKey(issue);
+      const requestPayload = await apiFetch<{ data: ValidationQualityRequest[] }>(
+        `/validation-requests/quality-queue?queue=${encodeURIComponent(queue)}${suffix}`,
+        { token },
+      );
+      const requests = requestPayload.data || [];
+      rows = requests.map((request) => {
+        const odp = odpMap.get(String(request.entity_id || "")) || null;
+        return toWorkflowRow(issue, request, odp);
+      });
+      setRows(rows);
+      setLastIssueKey(issue);
+      return;
+    }
+
     if (issue === "odp-without-ports") {
       rows = devices
         .filter((item) => !portsByOdp.has(item.id))
@@ -362,6 +406,56 @@ function toRow(issue: IssueKey, odp: GenericItem | null, port: DevicePortItem | 
     auditEntityType: hasPort ? "devicePorts" : "devices",
     auditEntityId: hasPort ? String(port?.id || "") : odpId,
   };
+}
+
+function toWorkflowRow(issue: IssueKey, request: ValidationQualityRequest, odp: GenericItem | null): IssueRow {
+  const odpId = String(request.entity_id || odp?.id || "");
+  const fallbackName =
+    request.payload_snapshot?.field_validation?.new_device_name ||
+    request.payload_snapshot?.field_validation?.old_device_name ||
+    "ODP";
+  return {
+    rowId: `${issue}:${request.id}`,
+    issue,
+    odpId,
+    odpDeviceId: String(odp?.device_id || request.request_id || odpId || "-"),
+    odpDeviceName: String(odp?.device_name || fallbackName),
+    portLabel: "-",
+    portStatus: "-",
+    note: getWorkflowIssueNote(issue, request),
+    auditEntityType: "validation_requests",
+    auditEntityId: request.id,
+    requestStatus: String(request.current_status || "-"),
+  };
+}
+
+function isWorkflowIssue(issue: IssueKey) {
+  return [
+    "odp-pending-adminregion",
+    "odp-pending-superadmin",
+    "odp-rejected-adminregion",
+    "odp-rejected-superadmin",
+    "odp-evidence-missing",
+  ].includes(issue);
+}
+
+function toQualityQueueKey(issue: IssueKey) {
+  if (issue === "odp-pending-adminregion") return "pending_adminregion";
+  if (issue === "odp-pending-superadmin") return "pending_superadmin";
+  if (issue === "odp-rejected-adminregion") return "rejected_adminregion";
+  if (issue === "odp-rejected-superadmin") return "rejected_superadmin";
+  return "evidence_missing";
+}
+
+function getWorkflowIssueNote(issue: IssueKey, request: ValidationQualityRequest) {
+  if (issue === "odp-pending-adminregion") return "Request menunggu review Admin Region.";
+  if (issue === "odp-pending-superadmin") return "Request menunggu approval final Superadmin.";
+  if (issue === "odp-rejected-adminregion") return "Request ditolak Admin Region dan perlu tindak lanjut validator.";
+  if (issue === "odp-rejected-superadmin") return "Request ditolak Superadmin dan perlu review ulang Admin Region.";
+  const evidenceCount = request.evidence_attachments?.length || 0;
+  return evidenceCount
+    ? "Request punya attachment, tetapi masih masuk antrean evidence kurang."
+    : "Request aktif belum memiliki evidence attachment.";
 }
 
 function exportIssueCsv(rows: IssueRow[], issueLabel: string) {

@@ -55,6 +55,8 @@ type AssetModelOption = {
   brand_id?: string | null;
   manufacturer_id?: string | null;
 };
+type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
+type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
 type SplitterProfileOption = {
   id: string;
   ratio_label: string;
@@ -148,6 +150,8 @@ export default function CreateDataManagementPage() {
   const [manufacturers, setManufacturers] = useState<ManufacturerOption[]>([]);
   const [brands, setBrands] = useState<BrandOption[]>([]);
   const [assetModels, setAssetModels] = useState<AssetModelOption[]>([]);
+  const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
+  const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -204,6 +208,8 @@ export default function CreateDataManagementPage() {
     total_ports: "",
     used_ports: "",
     splitter_ratio: "",
+    odp_type: "",
+    installation_type: "",
     route_name: "",
     route_type: "",
     route_status: "planning",
@@ -244,7 +250,7 @@ export default function CreateDataManagementPage() {
         const needsProjects = isRoute || isCustomer;
         const needsDeviceMasterData = isDevice;
 
-        const [regionsRes, popsRes, projectsRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, splitterProfilesRes] = await Promise.all([
+        const [regionsRes, popsRes, projectsRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, splitterProfilesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
           optionalPaginatedRequest<PopOption>(needsPops, () => apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token })),
           optionalPaginatedRequest<ProjectOption>(needsProjects, () => apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token })),
@@ -255,6 +261,8 @@ export default function CreateDataManagementPage() {
           optionalPaginatedRequest<ManufacturerOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<ManufacturerOption>>("/manufacturers?page=1&limit=500", { token })),
           optionalPaginatedRequest<BrandOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<BrandOption>>("/brands?page=1&limit=500", { token })),
           optionalPaginatedRequest<AssetModelOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<AssetModelOption>>("/assetModels?page=1&limit=1000", { token })),
+          optionalPaginatedRequest<OdpTypeOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<OdpTypeOption>>("/odpTypes?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<InstallationTypeOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<SplitterProfileOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token })),
         ]);
 
@@ -275,6 +283,8 @@ export default function CreateDataManagementPage() {
         setManufacturers(manufacturersRes.data || []);
         setBrands(brandsRes.data || []);
         setAssetModels(modelsRes.data || []);
+        setOdpTypes(odpTypesRes.data || []);
+        setInstallationTypes(installationTypesRes.data || []);
         setSplitterProfiles(splitterProfilesRes.data || []);
         setForm((prev) => ({
           ...prev,
@@ -714,8 +724,15 @@ export default function CreateDataManagementPage() {
         return;
       }
 
-      if ((!form.device_name && form.device_type_key !== "ODP") || !form.region_id || !form.device_type_key) {
-        throw new Error("Device Name, Device Type, dan Region wajib diisi. Untuk ODP, Device Name boleh dikosongkan.");
+      if (!form.device_name || !form.region_id || !form.device_type_key) {
+        throw new Error(
+          form.device_type_key === "ODP"
+            ? "Nama ODP, Device Type, dan Region wajib diisi."
+            : "Device Name, Device Type, dan Region wajib diisi.",
+        );
+      }
+      if (form.device_type_key === "ODP" && (!form.odp_type || !form.installation_type)) {
+        throw new Error("Tipe ODP dan Jenis Instalasi wajib dipilih.");
       }
 
       const payload: Record<string, unknown> = {
@@ -772,6 +789,8 @@ export default function CreateDataManagementPage() {
       }
       if (showSplitterField) {
         payload.splitter_ratio = nullIfEmpty(form.splitter_ratio);
+        payload.odp_type = nullIfEmpty(form.odp_type);
+        payload.installation_type = nullIfEmpty(form.installation_type);
       }
 
       const createdDevice = await apiFetch<{ data?: ApprovalResponse }>("/devices", {
@@ -877,7 +896,43 @@ export default function CreateDataManagementPage() {
 
             {isDevice ? (
               <>
-                <Field label={form.device_type_key === "ODP" ? "Device Name (opsional)" : "Device Name"} value={form.device_name} onChange={(v) => setForm((p) => ({ ...p, device_name: v }))} />
+                <Field label={form.device_type_key === "ODP" ? "Nama ODP" : "Device Name"} value={form.device_name} onChange={(v) => setForm((p) => ({ ...p, device_name: v }))} />
+                {form.device_type_key === "ODP" ? (
+                  <>
+                    <div className="space-y-1.5">
+                      <FieldLabel label="Tipe ODP" tooltip="Pilih tipe ODP dari master data." />
+                      <Combobox
+                        value={form.odp_type || "__none__"}
+                        onValueChange={(value) => setForm((p) => ({ ...p, odp_type: value === "__none__" ? "" : value }))}
+                        options={toOptions([
+                          { value: "__none__", label: "Pilih tipe ODP" },
+                          ...odpTypes.map((item) => ({
+                            value: item.odp_type_name,
+                            label: [item.odp_type_name, item.odp_type_code].filter(Boolean).join(" - "),
+                          })),
+                        ])}
+                        placeholder="Pilih tipe ODP"
+                        searchPlaceholder="Cari tipe ODP..."
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <FieldLabel label="Jenis Instalasi" tooltip="Pilih jenis instalasi dari master data." />
+                      <Combobox
+                        value={form.installation_type || "__none__"}
+                        onValueChange={(value) => setForm((p) => ({ ...p, installation_type: value === "__none__" ? "" : value }))}
+                        options={toOptions([
+                          { value: "__none__", label: "Pilih jenis instalasi" },
+                          ...installationTypes.map((item) => ({
+                            value: item.installation_type_name,
+                            label: [item.installation_type_name, item.installation_type_code].filter(Boolean).join(" - "),
+                          })),
+                        ])}
+                        placeholder="Pilih jenis instalasi"
+                        searchPlaceholder="Cari jenis instalasi..."
+                      />
+                    </div>
+                  </>
+                ) : null}
                 <div className="space-y-1.5">
                   <FieldLabel label="POP (opsional)" tooltip="Hubungkan device ke POP jika perangkat berada di POP tertentu." />
                   <Combobox
@@ -1443,7 +1498,7 @@ export default function CreateDataManagementPage() {
                 {needsPortPresetSelector ? (
                   <div className="space-y-1.5">
                     <FieldLabel
-                      label="Total Ports"
+                      label={form.device_type_key === "ODP" ? "Kapasitas ODP" : "Total Ports"}
                       tooltip="Untuk splitter ratio 1:16 ke atas, pilih jumlah port aktual terpasang di lapangan."
                     />
                     <Combobox
@@ -1459,14 +1514,14 @@ export default function CreateDataManagementPage() {
                   </div>
                 ) : (
                   <Field
-                    label="Total Ports"
+                    label={form.device_type_key === "ODP" ? "Kapasitas ODP" : "Total Ports"}
                     type="number"
                     value={form.total_ports}
                     onChange={(v) => setForm((p) => ({ ...p, total_ports: v }))}
                   />
                 )}
                 <Field
-                  label="Used Ports"
+                  label={form.device_type_key === "ODP" ? "Port Aktif" : "Used Ports"}
                   type="number"
                   value={form.used_ports}
                   onChange={(v) => setForm((p) => ({ ...p, used_ports: v }))}
@@ -1476,7 +1531,7 @@ export default function CreateDataManagementPage() {
 
             {showSplitterField ? (
               <div className="space-y-1.5">
-                <FieldLabel label="Splitter Ratio" tooltip="Pilih rasio splitter dari master data." />
+                <FieldLabel label={form.device_type_key === "ODP" ? "Kapasitas Splitter" : "Splitter Ratio"} tooltip="Pilih rasio splitter dari master data." />
                 <Combobox
                   value={form.splitter_ratio || "__none__"}
                   onValueChange={(value) => {

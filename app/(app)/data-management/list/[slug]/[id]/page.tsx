@@ -23,6 +23,7 @@ import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-utils";
 import { resolveAttachment } from "@/lib/attachment-utils";
 import { getCategoryBySlug } from "@/lib/data-management-config";
+import { mapValidationStatus } from "@/lib/validation-status";
 const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() || "";
 
 type GenericItem = Record<string, unknown> & {
@@ -96,6 +97,8 @@ type SplitterProfileOption = {
   output_port_count?: number | null;
   is_active?: boolean | null;
 };
+type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
+type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
 type OdpCoreChainSummary = {
   is_odp: boolean;
   is_complete: boolean;
@@ -203,6 +206,8 @@ type OdpValidationRecord = {
   validated_at?: string | null;
   validator_user_id?: string | null;
   findings?: string | null;
+  adminregion_review_note?: string | null;
+  superadmin_review_note?: string | null;
   payload?: {
     checklist?: Partial<Record<OdpValidationChecklistKey, boolean>>;
     field_inspection?: OdpFieldInspectionPayload;
@@ -231,6 +236,8 @@ type ValidationRequestRecord = {
   updated_at?: string | null;
   created_at?: string | null;
   finding_note?: string | null;
+  adminregion_review_note?: string | null;
+  superadmin_review_note?: string | null;
   checklist?: Partial<Record<OdpValidationChecklistKey, boolean>> | null;
   payload_snapshot?: {
     field_inspection?: OdpFieldInspectionPayload;
@@ -300,6 +307,8 @@ export default function DataManagementDetailPage() {
   const [attachmentNames, setAttachmentNames] = useState<Record<string, string>>({});
   const [relationLabels, setRelationLabels] = useState<RelationLabels>({});
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
+  const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
+  const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [newImagePreviewUrls, setNewImagePreviewUrls] = useState<string[]>([]);
   const [renamingAttachmentId, setRenamingAttachmentId] = useState("");
@@ -589,17 +598,27 @@ export default function DataManagementDetailPage() {
   useEffect(() => {
     if (!token) {
       setSplitterProfiles([]);
+      setOdpTypes([]);
+      setInstallationTypes([]);
       return;
     }
     let cancelled = false;
     async function loadSplitterProfiles() {
       try {
-        const response = await apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token });
+        const [splitterResponse, odpTypesResponse, installationTypesResponse] = await Promise.all([
+          apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token }),
+          apiFetch<PaginatedResponse<OdpTypeOption>>("/odpTypes?page=1&limit=200&is_active=true", { token }),
+          apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token }),
+        ]);
         if (cancelled) return;
-        setSplitterProfiles(response.data || []);
+        setSplitterProfiles(splitterResponse.data || []);
+        setOdpTypes(odpTypesResponse.data || []);
+        setInstallationTypes(installationTypesResponse.data || []);
       } catch {
         if (cancelled) return;
         setSplitterProfiles([]);
+        setOdpTypes([]);
+        setInstallationTypes([]);
       }
     }
     void loadSplitterProfiles();
@@ -707,6 +726,8 @@ export default function DataManagementDetailPage() {
             request_status: request.current_status || null,
             validated_at: request.updated_at || request.created_at || null,
             findings: request.finding_note || null,
+            adminregion_review_note: request.adminregion_review_note || null,
+            superadmin_review_note: request.superadmin_review_note || null,
             payload: {
               checklist: request.checklist || {},
               field_inspection: request.payload_snapshot?.field_inspection || {},
@@ -1307,7 +1328,9 @@ export default function DataManagementDetailPage() {
                     ) : null}
                     {category.resource === "pops" ? <Badge variant="outline">{valueOf(item.status_pop)}</Badge> : null}
                     {category.resource === "devices" ? <Badge variant="outline">{valueOf(item.status)}</Badge> : null}
-                    <Badge variant="secondary">{valueOf(item.validation_status)}</Badge>
+                    <Badge variant="outline" className={mapValidationStatus(valueOf(item.validation_status, "unvalidated")).className}>
+                      {mapValidationStatus(valueOf(item.validation_status, "unvalidated")).label}
+                    </Badge>
                   </div>
                 </div>
                 <CardDescription>
@@ -1328,6 +1351,8 @@ export default function DataManagementDetailPage() {
                   relationLabels={relationLabels}
                   isOdpDevice={isOdpDevice}
                   splitterProfiles={splitterProfiles}
+                  odpTypes={odpTypes}
+                  installationTypes={installationTypes}
                   latestFieldValidation={odpValidations[0]?.payload?.field_validation || null}
                 />
               ) : null}
@@ -1711,6 +1736,13 @@ function OdpOperationsPanel({
   const reservedPorts = ports.filter((port) => port.status === "reserved").length;
   const downPorts = ports.filter((port) => port.status === "down" || port.status === "maintenance").length;
   const idlePorts = Math.max(0, totalPorts - usedPorts - reservedPorts - downPorts);
+  const latestValidationRecord = validationHistory[0] || null;
+  const latestRequestStatus = latestValidationRecord?.request_status || null;
+  const currentDeviceValidationUi = mapValidationStatus(String(device.validation_status || "unvalidated"));
+  const latestRejectNote =
+    latestValidationRecord?.superadmin_review_note ||
+    latestValidationRecord?.adminregion_review_note ||
+    "";
   const customerOptions = [
     { value: "__none__", label: "Tanpa customer" },
     ...customers.map((customer) => ({
@@ -2077,7 +2109,9 @@ function OdpOperationsPanel({
                       Edit
                     </Button>
                   ) : null}
-                  <Badge variant="outline">Current: {valueOf(device.validation_status, "unvalidated")}</Badge>
+                  <Badge variant="outline" className={currentDeviceValidationUi.className}>
+                    Current: {currentDeviceValidationUi.label}
+                  </Badge>
                 </div>
               </div>
           </CardHeader>
@@ -2114,6 +2148,15 @@ function OdpOperationsPanel({
               </div>
 
               <div className="space-y-2">
+                {latestRequestStatus ? (
+                  <OdpValidationWorkflowTimeline status={latestRequestStatus} updatedAt={latestValidationRecord?.validated_at || latestValidationRecord?.updated_at || null} />
+                ) : null}
+                {latestRejectNote ? (
+                  <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">
+                    <p className="font-medium">Reject note terakhir</p>
+                    <p className="mt-1">{latestRejectNote}</p>
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium">Histori Validasi</p>
                   <p className="text-xs text-muted-foreground">{validationHistory.length} record terbaru</p>
@@ -2134,7 +2177,9 @@ function OdpOperationsPanel({
                                 {record.status || "-"}
                               </Badge>
                               {record.request_status ? (
-                                <Badge variant="outline">{mapValidationStatusLabel(record.request_status)}</Badge>
+                                <Badge variant="outline" className={mapValidationStatus(record.request_status).className}>
+                                  {mapValidationStatus(record.request_status).label}
+                                </Badge>
                               ) : null}
                               <p className="text-xs text-muted-foreground">
                                 {record.validation_id || record.id} - {formatDateTime(valueOf(record.validated_at || record.created_at))}
@@ -2208,6 +2253,70 @@ function OdpInspectionSummary({ inspection }: { inspection?: OdpFieldInspectionP
   );
 }
 
+function OdpValidationWorkflowTimeline({
+  status,
+  updatedAt,
+}: {
+  status: string;
+  updatedAt?: string | null;
+}) {
+  const steps = getOdpWorkflowSteps(status);
+  return (
+    <div className="rounded-md border p-2.5">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium">Timeline Workflow</p>
+        <span className="text-xs text-muted-foreground">Update: {formatDateTime(valueOf(updatedAt))}</span>
+      </div>
+      <div className="grid grid-cols-1 gap-1.5 md:grid-cols-3">
+        {steps.map((step) => (
+          <div key={step.label} className={`rounded-md border px-2 py-1.5 text-xs ${step.className}`}>
+            <p className="font-medium">{step.label}</p>
+            <p className="mt-0.5">{step.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function getOdpWorkflowSteps(status: string) {
+  const raw = String(status || "").trim();
+  const submitted = { label: "Validator", value: "Submitted", className: "border-emerald-200 bg-emerald-50 text-emerald-800" };
+  if (raw === "rejected_by_adminregion") {
+    return [
+      submitted,
+      { label: "Admin Region", value: "Rejected", className: "border-rose-200 bg-rose-50 text-rose-800" },
+      { label: "Superadmin", value: "Belum masuk", className: "border-slate-200 bg-slate-50 text-slate-700" },
+    ];
+  }
+  if (raw === "ongoing_validated") {
+    return [
+      submitted,
+      { label: "Admin Region", value: "Menunggu review", className: "border-amber-200 bg-amber-50 text-amber-800" },
+      { label: "Superadmin", value: "Belum masuk", className: "border-slate-200 bg-slate-50 text-slate-700" },
+    ];
+  }
+  if (raw === "rejected_by_superadmin") {
+    return [
+      submitted,
+      { label: "Admin Region", value: "Approved", className: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+      { label: "Superadmin", value: "Rejected", className: "border-rose-200 bg-rose-50 text-rose-800" },
+    ];
+  }
+  if (raw === "validated") {
+    return [
+      submitted,
+      { label: "Admin Region", value: "Approved", className: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+      { label: "Superadmin", value: "Approved final", className: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+    ];
+  }
+  return [
+    submitted,
+    { label: "Admin Region", value: raw === "pending_async" ? "Approved" : "Menunggu", className: raw === "pending_async" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-slate-50 text-slate-700" },
+    { label: "Superadmin", value: raw === "pending_async" ? "Menunggu approval final" : "Belum masuk", className: raw === "pending_async" ? "border-blue-200 bg-blue-50 text-blue-800" : "border-slate-200 bg-slate-50 text-slate-700" },
+  ];
+}
+
 function OdpFieldValidationSummary({ validation }: { validation?: OdpFieldValidationPayload | null }) {
   if (!validation || !Object.keys(validation).length) return null;
 
@@ -2263,15 +2372,6 @@ function formatOdpInspectionSummary(inspection?: OdpFieldInspectionPayload | nul
   if (!checks.length) return "-";
   const good = checks.filter((item) => isGoodOdpInspectionCondition(item.condition)).length;
   return `${good}/${checks.length} baik`;
-}
-
-function mapValidationStatusLabel(status: string) {
-  if (status === "ongoing_validated") return "Pending Adminregion";
-  if (status === "pending_async") return "Pending Superadmin";
-  if (status === "validated") return "Validated";
-  if (status === "rejected_by_adminregion") return "Rejected Adminregion";
-  if (status === "rejected_by_superadmin") return "Rejected Superadmin";
-  return status || "-";
 }
 
 function isGoodOdpInspectionCondition(value?: string | null) {
@@ -2539,6 +2639,8 @@ function DeviceDetailForm({
   relationLabels,
   isOdpDevice,
   splitterProfiles,
+  odpTypes,
+  installationTypes,
   latestFieldValidation,
 }: {
   form: EditableForm;
@@ -2547,6 +2649,8 @@ function DeviceDetailForm({
   relationLabels: RelationLabels;
   isOdpDevice: boolean;
   splitterProfiles: SplitterProfileOption[];
+  odpTypes: OdpTypeOption[];
+  installationTypes: InstallationTypeOption[];
   latestFieldValidation?: OdpFieldValidationPayload | null;
 }) {
   const selectedSplitterProfile =
@@ -2574,10 +2678,42 @@ function DeviceDetailForm({
             <DisplayField label="Nama ODP Baru" value={valueOf(latestFieldValidation?.new_device_name, "-")} compact />
           ) : null}
           {isOdpDevice ? (
-            <DisplayField label="Tipe ODP" value={valueOf(latestFieldValidation?.odp_type, "-")} compact />
+            <div className="space-y-1">
+              <Label>Tipe ODP</Label>
+              <Combobox
+                value={form.odp_type || "__none__"}
+                onValueChange={(value) => onChange((p) => ({ ...p, odp_type: value === "__none__" ? "" : value }))}
+                disabled={!editing}
+                triggerClassName="h-8 text-xs"
+                options={[
+                  { value: "__none__", label: "Pilih tipe ODP" },
+                  ...odpTypes.map((item) => ({
+                    value: item.odp_type_name,
+                    label: [item.odp_type_name, item.odp_type_code].filter(Boolean).join(" - "),
+                  })),
+                ]}
+                searchPlaceholder="Cari tipe ODP..."
+              />
+            </div>
           ) : null}
           {isOdpDevice ? (
-            <DisplayField label="Jenis Instalasi" value={valueOf(latestFieldValidation?.installation_type, "-")} compact />
+            <div className="space-y-1">
+              <Label>Jenis Instalasi</Label>
+              <Combobox
+                value={form.installation_type || "__none__"}
+                onValueChange={(value) => onChange((p) => ({ ...p, installation_type: value === "__none__" ? "" : value }))}
+                disabled={!editing}
+                triggerClassName="h-8 text-xs"
+                options={[
+                  { value: "__none__", label: "Pilih jenis instalasi" },
+                  ...installationTypes.map((item) => ({
+                    value: item.installation_type_name,
+                    label: [item.installation_type_name, item.installation_type_code].filter(Boolean).join(" - "),
+                  })),
+                ]}
+                searchPlaceholder="Cari jenis instalasi..."
+              />
+            </div>
           ) : null}
           <Field label={isOdpDevice ? "Kategori Device" : "Device Type"} value={form.device_type_key} disabled compact />
           <Field label="Asset Group" value={form.asset_group} disabled compact />
@@ -2903,6 +3039,8 @@ function buildEditableForm(item: GenericItem, resource: string): EditableForm {
       total_ports: valueOf(item.total_ports),
       used_ports: valueOf(item.used_ports),
       splitter_ratio: valueOf(item.splitter_ratio),
+      odp_type: valueOf(item.odp_type),
+      installation_type: valueOf(item.installation_type),
       address: valueOf(item.address),
       longitude: valueOf(item.longitude),
       latitude: valueOf(item.latitude),
@@ -2963,6 +3101,8 @@ function buildUpdatePayload(form: EditableForm, resource: string): Record<string
       total_ports: numberOrNull(form.total_ports),
       used_ports: numberOrNull(form.used_ports),
       splitter_ratio: nullIfEmpty(form.splitter_ratio),
+      odp_type: nullIfEmpty(form.odp_type),
+      installation_type: nullIfEmpty(form.installation_type),
       address: nullIfEmpty(form.address),
       longitude: numberOrNull(form.longitude),
       latitude: numberOrNull(form.latitude),

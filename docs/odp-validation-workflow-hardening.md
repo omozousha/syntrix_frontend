@@ -98,7 +98,7 @@ Keputusan implementasi:
 - Validator boleh mengusulkan perubahan nama ODP, tipe ODP, jenis instalasi, splitter ratio, kapasitas ODP, status port, dan redaman per port sesuai kondisi lapangan.
 - Validator mengisi pemeriksaan awal dan checklist kondisi ODP sebagai snapshot request validasi, termasuk lampiran foto per item.
 - Perubahan tersebut masuk ke snapshot request validasi, bukan langsung menulis ke asset utama.
-- Setelah approval final superadmin, sistem menerapkan field asset utama yang relevan: nama ODP, splitter ratio, total port, used port, dan status port.
+- Setelah approval final superadmin, sistem menerapkan field asset utama yang relevan: nama ODP, tipe ODP, jenis instalasi, splitter ratio, total port, used port, dan status port.
 - Redaman per port disimpan sebagai snapshot validasi terlebih dahulu sampai model database redaman final diputuskan.
 
 Aturan checklist:
@@ -287,12 +287,12 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 
 ### Phase 1 - Status & Lifecycle Display
 
-- [ ] Buat mapping status ODP workflow yang dipakai di list, detail, request, dan notification.
-- [ ] Tambahkan badge status di list ODP.
-- [ ] Tambahkan timeline status di detail ODP.
-- [ ] Tambahkan status penanggung jawab berikutnya di request card.
-- [ ] Tampilkan reject note terakhir di detail ODP.
-- [ ] Pastikan refresh state setelah submit, approve, reject, dan resubmit.
+- [x] Buat mapping status ODP workflow yang dipakai di list, detail, request, dan notification.
+- [x] Tambahkan badge status di list ODP.
+- [x] Tambahkan timeline status di detail ODP.
+- [x] Tambahkan status penanggung jawab berikutnya di request card.
+- [x] Tampilkan reject note terakhir di detail ODP.
+- [x] Pastikan refresh state setelah submit, approve, reject, dan resubmit.
 
 ### Phase 2 - Checklist & Evidence Standard
 
@@ -301,8 +301,8 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 - [x] Tambahkan validasi minimal evidence sebelum submit.
 - [x] Hapus checklist lama dari UI form validasi dan approval, gunakan checklist kondisi format baru.
 - [x] Tambahkan validasi wajib foto pemeriksaan, kondisi, keterangan bermasalah, master data, dan redaman angka sebelum submit.
-- [ ] Pastikan evidence request aktif hanya evidence submit terakhir.
-- [ ] Pastikan evidence lama tetap tampil di histori validasi.
+- [x] Pastikan evidence request aktif hanya evidence submit terakhir.
+- [x] Pastikan evidence lama tetap tampil di histori validasi.
 - [x] Tampilkan checklist snapshot di review adminregion/superadmin.
 - [x] Tambahkan pemeriksaan awal dan checklist kondisi ODP lengkap dengan foto ke snapshot validasi.
 - [x] Tampilkan pemeriksaan awal dan checklist kondisi di review adminregion/superadmin.
@@ -311,8 +311,9 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 - [x] Gabungkan evidence foto validasi format baru ke mini gallery detail ODP.
 - [x] Samakan port detail ODP dengan konteks form validasi: status aktual, status validasi, redaman terakhir, dan catatan.
 - [x] Samakan histori form validasi dengan histori detail ODP: workflow status, field snapshot, evidence count, port/redaman, dan checklist.
+- [x] Bedakan template review request untuk create asset, update asset, archive asset, dan validasi lapangan.
 - [x] Tambahkan input nama ODP baru, tipe ODP, jenis instalasi, splitter ratio, kapasitas ODP, status port, dan redaman per port ke snapshot validasi.
-- [x] Terapkan nama ODP, splitter ratio, total port, used port, dan status port setelah approval final.
+- [x] Terapkan nama ODP, tipe ODP, jenis instalasi, splitter ratio, total port, used port, dan status port setelah approval final.
 - [x] Tampilkan detail validasi terakhir sebagai referensi read-only.
 
 ### Phase 3 - Resubmit Workflow
@@ -321,21 +322,23 @@ Tujuan: semua perubahan tercatat, bisa diaudit, dan siap sign-off.
 - [x] Tampilkan banner reject note di request/adminregion review.
 - [x] Tambahkan action resubmit validator setelah reject adminregion.
 - [x] Tambahkan action resubmit adminregion setelah reject superadmin.
+- [x] Bedakan konteks review request berdasarkan role dan tampilkan stage banner + CTA yang sesuai tahap approval.
 - [x] Pastikan form validasi memakai data asset terakhir sebagai default.
 - [x] Pastikan temuan/evidence lama tidak otomatis menjadi input aktif.
 - [x] Catat semua resubmit di audit trail.
 
 ### Phase 4 - ODP Quality Work Queue
 
-- [ ] Tambahkan queue ODP pending adminregion.
-- [ ] Tambahkan queue ODP pending superadmin.
-- [ ] Tambahkan queue ODP rejected by adminregion.
-- [ ] Tambahkan queue ODP rejected by superadmin.
-- [ ] Tambahkan queue ODP evidence kurang.
-- [ ] Tambahkan action cepat ke ODP detail.
-- [ ] Tambahkan action cepat ke field validation.
-- [ ] Tambahkan action cepat ke request aktif.
-- [ ] Tambahkan summary count per queue.
+- [x] Tambahkan queue ODP pending adminregion.
+- [x] Tambahkan queue ODP pending superadmin.
+- [x] Tambahkan queue ODP rejected by adminregion.
+- [x] Tambahkan queue ODP rejected by superadmin.
+- [x] Tambahkan queue ODP evidence kurang.
+- [x] Tambahkan filter queue berdasarkan status workflow.
+- [x] Tambahkan action cepat ke ODP detail.
+- [x] Tambahkan action cepat ke field validation.
+- [x] Tambahkan action cepat ke request aktif.
+- [x] Tambahkan summary count per queue.
 
 ### Phase 5 - Mobile UX Hardening
 

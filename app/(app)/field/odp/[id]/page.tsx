@@ -479,6 +479,8 @@ export default function OdpFieldValidationPage() {
                 ? { device_name: draft.deviceNameNew.trim() }
                 : {}),
               splitter_ratio: nullIfEmpty(draft.splitterRatio),
+              odp_type: nullIfEmpty(draft.odpType),
+              installation_type: nullIfEmpty(draft.installationType),
               total_ports: totalPortsActual,
               used_ports: portSummary.used,
               address: device.address || null,
@@ -769,7 +771,11 @@ export default function OdpFieldValidationPage() {
                         <div>
                           <div className="flex flex-wrap items-center gap-1.5">
                             <Badge variant={record.status === "valid" ? "default" : "outline"}>{record.status || "-"}</Badge>
-                            {record.request_status ? <Badge variant="outline">{mapValidationStatusLabel(record.request_status)}</Badge> : null}
+                            {record.request_status ? (
+                              <Badge variant="outline" className={mapValidationStatus(record.request_status).className}>
+                                {mapValidationStatus(record.request_status).label}
+                              </Badge>
+                            ) : null}
                           </div>
                           <p className="mt-1 text-xs text-muted-foreground">
                             {record.validation_id || record.id} - {formatDateTime(record.validated_at)}
@@ -914,8 +920,8 @@ export default function OdpFieldValidationPage() {
                   <InfoField label="Nama ODP Lama" value={device.device_name || "-"} />
                   <InfoField label="POP" value={getPopDisplayName(pop) || String(device.pop_id || "-")} />
                   <InfoField label="Alamat" value={device.address || "-"} />
-                  <InfoField label="Longitude" value={device.longitude ?? "-"} />
-                  <InfoField label="Latitude" value={device.latitude ?? "-"} />
+                  <InfoField label="Longitude" value={device.longitude == null ? "-" : String(device.longitude)} />
+                  <InfoField label="Latitude" value={device.latitude == null ? "-" : String(device.latitude)} />
                   <div className="space-y-1">
                     <RequiredLabel>Nama ODP Baru</RequiredLabel>
                     <Input
@@ -1315,15 +1321,6 @@ function countValidationEvidence(record: ValidationRecord) {
   Object.values(record.payload?.field_inspection?.initial_photos || {}).forEach((item) => push(item.attachment?.id || item.attachment?.attachment_id));
   Object.values(record.payload?.field_inspection?.condition_checks || {}).forEach((item) => push(item.attachment?.id || item.attachment?.attachment_id));
   return ids.size;
-}
-
-function mapValidationStatusLabel(status: string) {
-  if (status === "ongoing_validated") return "Pending Adminregion";
-  if (status === "pending_async") return "Pending Superadmin";
-  if (status === "validated") return "Validated";
-  if (status === "rejected_by_adminregion") return "Rejected Adminregion";
-  if (status === "rejected_by_superadmin") return "Rejected Superadmin";
-  return status || "-";
 }
 
 function valueText(value: unknown) {
