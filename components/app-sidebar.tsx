@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import type { LucideIcon } from "lucide-react";
 import { BookMarked, ChevronRight, Database, FolderTree, LayoutDashboard, Layers3, Map, Network, ShieldCheck, Trash2, Workflow } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { SidebarSmartTip } from "@/components/sidebar-smart-tip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Sidebar,
@@ -176,9 +177,7 @@ export function AppSidebar({
       <SidebarSeparator />
 
       <SidebarFooter className="px-3 pb-3 pt-2">
-        <p className="text-[11px] leading-relaxed text-sidebar-foreground/70">
-          <Badge variant="outline">Tip:</Badge> gunakan Asset Overview untuk membuka ringkasan aset, area kerja role, dan aksi yang tersedia untuk akun ini.
-        </p>
+        <SidebarSmartTip pathname={pathname} menus={menus} />
       </SidebarFooter>
     </Sidebar>
   );
