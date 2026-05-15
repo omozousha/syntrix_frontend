@@ -1194,8 +1194,8 @@ function ValidationRequestReview({
     <div className="space-y-2">
       <div className="space-y-2 rounded-md border p-2.5">
         <ReviewSectionHeader
-          eyebrow="Validation"
-          title="Validasi Lapangan ODP"
+          eyebrow="Field Validation"
+          title="Identitas & Kapasitas Aktual"
           description={validationDescription}
         />
         <div className={`rounded-md border px-2 py-1.5 text-xs ${reviewContext.toneClassName}`}>
@@ -1205,11 +1205,11 @@ function ValidationRequestReview({
         </div>
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
           <div className="rounded-md border bg-muted/20 px-2 py-1.5">
-            <p className="text-xs font-medium text-muted-foreground">Kondisi Lapangan</p>
+            <p className="text-xs font-medium text-muted-foreground">Checklist Kondisi</p>
             <p className="mt-1 text-sm font-semibold">{inspectionSummary}</p>
           </div>
           <div className="rounded-md border bg-muted/20 px-2 py-1.5">
-            <p className="text-xs font-medium text-muted-foreground">Port</p>
+            <p className="text-xs font-medium text-muted-foreground">Port & Redaman</p>
             <p className="mt-1 text-sm font-semibold">{portSummary}</p>
           </div>
         </div>
@@ -1274,7 +1274,7 @@ function ReviewSectionHeader({
 function PortSummaryCard({ ports }: { ports: Array<Record<string, unknown>> }) {
   return (
     <div className="rounded-md border p-2.5">
-      <p className="mb-1.5 text-sm font-medium">Ringkasan Port</p>
+      <p className="mb-1.5 text-sm font-medium">Port & Redaman</p>
       {ports.length ? (
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
           {renderPortStats(ports).map((stat) => (
@@ -1311,10 +1311,10 @@ function FieldInspectionReview({ inspection }: { inspection?: Record<string, unk
 
   return (
     <div className="rounded-md border p-2.5">
-      <p className="mb-1.5 text-sm font-medium">Pemeriksaan Lapangan</p>
+      <p className="mb-1.5 text-sm font-medium">Pemeriksaan Awal & Checklist Kondisi</p>
       {initialPhotos.length ? (
         <div className="mb-3">
-          <p className="mb-1 text-xs font-medium text-muted-foreground">Pemeriksaan awal</p>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Pemeriksaan Awal</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {initialPhotos.map((item, index) => (
               <div key={`${valueText(item.label)}-${index}`} className="rounded-md border bg-muted/20 p-2">
@@ -1327,7 +1327,7 @@ function FieldInspectionReview({ inspection }: { inspection?: Record<string, unk
       ) : null}
       {conditionChecks.length ? (
         <div>
-          <p className="mb-1 text-xs font-medium text-muted-foreground">Checklist kondisi</p>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Checklist Kondisi</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {conditionChecks.map((item, index) => (
               <div key={`${valueText(item.label)}-${index}`} className="rounded-md border bg-muted/20 p-2">

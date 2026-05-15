@@ -2233,22 +2233,38 @@ function OdpOperationsPanel({
 }
 
 function OdpInspectionSummary({ inspection }: { inspection?: OdpFieldInspectionPayload | null }) {
+  const photos = Object.values(inspection?.initial_photos || {});
   const checks = Object.values(inspection?.condition_checks || {});
-  if (!checks.length) return null;
+  if (!photos.length && !checks.length) return null;
 
   return (
-    <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-      {checks.map((item, index) => (
-        <div key={`${item.label || "condition"}-${index}`} className="rounded border bg-muted/20 px-2 py-1.5 text-xs">
-          <div className="flex items-center justify-between gap-2">
-            <span className="truncate">{item.label || "Checklist kondisi"}</span>
-            <span className={isGoodOdpInspectionCondition(item.condition) ? "text-emerald-700" : "text-amber-700"}>
-              {item.condition || "-"}
-            </span>
-          </div>
-          {item.note ? <p className="mt-1 text-muted-foreground">Keterangan: {item.note}</p> : null}
+    <div className="mt-2 rounded-md border bg-muted/10 p-2">
+      <p className="mb-1.5 text-xs font-medium">Pemeriksaan Awal & Checklist Kondisi</p>
+      {photos.length ? (
+        <div className="mb-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
+          {photos.map((item, index) => (
+            <div key={`${item.label || "photo"}-${index}`} className="rounded border bg-background px-2 py-1.5 text-xs">
+              <p className="truncate font-medium">{item.label || "Foto pemeriksaan awal"}</p>
+              <p className="mt-1 text-muted-foreground">Foto: {item.attachment ? "Ada" : "-"}</p>
+            </div>
+          ))}
         </div>
-      ))}
+      ) : null}
+      {checks.length ? (
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
+          {checks.map((item, index) => (
+            <div key={`${item.label || "condition"}-${index}`} className="rounded border bg-background px-2 py-1.5 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate font-medium">{item.label || "Checklist kondisi"}</span>
+                <span className={isGoodOdpInspectionCondition(item.condition) ? "text-emerald-700" : "text-amber-700"}>
+                  {item.condition || "-"}
+                </span>
+              </div>
+              {item.note ? <p className="mt-1 text-muted-foreground">Keterangan: {item.note}</p> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -2335,10 +2351,13 @@ function OdpFieldValidationSummary({ validation }: { validation?: OdpFieldValida
   ];
 
   return (
-    <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-3 xl:grid-cols-4">
-      {fields.map((field) => (
-        <RelationInfo key={field.label} label={field.label} value={field.value} />
-      ))}
+    <div className="mt-2 rounded-md border bg-muted/10 p-2">
+      <p className="mb-1.5 text-xs font-medium">Identitas & Kapasitas Aktual</p>
+      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+        {fields.map((field) => (
+          <RelationInfo key={field.label} label={field.label} value={field.value} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -2348,7 +2367,7 @@ function OdpPortSnapshotSummary({ ports }: { ports?: OdpValidationPortSnapshot[]
 
   return (
     <div className="mt-2 rounded-md border bg-muted/10 p-2">
-      <p className="mb-1.5 text-xs font-medium">Snapshot Port & Redaman</p>
+      <p className="mb-1.5 text-xs font-medium">Port & Redaman</p>
       <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
         {ports.map((port, index) => (
           <div key={`${port.id || port.port_index || index}`} className="rounded border bg-background px-2 py-1.5 text-xs">

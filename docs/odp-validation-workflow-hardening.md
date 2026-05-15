@@ -503,25 +503,25 @@ Dampak:
 
 ### Todo Redesign Form Validasi ODP
 
-- [ ] Definisikan enum section form validasi: `summary`, `identity`, `initial_inspection`, `condition_check`, `ports`, `review_submit`.
-- [ ] Tambahkan state active section dan section navigation.
-- [ ] Buat progress helper untuk tiap section.
-- [ ] Buat error helper yang memetakan field wajib ke section.
-- [ ] Pecah `Ringkasan ODP` menjadi komponen read-only.
-- [ ] Pecah `Identitas & Kapasitas Aktual` menjadi komponen form.
-- [ ] Pecah `Pemeriksaan Awal` menjadi komponen uploader.
-- [ ] Pecah `Checklist Kondisi` menjadi komponen checklist teknis.
-- [ ] Pecah `Port & Redaman` menjadi komponen port editor.
-- [ ] Tambahkan `Review & Submit` dengan summary dan daftar blocking issue.
-- [ ] Ubah dialog validasi wajib agar menampilkan section dan field yang belum lengkap.
-- [ ] Pastikan error submit memindahkan user ke section bermasalah.
-- [ ] Pastikan mobile hanya menampilkan satu section aktif.
-- [ ] Pastikan desktop tetap efisien untuk review cepat.
-- [ ] Pastikan payload submit tidak berubah.
-- [ ] Samakan label section di halaman request approval.
-- [ ] Samakan label section di histori detail ODP.
-- [ ] Uji viewport mobile untuk validator.
-- [ ] Update checklist implementasi setelah manual test.
+- [x] Definisikan enum section form validasi: `summary`, `identity`, `initial_inspection`, `condition_check`, `ports`, `review_submit`.
+- [x] Tambahkan state active section dan section navigation.
+- [x] Buat progress helper untuk tiap section.
+- [x] Buat error helper yang memetakan field wajib ke section.
+- [x] Pecah `Ringkasan ODP` menjadi komponen read-only.
+- [x] Pecah `Identitas & Kapasitas Aktual` menjadi komponen form.
+- [x] Pecah `Pemeriksaan Awal` menjadi komponen uploader.
+- [x] Pecah `Checklist Kondisi` menjadi komponen checklist teknis.
+- [x] Pecah `Port & Redaman` menjadi komponen port editor.
+- [x] Tambahkan `Review & Submit` dengan summary dan daftar blocking issue.
+- [x] Ubah dialog validasi wajib agar menampilkan section dan field yang belum lengkap.
+- [x] Pastikan error submit memindahkan user ke section bermasalah.
+- [x] Pastikan mobile hanya menampilkan satu section aktif.
+- [x] Pastikan desktop tetap efisien untuk review cepat.
+- [x] Pastikan payload submit tidak berubah.
+- [x] Samakan label section di halaman request approval.
+- [x] Samakan label section di histori detail ODP.
+- [x] Uji viewport mobile untuk validator.
+- [x] Update checklist implementasi setelah manual test.
 
 ## Todo Checklist
 

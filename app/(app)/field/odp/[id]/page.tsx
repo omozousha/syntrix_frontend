@@ -3,8 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Download, RefreshCw, Save } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowUp, Download, RefreshCw, Save } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-utils";
@@ -104,6 +105,17 @@ type ValidationPortSnapshot = {
   attenuation_db?: number | null;
   notes?: string | null;
 };
+type FormSectionKey = "summary" | "identity" | "initial_inspection" | "condition_check" | "ports" | "review_submit";
+type ValidationIssue = {
+  section: FormSectionKey;
+  message: string;
+};
+type SectionProgress = {
+  completed: number;
+  total: number;
+  detail: string;
+  issues: number;
+};
 type FieldInspectionSnapshot = {
   initial_photos?: Record<string, { label?: string; attachment?: UploadedEvidenceRef }>;
   condition_checks?: Record<string, { label?: string; condition?: string | null; note?: string | null; attachment?: UploadedEvidenceRef }>;
@@ -193,6 +205,18 @@ const CONDITION_CHECK_ITEMS: Array<{ key: ConditionCheckKey; label: string; opti
   { key: "cable_neatness", label: "Kerapihan Kabel", options: ["Rapi", "Tidak rapi"] },
 ];
 const GOOD_CONDITION_VALUES = new Set(["Baik", "Bersih", "Lengkap", "Rapi"]);
+const FORM_SECTIONS: Array<{ key: FormSectionKey; label: string; shortLabel: string }> = [
+  { key: "summary", label: "Ringkasan ODP", shortLabel: "Ringkasan" },
+  { key: "identity", label: "Identitas & Kapasitas Aktual", shortLabel: "Identitas" },
+  { key: "initial_inspection", label: "Pemeriksaan Awal", shortLabel: "Foto Awal" },
+  { key: "condition_check", label: "Checklist Kondisi", shortLabel: "Kondisi" },
+  { key: "ports", label: "Port & Redaman", shortLabel: "Port" },
+  { key: "review_submit", label: "Review & Submit", shortLabel: "Submit" },
+];
+const FORM_SECTION_LABELS = FORM_SECTIONS.reduce<Record<FormSectionKey, string>>((acc, item) => {
+  acc[item.key] = item.label;
+  return acc;
+}, {} as Record<FormSectionKey, string>);
 
 export default function OdpFieldValidationPage() {
   const params = useParams<{ id: string }>();
@@ -228,6 +252,9 @@ export default function OdpFieldValidationPage() {
   const [lastValidationSnapshot, setLastValidationSnapshot] = useState<ValidationRecord | null>(null);
   const [draft, setDraft] = useState<ValidationDraft>(buildDefaultValidationDraft());
   const [portStatusFilter, setPortStatusFilter] = useState("all");
+  const [activeSection, setActiveSection] = useState<FormSectionKey>("summary");
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
   const summary = useMemo(() => summarizePorts(ports, device), [ports, device]);
   const isOdp = String(device?.device_type_key || "").toUpperCase() === "ODP";
@@ -296,12 +323,34 @@ export default function OdpFieldValidationPage() {
       .filter((value) => Number.isFinite(value) && value > 0);
     return Array.from(new Set(outputs.concat([8, 16]))).sort((a, b) => a - b);
   }, [selectedSplitterProfile, splitterProfiles]);
+  const validationIssues = useMemo(
+    () => getDraftValidationIssues(draft, summary.total || Number(device?.total_ports || 0)),
+    [draft, device?.total_ports, summary.total],
+  );
+  const sectionProgress = useMemo(
+    () => buildSectionProgress({ draft, validationPortIndexes, validationIssues, hasDevice: Boolean(device) }),
+    [draft, validationIssues, validationPortIndexes, device],
+  );
 
   useEffect(() => {
     if (!message) return;
     setSuccessDialogText(message);
     setSuccessDialogOpen(true);
   }, [message]);
+
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector<HTMLElement>('[data-slot="scroll-area-viewport"]');
+    if (!viewport) return;
+    const updateScrollTopVisibility = () => setShowScrollTop(viewport.scrollTop > 360);
+    updateScrollTopVisibility();
+    viewport.addEventListener("scroll", updateScrollTopVisibility, { passive: true });
+    return () => viewport.removeEventListener("scroll", updateScrollTopVisibility);
+  }, [loading, device?.id]);
+
+  function scrollToTop() {
+    const viewport = scrollAreaRef.current?.querySelector<HTMLElement>('[data-slot="scroll-area-viewport"]');
+    viewport?.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   useEffect(() => {
     if (!id || !token) return;
@@ -465,9 +514,10 @@ export default function OdpFieldValidationPage() {
     setError("");
     setMessage("");
     try {
-      const validationError = validateDraftBeforeSubmit(draft, summary.total || Number(device.total_ports || 0));
-      if (validationError) {
-        setValidationDialogMessage(validationError);
+      const firstIssue = getDraftValidationIssues(draft, summary.total || Number(device.total_ports || 0))[0];
+      if (firstIssue) {
+        setActiveSection(firstIssue.section);
+        setValidationDialogMessage(`${FORM_SECTION_LABELS[firstIssue.section]}: ${firstIssue.message}`);
         setValidationDialogOpen(true);
         return;
       }
@@ -563,8 +613,8 @@ export default function OdpFieldValidationPage() {
   if (!device) return null;
 
   return (
-    <ScrollArea className="h-full min-h-0 w-full">
-      <div className="w-full space-y-4 px-3 pb-3 md:px-4 md:pb-4">
+    <ScrollArea ref={scrollAreaRef} className="h-full min-h-0 w-full overflow-x-hidden">
+      <div className="w-full max-w-full space-y-4 overflow-x-hidden px-3 pb-3 md:px-4 md:pb-4">
         <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm" className="min-w-0 flex-1 sm:flex-none">
@@ -589,36 +639,25 @@ export default function OdpFieldValidationPage() {
         {message ? <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-700">{message}</p> : null}
         {error ? <p className="rounded-md border border-destructive/20 bg-destructive/5 p-2 text-sm text-destructive">{error}</p> : null}
 
-        <Card>
-          <CardHeader className="px-3 py-2">
-            <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
-              <div className="min-w-0 space-y-2">
-                <OdpMobileStatusHeader
-                  deviceType={device.device_type_key || "-"}
-                  isOdp={isOdp}
-                  deviceStatus={deviceValidationUi}
-                  requestStatus={requestValidationUi}
-                  validationDate={device.validation_date}
-                />
-                <div>
-                  <CardTitle className="text-xl md:text-2xl">{device.device_name || "ODP"}</CardTitle>
-                  <CardDescription className="break-all">{device.device_id || device.id}</CardDescription>
-                </div>
-              </div>
-              <div className="grid grid-flow-col auto-cols-[minmax(104px,1fr)] gap-2 overflow-x-auto pb-1 sm:grid-flow-row sm:grid-cols-3 sm:overflow-visible sm:pb-0 lg:min-w-[520px] lg:grid-cols-5">
-                <Metric label="Total" value={summary.total} />
-                <Metric label="Used" value={summary.used} />
-                <Metric label="Idle" value={summary.idle} />
-                <Metric label="Reserved" value={summary.reserved} />
-                <Metric label="Down" value={summary.down} />
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
+        <ValidationSectionTabs
+          activeSection={activeSection}
+          progress={sectionProgress}
+          onSectionChange={(section) => setActiveSection(section)}
+        />
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start">
-          <div className="order-2 space-y-4 xl:order-1">
-            <Card>
+        {activeSection === "summary" ? (
+          <OdpSummaryReadOnlySection
+            device={device}
+            isOdp={isOdp}
+            deviceValidationUi={deviceValidationUi}
+            requestValidationUi={requestValidationUi}
+            summary={summary}
+          />
+        ) : null}
+
+        <div className="grid gap-4">
+          {activeSection === "summary" || activeSection === "ports" ? <div className="space-y-4">
+            {activeSection === "summary" ? <Card>
               <CardHeader className="px-3 py-2">
                 <CardTitle className="text-base">Status Request Validasi</CardTitle>
                 <CardDescription>Progress approval validator - adminregion - superadmin.</CardDescription>
@@ -644,23 +683,9 @@ export default function OdpFieldValidationPage() {
                   <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">Belum ada request validasi untuk ODP ini.</p>
                 )}
               </CardContent>
-            </Card>
+            </Card> : null}
 
-            <Card>
-              <CardHeader className="px-3 py-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <CardTitle className="text-base">Port ODP</CardTitle>
-                    <CardDescription>Status, redaman, dan catatan aktual per port. {filteredValidationPortIndexes.length}/{validationPortIndexes.length} tampil.</CardDescription>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                    <LegendDot className="bg-emerald-500" label="used" />
-                    <LegendDot className="bg-slate-300" label="idle" />
-                    <LegendDot className="bg-amber-400" label="reserved" />
-                    <LegendDot className="bg-rose-500" label="down" />
-                  </div>
-                </div>
-              </CardHeader>
+            {activeSection === "ports" ? <PortEditorSection visibleCount={filteredValidationPortIndexes.length} totalCount={validationPortIndexes.length}>
               <CardContent className="space-y-2 px-3 pb-3">
                 <Combobox
                   value={portStatusFilter}
@@ -787,9 +812,9 @@ export default function OdpFieldValidationPage() {
                   <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">Port ODP belum tersedia.</p>
                 )}
               </CardContent>
-            </Card>
+            </PortEditorSection> : null}
 
-            <Card>
+            {activeSection === "summary" ? <Card>
               <CardHeader className="px-3 py-2">
                 <CardTitle className="text-base">Histori Validasi</CardTitle>
                 <CardDescription>Record validasi lapangan terbaru untuk ODP ini.</CardDescription>
@@ -869,13 +894,13 @@ export default function OdpFieldValidationPage() {
                   <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">Belum ada histori validasi.</p>
                 )}
               </CardContent>
-            </Card>
-          </div>
+            </Card> : null}
+          </div> : null}
 
-          <Card className="order-1 xl:sticky xl:top-4 xl:order-2">
+          {["identity", "initial_inspection", "condition_check", "review_submit"].includes(activeSection) ? <Card className="order-1">
             <CardHeader className="px-3 py-2">
-              <CardTitle className="text-base">{isRejectedByAdminregion ? "Resubmit Validasi" : "Submit Validasi"}</CardTitle>
-              <CardDescription>Checklist aktual, temuan, dan evidence lapangan.</CardDescription>
+              <CardTitle className="text-base">{FORM_SECTION_LABELS[activeSection]}</CardTitle>
+              <CardDescription>Workspace validasi teknis ODP berbasis section.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 px-3 pb-3">
               {latestRejectNote ? (
@@ -892,7 +917,7 @@ export default function OdpFieldValidationPage() {
               {submitBlockedMessage ? (
                 <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">{submitBlockedMessage}</p>
               ) : null}
-              {lastValidationSnapshot ? (
+              {activeSection === "review_submit" && lastValidationSnapshot ? (
                 <div className="space-y-2 rounded-md border bg-muted/20 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs font-medium text-muted-foreground">Validasi Terakhir</p>
@@ -937,18 +962,14 @@ export default function OdpFieldValidationPage() {
                     </Button>
                   </div>
                 </div>
-              ) : (
+              ) : activeSection === "review_submit" ? (
                 <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
                   Form ini untuk validasi baru. Data histori akan muncul setelah submit pertama.
                 </div>
-              )}
+              ) : null}
 
-              <div className="rounded-md border bg-background p-3">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium">Identitas dan Kapasitas Aktual</p>
-                  <Badge variant="outline" className="shrink-0">{inspectionStatus}</Badge>
-                </div>
-                <div className="grid grid-cols-1 gap-2">
+              {activeSection === "identity" ? <IdentityCapacitySection inspectionStatus={inspectionStatus}>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                   <InfoField label="Tanggal Validasi" value={formatDate(new Date().toISOString())} />
                   <InfoField label="ID Inventory" value={device.device_id || "-"} />
                   <InfoField label="Nama ODP Lama" value={device.device_name || "-"} />
@@ -1031,11 +1052,10 @@ export default function OdpFieldValidationPage() {
                     />
                   </div>
                 </div>
-              </div>
+              </IdentityCapacitySection> : null}
 
-              <div className="rounded-md border bg-background p-3">
-                <p className="mb-3 text-sm font-medium">Pemeriksaan Awal</p>
-                <div className="grid grid-cols-1 gap-3">
+              {activeSection === "initial_inspection" ? <InitialInspectionSection>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {INITIAL_PHOTO_ITEMS.map((item) => (
                     <EvidenceFileInput
                       key={item.key}
@@ -1051,11 +1071,10 @@ export default function OdpFieldValidationPage() {
                     />
                   ))}
                 </div>
-              </div>
+              </InitialInspectionSection> : null}
 
-              <div className="rounded-md border bg-background p-3">
-                <p className="mb-3 text-sm font-medium">Checklist Kondisi</p>
-                <div className="space-y-3">
+              {activeSection === "condition_check" ? <ConditionChecklistSection>
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                   {CONDITION_CHECK_ITEMS.map((item) => {
                     const check = draft.conditionChecks[item.key];
                     return (
@@ -1117,9 +1136,9 @@ export default function OdpFieldValidationPage() {
                     );
                   })}
                 </div>
-              </div>
+              </ConditionChecklistSection> : null}
 
-              <div className="grid grid-cols-1 gap-2">
+              {activeSection === "review_submit" ? <div className="grid grid-cols-1 gap-2">
                 <div className="rounded-md border bg-muted/20 p-3">
                   <p className="text-xs font-medium text-muted-foreground">Ringkasan Checklist Kondisi</p>
                   <p className="mt-1 text-sm">
@@ -1135,17 +1154,24 @@ export default function OdpFieldValidationPage() {
                     placeholder="Catatan kondisi lapangan"
                   />
                 </div>
-              </div>
+              </div> : null}
 
-              <div className="grid grid-cols-1 gap-2">
+              {activeSection === "review_submit" ? <ReviewSubmitSummary
+                draft={draft}
+                validationIssues={validationIssues}
+                validationPortIndexes={validationPortIndexes}
+                inspectionSummary={inspectionSummary}
+              /> : null}
+
+              {activeSection === "review_submit" ? <div className="grid grid-cols-1 gap-2">
                 <Button type="button" onClick={() => void submitValidation()} disabled={submitting || isSubmitBlocked} className="h-11 w-full sm:h-10">
                   {submitting ? <RefreshCw className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
                   {submitButtonLabel}
                 </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">Evidence diambil dari foto pemeriksaan awal dan checklist kondisi. Semua item wajib diisi sebelum submit.</p>
+              </div> : null}
+              {activeSection === "review_submit" ? <p className="text-xs text-muted-foreground">Evidence diambil dari foto pemeriksaan awal dan checklist kondisi. Semua item wajib diisi sebelum submit.</p> : null}
             </CardContent>
-          </Card>
+          </Card> : null}
         </div>
       </div>
       <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
@@ -1265,7 +1291,205 @@ export default function OdpFieldValidationPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {showScrollTop ? (
+        <Button
+          type="button"
+          size="icon"
+          variant="secondary"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] right-4 z-50 size-10 rounded-full border shadow-lg sm:hidden"
+          onClick={scrollToTop}
+          title="Kembali ke atas"
+        >
+          <ArrowUp className="size-4" />
+        </Button>
+      ) : null}
     </ScrollArea>
+  );
+}
+
+function ValidationSectionTabs({
+  activeSection,
+  progress,
+  onSectionChange,
+}: {
+  activeSection: FormSectionKey;
+  progress: Record<FormSectionKey, SectionProgress>;
+  onSectionChange: (section: FormSectionKey) => void;
+}) {
+  return (
+    <Tabs value={activeSection} onValueChange={(value) => onSectionChange(value as FormSectionKey)} className="sticky top-0 z-20 -mx-1 max-w-full bg-background/95 py-1 backdrop-blur">
+      <div className="max-w-full overflow-hidden pb-1">
+        <TabsList className="grid h-auto w-full grid-cols-3 justify-start rounded-md bg-muted/70 p-1 md:inline-flex md:w-fit">
+          {FORM_SECTIONS.map((section) => {
+            const itemProgress = progress[section.key];
+            const hasIssue = itemProgress.issues > 0;
+            return (
+              <TabsTrigger key={section.key} value={section.key} className="min-w-0 flex-col items-start gap-0.5 px-2 py-1.5 text-left md:min-w-[112px]">
+                <span className="flex w-full items-center justify-between gap-1 text-xs">
+                  <span className="truncate">{section.shortLabel}</span>
+                  {hasIssue ? (
+                    <Badge variant="outline" className="h-4 rounded px-1 text-[9px] leading-none text-rose-700">
+                      {itemProgress.issues}
+                    </Badge>
+                  ) : null}
+                </span>
+                <span className="text-[10px] font-normal text-muted-foreground">{itemProgress.detail}</span>
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </div>
+    </Tabs>
+  );
+}
+
+function ReviewSubmitSummary({
+  draft,
+  validationIssues,
+  validationPortIndexes,
+  inspectionSummary,
+}: {
+  draft: ValidationDraft;
+  validationIssues: ValidationIssue[];
+  validationPortIndexes: number[];
+  inspectionSummary: ReturnType<typeof summarizeConditionChecks>;
+}) {
+  const attenuationCount = validationPortIndexes.filter((portIndex) => (draft.portAttenuations[String(portIndex)] || "").trim()).length;
+  return (
+    <div className="space-y-3 rounded-md border bg-background p-3">
+      <div>
+        <p className="text-sm font-medium">Review Teknis Sebelum Submit</p>
+        <p className="text-xs text-muted-foreground">Periksa ringkasan section dan selesaikan blocking issue sebelum mengirim request.</p>
+      </div>
+      <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
+        <InfoField label="Nama Baru" value={draft.deviceNameNew || "-"} />
+        <InfoField label="Tipe ODP" value={draft.odpType || "-"} />
+        <InfoField label="Kapasitas" value={draft.totalPortsActual ? `${draft.totalPortsActual} port` : "-"} />
+        <InfoField label="Splitter" value={draft.splitterRatio || "-"} />
+        <InfoField label="Foto Awal" value={`${countInitialPhotos(draft)}/${INITIAL_PHOTO_ITEMS.length}`} />
+        <InfoField label="Kondisi Baik" value={`${inspectionSummary.good}/${CONDITION_CHECK_ITEMS.length}`} />
+        <InfoField label="Issue Kondisi" value={String(inspectionSummary.issue)} />
+        <InfoField label="Redaman" value={`${attenuationCount}/${validationPortIndexes.length}`} />
+      </div>
+      {validationIssues.length ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+          <p className="font-medium">Blocking issue</p>
+          <div className="mt-1 grid gap-1">
+            {validationIssues.slice(0, 6).map((issue, index) => (
+              <p key={`${issue.section}-${index}`}>{FORM_SECTION_LABELS[issue.section]}: {issue.message}</p>
+            ))}
+            {validationIssues.length > 6 ? <p>+{validationIssues.length - 6} issue lain.</p> : null}
+          </div>
+        </div>
+      ) : (
+        <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-800">
+          Semua section wajib sudah lengkap. Request siap disubmit.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function OdpSummaryReadOnlySection({
+  device,
+  isOdp,
+  deviceValidationUi,
+  requestValidationUi,
+  summary,
+}: {
+  device: DeviceItem;
+  isOdp: boolean;
+  deviceValidationUi: ReturnType<typeof mapValidationStatus>;
+  requestValidationUi: ReturnType<typeof mapValidationStatus> | null;
+  summary: ReturnType<typeof summarizePorts>;
+}) {
+  return (
+    <Card>
+      <CardHeader className="px-3 py-2">
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
+          <div className="min-w-0 space-y-2">
+            <OdpMobileStatusHeader
+              deviceType={device.device_type_key || "-"}
+              isOdp={isOdp}
+              deviceStatus={deviceValidationUi}
+              requestStatus={requestValidationUi}
+              validationDate={device.validation_date}
+            />
+            <div>
+              <CardTitle className="text-xl md:text-2xl">{device.device_name || "ODP"}</CardTitle>
+              <CardDescription className="break-all">{device.device_id || device.id}</CardDescription>
+            </div>
+          </div>
+          <div className="grid grid-flow-col auto-cols-[minmax(104px,1fr)] gap-2 overflow-x-auto pb-1 sm:grid-flow-row sm:grid-cols-3 sm:overflow-visible sm:pb-0 lg:min-w-[520px] lg:grid-cols-5">
+            <Metric label="Total" value={summary.total} />
+            <Metric label="Used" value={summary.used} />
+            <Metric label="Idle" value={summary.idle} />
+            <Metric label="Reserved" value={summary.reserved} />
+            <Metric label="Down" value={summary.down} />
+          </div>
+        </div>
+      </CardHeader>
+    </Card>
+  );
+}
+
+function PortEditorSection({
+  visibleCount,
+  totalCount,
+  children,
+}: {
+  visibleCount: number;
+  totalCount: number;
+  children: ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader className="px-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <CardTitle className="text-base">Port ODP</CardTitle>
+            <CardDescription>Status, redaman, dan catatan aktual per port. {visibleCount}/{totalCount} tampil.</CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+            <LegendDot className="bg-emerald-500" label="used" />
+            <LegendDot className="bg-slate-300" label="idle" />
+            <LegendDot className="bg-amber-400" label="reserved" />
+            <LegendDot className="bg-rose-500" label="down" />
+          </div>
+        </div>
+      </CardHeader>
+      {children}
+    </Card>
+  );
+}
+
+function IdentityCapacitySection({ inspectionStatus, children }: { inspectionStatus: ValidationStatus; children: ReactNode }) {
+  return (
+    <div className="rounded-md border bg-background p-3">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="text-sm font-medium">Identitas dan Kapasitas Aktual</p>
+        <Badge variant="outline" className="shrink-0">{inspectionStatus}</Badge>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function InitialInspectionSection({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-md border bg-background p-3">
+      <p className="mb-3 text-sm font-medium">Pemeriksaan Awal</p>
+      {children}
+    </div>
+  );
+}
+
+function ConditionChecklistSection({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-md border bg-background p-3">
+      <p className="mb-3 text-sm font-medium">Checklist Kondisi</p>
+      {children}
+    </div>
   );
 }
 
@@ -1665,6 +1889,110 @@ function summarizeConditionChecks(checks: Record<ConditionCheckKey, ConditionChe
   };
 }
 
+function countInitialPhotos(draft: ValidationDraft) {
+  return INITIAL_PHOTO_ITEMS.filter((item) => draft.initialPhotos[item.key]).length;
+}
+
+function getDraftValidationIssues(draft: ValidationDraft, fallbackTotalPorts: number): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  if (!draft.deviceNameNew.trim()) issues.push({ section: "identity", message: "Nama ODP Baru wajib diisi." });
+  if (!draft.odpType.trim()) issues.push({ section: "identity", message: "Tipe ODP wajib dipilih." });
+  if (!draft.installationType.trim()) issues.push({ section: "identity", message: "Jenis instalasi wajib dipilih." });
+  if (!draft.totalPortsActual.trim()) issues.push({ section: "identity", message: "Kapasitas ODP wajib dipilih." });
+  if (!draft.splitterRatio.trim()) issues.push({ section: "identity", message: "Kapasitas splitter wajib dipilih." });
+
+  const totalPorts = normalizePortCapacity(draft.totalPortsActual, fallbackTotalPorts || 8);
+  if (!Number.isInteger(totalPorts) || totalPorts <= 0) issues.push({ section: "identity", message: "Kapasitas ODP tidak valid." });
+
+  for (const item of INITIAL_PHOTO_ITEMS) {
+    if (!draft.initialPhotos[item.key]) issues.push({ section: "initial_inspection", message: `${item.label} wajib dilampirkan.` });
+  }
+
+  for (const item of CONDITION_CHECK_ITEMS) {
+    const check = draft.conditionChecks[item.key];
+    if (!check.condition) issues.push({ section: "condition_check", message: `Kondisi ${item.label} wajib dipilih.` });
+    if (!check.photo) issues.push({ section: "condition_check", message: `Foto ${item.label} wajib dilampirkan.` });
+    if (!isGoodCondition(check.condition) && !check.note.trim()) {
+      issues.push({ section: "condition_check", message: `Keterangan ${item.label} wajib diisi jika kondisi bermasalah.` });
+    }
+  }
+
+  for (const portIndex of buildValidationPortIndexes(draft.totalPortsActual, fallbackTotalPorts || 8)) {
+    const value = draft.portAttenuations[String(portIndex)] || "";
+    if (!value.trim()) {
+      issues.push({ section: "ports", message: `Redaman port ${portIndex} wajib diisi.` });
+      continue;
+    }
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) issues.push({ section: "ports", message: `Redaman port ${portIndex} harus berupa angka.` });
+  }
+
+  return issues;
+}
+
+function buildSectionProgress({
+  draft,
+  validationPortIndexes,
+  validationIssues,
+  hasDevice,
+}: {
+  draft: ValidationDraft;
+  validationPortIndexes: number[];
+  validationIssues: ValidationIssue[];
+  hasDevice: boolean;
+}): Record<FormSectionKey, SectionProgress> {
+  const issueCount = (section: FormSectionKey) => validationIssues.filter((issue) => issue.section === section).length;
+  const identityFields = [draft.deviceNameNew, draft.odpType, draft.installationType, draft.totalPortsActual, draft.splitterRatio];
+  const identityCompleted = identityFields.filter((value) => String(value || "").trim()).length;
+  const conditionCompleted = CONDITION_CHECK_ITEMS.filter((item) => {
+    const check = draft.conditionChecks[item.key];
+    return Boolean(check.condition && check.photo && (isGoodCondition(check.condition) || check.note.trim()));
+  }).length;
+  const attenuationCompleted = validationPortIndexes.filter((portIndex) => {
+    const value = draft.portAttenuations[String(portIndex)] || "";
+    return value.trim() && Number.isFinite(Number(value));
+  }).length;
+
+  return {
+    summary: {
+      completed: hasDevice ? 1 : 0,
+      total: 1,
+      detail: hasDevice ? "ready" : "loading",
+      issues: issueCount("summary"),
+    },
+    identity: {
+      completed: identityCompleted,
+      total: identityFields.length,
+      detail: `${identityCompleted}/${identityFields.length}`,
+      issues: issueCount("identity"),
+    },
+    initial_inspection: {
+      completed: countInitialPhotos(draft),
+      total: INITIAL_PHOTO_ITEMS.length,
+      detail: `${countInitialPhotos(draft)}/${INITIAL_PHOTO_ITEMS.length}`,
+      issues: issueCount("initial_inspection"),
+    },
+    condition_check: {
+      completed: conditionCompleted,
+      total: CONDITION_CHECK_ITEMS.length,
+      detail: `${conditionCompleted}/${CONDITION_CHECK_ITEMS.length}`,
+      issues: issueCount("condition_check"),
+    },
+    ports: {
+      completed: attenuationCompleted,
+      total: validationPortIndexes.length,
+      detail: `${attenuationCompleted}/${validationPortIndexes.length}`,
+      issues: issueCount("ports"),
+    },
+    review_submit: {
+      completed: validationIssues.length ? 0 : 1,
+      total: 1,
+      detail: validationIssues.length ? `${validationIssues.length} issue` : "ready",
+      issues: validationIssues.length,
+    },
+  };
+}
+
 function deriveStatusFromConditionChecks(checks: Record<ConditionCheckKey, ConditionCheckDraft>): ValidationStatus {
   const summary = summarizeConditionChecks(checks);
   if (summary.filled < CONDITION_CHECK_ITEMS.length) return "invalid";
@@ -1677,39 +2005,6 @@ function formatInspectionSummary(inspection?: FieldInspectionSnapshot | null) {
   if (!checks.length) return "-";
   const good = checks.filter((item) => isGoodCondition(item.condition)).length;
   return `${good}/${checks.length} baik`;
-}
-
-function validateDraftBeforeSubmit(draft: ValidationDraft, fallbackTotalPorts: number) {
-  if (!draft.deviceNameNew.trim()) return "Nama ODP Baru wajib diisi.";
-  if (!draft.odpType.trim()) return "Tipe ODP wajib dipilih.";
-  if (!draft.installationType.trim()) return "Jenis instalasi wajib dipilih.";
-  if (!draft.totalPortsActual.trim()) return "Kapasitas ODP wajib dipilih.";
-  if (!draft.splitterRatio.trim()) return "Kapasitas splitter wajib dipilih.";
-  const totalPorts = normalizePortCapacity(draft.totalPortsActual, fallbackTotalPorts || 8);
-  if (!Number.isInteger(totalPorts) || totalPorts <= 0) return "Kapasitas ODP tidak valid.";
-
-  const missingPhoto = INITIAL_PHOTO_ITEMS.find((item) => !draft.initialPhotos[item.key]);
-  if (missingPhoto) return `${missingPhoto.label} wajib dilampirkan.`;
-
-  for (const item of CONDITION_CHECK_ITEMS) {
-    const check = draft.conditionChecks[item.key];
-    if (!check.condition) return `Kondisi ${item.label} wajib dipilih.`;
-    if (!check.photo) return `Foto ${item.label} wajib dilampirkan.`;
-    if (!isGoodCondition(check.condition) && !check.note.trim()) return `Keterangan ${item.label} wajib diisi jika kondisi bermasalah.`;
-  }
-
-  for (const portIndex of buildValidationPortIndexes(draft.totalPortsActual, fallbackTotalPorts || 8)) {
-    const value = draft.portAttenuations[String(portIndex)] || "";
-    if (!value.trim()) return `Redaman port ${portIndex} wajib diisi.`;
-  }
-
-  for (const [portIndex, value] of Object.entries(draft.portAttenuations)) {
-    if (!value.trim()) continue;
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) return `Redaman port ${portIndex} harus berupa angka.`;
-  }
-
-  return "";
 }
 
 function buildLegacyChecklistFromInspection(checks: Record<ConditionCheckKey, ConditionCheckDraft>, ports: Array<Record<string, unknown>>) {
