@@ -265,6 +265,8 @@ type ServicePortRelation = DevicePort & {
 type RelationLabels = {
   region?: string;
   pop?: string;
+  project?: string;
+  serviceType?: string;
   manufacturer?: string;
   brand?: string;
   model?: string;
@@ -583,6 +585,36 @@ export default function DataManagementDetailPage() {
           labels.popType = popType ? valueOf(popType.data.pop_type_name) : valueOf(activeItem.pop_type);
           labels.province = province ? valueOf(province.data.province_name) : valueOf(activeItem.province);
           labels.city = city ? valueOf(city.data.city_name) : valueOf(activeItem.city);
+        }
+
+        if (activeCategory.resource === "customers") {
+          const [region, pop, project, province, city, serviceType] = await Promise.all([
+            valueOf(activeItem.region_id)
+              ? apiFetch<{ data: Record<string, unknown> }>(`/regions/${valueOf(activeItem.region_id)}`, { token }).catch(() => null)
+              : Promise.resolve(null),
+            valueOf(activeItem.pop_id)
+              ? apiFetch<{ data: Record<string, unknown> }>(`/pops/${valueOf(activeItem.pop_id)}`, { token }).catch(() => null)
+              : Promise.resolve(null),
+            valueOf(activeItem.project_id)
+              ? apiFetch<{ data: Record<string, unknown> }>(`/projects/${valueOf(activeItem.project_id)}`, { token }).catch(() => null)
+              : Promise.resolve(null),
+            valueOf(activeItem.province_id)
+              ? apiFetch<{ data: Record<string, unknown> }>(`/provinces/${valueOf(activeItem.province_id)}`, { token }).catch(() => null)
+              : Promise.resolve(null),
+            valueOf(activeItem.city_id)
+              ? apiFetch<{ data: Record<string, unknown> }>(`/cities/${valueOf(activeItem.city_id)}`, { token }).catch(() => null)
+              : Promise.resolve(null),
+            valueOf(activeItem.service_type_id)
+              ? apiFetch<{ data: Record<string, unknown> }>(`/serviceTypes/${valueOf(activeItem.service_type_id)}`, { token }).catch(() => null)
+              : Promise.resolve(null),
+          ]);
+
+          labels.region = region ? valueOf(region.data.region_name) : "";
+          labels.pop = pop ? valueOf(pop.data.pop_name) : "";
+          labels.project = project ? valueOf(project.data.project_name) : "";
+          labels.province = province ? valueOf(province.data.province_name) : valueOf(activeItem.province);
+          labels.city = city ? valueOf(city.data.city_name) : valueOf(activeItem.city);
+          labels.serviceType = serviceType ? valueOf(serviceType.data.service_type_name) : valueOf(activeItem.service_type);
         }
       } finally {
         if (!cancelled) setRelationLabels(labels);
@@ -1328,20 +1360,28 @@ export default function DataManagementDetailPage() {
                     ) : null}
                     {category.resource === "pops" ? <Badge variant="outline">{valueOf(item.status_pop)}</Badge> : null}
                     {category.resource === "devices" ? <Badge variant="outline">{valueOf(item.status)}</Badge> : null}
-                    <Badge variant="outline" className={mapValidationStatus(valueOf(item.validation_status, "unvalidated")).className}>
-                      {mapValidationStatus(valueOf(item.validation_status, "unvalidated")).label}
-                    </Badge>
+                    {category.resource !== "customers" ? (
+                      <Badge variant="outline" className={mapValidationStatus(valueOf(item.validation_status, "unvalidated")).className}>
+                        {mapValidationStatus(valueOf(item.validation_status, "unvalidated")).label}
+                      </Badge>
+                    ) : null}
                   </div>
                 </div>
-                <CardDescription>
-                  Updated: {formatDateTime(valueOf(item.updated_at || item.created_at))}
-                </CardDescription>
+                {category.resource !== "customers" ? (
+                  <CardDescription>
+                    Updated: {formatDateTime(valueOf(item.updated_at || item.created_at))}
+                  </CardDescription>
+                ) : null}
               </CardHeader>
               <CollapsibleContent>
                 <CardContent className="space-y-5">
                   {category.resource === "pops" ? (
                     <PopDetailForm form={form} onChange={setForm} editing={isEditing} relationLabels={relationLabels} />
                   ) : null}
+
+              {category.resource === "customers" ? (
+                <CustomerDetailForm item={item} relationLabels={relationLabels} />
+              ) : null}
 
               {category.resource === "devices" ? (
                 <DeviceDetailForm
@@ -1357,7 +1397,7 @@ export default function DataManagementDetailPage() {
                 />
               ) : null}
 
-              {category.resource !== "pops" && category.resource !== "devices" ? (
+              {category.resource !== "pops" && category.resource !== "devices" && category.resource !== "customers" ? (
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {Object.entries(item).map(([key, value]) => (
                     <div key={key} className="space-y-1.5">
@@ -2499,6 +2539,33 @@ function ServicePortRelationsPanel({
   );
 }
 
+function CustomerDetailForm({
+  item,
+  relationLabels,
+}: {
+  item: GenericItem;
+  relationLabels: RelationLabels;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+      <DisplayField label="Customer Name" value={valueOf(item.customer_name, "-")} compact />
+      <DisplayField label="CID" value={valueOf(item.customer_number, "-")} compact />
+      <DisplayField label="Service Type" value={relationLabels.serviceType || valueOf(item.service_type, "-")} compact />
+      <DisplayField label="POP" value={relationLabels.pop || valueOf(item.pop_id, "-")} compact />
+      <DisplayField label="Project" value={relationLabels.project || valueOf(item.project_id, "-")} compact />
+      <DisplayField label="Region" value={relationLabels.region || valueOf(item.region_id, "-")} compact />
+      <DisplayField label="Status" value={valueOf(item.status, "-")} compact />
+      <DisplayField label="Installation Date" value={formatDate(valueOf(item.installation_date))} compact />
+      <DisplayField label="Tags" value={arrayToCsv(item.tags) || "-"} compact />
+      <DisplayField className="md:col-span-2 xl:col-span-3" label="Address" value={valueOf(item.address, "-")} compact />
+      <DisplayField label="Province" value={relationLabels.province || valueOf(item.province, "-")} compact />
+      <DisplayField label="City/Kabupaten" value={relationLabels.city || valueOf(item.city, "-")} compact />
+      <DisplayField label="Longitude" value={valueOf(item.longitude, "-")} compact />
+      <DisplayField label="Latitude" value={valueOf(item.latitude, "-")} compact />
+    </div>
+  );
+}
+
 function RelationInfo({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md border bg-muted/20 p-2">
@@ -2881,14 +2948,16 @@ function DeviceDetailForm({
 function DisplayField({
   label,
   value,
+  className = "",
   compact = false,
 }: {
   label: string;
   value: string;
+  className?: string;
   compact?: boolean;
 }) {
   return (
-    <div className={compact ? "space-y-1" : "space-y-1.5"}>
+    <div className={`${compact ? "space-y-1" : "space-y-1.5"} ${className}`}>
       <Label>{label}</Label>
       <Input value={value} disabled className={compact ? "h-8 text-xs" : undefined} />
     </div>

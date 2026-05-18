@@ -413,7 +413,7 @@ export default function DataManagementListPage() {
     if (category.resource === "pops") return [selectAllHeader, "POP ID", "Code", "Name", "Status", "Updated"];
     if (category.resource === "devices") return [selectAllHeader, "Device ID", "Name", "Type", "Status", "Validation", "Updated"];
     if (category.resource === "poles") return [selectAllHeader, "Pole ID", "Pole Number", "Region", "Status", "Updated"];
-    if (category.resource === "customers") return [selectAllHeader, "Customer ID", "Name", "Service", "Status", "Updated"];
+    if (category.resource === "customers") return [selectAllHeader, "CID", "Name", "Service", "Status", "Updated"];
     if (category.resource === "routes") return [selectAllHeader, "Route ID", "Route Name", "Region", "Status", "Updated"];
     if (category.resource === "regions") return [selectAllHeader, "Region ID", "Inventory Code", "Region Name", "Color", "Updated"];
     if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Inventory Code", "Asset Group", "Status", "Updated"];
@@ -489,7 +489,7 @@ export default function DataManagementListPage() {
       if (category.resource === "customers") {
         return [
           selectCell,
-          pick(item, ["customer_id", "customer_code"]),
+          pick(item, ["customer_number"]),
           pick(item, ["customer_name", "name"]),
           pick(item, ["service_type"]),
           pick(item, ["status"]),
@@ -1055,7 +1055,9 @@ export default function DataManagementListPage() {
                           ? pick(row, ["pop_id"])
                           : category?.resource === "projects"
                             ? pick(row, ["project_id"])
-                            : pick(row, ["region_id", "city_code", "customer_id", "route_id", "id"]);
+                            : category?.resource === "customers"
+                              ? pick(row, ["customer_number"])
+                              : pick(row, ["region_id", "city_code", "route_id", "id"]);
 
                     return (
                       <div key={row.id} className="rounded-md border bg-card p-3">
