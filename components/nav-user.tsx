@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Check, ChevronDown, LogOut, Moon, Sun, User } from "lucide-react";
+import { Bell, Check, ChevronDown, Loader2, LogOut, Moon, ShieldCheck, Sun, User } from "lucide-react";
 import { toast } from "sonner";
 import type { SessionUser } from "@/lib/session";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
 const THEME_KEY = "syntrix_theme";
 const AVATAR_CACHE_PREFIX = "syntrix_avatar_cache";
 const NOTIFICATION_POLL_INTERVAL_MS = 20_000;
+const LOGOUT_DIALOG_INTERVAL_MS = 5000;
 const REQUESTS_PATH = "/requests";
 const avatarBlobUrlCache = new Map<string, string>();
 
@@ -88,8 +90,11 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
   const [digest, setDigest] = useState<NotificationDigestResponse["data"] | null>(null);
   const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
   const [selectedRegionId, setSelectedRegionId] = useState<string>("");
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const seenUnreadIdsRef = useRef<Set<string>>(new Set());
   const firstNotificationLoadRef = useRef(true);
+  const logoutTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -151,6 +156,23 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
     document.documentElement.classList.toggle("dark", next);
     window.localStorage.setItem(THEME_KEY, next ? "dark" : "light");
   }
+
+  function handleLogout() {
+    if (logoutLoading) return;
+    setLogoutDialogOpen(true);
+    setLogoutLoading(true);
+    logoutTimerRef.current = window.setTimeout(() => {
+      onLogout();
+    }, LOGOUT_DIALOG_INTERVAL_MS);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (logoutTimerRef.current) {
+        window.clearTimeout(logoutTimerRef.current);
+      }
+    };
+  }, []);
 
   const initials = getInitials(me.app_user.full_name);
   const notificationCount = unreadCount;
@@ -456,12 +478,31 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
             {darkMode ? <Sun className="mr-2 size-4" /> : <Moon className="mr-2 size-4" />}
             {darkMode ? "Light mode" : "Dark mode"}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-destructive focus:text-destructive">
+          <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
             <LogOut className="mr-2 size-4" />
             Logout
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <AlertDialog
+        open={logoutDialogOpen}
+        onOpenChange={(open) => {
+          if (logoutLoading) return;
+          setLogoutDialogOpen(open);
+        }}
+      >
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              {logoutLoading ? <Loader2 className="size-5 animate-spin" /> : <ShieldCheck className="size-5" />}
+            </div>
+            <AlertDialogTitle className="text-center">Mengakhiri Sesi</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Syntrix sedang menutup workspace dan membersihkan sesi akun. Anda akan diarahkan ke login dalam 5 detik.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -2,15 +2,17 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Network, Radar, ShieldCheck } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { loginWithPassword, storeSessionTokens, getStoredToken } from "@/lib/session";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+
+const AUTH_DIALOG_INTERVAL_MS = 5000;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,9 +20,12 @@ export default function LoginPage() {
   const [email, setEmail] = useState("admin.ops@syntrix.local");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("Masukkan akun Anda untuk melanjutkan.");
-  const [statusType, setStatusType] = useState<"default" | "destructive">("default");
+  const [statusTitle, setStatusTitle] = useState("Status Login");
+  const [statusType, setStatusType] = useState<"default" | "destructive" | "success">("default");
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const nextParam = searchParams.get("next");
   const getNextPath = useCallback(() => {
     if (!nextParam) return "/dashboard";
@@ -41,15 +46,20 @@ export default function LoginPage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
+    setStatusDialogOpen(true);
+    setStatusTitle("Memproses Login");
     setStatus("Sedang memproses login...");
     setStatusType("default");
     try {
       const session = await loginWithPassword(email, password);
       storeSessionTokens(session);
+      setStatusTitle("Login Berhasil");
       setStatus("Login sukses.");
-      setStatusType("default");
+      setStatusType("success");
+      await delay(AUTH_DIALOG_INTERVAL_MS);
       router.replace(getNextPath());
     } catch (error) {
+      setStatusTitle("Login Gagal");
       setStatus(`Login gagal: ${(error as Error).message}`);
       setStatusType("destructive");
     } finally {
@@ -60,11 +70,15 @@ export default function LoginPage() {
   async function onResetPassword() {
     if (!email.trim()) {
       setStatusType("destructive");
+      setStatusTitle("Email Wajib Diisi");
       setStatus("Isi email terlebih dahulu untuk reset password.");
+      setStatusDialogOpen(true);
       return;
     }
 
     setResetLoading(true);
+    setStatusDialogOpen(true);
+    setStatusTitle("Mengirim Reset Password");
     setStatusType("default");
     setStatus("Mengirim email reset password...");
     try {
@@ -72,9 +86,11 @@ export default function LoginPage() {
         method: "POST",
         body: JSON.stringify({ email: email.trim() }),
       });
-      setStatusType("default");
+      setStatusTitle("Reset Password Dikirim");
+      setStatusType("success");
       setStatus("Email reset password berhasil dikirim. Silakan cek inbox/spam.");
     } catch (error) {
+      setStatusTitle("Reset Password Gagal");
       setStatusType("destructive");
       setStatus(`Gagal mengirim reset password: ${(error as Error).message}`);
     } finally {
@@ -83,25 +99,74 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-dvh lg:grid-cols-2">
-      <section className="hidden border-r bg-muted/30 lg:flex lg:items-center lg:justify-center">
-        <div className="max-w-md space-y-4 px-8">
-          <Badge variant="outline">Syntrix Asset Inventory</Badge>
-          <h1 className="text-3xl font-semibold tracking-tight">Monitoring jaringan fiber lebih rapi dan terstruktur</h1>
-          <p className="text-sm text-muted-foreground">
-            Kelola POP, perangkat aktif/pasif, project, dan customer dari satu dashboard dengan scope region yang aman.
-          </p>
+    <main className="grid min-h-dvh bg-background lg:grid-cols-[1.05fr_0.95fr]">
+      <section className="hidden border-r bg-muted/20 lg:flex lg:items-center lg:justify-center">
+        <div className="w-full max-w-2xl space-y-6 px-10">
+          <div className="space-y-3">
+            <Badge variant="outline" className="w-fit">
+              Synchronization & Validation Matrix
+            </Badge>
+            <div className="space-y-2">
+              <h1 className="text-4xl font-semibold tracking-tight">Syntrix</h1>
+              <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+                Operations console untuk menyelaraskan inventory region, POP, device, validasi ODP, dan approval chain dalam satu alur kerja yang terukur.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border bg-card p-4 shadow-sm">
+            <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-3">
+              <MatrixNode icon={Network} title="Inventory" description="Region, POP, Device" />
+              <ArrowRight className="size-4 text-muted-foreground" />
+              <MatrixNode icon={Radar} title="Validation" description="Field evidence" />
+              <ArrowRight className="size-4 text-muted-foreground" />
+              <MatrixNode icon={ShieldCheck} title="Approval" description="Role based" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <SignalCard label="Scope" value="Region-aware" />
+            <SignalCard label="Workflow" value="Validator chain" />
+            <SignalCard label="Control" value="Audit ready" />
+          </div>
+
+          <div className="rounded-lg border bg-background p-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-md bg-primary/10 p-2 text-primary">
+                <LockKeyhole className="size-4" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Secure role workspace</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Setelah login, Syntrix membuka dashboard, queue, dan data sesuai role serta scope region akun.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="flex items-center justify-center bg-background px-3 py-6 sm:px-6 sm:py-10">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Login Syntrix</CardTitle>
-            <CardDescription>Masuk menggunakan akun yang sudah terdaftar.</CardDescription>
+      <section className="flex items-center justify-center px-3 py-6 sm:px-6 sm:py-10">
+        <Card className="w-full max-w-md border-border/80 shadow-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <Network className="size-4" />
+                </div>
+                <div>
+                  <CardTitle>Login Syntrix</CardTitle>
+                  <CardDescription>Synchronization & Validation Matrix</CardDescription>
+                </div>
+              </div>
+              <Badge variant="secondary">Secure</Badge>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Badge variant="outline">Single Login Form</Badge>
+            <div className="rounded-md border bg-muted/30 px-3 py-2">
+              <p className="text-xs text-muted-foreground">Destination</p>
+              <p className="truncate text-sm font-medium">{getNextPath()}</p>
+            </div>
 
             <form onSubmit={onSubmit}>
               <FieldGroup>
@@ -120,15 +185,28 @@ export default function LoginPage() {
 
                 <Field>
                   <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    autoComplete="current-password"
-                    placeholder="Masukkan password"
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      autoComplete="current-password"
+                      placeholder="Masukkan password"
+                      className="pr-10"
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 size-8 -translate-y-1/2"
+                      onClick={() => setShowPassword((value) => !value)}
+                      aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </Button>
+                  </div>
                 </Field>
 
                 <Button type="submit" disabled={loading} className="w-full">
@@ -150,13 +228,68 @@ export default function LoginPage() {
               </FieldGroup>
             </form>
 
-            <Alert variant={statusType}>
-              <AlertTitle>Status</AlertTitle>
-              <AlertDescription>{status}</AlertDescription>
-            </Alert>
           </CardContent>
         </Card>
       </section>
+
+      <AlertDialog open={statusDialogOpen} onOpenChange={(open) => {
+        if (loading || resetLoading) return;
+        setStatusDialogOpen(open);
+      }}>
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <div className={`mx-auto mb-2 flex size-12 items-center justify-center rounded-xl ${statusToneClassName(statusType)}`}>
+              {loading || resetLoading ? <Loader2 className="size-5 animate-spin" /> : statusType === "destructive" ? <LockKeyhole className="size-5" /> : <ShieldCheck className="size-5" />}
+            </div>
+            <AlertDialogTitle className="text-center">{statusTitle}</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">{status}</AlertDialogDescription>
+          </AlertDialogHeader>
+          {!loading && !resetLoading ? (
+            <AlertDialogFooter>
+              <Button type="button" className="w-full" onClick={() => setStatusDialogOpen(false)}>
+                Mengerti
+              </Button>
+            </AlertDialogFooter>
+          ) : null}
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
+  );
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function statusToneClassName(type: "default" | "destructive" | "success") {
+  if (type === "destructive") return "bg-destructive/10 text-destructive";
+  if (type === "success") return "bg-emerald-100 text-emerald-700";
+  return "bg-primary/10 text-primary";
+}
+
+function MatrixNode({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: typeof Network;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border bg-background p-3">
+      <Icon className="mb-3 size-5 text-primary" />
+      <p className="truncate text-sm font-medium">{title}</p>
+      <p className="mt-1 truncate text-xs text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function SignalCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <p className="text-[11px] uppercase text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-medium">{value}</p>
+    </div>
   );
 }

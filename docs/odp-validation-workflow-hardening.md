@@ -588,7 +588,7 @@ Dampak:
 - [x] Buat checklist mobile-friendly.
 - [x] Buat evidence uploader per kategori.
 - [x] Buat port card dengan filter status.
-- [ ] Uji tampilan validator di viewport mobile.
+- [x] Uji tampilan validator di viewport mobile.
 
 ### Phase 6 - Audit Trail & UAT
 
@@ -882,31 +882,31 @@ Dampak:
 
 ### Todo Terakhir - UAT Dashboard
 
-- [ ] Tab default dashboard adalah `Overview`, bukan queue workflow.
-- [ ] Overview menampilkan informasi Region, POP, dan Device yang berguna.
-- [ ] Chart Device Type Donut tampil dan totalnya sesuai data device.
-- [ ] Chart Device Status Bar tampil dan totalnya sesuai data device.
-- [ ] Chart POP Distribution tampil sesuai scope role.
-- [ ] Chart ODP Validation tampil sesuai scope role.
-- [ ] Chart Port Utilization tampil sesuai data port.
-- [ ] Superadmin melihat queue approval final dan bisa membuka request terkait.
-- [ ] Superadmin melihat indikator risk untuk ODP issue dan audit activity.
-- [ ] Uji role superadmin.
-- [ ] Adminregion hanya melihat data/queue sesuai region scope.
-- [ ] Adminregion bisa membuka pending adminregion dan rejected superadmin dari dashboard.
-- [ ] Uji role adminregion.
-- [ ] Validator melihat queue validasi ODP sesuai scope region.
-- [ ] Validator bisa membuka field validation dari dashboard.
-- [ ] Uji role validator.
-- [ ] Validator hanya melihat tabs `Overview`, `POP`, dan `KPI & Workflow`.
-- [ ] Overview validator menampilkan region scope, POP coverage, ODP queue, rejected validation, dan POP by ODP.
-- [ ] Dashboard validator nyaman di viewport mobile.
-- [ ] Semua CTA menghormati permission role.
-- [ ] Count dashboard konsisten dengan halaman sumber.
-- [ ] Loading state tidak membuat layout lompat berlebihan.
-- [ ] Empty state jelas dan tetap memberi aksi yang relevan.
-- [ ] Tidak ada horizontal scroll di mobile.
-- [ ] Smart tip sidebar berubah sesuai konteks dashboard.
+- [x] Tab default dashboard adalah `Overview`, bukan queue workflow.
+- [x] Overview menampilkan informasi Region, POP, dan Device yang berguna.
+- [x] Chart Device Type Donut tampil dan totalnya sesuai data device.
+- [x] Chart Device Status Bar tampil dan totalnya sesuai data device.
+- [x] Chart POP Distribution tampil sesuai scope role.
+- [x] Chart ODP Validation tampil sesuai scope role.
+- [x] Chart Port Utilization tampil sesuai data port.
+- [x] Superadmin melihat queue approval final dan bisa membuka request terkait.
+- [x] Superadmin melihat indikator risk untuk ODP issue dan audit activity.
+- [x] Uji role superadmin.
+- [x] Adminregion hanya melihat data/queue sesuai region scope.
+- [x] Adminregion bisa membuka pending adminregion dan rejected superadmin dari dashboard.
+- [x] Uji role adminregion.
+- [x] Validator melihat queue validasi ODP sesuai scope region.
+- [x] Validator bisa membuka field validation dari dashboard.
+- [x] Uji role validator.
+- [x] Validator hanya melihat tabs `Overview`, `POP`, dan `KPI & Workflow`.
+- [x] Overview validator menampilkan region scope, POP coverage, ODP queue, rejected validation, dan POP by ODP.
+- [x] Dashboard validator nyaman di viewport mobile.
+- [x] Semua CTA menghormati permission role.
+- [x] Count dashboard konsisten dengan halaman sumber.
+- [x] Loading state tidak membuat layout lompat berlebihan.
+- [x] Empty state jelas dan tetap memberi aksi yang relevan.
+- [x] Tidak ada horizontal scroll di mobile.
+- [x] Smart tip sidebar berubah sesuai konteks dashboard.
 
 ### Keputusan Awal Yang Disarankan
 
