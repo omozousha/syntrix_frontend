@@ -26,7 +26,7 @@ export function AppShell({
   const isValidator = normalizedRole === "validator";
   const canReviewValidation = isSuperAdmin || isAdminRegion;
   const menus: AppSidebarMenuItem[] = [
-    ...(!isValidator ? [{ href: "/dashboard", label: "Dashboard" }] : []),
+    { href: "/dashboard", label: "Dashboard" },
     { href: "/data-management", label: "Data Management" },
     ...(isAdminRegion ? [{ href: "/data-management/list/odp", label: "ODP List" }] : []),
     ...(canReviewValidation ? [{ href: "/requests", label: "Requests" }] : []),

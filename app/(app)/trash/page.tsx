@@ -177,9 +177,7 @@ export default function TrashPage() {
           );
 
           if (cancelled) return;
-          const successfulResults = results
-            .filter((result): result is PromiseFulfilledResult<{ category: TrashCategory; data: GenericItem[]; total: number }> => result.status === "fulfilled")
-            .map((result) => result.value);
+          const successfulResults = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
           const combinedRows = successfulResults
             .flatMap((result) => result.data)
             .sort((a, b) => getTimeValue(b.deleted_at) - getTimeValue(a.deleted_at));

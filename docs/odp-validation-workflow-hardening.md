@@ -607,3 +607,311 @@ Dampak:
 - Data final asset tetap hanya berubah setelah approval sesuai chain.
 - Evidence hasil validasi terbaru harus menjadi fokus review; evidence lama tetap menjadi histori.
 - Semua reject wajib punya note yang cukup jelas.
+
+## Rencana Role-Based Dashboard
+
+### Latar Belakang
+
+Dashboard saat ini sudah mulai berubah menjadi pusat kerja berbasis role. Setelah dikaji ulang, arah dashboard utama perlu dikembalikan ke fondasi Syntrix sebagai **asset inventory console**: informasi Region, POP, dan Device harus menjadi konteks default sebelum user masuk ke KPI workflow.
+
+Tujuan dashboard baru bukan hanya menampilkan angka, tetapi menjawab dua pertanyaan utama:
+
+- **Bagaimana kondisi region, POP, dan device yang saya kelola?**
+- **Apa pekerjaan operasional yang perlu saya tindaklanjuti sekarang?**
+
+### Prinsip Desain Dashboard
+
+- **Role-aware**: konten dashboard berbeda untuk superadmin, adminregion, dan validator.
+- **Asset context first**: tab default dashboard menampilkan Region, POP, dan Device.
+- **Action-first**: setiap insight penting punya CTA langsung ke halaman kerja terkait.
+- **Operational density**: informasi padat, mudah discan, tidak memakai hero marketing atau chart dekoratif.
+- **Useful charts only**: chart dipakai untuk komposisi, distribusi, dan tren ringkas yang membantu keputusan.
+- **Exception-driven KPI**: pending, rejected, evidence issue, SLA risk, dan data mismatch ditempatkan di tab KPI/Workflow.
+- **Mobile-aware**: validator dan adminregion harus tetap nyaman melihat queue di layar kecil.
+- **Consistent with shadcn UI**: gunakan Card, Badge, Button, Alert, ScrollArea, Skeleton, dan komponen existing.
+- **No over-fetching**: mulai dari endpoint existing jika cukup; endpoint baru dibuat hanya untuk summary yang memang tidak tersedia.
+
+### Struktur Tab Dashboard Baru
+
+Tab default:
+
+- `Overview`: ringkasan Region, POP, dan Device.
+
+Tab pendukung:
+
+- `Region`: health region, jumlah POP/device per region, region dengan issue terbanyak.
+- `POP`: total POP, status POP, POP dengan device terbanyak, POP tanpa device/ODP jika ada.
+- `Device`: komposisi device type, status device, ODP validation distribution, port utilization.
+- `KPI & Workflow`: approval queue, ODP Quality, rejected request, evidence issue, audit activity.
+
+Catatan:
+
+- Jika role hanya punya satu region, tab `Region` fokus ke detail region tersebut.
+- Jika role superadmin punya semua region, tab `Region` menjadi perbandingan antar region.
+- Untuk validator, tab disederhanakan menjadi `Overview`, `POP`, dan `KPI & Workflow` agar fokus pada region/POP/ODP lapangan.
+- KPI tetap penting, tetapi bukan tab default agar dashboard tidak terasa hanya seperti halaman request approval.
+
+### Chart Yang Disarankan
+
+Chart wajib tahap berikutnya:
+
+- **Device Type Donut**: komposisi ODP, OLT, ONT, ODC, OTB, cable, pole, route.
+- **Device Status Bar**: active, draft, archived, inactive, atau status lain yang tersedia.
+- **POP Distribution Bar**: jumlah POP per region atau jumlah device per POP.
+- **ODP Validation Donut**: validated, unvalidated, pending adminregion, pending superadmin, rejected.
+- **Port Utilization Bar**: used, idle, reserved, down, maintenance.
+
+Chart opsional setelah data stabil:
+
+- **Region Health Matrix**: region vs issue count.
+- **Approval Funnel**: submitted, adminregion review, superadmin review, rejected, final approved.
+- **Activity Sparkline**: submit/approve/reject per hari jika backend menyediakan time-series.
+
+Aturan chart:
+
+- Chart harus compact dan tidak mengambil ruang lebih besar dari work queue.
+- Chart wajib punya angka total dan legend yang bisa dibaca tanpa hover.
+- Mobile memakai stacked card, bukan chart lebar yang memicu horizontal scroll.
+- Warna chart mengikuti fungsi: green validated/healthy, amber pending/warning, red rejected/problem, blue review/info.
+
+### Dashboard Superadmin
+
+Fokus: visibility semua region, POP/device coverage, approval final, governance, dan audit.
+
+Konten utama:
+
+- Region overview: jumlah region aktif, POP total, device total, ODP total.
+- Device composition chart.
+- Region distribution chart untuk POP/device.
+- Approval queue final: pending superadmin, create device, validation, update, delete/archive.
+- Operational risk: ODP evidence kurang, ODP belum valid, request rejected, port issue.
+- SLA risk: request menunggu terlalu lama.
+- Region health: ringkasan validasi dan issue per region.
+- Recent critical activity: approve, reject, delete, restore, update master data.
+- Audit watch: aktivitas sensitif yang perlu dipantau.
+
+CTA utama:
+
+- Review Pending Requests.
+- Open ODP Quality.
+- Open Audit Trail.
+- Open Trash.
+
+### Dashboard Adminregion
+
+Fokus: kesehatan region sendiri, coverage POP/device, kualitas ODP, dan tindak lanjut request.
+
+Konten utama:
+
+- Region scope summary: region aktif, total POP, total device, total ODP.
+- POP health: POP aktif, POP tanpa device/ODP jika data tersedia, POP dengan device terbanyak.
+- Device composition dan device status untuk region aktif.
+- ODP validation chart untuk region aktif.
+- My region queue: pending adminregion, rejected superadmin, resubmission validator.
+- Field issues: evidence kurang, koordinat kosong, port mismatch, redaman belum lengkap.
+- Validator activity: submission terbaru dari validator region.
+- Top problem ODP: ODP dengan issue paling banyak.
+- Quick actions: request aktif, list ODP, field validation, ODP Quality.
+
+CTA utama:
+
+- Review Validator Submission.
+- Open Rejected by Superadmin.
+- Check ODP Quality.
+- Open ODP List.
+
+### Dashboard Validator
+
+Fokus: konteks region lapangan, daftar ODP, dan status submit validasi.
+
+Catatan: saat ini validator belum diberi menu dashboard. Rekomendasi perubahan adalah menambahkan dashboard khusus validator dengan tampilan mobile-first.
+
+Konten utama:
+
+- Region assignment: region yang menjadi scope validator.
+- POP coverage di region tersebut.
+- ODP queue per POP.
+- ODP validation chart mobile-friendly.
+- Tugas hari ini: ODP belum tervalidasi, rejected adminregion, evidence kurang.
+- Resume validation: lanjutkan validasi terakhir.
+- Rejected validation: daftar catatan reject yang harus diperbaiki.
+- Submission status: submitted, pending review, approved, rejected.
+- Region ODP queue: ODP sesuai scope region.
+- Mobile readiness: jumlah ODP siap submit dan belum lengkap.
+
+CTA utama:
+
+- Mulai Validasi ODP.
+- Lanjutkan Draft.
+- Perbaiki Rejected.
+- Scan QR atau Open Field ODP.
+
+### Struktur Layout Yang Disarankan
+
+Desktop:
+
+- Role summary bar di bagian atas.
+- Tabs utama: Overview, Region, POP, Device, KPI & Workflow.
+- Overview default menampilkan cards Region/POP/Device dan chart komposisi ringkas.
+- Work queue ditaruh pada tab KPI & Workflow atau panel kanan yang lebih kecil.
+- Recent activity compact di bawah atau kanan.
+
+Tablet:
+
+- KPI strip tetap 2 kolom.
+- Work queue satu kolom.
+- Activity dan risk panel menjadi section terpisah.
+
+Mobile:
+
+- Role summary singkat.
+- Tabs menggunakan grid/scroll segmented yang tidak memicu horizontal page scroll.
+- Overview default berisi cards Region/POP/Device satu kolom.
+- Chart dibuat compact dan bisa dibaca tanpa hover.
+- Queue cards masuk setelah context asset atau tab KPI.
+- Recent activity collapsible.
+
+### Dampak Perubahan
+
+#### Frontend
+
+File utama:
+
+- `app/(app)/dashboard/page.tsx`
+- `components/app-shell.tsx`
+- `components/app-sidebar.tsx`
+- `components/sidebar-smart-tip.tsx`
+
+Dampak:
+
+- Dashboard perlu mendeteksi role dan render template berbeda.
+- Validator perlu diberi akses menu dashboard jika dashboard validator dibuat.
+- Smart tip sidebar perlu menambahkan konteks dashboard.
+- Komponen dashboard sebaiknya dipisah per role agar tidak membuat satu file terlalu panjang.
+
+Komponen yang disarankan:
+
+- `components/dashboard/role-dashboard-shell.tsx`
+- `components/dashboard/superadmin-dashboard.tsx`
+- `components/dashboard/adminregion-dashboard.tsx`
+- `components/dashboard/validator-dashboard.tsx`
+- `components/dashboard/dashboard-metric-card.tsx`
+- `components/dashboard/dashboard-work-queue.tsx`
+- `components/dashboard/dashboard-activity-feed.tsx`
+- `components/dashboard/dashboard-chart-card.tsx`
+- `components/dashboard/dashboard-tabs.tsx`
+
+#### Backend
+
+File yang perlu dicek:
+
+- endpoint existing `/dashboard/summary`
+- endpoint list region
+- endpoint list POP
+- endpoint list device
+- endpoint list device ports
+- endpoint request validation
+- endpoint ODP quality
+- endpoint audit trail
+
+Dampak:
+
+- Tahap awal bisa memakai endpoint existing untuk mock/derived UI.
+- Jika data tidak cukup, tambahkan endpoint summary role-based:
+  - `/dashboard/superadmin`
+  - `/dashboard/adminregion`
+  - `/dashboard/validator`
+- Endpoint baru harus respect region scope dan role permission.
+
+#### UX dan Data Contract
+
+Dampak:
+
+- Dashboard tidak boleh mengubah data.
+- Dashboard hanya read-only summary dan quick navigation.
+- Semua CTA harus menuju halaman yang sudah punya permission guard.
+- Count Region/POP/Device harus konsisten dengan halaman sumber.
+- Queue count harus konsisten dengan halaman request/ODP Quality.
+
+### Todo Role-Based Dashboard
+
+- [x] Audit data yang tersedia dari endpoint existing untuk dashboard.
+- [x] Tentukan apakah endpoint `/dashboard/summary` cukup atau perlu endpoint role-based baru.
+- [x] Definisikan normalized role dashboard: `superadmin`, `adminregion`, `validator`.
+- [x] Tambahkan akses dashboard untuk validator jika dashboard validator disetujui.
+- [x] Buat struktur komponen dashboard per role.
+- [x] Buat shared metric card yang compact dan konsisten dengan shadcn UI.
+- [x] Buat shared work queue card/list untuk pending, rejected, dan issue.
+- [x] Buat dashboard superadmin: approval final, risk, region health, audit watch.
+- [x] Buat dashboard adminregion: regional queue, validation progress, field issue, validator activity.
+- [x] Buat dashboard validator: today task, rejected validation, resume validation, submission status.
+- [x] Tambahkan empty state untuk role yang belum punya data.
+- [x] Tambahkan loading skeleton per section.
+- [x] Tambahkan error state jika summary endpoint gagal.
+- [x] Tambahkan CTA yang menuju request, ODP Quality, List ODP, Field ODP, Audit Trail, dan Trash sesuai role.
+- [x] Update smart tip sidebar untuk konteks dashboard.
+- [x] Pastikan layout desktop tidak terlalu kosong dan mobile tidak scroll horizontal.
+- [x] Jalankan lint file dashboard terkait.
+- [x] Jalankan build atau catat blocker build jika masih ada error lama di halaman lain.
+
+### Todo Revisi Dashboard Region POP Device
+
+- [x] Ubah default dashboard dari workflow queue menjadi tab `Overview` berbasis Region, POP, dan Device.
+- [x] Tambahkan tabs dashboard: `Overview`, `Region`, `POP`, `Device`, `KPI & Workflow`.
+- [x] Audit endpoint list region, POP, device, dan device ports untuk kebutuhan chart.
+- [x] Buat helper agregasi region summary: total region, POP per region, device per region, ODP per region.
+- [x] Buat helper agregasi POP summary: total POP, status POP, device per POP, POP tanpa device jika data cukup.
+- [x] Buat helper agregasi device summary: total device, komposisi device type, status device, ODP validation distribution.
+- [x] Buat helper agregasi port utilization: used, idle, reserved, down, maintenance.
+- [x] Buat komponen chart reusable berbasis CSS/SVG ringan tanpa dependency baru jika memungkinkan.
+- [x] Tambahkan Device Type Donut chart.
+- [x] Tambahkan Device Status Bar chart.
+- [x] Tambahkan POP Distribution Bar chart.
+- [x] Tambahkan ODP Validation Donut chart.
+- [x] Tambahkan Port Utilization Bar chart.
+- [x] Pindahkan approval queue, ODP Quality, rejected request, evidence issue, dan audit activity ke tab `KPI & Workflow`.
+- [x] Sesuaikan dashboard superadmin agar default menonjolkan seluruh region, POP, dan device.
+- [x] Sesuaikan dashboard adminregion agar default menonjolkan region aktif, POP coverage, dan device/ODP health.
+- [x] Sesuaikan dashboard validator agar default menonjolkan region assignment, POP/ODP coverage, dan ODP yang perlu divalidasi.
+- [x] Sederhanakan tabs validator menjadi `Overview`, `POP`, dan `KPI & Workflow`.
+- [x] Redesign overview validator agar fokus pada region scope, POP coverage, ODP queue, rejected validation, dan POP by ODP.
+- [x] Pastikan semua chart punya legend, total, empty state, dan mobile layout yang tidak horizontal scroll.
+- [x] Update smart tip sidebar untuk menjelaskan tab dashboard baru.
+- [x] Jalankan lint dashboard setelah revisi.
+- [x] Jalankan build setelah revisi.
+
+### Todo Terakhir - UAT Dashboard
+
+- [ ] Tab default dashboard adalah `Overview`, bukan queue workflow.
+- [ ] Overview menampilkan informasi Region, POP, dan Device yang berguna.
+- [ ] Chart Device Type Donut tampil dan totalnya sesuai data device.
+- [ ] Chart Device Status Bar tampil dan totalnya sesuai data device.
+- [ ] Chart POP Distribution tampil sesuai scope role.
+- [ ] Chart ODP Validation tampil sesuai scope role.
+- [ ] Chart Port Utilization tampil sesuai data port.
+- [ ] Superadmin melihat queue approval final dan bisa membuka request terkait.
+- [ ] Superadmin melihat indikator risk untuk ODP issue dan audit activity.
+- [ ] Uji role superadmin.
+- [ ] Adminregion hanya melihat data/queue sesuai region scope.
+- [ ] Adminregion bisa membuka pending adminregion dan rejected superadmin dari dashboard.
+- [ ] Uji role adminregion.
+- [ ] Validator melihat queue validasi ODP sesuai scope region.
+- [ ] Validator bisa membuka field validation dari dashboard.
+- [ ] Uji role validator.
+- [ ] Validator hanya melihat tabs `Overview`, `POP`, dan `KPI & Workflow`.
+- [ ] Overview validator menampilkan region scope, POP coverage, ODP queue, rejected validation, dan POP by ODP.
+- [ ] Dashboard validator nyaman di viewport mobile.
+- [ ] Semua CTA menghormati permission role.
+- [ ] Count dashboard konsisten dengan halaman sumber.
+- [ ] Loading state tidak membuat layout lompat berlebihan.
+- [ ] Empty state jelas dan tetap memberi aksi yang relevan.
+- [ ] Tidak ada horizontal scroll di mobile.
+- [ ] Smart tip sidebar berubah sesuai konteks dashboard.
+
+### Keputusan Awal Yang Disarankan
+
+- Revisi berikutnya dimulai dari struktur tabs dan tab default `Overview`.
+- Fokus default dashboard adalah **Region, POP, Device**.
+- KPI workflow tetap dipertahankan, tetapi dipindah ke tab `KPI & Workflow`.
+- Adminregion menjadi role pertama untuk UAT karena region scope paling mudah diverifikasi.
+- Dashboard tahap berikutnya boleh memakai data existing dan derived count dari frontend, tetapi summary final sebaiknya punya endpoint backend khusus agar konsisten dan cepat.

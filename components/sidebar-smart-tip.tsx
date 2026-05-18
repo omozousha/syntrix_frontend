@@ -68,6 +68,22 @@ export function SidebarSmartTip({
 }
 
 function getSmartTips(pathname: string, allowedHrefs: Set<string>) {
+  if (pathname.startsWith("/dashboard") && allowedHrefs.has("/dashboard")) {
+    if (allowedHrefs.has("/requests")) {
+      return [
+        "Tab Overview merangkum Region, POP, dan Device sebelum masuk KPI workflow.",
+        "Gunakan tab Device untuk membaca komposisi asset, status device, dan validasi ODP.",
+        "Pindah ke KPI & Workflow saat perlu review request, issue ODP, atau audit activity.",
+      ];
+    }
+
+    return [
+      "Tab Overview membantu membaca scope region, POP, dan ODP sebelum validasi lapangan.",
+      "Gunakan tab Device untuk melihat status ODP dan distribusi validasi.",
+      "Pindah ke KPI & Workflow untuk membuka tugas validasi dan rejected submission.",
+    ];
+  }
+
   if (pathname.startsWith("/requests") && allowedHrefs.has("/requests")) {
     return [
       "Review request sesuai tahap approval aktif sebelum perubahan masuk data utama.",

@@ -95,7 +95,6 @@ export function ProtectedLayoutClient({ children }: { children: React.ReactNode 
 
     if (me.role === "user_region") {
       const validatorBlockedPaths = [
-        "/dashboard",
         "/validation-requests",
         "/requests",
         "/data-management/as-built",
