@@ -1,85 +1,59 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AppLoading } from "@/components/app-loading-new";
-import { SimpleTable } from "@/components/simple-table";
+import { MapPinned, RadioTower, Route, ShieldCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useSession } from "@/components/session-context";
-import { apiFetch, type PopsListResponse } from "@/lib/api";
+
+const MAP_FEATURES = [
+  {
+    title: "Asset Coverage",
+    description: "Visualisasi region, POP, ODP, dan perangkat jaringan pada peta operasional.",
+    icon: RadioTower,
+  },
+  {
+    title: "Route Context",
+    description: "Konteks jalur, koneksi, dan area layanan untuk membantu inspeksi lapangan.",
+    icon: Route,
+  },
+  {
+    title: "Role Scope",
+    description: "Tampilan peta akan mengikuti akses region dan role masing-masing user.",
+    icon: ShieldCheck,
+  },
+];
 
 export default function MapsPage() {
-  const { token, me } = useSession();
-  const [pops, setPops] = useState<PopsListResponse["data"]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      setLoading(true);
-      setError("");
-      try {
-        const singleRegionScope =
-          me.role === "user_region" && me.app_user.user_region_scopes?.length === 1
-            ? me.app_user.user_region_scopes[0]?.region_id
-            : "";
-        const scopeQuery = singleRegionScope ? `&region_id=${encodeURIComponent(singleRegionScope)}` : "";
-        const result = await apiFetch<PopsListResponse>(`/pops?page=1&limit=20${scopeQuery}`, { token });
-        if (cancelled) return;
-        setPops(result.data || []);
-      } catch (err) {
-        if (cancelled) return;
-        setError((err as Error).message || "Gagal memuat data maps.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [token, me]);
-
   return (
     <ScrollArea className="h-full min-h-0 w-full">
-      <div className="space-y-4 pr-3">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Maps</h2>
-        <p className="text-sm text-muted-foreground">Klik POP untuk membuka pencarian di OpenStreetMap.</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>POP Map Links</CardTitle>
-          <CardDescription>List POP yang bisa dibuka langsung di OpenStreetMap.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <AppLoading label="Sedang memuat data POP untuk peta..." />
-          ) : error ? (
-            <AppLoading label={error} />
-          ) : (
-            <SimpleTable
-              headers={["POP", "Status", "OpenStreetMap"]}
-              rows={pops.map((item) => [
-                item.pop_name,
-                item.status_pop,
-                <a
-                  key={item.id}
-                  href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(item.pop_name)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary underline"
-                >
-                  Open Map
-                </a>,
-              ])}
-            />
-          )}
-        </CardContent>
-      </Card>
+      <div className="flex min-h-full items-center justify-center pr-3">
+        <div className="w-full max-w-4xl space-y-4">
+          <Card className="overflow-hidden border-primary/20 bg-primary/5">
+            <CardHeader className="space-y-3 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <MapPinned className="size-6" />
+              </div>
+              <div className="space-y-2">
+                <Badge variant="secondary" className="mx-auto w-fit">
+                  Coming Soon
+                </Badge>
+                <CardTitle className="text-2xl">Maps Workspace</CardTitle>
+                <CardDescription className="mx-auto max-w-2xl">
+                  Halaman peta sedang disiapkan sebagai workspace visual untuk membaca sebaran asset, coverage region, dan konteks lapangan.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-3 p-4 pt-0 md:grid-cols-3">
+              {MAP_FEATURES.map((feature) => (
+                <div key={feature.title} className="rounded-lg border bg-background p-3">
+                  <feature.icon className="mb-3 size-5 text-primary" />
+                  <p className="text-sm font-medium">{feature.title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{feature.description}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </ScrollArea>
   );
