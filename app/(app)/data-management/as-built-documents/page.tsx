@@ -287,7 +287,7 @@ export default function AsBuiltDocumentsPage() {
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4 pt-0">
             {loading ? <AppLoading label="Memuat daftar as-built documents..." /> : null}
-            {!loading && error ? <AppLoading label={error} /> : null}
+            {!loading && error ? <AppLoading label={error} variant="error" /> : null}
             {!loading && actionSuccess ? <p className="text-sm text-emerald-600">{actionSuccess}</p> : null}
             {!loading && actionError ? <p className="text-sm text-destructive">{actionError}</p> : null}
             {!loading && !error ? (

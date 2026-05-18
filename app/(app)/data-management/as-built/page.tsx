@@ -644,7 +644,7 @@ export default function AsBuiltWorkspacePage() {
               <AppLoading label="Belum ada start device. Buka dari list device lalu jalankan Trace Device agar konteks terbawa otomatis." />
             ) : null}
             {loading ? <AppLoading label="Menyiapkan data trace untuk as-built..." /> : null}
-            {!loading && error ? <AppLoading label={error} /> : null}
+            {!loading && error ? <AppLoading label={error} variant="error" /> : null}
             {publishMessage ? <p className="text-sm text-emerald-600">{publishMessage}</p> : null}
             {publishError ? <p className="text-sm text-destructive">{publishError}</p> : null}
             {saveMessage ? <p className="text-sm text-emerald-600">{saveMessage}</p> : null}

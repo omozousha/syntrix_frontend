@@ -253,7 +253,7 @@ export default function AuditTrailPage() {
             {loading ? (
               <AppLoading label="Sedang memuat audit trail..." />
             ) : error ? (
-              <AppLoading label={error} />
+              <AppLoading label={error} variant="error" />
             ) : (
               <SimpleTable
                 headers={headers}

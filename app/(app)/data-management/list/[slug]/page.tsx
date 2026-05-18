@@ -1024,7 +1024,7 @@ export default function DataManagementListPage() {
             {loading ? (
               <AppLoading label="Sedang memuat data list..." />
             ) : error ? (
-              <AppLoading label={error} />
+              <AppLoading label={error} variant="error" />
             ) : (
               <>
                 <div className="space-y-2 md:hidden">

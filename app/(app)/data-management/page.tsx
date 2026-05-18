@@ -653,7 +653,7 @@ export default function DataManagementPage() {
         </div>
 
         {loading ? <SummaryLoading /> : null}
-        {!loading && error ? <AppLoading label={error} /> : null}
+        {!loading && error ? <AppLoading label={error} variant="error" /> : null}
 
         {!loading && !error ? (
           <div className="space-y-3">
@@ -944,7 +944,7 @@ export default function DataManagementPage() {
                 </div>
 
                 {qualityError ? (
-                  <AppLoading label={qualityError} />
+                  <AppLoading label={qualityError} variant="error" />
                 ) : qualityLoading && activeQualityKpis.length === 0 ? (
                   <QualityLoading />
                 ) : (

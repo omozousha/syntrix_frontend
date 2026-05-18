@@ -3,51 +3,87 @@
 export function AppLoading({
   label = "Sedang memuat data...",
   fullscreen = false,
+  variant = "loading",
 }: {
   label?: string;
   fullscreen?: boolean;
+  variant?: "loading" | "empty" | "error";
 }) {
+  const isLoading = variant === "loading";
+
   return (
     <div
       className={fullscreen
-        ? "relative flex min-h-dvh items-center justify-center bg-background"
-        : "relative flex min-h-28 items-center justify-center rounded-lg border bg-card"
+        ? "relative flex min-h-dvh items-center justify-center bg-background px-4"
+        : "relative flex min-h-28 items-center justify-center rounded-lg border bg-card px-4 py-6"
       }
       role="status"
       aria-live="polite"
     >
-      <div className="loader-wrap">
-        <div className="loader-container">
-          <div className="dash first" />
-          <div className="dash second" />
-          <div className="dash third" />
-          <div className="dash fourth" />
+      <div className="flex w-full max-w-sm flex-col items-center text-center">
+        <div className={`loader-shell ${variant}`}>
+          {isLoading ? (
+            <div className="loader-container" aria-hidden="true">
+              <span className="dash first" />
+              <span className="dash second" />
+              <span className="dash third" />
+              <span className="dash fourth" />
+            </div>
+          ) : (
+            <span className="state-dot" aria-hidden="true" />
+          )}
         </div>
-        <p className="mt-5 text-sm text-muted-foreground">{label}</p>
+        <p className={`mt-4 text-sm leading-relaxed ${variant === "error" ? "text-destructive" : "text-muted-foreground"}`}>{label}</p>
       </div>
       <span className="sr-only">{label}</span>
       <style jsx>{`
-        .loader-wrap {
+        .loader-shell {
           display: flex;
-          flex-direction: column;
+          min-height: 36px;
           align-items: center;
+          justify-content: center;
         }
 
         .loader-container {
           display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .dash {
-          margin: 0 15px;
-          width: 35px;
-          height: 15px;
-          border-radius: 8px;
-          background: rgb(82, 159, 246);
-          box-shadow: rgb(82, 159, 246) 0 0 15px 0;
+          margin: 0 10px;
+          width: 28px;
+          height: 10px;
+          border-radius: 999px;
+          background: var(--primary);
+          box-shadow: 0 0 14px color-mix(in oklch, var(--primary) 35%, transparent);
+        }
+
+        .state-dot {
+          width: 34px;
+          height: 34px;
+          border-radius: 999px;
+          border: 1px solid var(--border);
+          background:
+            radial-gradient(circle at center, var(--background) 0 38%, transparent 39%),
+            conic-gradient(var(--muted-foreground) 0deg 360deg);
+        }
+
+        .loader-shell.empty .state-dot {
+          background:
+            radial-gradient(circle at center, var(--background) 0 38%, transparent 39%),
+            conic-gradient(color-mix(in oklch, var(--muted-foreground) 35%, transparent) 0deg 360deg);
+        }
+
+        .loader-shell.error .state-dot {
+          border-color: color-mix(in oklch, var(--destructive) 30%, transparent);
+          background:
+            radial-gradient(circle at center, var(--background) 0 38%, transparent 39%),
+            conic-gradient(var(--destructive) 0deg 360deg);
         }
 
         .first {
-          margin-right: -18px;
+          margin-right: -12px;
           transform-origin: center left;
           animation: spin 3s linear infinite;
         }
@@ -110,6 +146,12 @@ export function AppLoading({
           65% { transform: rotate(-370deg); }
           75% { transform: rotate(-360deg); }
           100% { transform: rotate(-360deg); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .dash {
+            animation: none;
+          }
         }
       `}</style>
     </div>

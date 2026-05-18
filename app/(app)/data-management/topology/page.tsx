@@ -643,7 +643,7 @@ export default function TopologyWorkspacePage() {
             {loading ? (
               <AppLoading label="Memuat topology quality..." />
             ) : error ? (
-              <AppLoading label={error} />
+              <AppLoading label={error} variant="error" />
             ) : (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 <MetricCard label="Total Ports" value={quality?.metrics.total_ports ?? 0} />

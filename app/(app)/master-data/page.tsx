@@ -174,7 +174,7 @@ export default function MasterDataPage() {
         </Card>
 
         {loading ? <AppLoading label="Memuat ringkasan master data..." /> : null}
-        {!loading && error ? <AppLoading label={error} /> : null}
+        {!loading && error ? <AppLoading label={error} variant="error" /> : null}
 
         {!loading && !error ? (
           <>
