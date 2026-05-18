@@ -60,13 +60,19 @@ export const DATA_CATEGORIES: DataCategory[] = [
 export const ASSET_DATA_CATEGORIES = DATA_CATEGORIES.filter((item) => item.group !== "master");
 export const MASTER_DATA_CATEGORIES = DATA_CATEGORIES.filter((item) => item.group === "master");
 
+const RESERVED_ASSET_SLUGS = new Set(["pop", "pole", "customer", "route", "projects"]);
+const dynamicDeviceCategoryCache = new Map<string, DataCategory>();
+
 export function getCategoryBySlug(slug: string) {
   const found = DATA_CATEGORIES.find((item) => item.slug === slug);
   if (found) return found;
 
   // Fallback for dynamic device types stored in device_type_catalog.
   // Example: `xgspon` => device_type_key `XGSPON`
-  if (!slug.startsWith("master-") && slug !== "pop" && slug !== "pole" && slug !== "customer" && slug !== "route" && slug !== "projects") {
+  if (!slug.startsWith("master-") && !RESERVED_ASSET_SLUGS.has(slug)) {
+    const cached = dynamicDeviceCategoryCache.get(slug);
+    if (cached) return cached;
+
     const normalized = slug.trim().replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "");
     if (normalized) {
       const label = normalized
@@ -74,7 +80,7 @@ export function getCategoryBySlug(slug: string) {
         .filter(Boolean)
         .map((part) => (part.length <= 3 ? part.toUpperCase() : part[0].toUpperCase() + part.slice(1).toLowerCase()))
         .join(" ");
-      return {
+      const category = {
         slug,
         label: label || slug.toUpperCase(),
         description: "Dynamic device type",
@@ -82,6 +88,9 @@ export function getCategoryBySlug(slug: string) {
         deviceTypeKey: normalized.toUpperCase(),
         group: "asset",
       } as DataCategory;
+
+      dynamicDeviceCategoryCache.set(slug, category);
+      return category;
     }
   }
 
@@ -95,6 +104,7 @@ export function buildCategoryApiPath(
     limit?: number;
     q?: string;
     regionScopeId?: string;
+    popId?: string;
   },
 ) {
   const query = new URLSearchParams();
@@ -103,6 +113,7 @@ export function buildCategoryApiPath(
 
   if (options?.q?.trim()) query.set("q", options.q.trim());
   if (options?.regionScopeId) query.set("region_id", options.regionScopeId);
+  if (options?.popId) query.set("pop_id", options.popId);
   if (category.deviceTypeKey) query.set("device_type_key", category.deviceTypeKey);
 
   return `/${category.resource}?${query.toString()}`;

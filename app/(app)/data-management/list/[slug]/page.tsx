@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
 import { SimpleTable } from "@/components/simple-table";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +45,6 @@ import { ContextMenuItem, ContextMenuLabel, ContextMenuSeparator } from "@/compo
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Sheet,
@@ -67,6 +67,7 @@ type GenericItem = Record<string, unknown> & {
 };
 
 type LookupOption = { id: string; label: string };
+type PopFilterOption = LookupOption & { regionId: string };
 type ApprovalResponse = {
   approval_request?: {
     request_id?: string | null;
@@ -115,8 +116,9 @@ export default function DataManagementListPage() {
   const params = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
   const queryString = searchParams.toString();
+  const popQueryParam = searchParams.get("pop_id") || "__all";
   const slug = (params?.slug || "").toLowerCase();
-  const category = getCategoryBySlug(slug);
+  const category = useMemo(() => getCategoryBySlug(slug), [slug]);
   const { token, me } = useSession();
 
   const [rows, setRows] = useState<GenericItem[]>([]);
@@ -125,6 +127,8 @@ export default function DataManagementListPage() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [provinceFilter, setProvinceFilter] = useState(searchParams.get("province_id") || "__all");
+  const [popFilterOptions, setPopFilterOptions] = useState<PopFilterOption[]>([]);
+  const [popFilterLoading, setPopFilterLoading] = useState(true);
   const [archiveView, setArchiveView] = useState<"active" | "archived" | "all">("active");
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -182,10 +186,59 @@ export default function DataManagementListPage() {
   const canCreateMaster = canWrite && isMasterCategory && me.role === "admin";
   const canBulkToggleStatus = supportsIsActiveResource(category?.resource || "");
   const isSoftDeleteResource = supportsSoftDeleteResource(category?.resource || "");
+  const isDeviceCategory = category?.resource === "devices";
   const isOdpCategory = category?.resource === "devices" && String(category?.deviceTypeKey || "").toUpperCase() === "ODP";
   const renameConfig = getRenameConfig(category?.resource || "");
   const createDefaults = useMemo(() => getCreateDefaults(category?.resource || ""), [category?.resource]);
   const [activeTab, setActiveTab] = useState<"list" | "quality">("list");
+  const selectedPopLabel = useMemo(
+    () => popFilterOptions.find((option) => option.id === popQueryParam)?.label || "",
+    [popQueryParam, popFilterOptions],
+  );
+  const popLabelById = useMemo(
+    () =>
+      popFilterOptions.reduce<Record<string, string>>((accumulator, option) => {
+        accumulator[option.id] = option.label;
+        return accumulator;
+      }, {}),
+    [popFilterOptions],
+  );
+  const filterGridClass =
+    isDeviceCategory
+      ? "sm:grid-cols-2 lg:grid-cols-5"
+      : category?.resource === "cities" || isSoftDeleteResource
+      ? "sm:grid-cols-4"
+      : "sm:grid-cols-3";
+  const applyPopFilter = useCallback(
+    (nextValue: string) => {
+      setSelectedIds(new Set());
+      setPage(1);
+
+      const nextParams = new URLSearchParams(queryString);
+      if (nextValue && nextValue !== "__all") nextParams.set("pop_id", nextValue);
+      else nextParams.delete("pop_id");
+
+      const nextQuery = nextParams.toString();
+      if (nextQuery === queryString) return;
+      router.replace(`/data-management/list/${slug}${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
+    },
+    [queryString, router, slug],
+  );
+  const resetListFilters = useCallback(() => {
+    setSearch("");
+    setSearchInput("");
+    setProvinceFilter("__all");
+    setArchiveView("active");
+    setSelectedIds(new Set());
+    setPage(1);
+
+    const nextParams = new URLSearchParams(queryString);
+    nextParams.delete("pop_id");
+    nextParams.delete("province_id");
+    const nextQuery = nextParams.toString();
+    if (nextQuery === queryString) return;
+    router.replace(`/data-management/list/${slug}${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
+  }, [queryString, router, slug]);
 
   useEffect(() => {
     if (!category) return;
@@ -201,6 +254,7 @@ export default function DataManagementListPage() {
           limit,
           q: search,
           regionScopeId: effectiveRegionScopeId,
+          popId: isDeviceCategory && popQueryParam !== "__all" ? popQueryParam : undefined,
         });
         let path =
           activeCategory.resource === "cities" && provinceFilter !== "__all"
@@ -233,7 +287,54 @@ export default function DataManagementListPage() {
     return () => {
       cancelled = true;
     };
-  }, [category, token, page, limit, search, effectiveRegionScopeId, provinceFilter, refreshSeed, archiveView, isSoftDeleteResource]);
+  }, [category, token, page, limit, search, effectiveRegionScopeId, provinceFilter, refreshSeed, archiveView, isSoftDeleteResource, isDeviceCategory, popQueryParam]);
+
+  useEffect(() => {
+    if (!isDeviceCategory) {
+      setPopFilterOptions([]);
+      setPopFilterLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadPopFilterOptions() {
+      setPopFilterLoading(true);
+      try {
+        const query = new URLSearchParams({ page: "1", limit: "500" });
+        if (effectiveRegionScopeId) query.set("region_id", effectiveRegionScopeId);
+        const result = await apiFetch<PaginatedResponse<GenericItem>>(`/pops?${query.toString()}`, { token });
+        if (cancelled) return;
+        setPopFilterOptions(
+          (result.data || []).map((item) => ({
+            id: String(item.id),
+            label: [item.pop_name, item.pop_code || item.pop_id].filter(Boolean).join(" | ") || String(item.id),
+            regionId: String(item.region_id || ""),
+          })),
+        );
+      } catch {
+        if (!cancelled) setPopFilterOptions([]);
+      } finally {
+        if (!cancelled) setPopFilterLoading(false);
+      }
+    }
+
+    void loadPopFilterOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveRegionScopeId, isDeviceCategory, token]);
+
+  useEffect(() => {
+    if (!isDeviceCategory || popQueryParam === "__all" || popFilterLoading) return;
+    const selectedPop = popFilterOptions.find((option) => option.id === popQueryParam);
+    if (!selectedPop) {
+      applyPopFilter("__all");
+      return;
+    }
+    if (effectiveRegionScopeId && selectedPop.regionId && selectedPop.regionId !== effectiveRegionScopeId) {
+      applyPopFilter("__all");
+    }
+  }, [applyPopFilter, effectiveRegionScopeId, isDeviceCategory, popQueryParam, popFilterLoading, popFilterOptions]);
 
   useEffect(() => {
     if (!createOpen) return;
@@ -411,7 +512,7 @@ export default function DataManagementListPage() {
   const headers = useMemo(() => {
     if (!category) return [];
     if (category.resource === "pops") return [selectAllHeader, "POP ID", "Code", "Name", "Status", "Updated"];
-    if (category.resource === "devices") return [selectAllHeader, "Device ID", "Name", "Type", "Status", "Validation", "Updated"];
+    if (category.resource === "devices") return [selectAllHeader, "Device ID", "Name", "Type", "POP", "Status", "Validation", "Updated"];
     if (category.resource === "poles") return [selectAllHeader, "Pole ID", "Pole Number", "Region", "Status", "Updated"];
     if (category.resource === "customers") return [selectAllHeader, "CID", "Name", "Service", "Status", "Updated"];
     if (category.resource === "routes") return [selectAllHeader, "Route ID", "Route Name", "Region", "Status", "Updated"];
@@ -471,6 +572,7 @@ export default function DataManagementListPage() {
           pick(item, ["device_id"]),
           pick(item, ["device_name", "name"]),
           pick(item, ["device_type_key"]),
+          resolveRelationName(item.pop_id, popLabelById),
           pick(item, ["status"]),
           <span key={`validation-${item.id}`} className={`inline-flex rounded border px-2 py-0.5 text-xs ${validation.className}`}>{validation.label}</span>,
           formatDateTime(pick(item, ["updated_at", "created_at"])),
@@ -644,7 +746,7 @@ export default function DataManagementListPage() {
         formatDateTime(pick(item, ["updated_at", "created_at"])),
       ];
     });
-  }, [category, rows, selectedIds, relationMaps]);
+  }, [category, rows, selectedIds, relationMaps, popLabelById]);
 
   const selectedRowIndices = useMemo(() => {
     const set = new Set<number>();
@@ -867,7 +969,7 @@ export default function DataManagementListPage() {
 
   if (!category) {
     return (
-      <ScrollArea className="h-full min-h-0 w-full">
+      <div className="h-full min-h-0 w-full overflow-auto">
         <div className="space-y-3 pr-3">
           <p className="text-sm text-destructive">Kategori tidak ditemukan.</p>
           <Button asChild variant="outline">
@@ -877,12 +979,12 @@ export default function DataManagementListPage() {
             </Link>
           </Button>
         </div>
-      </ScrollArea>
+      </div>
     );
   }
 
   return (
-    <ScrollArea className="h-full min-h-0 w-full">
+    <div className="h-full min-h-0 w-full overflow-auto">
       <div className="space-y-4 pr-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
@@ -921,7 +1023,10 @@ export default function DataManagementListPage() {
         <Card>
           <CardHeader>
             <CardTitle>Data {category.label}</CardTitle>
-            <CardDescription>Total data: {total}. Klik kanan pada baris untuk aksi cepat.</CardDescription>
+            <CardDescription>
+              Total data: {total}. Klik kanan pada baris untuk aksi cepat.
+              {isDeviceCategory && popQueryParam !== "__all" && selectedPopLabel ? ` Filter POP: ${selectedPopLabel}.` : ""}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
@@ -962,7 +1067,7 @@ export default function DataManagementListPage() {
                 </Button>
               </div>
             </div>
-            <div className={`grid grid-cols-1 gap-3 ${category.resource === "cities" || isSoftDeleteResource ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+            <div className={`grid grid-cols-1 gap-3 ${filterGridClass}`}>
               <Input
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
@@ -984,6 +1089,23 @@ export default function DataManagementListPage() {
                     ...Object.entries(relationMaps.provinces)
                       .sort((a, b) => a[1].localeCompare(b[1], "id"))
                       .map(([id, name]) => ({ value: id, label: name })),
+                  ]}
+                />
+              ) : null}
+              {isDeviceCategory ? (
+                <Combobox
+                  value={popQueryParam}
+                  onValueChange={applyPopFilter}
+                  placeholder={popFilterLoading ? "Memuat POP..." : "Filter POP"}
+                  searchPlaceholder="Cari POP..."
+                  emptyText={effectiveRegionScopeId ? "Tidak ada POP pada region ini." : "Tidak ada POP."}
+                  disabled={popFilterLoading}
+                  options={[
+                    { value: "__all", label: effectiveRegionScopeId ? "Semua POP di region ini" : "Semua POP" },
+                    ...popFilterOptions
+                      .slice()
+                      .sort((a, b) => a.label.localeCompare(b.label, "id"))
+                      .map((option) => ({ value: option.id, label: option.label })),
                   ]}
                 />
               ) : null}
@@ -1025,16 +1147,32 @@ export default function DataManagementListPage() {
               >
                 Terapkan Filter
               </Button>
+              <Button type="button" variant="outline" onClick={resetListFilters}>
+                Reset
+              </Button>
             </div>
 
             {success ? (
               <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-700">{success}</p>
+            ) : null}
+            {isDeviceCategory && popQueryParam !== "__all" && selectedPopLabel ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="font-normal">
+                  POP: {selectedPopLabel}
+                </Badge>
+              </div>
             ) : null}
 
             {loading ? (
               <AppLoading label="Sedang memuat data list..." />
             ) : error ? (
               <AppLoading label={error} variant="error" />
+            ) : rows.length === 0 ? (
+              <p className="rounded-md border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                {isDeviceCategory && popQueryParam !== "__all" && selectedPopLabel
+                  ? `Tidak ada ${category.label} pada POP ${selectedPopLabel}.`
+                  : "Tidak ada data pada filter saat ini."}
+              </p>
             ) : (
               <>
                 <div className="space-y-2 md:hidden">
@@ -1076,6 +1214,11 @@ export default function DataManagementListPage() {
                           <span>Status: {pick(row, ["status", "status_pop", "is_active"]) || "-"}</span>
                           <span>{formatDateTime(pick(row, ["updated_at", "created_at"]))}</span>
                         </div>
+                        {category?.resource === "devices" ? (
+                          <p className="mt-1 truncate text-xs text-muted-foreground">
+                            POP: {resolveRelationName(row.pop_id, popLabelById)}
+                          </p>
+                        ) : null}
                         <div className={`mt-3 grid gap-2 ${isOdpCategory && canTraceTopology ? "grid-cols-2" : "grid-cols-1"}`}>
                           <Button type="button" variant="outline" size="sm" onClick={() => router.push(getDetailHref(row.id))}>
                             <Eye className="mr-1.5 size-3.5" />
@@ -1325,7 +1468,7 @@ export default function DataManagementListPage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
-    </ScrollArea>
+    </div>
   );
 }
 

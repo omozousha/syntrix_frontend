@@ -94,9 +94,17 @@ function getSmartTips(pathname: string, allowedHrefs: Set<string>) {
 
   if (pathname.startsWith("/data-management/list/odp") && allowedHrefs.has("/data-management/list/odp")) {
     return [
-      "Cek detail ODP, histori validasi, dan status port sebelum mengambil aksi lanjutan.",
+      "Gunakan filter POP untuk membatasi ODP sesuai titik interkoneksi yang sedang diaudit.",
       "Pastikan tipe ODP dan jenis instalasi sudah sesuai format data terbaru.",
       "Gunakan histori validasi untuk membaca evidence dan keputusan reviewer terakhir.",
+    ];
+  }
+
+  if (pathname.startsWith("/data-management/list/") && allowedHrefs.has("/data-management")) {
+    return [
+      "Gunakan filter POP untuk melihat device berdasarkan titik interkoneksi operasional.",
+      "Kombinasikan pencarian, region scope, dan POP agar audit device lebih presisi.",
+      "Jika data kosong, reset filter atau cek apakah device memang belum terhubung ke POP tersebut.",
     ];
   }
 
