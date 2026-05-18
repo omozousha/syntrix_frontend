@@ -42,6 +42,21 @@ type ProjectOption = {
   region_id?: string | null;
   pop_id?: string | null;
 };
+type CustomerOption = {
+  id: string;
+  customer_name: string;
+  customer_id?: string | null;
+  customer_number?: string | null;
+  region_id?: string | null;
+  pop_id?: string | null;
+  address?: string | null;
+  province?: string | null;
+  province_id?: string | null;
+  city?: string | null;
+  city_id?: string | null;
+  longitude?: number | string | null;
+  latitude?: number | string | null;
+};
 type PopTypeOption = { id: string; pop_type_name: string; pop_type_code?: string | null };
 type RouteTypeOption = { id: string; route_type_name: string; route_type_code?: string | null };
 type ProvinceOption = { id: string; province_name: string };
@@ -150,6 +165,7 @@ export default function CreateDataManagementPage() {
   const [regions, setRegions] = useState<RegionsListResponse["data"]>([]);
   const [pops, setPops] = useState<PopOption[]>([]);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [popTypes, setPopTypes] = useState<PopTypeOption[]>([]);
   const [routeTypes, setRouteTypes] = useState<RouteTypeOption[]>([]);
   const [provinces, setProvinces] = useState<ProvinceOption[]>([]);
@@ -206,6 +222,7 @@ export default function CreateDataManagementPage() {
     asset_group: PASSIVE_TYPES.has(deviceType) ? "passive" : "active",
     installation_date: "",
     pop_id: "",
+    customer_id: "",
     manufacturer_id: "",
     brand_id: "",
     model_id: "",
@@ -249,6 +266,7 @@ export default function CreateDataManagementPage() {
   );
   const isFixedRegionRole = me.role === "user_all_region" || me.role === "user_region";
   const selectedRegionLabel = regions.find((region) => region.id === form.region_id)?.region_name || "-";
+  const isOntDevice = isDevice && form.device_type_key === "ONT";
 
   useEffect(() => {
     let cancelled = false;
@@ -258,12 +276,14 @@ export default function CreateDataManagementPage() {
         const needsPops = isDevice || isRoute || isProject || isCustomer;
         const needsProjects = isRoute || isCustomer;
         const needsDeviceMasterData = isDevice;
+        const needsOntCustomerLookup = isDevice && deviceType === "ONT";
         const needsCustomerMasterData = isCustomer;
 
-        const [regionsRes, popsRes, projectsRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, serviceTypesRes, splitterProfilesRes] = await Promise.all([
+        const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, serviceTypesRes, splitterProfilesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
           optionalPaginatedRequest<PopOption>(needsPops, () => apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token })),
           optionalPaginatedRequest<ProjectOption>(needsProjects, () => apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token })),
+          optionalPaginatedRequest<CustomerOption>(needsOntCustomerLookup, () => apiFetch<PaginatedResponse<CustomerOption>>("/customers?page=1&limit=500", { token })),
           optionalPaginatedRequest<PopTypeOption>(isPop, () => apiFetch<PaginatedResponse<PopTypeOption>>("/popTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<RouteTypeOption>(isRoute, () => apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token })),
           apiFetch<PaginatedResponse<ProvinceOption>>("/provinces?page=1&limit=500&is_active=true", { token }),
@@ -287,6 +307,7 @@ export default function CreateDataManagementPage() {
         setRegions(nextRegions);
         setPops(popsRes.data || []);
         setProjects(projectsRes.data || []);
+        setCustomers(customersRes.data || []);
         setPopTypes(popTypesRes.data || []);
         setRouteTypes(routeTypesRes.data || []);
         setProvinces(provincesRes.data || []);
@@ -314,7 +335,7 @@ export default function CreateDataManagementPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, me.role, scopeRegionIds, isCustomer, isDevice, isPop, isProject, isRoute]);
+  }, [token, me.role, scopeRegionIds, deviceType, isCustomer, isDevice, isPop, isProject, isRoute]);
 
   useEffect(() => {
     let cancelled = false;
@@ -366,7 +387,7 @@ export default function CreateDataManagementPage() {
   }, [token, isPop, isDevice, form.region_id, form.pop_type, form.device_type_key]);
 
   const showCoreFields = isDevice && CORE_TYPES.has(form.device_type_key);
-  const showPortFields = isDevice && PORT_TYPES.has(form.device_type_key);
+  const showPortFields = isDevice && PORT_TYPES.has(form.device_type_key) && form.device_type_key !== "ONT";
   const showSplitterField = isDevice && form.device_type_key === "ODP";
   const selectedSplitterProfile = useMemo(
     () => splitterProfiles.find((item) => item.ratio_label === form.splitter_ratio) || null,
@@ -766,6 +787,7 @@ export default function CreateDataManagementPage() {
         asset_group: PASSIVE_TYPES.has(form.device_type_key) ? "passive" : "active",
         region_id: form.region_id,
         pop_id: nullIfEmpty(form.pop_id),
+        customer_id: isOntDevice ? nullIfEmpty(form.customer_id) : null,
         manufacturer_id: nullIfEmpty(form.manufacturer_id),
         brand_id: nullIfEmpty(form.brand_id),
         model_id: nullIfEmpty(form.model_id),
@@ -970,7 +992,7 @@ export default function CreateDataManagementPage() {
                   <FieldLabel label="POP (opsional)" tooltip="Hubungkan device ke POP jika perangkat berada di POP tertentu." />
                   <Combobox
                     value={form.pop_id || "__none__"}
-                    onValueChange={(v) => setForm((p) => ({ ...p, pop_id: v === "__none__" ? "" : v }))}
+                    onValueChange={(v) => setForm((p) => ({ ...p, pop_id: v === "__none__" ? "" : v, customer_id: "" }))}
                     options={toOptions([
                       { value: "__none__", label: "None" },
                       ...pops
@@ -984,6 +1006,48 @@ export default function CreateDataManagementPage() {
                     searchPlaceholder="Cari POP..."
                   />
                 </div>
+                {isOntDevice ? (
+                  <div className="space-y-1.5">
+                    <FieldLabel label="Customer Reference (opsional)" tooltip="Hubungkan ONT ke customer existing. Relasi ini opsional dan bisa diubah lagi dari detail asset." />
+                    <Combobox
+                      value={form.customer_id || "__none__"}
+                      onValueChange={(value) => {
+                        if (value === "__none__") {
+                          setForm((p) => ({ ...p, customer_id: "" }));
+                          return;
+                        }
+                        const selectedCustomer = customers.find((customer) => customer.id === value) || null;
+                        setForm((p) => ({
+                          ...p,
+                          customer_id: value,
+                          region_id: selectedCustomer?.region_id || p.region_id,
+                          pop_id: selectedCustomer?.pop_id || p.pop_id,
+                          address: selectedCustomer?.address || p.address,
+                          province: selectedCustomer?.province || p.province,
+                          province_id: selectedCustomer?.province_id || p.province_id,
+                          city: selectedCustomer?.city || p.city,
+                          city_id: selectedCustomer?.city_id || p.city_id,
+                          longitude: valueToFormText(selectedCustomer?.longitude) || p.longitude,
+                          latitude: valueToFormText(selectedCustomer?.latitude) || p.latitude,
+                        }));
+                      }}
+                      options={toOptions([
+                        { value: "__none__", label: "Tanpa customer" },
+                        ...customers
+                          .filter((customer) => !form.region_id || !customer.region_id || customer.region_id === form.region_id)
+                          .map((customer) => ({
+                            value: customer.id,
+                            label: [
+                              customer.customer_name,
+                              customer.customer_number ? `CID ${customer.customer_number}` : customer.customer_id,
+                            ].filter(Boolean).join(" - ") || customer.id,
+                          })),
+                      ])}
+                      placeholder="Pilih customer"
+                      searchPlaceholder="Cari customer..."
+                    />
+                  </div>
+                ) : null}
               </>
             ) : null}
 
@@ -2139,6 +2203,11 @@ function getDefaultTooltip(label: string) {
 
 function nullIfEmpty(value: string) {
   return value.trim() ? value.trim() : null;
+}
+
+function valueToFormText(value: unknown) {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
 }
 
 function normalizeValidationPayload(statusRaw: string, dateRaw: string) {

@@ -53,12 +53,15 @@ type CustomerOption = {
   customer_id?: string | null;
   customer_name?: string | null;
   customer_number?: string | null;
+  pop_id?: string | null;
 };
 type OntOption = {
   id: string;
   device_id?: string | null;
   device_name?: string | null;
   device_type_key?: string | null;
+  customer_id?: string | null;
+  pop_id?: string | null;
   region_id?: string | null;
 };
 type PopItem = {
@@ -721,7 +724,13 @@ export default function OdpFieldValidationPage() {
                                 ...prev,
                                 portStatuses: { ...prev.portStatuses, [key]: status },
                               }));
-                              if (port) void updatePort(port, { status });
+                              if (port) {
+                                const changes: Partial<DevicePort> =
+                                  status === "idle"
+                                    ? { status, customer_id: null, ont_device_id: null }
+                                    : { status };
+                                void updatePort(port, changes);
+                              }
                             }}
                             disabled={savingPortId === port?.id}
                             triggerClassName="h-9"
@@ -733,19 +742,35 @@ export default function OdpFieldValidationPage() {
                                 value={port.customer_id || "__none__"}
                                 onValueChange={(value) => {
                                   const customerId = value === "__none__" ? null : value;
-                                  const changes: Partial<DevicePort> = { customer_id: customerId };
-                                  if (customerId) changes.status = "used";
-                                  if (!customerId && !port.ont_device_id) changes.status = "idle";
+                                  const linkedOnt = customerId ? findOntForCustomer(ontDevices, customerId, device?.pop_id, port.ont_device_id) : null;
+                                  const currentOnt = port.ont_device_id
+                                    ? ontDevices.find((item) => item.id === port.ont_device_id) || null
+                                    : null;
+                                  const currentOntMatchesCustomer =
+                                    currentOnt?.customer_id &&
+                                    customerId &&
+                                    currentOnt.customer_id === customerId &&
+                                    isSamePop(currentOnt.pop_id, device?.pop_id);
+                                  const changes: Partial<DevicePort> = {
+                                    customer_id: customerId,
+                                    ont_device_id: customerId
+                                      ? linkedOnt?.id || (currentOntMatchesCustomer ? port.ont_device_id : null)
+                                      : port.ont_device_id || null,
+                                  };
+                                  if (customerId || changes.ont_device_id) changes.status = "used";
+                                  if (!customerId && !changes.ont_device_id) changes.status = "idle";
                                   void updatePort(port, changes);
                                 }}
                                 disabled={savingPortId === port.id}
                                 triggerClassName="h-9"
                                 options={[
                                   { value: "__none__", label: "Tanpa customer" },
-                                  ...customers.map((item) => ({
-                                    value: item.id,
-                                    label: [item.customer_name, item.customer_id || item.customer_number].filter(Boolean).join(" - ") || item.id,
-                                  })),
+                                  ...customers
+                                    .filter((item) => isSamePop(item.pop_id, device?.pop_id))
+                                    .map((item) => ({
+                                      value: item.id,
+                                      label: [item.customer_name, item.customer_id || item.customer_number].filter(Boolean).join(" - ") || item.id,
+                                    })),
                                 ]}
                                 searchPlaceholder="Cari customer..."
                               />
@@ -753,9 +778,17 @@ export default function OdpFieldValidationPage() {
                                 value={port.ont_device_id || "__none__"}
                                 onValueChange={(value) => {
                                   const ontDeviceId = value === "__none__" ? null : value;
-                                  const changes: Partial<DevicePort> = { ont_device_id: ontDeviceId };
-                                  if (ontDeviceId) changes.status = "used";
-                                  if (!ontDeviceId && !port.customer_id) changes.status = "idle";
+                                  const selectedOnt = ontDeviceId
+                                    ? ontDevices.find((item) => item.id === ontDeviceId) || null
+                                    : null;
+                                  const changes: Partial<DevicePort> = {
+                                    ont_device_id: ontDeviceId,
+                                    customer_id: selectedOnt && isSamePop(selectedOnt.pop_id, device?.pop_id)
+                                      ? selectedOnt.customer_id || port.customer_id || null
+                                      : port.customer_id || null,
+                                  };
+                                  if (ontDeviceId || changes.customer_id) changes.status = "used";
+                                  if (!ontDeviceId && !changes.customer_id) changes.status = "idle";
                                   void updatePort(port, changes);
                                 }}
                                 disabled={savingPortId === port.id}
@@ -763,7 +796,7 @@ export default function OdpFieldValidationPage() {
                                 options={[
                                   { value: "__none__", label: "Tanpa ONT" },
                                   ...ontDevices
-                                    .filter((item) => !device?.region_id || !item.region_id || item.region_id === device.region_id)
+                                    .filter((item) => isSamePop(item.pop_id, device?.pop_id))
                                     .map((item) => ({
                                       value: item.id,
                                       label: [item.device_name, item.device_id].filter(Boolean).join(" - ") || item.id,
@@ -1783,6 +1816,20 @@ function formatOdpPortLabel(port: DevicePort) {
 function describePortAssignmentState(port: DevicePort) {
   if (port.customer_id || port.ont_device_id) return "Endpoint terhubung";
   return "Belum terhubung customer/ONT";
+}
+
+function isSamePop(candidatePopId?: string | null, odpPopId?: string | null) {
+  const expected = String(odpPopId || "").trim();
+  if (!expected) return false;
+  return String(candidatePopId || "").trim() === expected;
+}
+
+function findOntForCustomer(ontDevices: OntOption[], customerId: string, odpPopId?: string | null, preferredOntId?: string | null) {
+  if (preferredOntId) {
+    const preferred = ontDevices.find((item) => item.id === preferredOntId && item.customer_id === customerId && isSamePop(item.pop_id, odpPopId));
+    if (preferred) return preferred;
+  }
+  return ontDevices.find((item) => item.customer_id === customerId && isSamePop(item.pop_id, odpPopId)) || null;
 }
 
 function mapValidationRequestToRecord(item: ValidationRequestItem): ValidationRecord {

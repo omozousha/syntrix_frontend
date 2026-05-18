@@ -91,6 +91,13 @@ type OdpCableOption = {
   device_name?: string | null;
   region_id?: string | null;
 };
+type PopLookupOption = {
+  id: string;
+  pop_id?: string | null;
+  pop_code?: string | null;
+  pop_name?: string | null;
+  region_id?: string | null;
+};
 type SplitterProfileOption = {
   id: string;
   ratio_label: string;
@@ -324,6 +331,7 @@ export default function DataManagementDetailPage() {
   const [odpCustomers, setOdpCustomers] = useState<OdpCustomerOption[]>([]);
   const [odpOntDevices, setOdpOntDevices] = useState<OdpOntOption[]>([]);
   const [odpCableDevices, setOdpCableDevices] = useState<OdpCableOption[]>([]);
+  const [popOptions, setPopOptions] = useState<PopLookupOption[]>([]);
   const [loadingOdpLookups, setLoadingOdpLookups] = useState(false);
   const [odpValidations, setOdpValidations] = useState<OdpValidationRecord[]>([]);
   const [loadingOdpValidations, setLoadingOdpValidations] = useState(false);
@@ -690,6 +698,31 @@ export default function DataManagementDetailPage() {
       cancelled = true;
     };
   }, [isOdpDevice, item, token]);
+
+  useEffect(() => {
+    if (category?.resource !== "devices" || !item || !token) {
+      setPopOptions([]);
+      return;
+    }
+
+    const activeRegionId = valueOf(item.region_id);
+    const regionQuery = activeRegionId ? `&region_id=${encodeURIComponent(activeRegionId)}` : "";
+    let cancelled = false;
+
+    async function loadPopOptions() {
+      try {
+        const result = await apiFetch<PaginatedResponse<PopLookupOption>>(`/pops?page=1&limit=500${regionQuery}`, { token });
+        if (!cancelled) setPopOptions(result.data || []);
+      } catch {
+        if (!cancelled) setPopOptions([]);
+      }
+    }
+
+    void loadPopOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [category?.resource, item, token]);
 
   useEffect(() => {
     if (!isOdpDevice || !item || !token) {
@@ -1393,6 +1426,7 @@ export default function DataManagementDetailPage() {
                   splitterProfiles={splitterProfiles}
                   odpTypes={odpTypes}
                   installationTypes={installationTypes}
+                  popOptions={popOptions}
                   latestFieldValidation={odpValidations[0]?.payload?.field_validation || null}
                 />
               ) : null}
@@ -2727,6 +2761,7 @@ function DeviceDetailForm({
   splitterProfiles,
   odpTypes,
   installationTypes,
+  popOptions,
   latestFieldValidation,
 }: {
   form: EditableForm;
@@ -2737,6 +2772,7 @@ function DeviceDetailForm({
   splitterProfiles: SplitterProfileOption[];
   odpTypes: OdpTypeOption[];
   installationTypes: InstallationTypeOption[];
+  popOptions: PopLookupOption[];
   latestFieldValidation?: OdpFieldValidationPayload | null;
 }) {
   const selectedSplitterProfile =
@@ -2846,7 +2882,26 @@ function DeviceDetailForm({
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
           <DisplayField label="Region" value={relationLabels.region || "-"} compact />
-          <DisplayField label="POP" value={relationLabels.pop || "-"} compact />
+          {editing ? (
+            <div className="space-y-1">
+              <Label>POP</Label>
+              <Combobox
+                value={form.pop_id || "__none__"}
+                onValueChange={(value) => onChange((p) => ({ ...p, pop_id: value === "__none__" ? "" : value }))}
+                triggerClassName="h-8 text-xs"
+                options={[
+                  { value: "__none__", label: "Tidak ada POP" },
+                  ...popOptions.map((pop) => ({
+                    value: pop.id,
+                    label: [pop.pop_name, pop.pop_code || pop.pop_id].filter(Boolean).join(" - ") || pop.id,
+                  })),
+                ]}
+                searchPlaceholder="Cari POP..."
+              />
+            </div>
+          ) : (
+            <DisplayField label="POP" value={relationLabels.pop || "-"} compact />
+          )}
           <DisplayField label="Manufacturer" value={relationLabels.manufacturer || "-"} compact />
           <DisplayField label="Brand" value={relationLabels.brand || "-"} compact />
           <DisplayField label="Model" value={relationLabels.model || "-"} compact />
