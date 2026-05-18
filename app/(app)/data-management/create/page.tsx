@@ -140,6 +140,12 @@ export default function CreateDataManagementPage() {
     description: string;
     redirectTo: string;
   } | null>(null);
+  const [customerResponseDialog, setCustomerResponseDialog] = useState<{
+    title: string;
+    description: string;
+    variant: "success" | "destructive";
+    redirectTo?: string;
+  } | null>(null);
 
   const [regions, setRegions] = useState<RegionsListResponse["data"]>([]);
   const [pops, setPops] = useState<PopOption[]>([]);
@@ -474,6 +480,12 @@ export default function CreateDataManagementPage() {
           throw new Error(`Longitude tidak valid: ${longitudeValidation.message}`);
         }
       }
+      if (isCustomer) {
+        const cidValidation = validateCid(form.customer_number);
+        if (!cidValidation.valid) {
+          throw new Error(`CID tidak valid: ${cidValidation.message}`);
+        }
+      }
 
       const normalizedValidation = normalizeValidationPayload(form.validation_status, form.validation_date);
 
@@ -696,19 +708,9 @@ export default function CreateDataManagementPage() {
       }
 
       if (isCustomer) {
-        if (
-          !form.customer_name ||
-          !form.region_id ||
-          !form.pop_id ||
-          !form.customer_status ||
-          !form.installation_date ||
-          !form.address ||
-          !form.province_id ||
-          !form.city_id ||
-          !form.longitude ||
-          !form.latitude
-        ) {
-          throw new Error("Customer Name, POP, Region, Status, Installation Date, Address, Province, City/Kabupaten, Longitude, dan Latitude wajib diisi.");
+        const missingCustomerFields = getMissingCustomerRequiredFields(form);
+        if (missingCustomerFields.length) {
+          throw new Error(`Field wajib belum lengkap: ${formatFieldList(missingCustomerFields)}.`);
         }
 
         const payload: Record<string, unknown> = {
@@ -738,8 +740,12 @@ export default function CreateDataManagementPage() {
           body: JSON.stringify(payload),
         });
 
-        setSuccessMessage("Customer berhasil dibuat.");
-        router.push(buildListTarget("/data-management/list/customer", form.region_id));
+        setCustomerResponseDialog({
+          title: "Customer Berhasil Dibuat",
+          description: "Data customer sudah tersimpan dan siap digunakan untuk relasi layanan.",
+          variant: "success",
+          redirectTo: buildListTarget("/data-management/list/customer", form.region_id),
+        });
         return;
       }
 
@@ -827,7 +833,15 @@ export default function CreateDataManagementPage() {
       setSuccessMessage("Device berhasil dibuat.");
       router.push(buildListTarget(`/data-management/list/${toDeviceSlug(form.device_type_key)}`, form.region_id));
     } catch (err) {
-      setErrorMessage((err as Error).message);
+      const message = (err as Error).message;
+      setErrorMessage(message);
+      if (isCustomer) {
+        setCustomerResponseDialog({
+          title: "Create Customer Gagal",
+          description: message,
+          variant: "destructive",
+        });
+      }
       submitLockRef.current = false;
     } finally {
       setSaving(false);
@@ -1076,7 +1090,7 @@ export default function CreateDataManagementPage() {
             {isCustomer ? (
               <>
                 <Field label="Customer Name" value={form.customer_name} onChange={(v) => setForm((p) => ({ ...p, customer_name: v }))} />
-                <Field label="CID" value={form.customer_number} onChange={(v) => setForm((p) => ({ ...p, customer_number: v }))} tooltip="Customer ID dari sistem layanan/billing jika tersedia." />
+                <CidField value={form.customer_number} onChange={(v) => setForm((p) => ({ ...p, customer_number: v }))} />
                 <div className="space-y-1.5">
                   <FieldLabel label="Service Type (opsional)" tooltip="Pilih dari master Service Types agar jenis layanan bisa dikelola ulang." />
                   <Combobox
@@ -1749,6 +1763,48 @@ export default function CreateDataManagementPage() {
                 Kembali ke list
               </AlertDialogAction>
             </AlertDialogFooter>
+        </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog
+          open={Boolean(customerResponseDialog)}
+          onOpenChange={(open) => {
+            if (open) return;
+            if (customerResponseDialog?.variant === "destructive") {
+              setCustomerResponseDialog(null);
+            }
+          }}
+        >
+          <AlertDialogContent className="max-w-sm">
+            <AlertDialogHeader>
+              <div
+                className={`mx-auto mb-2 flex size-12 items-center justify-center rounded-xl ${
+                  customerResponseDialog?.variant === "success"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-destructive/10 text-destructive"
+                }`}
+              >
+                {customerResponseDialog?.variant === "success" ? <CheckCircle2 className="size-5" /> : <XCircle className="size-5" />}
+              </div>
+              <AlertDialogTitle className="text-center">{customerResponseDialog?.title || "Response"}</AlertDialogTitle>
+              <AlertDialogDescription className="text-center">
+                {customerResponseDialog?.description}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction
+                className="w-full"
+                onClick={() => {
+                  const target = customerResponseDialog?.redirectTo;
+                  setCustomerResponseDialog(null);
+                  if (target) {
+                    router.push(target);
+                  }
+                }}
+              >
+                {customerResponseDialog?.variant === "success" ? "Lihat Customer" : "Perbaiki Form"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
@@ -1955,6 +2011,34 @@ function Field({
   );
 }
 
+function CidField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const validation = validateCid(value);
+
+  return (
+    <div className="space-y-1.5">
+      <FieldLabel label="CID" tooltip="Customer ID dari sistem layanan/billing. Jika diisi, wajib tepat 8 digit angka." />
+      <Input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={8}
+        value={value}
+        onChange={(event) => onChange(normalizeCidInput(event.target.value))}
+        placeholder="12345678"
+      />
+      {validation.state !== "idle" ? (
+        <Badge
+          variant="outline"
+          className={`${validation.state === "valid" ? "border-emerald-300 text-emerald-700" : "border-rose-300 text-rose-700"} h-4 w-fit gap-0.5 px-1.5 text-[10px]`}
+        >
+          {validation.state === "valid" ? <CheckCircle2 className="mr-0.5 size-3" /> : <XCircle className="mr-0.5 size-3" />}
+          {validation.message}
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
 function CoordinateField({
   label,
   value,
@@ -2040,7 +2124,7 @@ function getDefaultTooltip(label: string) {
     "Total Ports": "Total port yang tersedia pada perangkat.",
     "Used Ports": "Jumlah port yang sudah terpakai.",
     "Splitter Ratio": "Rasio splitter perangkat ODP, misalnya 1:8.",
-    Address: "Alamat lengkap lokasi POP/perangkat.",
+    Address: "Alamat lengkap lokasi POP/perangkat/customer. Wajib diisi untuk customer.",
     City: "Kota/Kabupaten lokasi.",
     Province: "Provinsi lokasi.",
     Longitude: "Koordinat bujur lokasi.",
@@ -2083,6 +2167,49 @@ function numberOrNull(value: string) {
   if (!value.trim()) return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function normalizeCidInput(value: string) {
+  return value.replace(/\D/g, "").slice(0, 8);
+}
+
+function validateCid(value: string) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return { valid: true, state: "idle" as const, message: "" };
+  }
+  if (!/^\d+$/.test(text)) {
+    return { valid: false, state: "invalid" as const, message: "CID hanya boleh berisi angka." };
+  }
+  if (text.length !== 8) {
+    return { valid: false, state: "invalid" as const, message: "CID wajib tepat 8 digit." };
+  }
+  return { valid: true, state: "valid" as const, message: "CID valid." };
+}
+
+function getMissingCustomerRequiredFields(form: Record<string, string>) {
+  const requiredFields = [
+    ["customer_name", "Customer Name"],
+    ["pop_id", "POP"],
+    ["region_id", "Region"],
+    ["customer_status", "Status"],
+    ["installation_date", "Installation Date"],
+    ["address", "Address"],
+    ["province_id", "Province"],
+    ["city_id", "City/Kabupaten"],
+    ["longitude", "Longitude"],
+    ["latitude", "Latitude"],
+  ] as const;
+
+  return requiredFields
+    .filter(([key]) => !String(form[key] || "").trim())
+    .map(([, label]) => label);
+}
+
+function formatFieldList(fields: string[]) {
+  if (fields.length <= 1) return fields[0] || "";
+  if (fields.length === 2) return `${fields[0]} dan ${fields[1]}`;
+  return `${fields.slice(0, -1).join(", ")}, dan ${fields[fields.length - 1]}`;
 }
 
 function getApprovalRequestId(value?: ApprovalResponse | null) {
