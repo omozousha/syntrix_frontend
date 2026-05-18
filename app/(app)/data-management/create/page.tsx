@@ -56,6 +56,8 @@ type CustomerOption = {
   city_id?: string | null;
   longitude?: number | string | null;
   latitude?: number | string | null;
+  installation_date?: string | null;
+  status?: string | null;
 };
 type PopTypeOption = { id: string; pop_type_name: string; pop_type_code?: string | null };
 type RouteTypeOption = { id: string; route_type_name: string; route_type_code?: string | null };
@@ -1029,6 +1031,8 @@ export default function CreateDataManagementPage() {
                           city_id: selectedCustomer?.city_id || p.city_id,
                           longitude: valueToFormText(selectedCustomer?.longitude) || p.longitude,
                           latitude: valueToFormText(selectedCustomer?.latitude) || p.latitude,
+                          installation_date: selectedCustomer?.installation_date || p.installation_date,
+                          status: mapCustomerStatusToDeviceStatus(selectedCustomer?.status) || p.status,
                         }));
                       }}
                       options={toOptions([
@@ -2208,6 +2212,18 @@ function nullIfEmpty(value: string) {
 function valueToFormText(value: unknown) {
   if (value === null || value === undefined) return "";
   return String(value).trim();
+}
+
+function mapCustomerStatusToDeviceStatus(customerStatus?: string | null): string {
+  if (!customerStatus) return "";
+  const statusMap: Record<string, string> = {
+    active: "active",
+    prospect: "draft",
+    suspend: "inactive",
+    inactive: "inactive",
+    terminated: "inactive",
+  };
+  return statusMap[customerStatus.toLowerCase()] || "";
 }
 
 function normalizeValidationPayload(statusRaw: string, dateRaw: string) {
