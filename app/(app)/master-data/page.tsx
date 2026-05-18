@@ -26,9 +26,9 @@ const MASTER_SECTIONS: Array<{
 }> = [
   {
     title: "Referensi Topologi",
-    description: "Standardisasi struktur region, klasifikasi POP, dan tipe route untuk seluruh operasi.",
+    description: "Standardisasi struktur region, klasifikasi POP, tipe route, dan layanan customer.",
     icon: Network,
-    slugs: ["master-regions", "master-pop-types", "master-route-types"],
+    slugs: ["master-regions", "master-pop-types", "master-route-types", "master-service-types"],
   },
   {
     title: "Referensi Perangkat",

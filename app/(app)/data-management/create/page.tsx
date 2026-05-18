@@ -57,6 +57,7 @@ type AssetModelOption = {
 };
 type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
+type ServiceTypeOption = { id: string; service_type_name: string; service_type_code?: string | null };
 type SplitterProfileOption = {
   id: string;
   ratio_label: string;
@@ -152,6 +153,7 @@ export default function CreateDataManagementPage() {
   const [assetModels, setAssetModels] = useState<AssetModelOption[]>([]);
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<ServiceTypeOption[]>([]);
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -226,6 +228,7 @@ export default function CreateDataManagementPage() {
     budget_value: "",
     customer_name: "",
     customer_number: "",
+    service_type_id: "",
     service_type: "",
     customer_status: "prospect",
     contact_name: "",
@@ -249,8 +252,9 @@ export default function CreateDataManagementPage() {
         const needsPops = isDevice || isRoute || isProject || isCustomer;
         const needsProjects = isRoute || isCustomer;
         const needsDeviceMasterData = isDevice;
+        const needsCustomerMasterData = isCustomer;
 
-        const [regionsRes, popsRes, projectsRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, splitterProfilesRes] = await Promise.all([
+        const [regionsRes, popsRes, projectsRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, serviceTypesRes, splitterProfilesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
           optionalPaginatedRequest<PopOption>(needsPops, () => apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token })),
           optionalPaginatedRequest<ProjectOption>(needsProjects, () => apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token })),
@@ -263,6 +267,7 @@ export default function CreateDataManagementPage() {
           optionalPaginatedRequest<AssetModelOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<AssetModelOption>>("/assetModels?page=1&limit=1000", { token })),
           optionalPaginatedRequest<OdpTypeOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<OdpTypeOption>>("/odpTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<InstallationTypeOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<ServiceTypeOption>(needsCustomerMasterData, () => apiFetch<PaginatedResponse<ServiceTypeOption>>("/serviceTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<SplitterProfileOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token })),
         ]);
 
@@ -285,6 +290,7 @@ export default function CreateDataManagementPage() {
         setAssetModels(modelsRes.data || []);
         setOdpTypes(odpTypesRes.data || []);
         setInstallationTypes(installationTypesRes.data || []);
+        setServiceTypes(serviceTypesRes.data || []);
         setSplitterProfiles(splitterProfilesRes.data || []);
         setForm((prev) => ({
           ...prev,
@@ -690,23 +696,36 @@ export default function CreateDataManagementPage() {
       }
 
       if (isCustomer) {
-        if (!form.customer_name || !form.region_id) {
-          throw new Error("Customer Name dan Region wajib diisi.");
+        if (
+          !form.customer_name ||
+          !form.region_id ||
+          !form.pop_id ||
+          !form.customer_status ||
+          !form.installation_date ||
+          !form.address ||
+          !form.province_id ||
+          !form.city_id ||
+          !form.longitude ||
+          !form.latitude
+        ) {
+          throw new Error("Customer Name, POP, Region, Status, Installation Date, Address, Province, City/Kabupaten, Longitude, dan Latitude wajib diisi.");
         }
 
         const payload: Record<string, unknown> = {
           customer_name: form.customer_name.trim(),
           customer_number: nullIfEmpty(form.customer_number),
+          service_type_id: nullIfEmpty(form.service_type_id),
           service_type: nullIfEmpty(form.service_type),
           status: form.customer_status || "prospect",
-          contact_name: nullIfEmpty(form.contact_name),
-          contact_phone: nullIfEmpty(form.contact_phone),
-          email: nullIfEmpty(form.email),
           longitude: numberOrNull(form.longitude),
           latitude: numberOrNull(form.latitude),
           address: nullIfEmpty(form.address),
+          province: nullIfEmpty(form.province),
+          province_id: nullIfEmpty(form.province_id),
+          city: nullIfEmpty(form.city),
+          city_id: nullIfEmpty(form.city_id),
           region_id: form.region_id,
-          pop_id: nullIfEmpty(form.pop_id),
+          pop_id: form.pop_id,
           project_id: nullIfEmpty(form.customer_project_id),
           installation_date: nullIfEmpty(form.installation_date),
           tags: csvToTags(form.tags),
@@ -1057,18 +1076,43 @@ export default function CreateDataManagementPage() {
             {isCustomer ? (
               <>
                 <Field label="Customer Name" value={form.customer_name} onChange={(v) => setForm((p) => ({ ...p, customer_name: v }))} />
-                <Field label="Customer Number" value={form.customer_number} onChange={(v) => setForm((p) => ({ ...p, customer_number: v }))} />
-                <Field label="Service Type" value={form.service_type} onChange={(v) => setForm((p) => ({ ...p, service_type: v }))} placeholder="internet / metro / dedicated" />
-                <Field label="Contact Name" value={form.contact_name} onChange={(v) => setForm((p) => ({ ...p, contact_name: v }))} />
-                <Field label="Contact Phone" value={form.contact_phone} onChange={(v) => setForm((p) => ({ ...p, contact_phone: v }))} />
-                <Field label="Email" type="email" value={form.email} onChange={(v) => setForm((p) => ({ ...p, email: v }))} />
+                <Field label="CID" value={form.customer_number} onChange={(v) => setForm((p) => ({ ...p, customer_number: v }))} tooltip="Customer ID dari sistem layanan/billing jika tersedia." />
                 <div className="space-y-1.5">
-                  <FieldLabel label="POP (opsional)" tooltip="POP atau site terdekat dengan lokasi customer." />
+                  <FieldLabel label="Service Type (opsional)" tooltip="Pilih dari master Service Types agar jenis layanan bisa dikelola ulang." />
+                  <Combobox
+                    value={form.service_type_id || "__none__"}
+                    onValueChange={(value) => {
+                      if (value === "__none__") {
+                        setForm((p) => ({ ...p, service_type_id: "", service_type: "" }));
+                        return;
+                      }
+                      const selected = serviceTypes.find((item) => item.id === value);
+                      setForm((p) => ({
+                        ...p,
+                        service_type_id: value,
+                        service_type: selected?.service_type_name || p.service_type,
+                      }));
+                    }}
+                    options={toOptions([
+                      { value: "__none__", label: "None" },
+                      ...serviceTypes.map((item) => ({
+                        value: item.id,
+                        label: item.service_type_code
+                          ? `${item.service_type_name} (${item.service_type_code})`
+                          : item.service_type_name,
+                      })),
+                    ])}
+                    placeholder="Pilih service type"
+                    searchPlaceholder="Cari service type..."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <FieldLabel label="POP" tooltip="POP/site yang melayani lokasi customer. Wajib dipilih." />
                   <Combobox
                     value={form.pop_id || "__none__"}
                     onValueChange={(v) => setForm((p) => ({ ...p, pop_id: v === "__none__" ? "" : v }))}
                     options={toOptions([
-                      { value: "__none__", label: "None" },
+                      { value: "__none__", label: "Pilih POP" },
                       ...pops
                         .filter((p) => !form.region_id || p.region_id === form.region_id)
                         .map((pop) => ({
@@ -1976,8 +2020,8 @@ function getDefaultTooltip(label: string) {
     "POP Code (3 huruf)": "Kode singkat 3 huruf unik per POP, contoh CBO.",
     "Device Name": "Nama perangkat sesuai penamaan operasional.",
     "Customer Name": "Nama pelanggan atau titik layanan.",
-    "Customer Number": "Nomor pelanggan dari sistem billing/CRM jika tersedia.",
-    "Service Type": "Jenis layanan customer, misalnya internet, metro, atau dedicated.",
+    "CID": "Customer ID dari sistem layanan/billing jika tersedia.",
+    "Service Type": "Jenis layanan customer dari master data, misalnya Internet, Metro Ethernet, atau Dedicated Link.",
     "Contact Name": "Nama PIC customer yang dapat dihubungi.",
     "Contact Phone": "Nomor telepon PIC customer.",
     "BAST Number": "Nomor BAST untuk referensi serah terima project.",
