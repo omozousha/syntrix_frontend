@@ -1228,30 +1228,24 @@ export default function OdpFieldValidationPage() {
           </Card> : null}
         </div>
       </div>
-      <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Status Port Ditolak</AlertDialogTitle>
-            <AlertDialogDescription>
-              {rejectDialogMessage}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction>Tutup</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog open={validationDialogOpen} onOpenChange={setValidationDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Field wajib belum lengkap</AlertDialogTitle>
-            <AlertDialogDescription>{validationDialogMessage}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction>Tutup</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ResponseDialog
+        open={rejectDialogOpen}
+        title="Status Port Ditolak"
+        description={rejectDialogMessage}
+        variant="error"
+        actionLabel="Tutup"
+        onOpenChange={setRejectDialogOpen}
+        onAction={() => setRejectDialogOpen(false)}
+      />
+      <ResponseDialog
+        open={validationDialogOpen}
+        title="Field wajib belum lengkap"
+        description={validationDialogMessage}
+        variant="warning"
+        actionLabel="Tutup"
+        onOpenChange={setValidationDialogOpen}
+        onAction={() => setValidationDialogOpen(false)}
+      />
       <AlertDialog open={lastValidationDialogOpen} onOpenChange={setLastValidationDialogOpen}>
         <AlertDialogContent className="sm:max-w-xl">
           <AlertDialogHeader>

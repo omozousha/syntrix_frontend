@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertCircle, CheckCircle2, Info, TriangleAlert } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info, Loader2, TriangleAlert } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +23,8 @@ type ResponseDialogProps = {
   actionLabel?: string;
   onAction?: () => void;
   onOpenChange?: (open: boolean) => void;
+  loading?: boolean;
+  showAction?: boolean;
 };
 
 const VARIANT_META: Record<ResponseDialogVariant, { icon: typeof CheckCircle2; mediaClassName: string; actionClassName?: string }> = {
@@ -58,6 +60,8 @@ export function ResponseDialog({
   actionLabel = "OK",
   onAction,
   onOpenChange,
+  loading = false,
+  showAction = true,
 }: ResponseDialogProps) {
   const meta = VARIANT_META[variant];
   const Icon = meta.icon;
@@ -67,16 +71,18 @@ export function ResponseDialog({
       <AlertDialogContent className="max-w-sm">
         <AlertDialogHeader>
           <div className={cn("mx-auto mb-2 flex size-12 items-center justify-center rounded-xl", meta.mediaClassName)}>
-            <Icon className="size-5" />
+            {loading ? <Loader2 className="size-5 animate-spin" /> : <Icon className="size-5" />}
           </div>
           <AlertDialogTitle className="text-center">{title || "Response"}</AlertDialogTitle>
           {description ? <AlertDialogDescription className="text-center">{description}</AlertDialogDescription> : null}
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogAction className={cn("w-full", meta.actionClassName)} onClick={onAction}>
-            {actionLabel}
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        {showAction ? (
+          <AlertDialogFooter>
+            <AlertDialogAction className={cn("w-full", meta.actionClassName)} onClick={onAction}>
+              {actionLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        ) : null}
       </AlertDialogContent>
     </AlertDialog>
   );

@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Check, ChevronDown, Loader2, LogOut, Moon, ShieldCheck, Sun, User } from "lucide-react";
+import { Bell, Check, ChevronDown, LogOut, Moon, Sun, User } from "lucide-react";
 import { toast } from "sonner";
 import type { SessionUser } from "@/lib/session";
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ResponseDialog } from "@/components/response-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -484,25 +484,18 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <AlertDialog
+      <ResponseDialog
         open={logoutDialogOpen}
+        title="Mengakhiri Sesi"
+        description="Syntrix sedang menutup workspace dan membersihkan sesi akun. Anda akan diarahkan ke login dalam 5 detik."
+        variant="info"
+        loading={logoutLoading}
+        showAction={false}
         onOpenChange={(open) => {
           if (logoutLoading) return;
           setLogoutDialogOpen(open);
         }}
-      >
-        <AlertDialogContent className="max-w-sm">
-          <AlertDialogHeader>
-            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              {logoutLoading ? <Loader2 className="size-5 animate-spin" /> : <ShieldCheck className="size-5" />}
-            </div>
-            <AlertDialogTitle className="text-center">Mengakhiri Sesi</AlertDialogTitle>
-            <AlertDialogDescription className="text-center">
-              Syntrix sedang menutup workspace dan membersihkan sesi akun. Anda akan diarahkan ke login dalam 5 detik.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-        </AlertDialogContent>
-      </AlertDialog>
+      />
     </div>
   );
 }

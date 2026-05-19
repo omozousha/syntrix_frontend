@@ -3,9 +3,9 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Network, Radar, ShieldCheck } from "lucide-react";
+import { ResponseDialog } from "@/components/response-dialog";
 import { apiFetch } from "@/lib/api";
 import { loginWithPassword, storeSessionTokens, getStoredToken } from "@/lib/session";
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -232,39 +232,26 @@ export default function LoginPage() {
         </Card>
       </section>
 
-      <AlertDialog open={statusDialogOpen} onOpenChange={(open) => {
-        if (loading || resetLoading) return;
-        setStatusDialogOpen(open);
-      }}>
-        <AlertDialogContent className="max-w-sm">
-          <AlertDialogHeader>
-            <div className={`mx-auto mb-2 flex size-12 items-center justify-center rounded-xl ${statusToneClassName(statusType)}`}>
-              {loading || resetLoading ? <Loader2 className="size-5 animate-spin" /> : statusType === "destructive" ? <LockKeyhole className="size-5" /> : <ShieldCheck className="size-5" />}
-            </div>
-            <AlertDialogTitle className="text-center">{statusTitle}</AlertDialogTitle>
-            <AlertDialogDescription className="text-center">{status}</AlertDialogDescription>
-          </AlertDialogHeader>
-          {!loading && !resetLoading ? (
-            <AlertDialogFooter>
-              <Button type="button" className="w-full" onClick={() => setStatusDialogOpen(false)}>
-                Mengerti
-              </Button>
-            </AlertDialogFooter>
-          ) : null}
-        </AlertDialogContent>
-      </AlertDialog>
+      <ResponseDialog
+        open={statusDialogOpen}
+        title={statusTitle}
+        description={status}
+        variant={statusType === "destructive" ? "error" : statusType === "success" ? "success" : "info"}
+        loading={loading || resetLoading}
+        showAction={!loading && !resetLoading}
+        actionLabel="Mengerti"
+        onOpenChange={(open) => {
+          if (loading || resetLoading) return;
+          setStatusDialogOpen(open);
+        }}
+        onAction={() => setStatusDialogOpen(false)}
+      />
     </main>
   );
 }
 
 function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-function statusToneClassName(type: "default" | "destructive" | "success") {
-  if (type === "destructive") return "bg-destructive/10 text-destructive";
-  if (type === "success") return "bg-emerald-100 text-emerald-700";
-  return "bg-primary/10 text-primary";
 }
 
 function MatrixNode({
