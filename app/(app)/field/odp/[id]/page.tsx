@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowUp, Download, RefreshCw, Save } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
+import { ResponseDialog } from "@/components/response-dialog";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -700,6 +701,18 @@ export default function OdpFieldValidationPage() {
                   ]}
                   searchPlaceholder="Filter status port..."
                 />
+                <div className="rounded-md border border-blue-200 bg-blue-50/70 px-3 py-2 text-xs text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-100">
+                  <div className="mb-1 flex flex-wrap items-center gap-2 font-medium">
+                    <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal">
+                      Auto-fill
+                    </Badge>
+                    Relasi port mengikuti POP ODP
+                  </div>
+                  <p className="text-blue-900/80 dark:text-blue-100/80">
+                    Pilih customer untuk mengisi ONT terkait jika tersedia di POP yang sama. Pilih ONT akan mengisi customer terkait. Status idle otomatis
+                    mengosongkan customer dan ONT.
+                  </p>
+                </div>
                 {validationPortIndexes.length ? (
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
                     {filteredValidationPortIndexes.map((portIndex) => {
@@ -1062,7 +1075,15 @@ export default function OdpFieldValidationPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <RequiredLabel>Kapasitas Splitter</RequiredLabel>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <RequiredLabel>Kapasitas Splitter</RequiredLabel>
+                      <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal text-blue-700 dark:text-blue-300">
+                        Auto-fill
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Pilihan splitter akan mengisi rekomendasi kapasitas ODP. Koreksi kapasitas jika hasil inspeksi lapangan berbeda.
+                    </p>
                     <Combobox
                       value={draft.splitterRatio}
                       onValueChange={(value) => {
@@ -1305,25 +1326,25 @@ export default function OdpFieldValidationPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog
+      <ResponseDialog
         open={successDialogOpen}
+        title="Berhasil"
+        description={successDialogText}
+        variant="success"
+        actionLabel="Tutup"
         onOpenChange={(open) => {
           setSuccessDialogOpen(open);
           if (!open && reloadAfterSuccessDialog) {
             location.reload();
           }
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Berhasil</AlertDialogTitle>
-            <AlertDialogDescription>{successDialogText}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction>Tutup</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onAction={() => {
+          setSuccessDialogOpen(false);
+          if (reloadAfterSuccessDialog) {
+            location.reload();
+          }
+        }}
+      />
       {showScrollTop ? (
         <Button
           type="button"

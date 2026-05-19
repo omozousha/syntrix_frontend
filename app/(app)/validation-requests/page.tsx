@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, RefreshCw, X } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
+import { ResponseDialog } from "@/components/response-dialog";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -646,8 +647,12 @@ export default function ValidationRequestsPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        <AlertDialog
+        <ResponseDialog
           open={resultDialogOpen}
+          title={resultDialogTitle}
+          description={resultDialogDescription}
+          variant={resultDialogTitle.toLowerCase().includes("gagal") ? "error" : "success"}
+          actionLabel="OK"
           onOpenChange={(open) => {
             if (open) {
               setResultDialogOpen(true);
@@ -655,17 +660,7 @@ export default function ValidationRequestsPage() {
             }
             closeResultDialog();
           }}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{resultDialogTitle}</AlertDialogTitle>
-              <AlertDialogDescription>{resultDialogDescription}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction>OK</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        />
 
         <AlertDialog
           open={evidencePreviewOpen}

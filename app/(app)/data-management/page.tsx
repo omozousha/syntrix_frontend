@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
-import { ASSET_DATA_CATEGORIES, buildCategoryApiPath, type DataCategory } from "@/lib/data-management-config";
+import { ASSET_DATA_CATEGORIES, buildCategoryApiPath, deviceTypeKeyToSlug, type DataCategory } from "@/lib/data-management-config";
 
 type GenericItem = {
   id: string;
@@ -120,10 +120,6 @@ type TopologyIntegrityResponse = {
 };
 
 const REGION_PAGE_SIZE = 8;
-
-function deviceTypeKeyToSlug(key: string) {
-  return key.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
-}
 
 export default function DataManagementPage() {
   const { token, me } = useSession();

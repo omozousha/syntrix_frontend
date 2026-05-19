@@ -63,6 +63,15 @@ export const MASTER_DATA_CATEGORIES = DATA_CATEGORIES.filter((item) => item.grou
 const RESERVED_ASSET_SLUGS = new Set(["pop", "pole", "customer", "route", "projects"]);
 const dynamicDeviceCategoryCache = new Map<string, DataCategory>();
 
+export function deviceTypeKeyToSlug(key: string) {
+  const normalized = key.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return normalized || "olt";
+}
+
+export function slugToDeviceTypeKey(slug: string) {
+  return slug.trim().replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "").toUpperCase();
+}
+
 export function getCategoryBySlug(slug: string) {
   const found = DATA_CATEGORIES.find((item) => item.slug === slug);
   if (found) return found;
@@ -73,7 +82,7 @@ export function getCategoryBySlug(slug: string) {
     const cached = dynamicDeviceCategoryCache.get(slug);
     if (cached) return cached;
 
-    const normalized = slug.trim().replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "");
+    const normalized = slugToDeviceTypeKey(slug);
     if (normalized) {
       const label = normalized
         .split("_")

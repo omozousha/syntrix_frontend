@@ -3,9 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, CircleHelp, ImagePlus, Trash2, X, XCircle } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
+import { ResponseDialog } from "@/components/response-dialog";
 import { useSession } from "@/components/session-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -28,6 +30,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
+import { deviceTypeKeyToSlug } from "@/lib/data-management-config";
 
 type PopOption = {
   id: string;
@@ -157,10 +160,11 @@ export default function CreateDataManagementPage() {
     description: string;
     redirectTo: string;
   } | null>(null);
-  const [customerResponseDialog, setCustomerResponseDialog] = useState<{
+  const [createResponseDialog, setCreateResponseDialog] = useState<{
     title: string;
     description: string;
     variant: "success" | "destructive";
+    actionLabel: string;
     redirectTo?: string;
   } | null>(null);
 
@@ -168,6 +172,8 @@ export default function CreateDataManagementPage() {
   const [pops, setPops] = useState<PopOption[]>([]);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [autoFillNotice, setAutoFillNotice] = useState("");
   const [popTypes, setPopTypes] = useState<PopTypeOption[]>([]);
   const [routeTypes, setRouteTypes] = useState<RouteTypeOption[]>([]);
   const [provinces, setProvinces] = useState<ProvinceOption[]>([]);
@@ -269,6 +275,7 @@ export default function CreateDataManagementPage() {
   const isFixedRegionRole = me.role === "user_all_region" || me.role === "user_region";
   const selectedRegionLabel = regions.find((region) => region.id === form.region_id)?.region_name || "-";
   const isOntDevice = isDevice && form.device_type_key === "ONT";
+  const hasCustomerAutoFill = isOntDevice && Boolean(form.customer_id);
 
   useEffect(() => {
     let cancelled = false;
@@ -278,14 +285,13 @@ export default function CreateDataManagementPage() {
         const needsPops = isDevice || isRoute || isProject || isCustomer;
         const needsProjects = isRoute || isCustomer;
         const needsDeviceMasterData = isDevice;
-        const needsOntCustomerLookup = isDevice && deviceType === "ONT";
         const needsCustomerMasterData = isCustomer;
 
         const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, serviceTypesRes, splitterProfilesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
           optionalPaginatedRequest<PopOption>(needsPops, () => apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token })),
           optionalPaginatedRequest<ProjectOption>(needsProjects, () => apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token })),
-          optionalPaginatedRequest<CustomerOption>(needsOntCustomerLookup, () => apiFetch<PaginatedResponse<CustomerOption>>("/customers?page=1&limit=500", { token })),
+          emptyPaginatedResponse<CustomerOption>(),
           optionalPaginatedRequest<PopTypeOption>(isPop, () => apiFetch<PaginatedResponse<PopTypeOption>>("/popTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<RouteTypeOption>(isRoute, () => apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token })),
           apiFetch<PaginatedResponse<ProvinceOption>>("/provinces?page=1&limit=500&is_active=true", { token }),
@@ -338,6 +344,45 @@ export default function CreateDataManagementPage() {
       cancelled = true;
     };
   }, [token, me.role, scopeRegionIds, deviceType, isCustomer, isDevice, isPop, isProject, isRoute]);
+
+  useEffect(() => {
+    if (!isOntDevice) return;
+
+    let cancelled = false;
+    async function loadCustomersByPop() {
+      if (!form.pop_id) {
+        setCustomers([]);
+        setForm((prev) => (prev.customer_id ? { ...prev, customer_id: "" } : prev));
+        return;
+      }
+
+      setLoadingCustomers(true);
+      try {
+        const query = new URLSearchParams({ page: "1", limit: "500", pop_id: form.pop_id });
+        if (form.region_id) query.set("region_id", form.region_id);
+        const result = await apiFetch<PaginatedResponse<CustomerOption>>(`/customers?${query.toString()}`, { token });
+        if (cancelled) return;
+
+        const rows = result.data || [];
+        setCustomers(rows);
+        setForm((prev) => {
+          if (!prev.customer_id) return prev;
+          return rows.some((customer) => customer.id === prev.customer_id) ? prev : { ...prev, customer_id: "" };
+        });
+      } catch {
+        if (cancelled) return;
+        setCustomers([]);
+        setForm((prev) => (prev.customer_id ? { ...prev, customer_id: "" } : prev));
+      } finally {
+        if (!cancelled) setLoadingCustomers(false);
+      }
+    }
+
+    void loadCustomersByPop();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOntDevice, form.pop_id, form.region_id, token]);
 
   useEffect(() => {
     let cancelled = false;
@@ -763,10 +808,11 @@ export default function CreateDataManagementPage() {
           body: JSON.stringify(payload),
         });
 
-        setCustomerResponseDialog({
+        setCreateResponseDialog({
           title: "Customer Berhasil Dibuat",
           description: "Data customer sudah tersimpan dan siap digunakan untuk relasi layanan.",
           variant: "success",
+          actionLabel: "Lihat Customer",
           redirectTo: buildListTarget("/data-management/list/customer", form.region_id),
         });
         return;
@@ -850,20 +896,30 @@ export default function CreateDataManagementPage() {
 
       if (createdDevice.data?.approval_request) {
         const requestId = getApprovalRequestId(createdDevice.data);
-        openApprovalNotice("Device", requestId, buildListTarget(`/data-management/list/${toDeviceSlug(form.device_type_key)}`, form.region_id));
+        openApprovalNotice("Device", requestId, buildListTarget(`/data-management/list/${deviceTypeKeyToSlug(form.device_type_key)}`, form.region_id));
         return;
       }
 
-      setSuccessMessage("Device berhasil dibuat.");
-      router.push(buildListTarget(`/data-management/list/${toDeviceSlug(form.device_type_key)}`, form.region_id));
+      setCreateResponseDialog({
+        title: isOntDevice ? "ONT Berhasil Dibuat" : "Device Berhasil Dibuat",
+        description: isOntDevice
+          ? form.customer_id
+            ? "Data ONT sudah tersimpan dengan relasi customer dan data lokasi hasil auto-fill."
+            : "Data ONT sudah tersimpan. Customer reference dapat dilengkapi dari detail ONT bila diperlukan."
+          : "Data device sudah tersimpan dan siap digunakan.",
+        variant: "success",
+        actionLabel: isOntDevice ? "Lihat ONT" : "Lihat Device",
+        redirectTo: buildListTarget(`/data-management/list/${deviceTypeKeyToSlug(form.device_type_key)}`, form.region_id),
+      });
     } catch (err) {
       const message = (err as Error).message;
       setErrorMessage(message);
-      if (isCustomer) {
-        setCustomerResponseDialog({
-          title: "Create Customer Gagal",
+      if (isCustomer || isOntDevice) {
+        setCreateResponseDialog({
+          title: isOntDevice ? "Create ONT Gagal" : "Create Customer Gagal",
           description: message,
           variant: "destructive",
+          actionLabel: "Perbaiki Form",
         });
       }
       submitLockRef.current = false;
@@ -994,7 +1050,13 @@ export default function CreateDataManagementPage() {
                   <FieldLabel label="POP (opsional)" tooltip="Hubungkan device ke POP jika perangkat berada di POP tertentu." />
                   <Combobox
                     value={form.pop_id || "__none__"}
-                    onValueChange={(v) => setForm((p) => ({ ...p, pop_id: v === "__none__" ? "" : v, customer_id: "" }))}
+                    onValueChange={(v) => {
+                      const nextPopId = v === "__none__" ? "" : v;
+                      if (form.customer_id && form.pop_id !== nextPopId) {
+                        setAutoFillNotice("Customer reference dikosongkan karena POP berubah. Pilih customer dari POP baru untuk mengisi ulang data lokasi.");
+                      }
+                      setForm((p) => ({ ...p, pop_id: nextPopId, customer_id: "" }));
+                    }}
                     options={toOptions([
                       { value: "__none__", label: "None" },
                       ...pops
@@ -1010,15 +1072,20 @@ export default function CreateDataManagementPage() {
                 </div>
                 {isOntDevice ? (
                   <div className="space-y-1.5">
-                    <FieldLabel label="Customer Reference (opsional)" tooltip="Hubungkan ONT ke customer existing. Relasi ini opsional dan bisa diubah lagi dari detail asset." />
+                    <FieldLabel label="Customer Reference (opsional)" tooltip="Customer yang tampil hanya customer dengan POP yang sama dengan POP ONT." />
+                    <p className="text-xs text-muted-foreground">
+                      Memilih customer akan mengisi otomatis lokasi ONT dari data customer terkait. Field tetap bisa dikoreksi sebelum disimpan.
+                    </p>
                     <Combobox
                       value={form.customer_id || "__none__"}
                       onValueChange={(value) => {
                         if (value === "__none__") {
                           setForm((p) => ({ ...p, customer_id: "" }));
+                          setAutoFillNotice("Customer reference dilepas. Data lokasi yang sudah terisi tidak dihapus otomatis, silakan review kembali sebelum menyimpan.");
                           return;
                         }
                         const selectedCustomer = customers.find((customer) => customer.id === value) || null;
+                        const selectedLabel = selectedCustomer?.customer_name || selectedCustomer?.customer_number || "customer terpilih";
                         setForm((p) => ({
                           ...p,
                           customer_id: value,
@@ -1034,11 +1101,12 @@ export default function CreateDataManagementPage() {
                           installation_date: selectedCustomer?.installation_date || p.installation_date,
                           status: mapCustomerStatusToDeviceStatus(selectedCustomer?.status) || p.status,
                         }));
+                        setAutoFillNotice(`Data lokasi, tanggal instalasi, dan status ONT diisi otomatis dari ${selectedLabel}.`);
                       }}
                       options={toOptions([
-                        { value: "__none__", label: "Tanpa customer" },
+                        { value: "__none__", label: form.pop_id ? "Tanpa customer" : "Pilih POP terlebih dahulu" },
                         ...customers
-                          .filter((customer) => !form.region_id || !customer.region_id || customer.region_id === form.region_id)
+                          .filter((customer) => customer.pop_id === form.pop_id)
                           .map((customer) => ({
                             value: customer.id,
                             label: [
@@ -1047,9 +1115,22 @@ export default function CreateDataManagementPage() {
                             ].filter(Boolean).join(" - ") || customer.id,
                           })),
                       ])}
-                      placeholder="Pilih customer"
+                      placeholder={form.pop_id ? "Pilih customer" : "Pilih POP terlebih dahulu"}
                       searchPlaceholder="Cari customer..."
+                      emptyText={form.pop_id ? "Tidak ada customer pada POP ini." : "Pilih POP terlebih dahulu."}
+                      disabled={!form.pop_id || loadingCustomers}
                     />
+                    {autoFillNotice ? (
+                      <Alert className="border-blue-200 bg-blue-50/70 py-2 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-100">
+                        <AlertTitle className="flex items-center gap-2 text-xs">
+                          <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal">
+                            Auto-fill
+                          </Badge>
+                          Review data otomatis
+                        </AlertTitle>
+                        <AlertDescription className="text-xs">{autoFillNotice}</AlertDescription>
+                      </Alert>
+                    ) : null}
                   </div>
                 ) : null}
               </>
@@ -1255,6 +1336,7 @@ export default function CreateDataManagementPage() {
             <div className="space-y-1.5">
               <FieldLabel
                 label="Status"
+                badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
                 tooltip={
                   isPop
                     ? "Status operasional POP."
@@ -1333,6 +1415,7 @@ export default function CreateDataManagementPage() {
                 type="date"
                 value={form.installation_date}
                 onChange={(v) => setForm((p) => ({ ...p, installation_date: v }))}
+                badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
               />
             ) : null}
 
@@ -1657,7 +1740,14 @@ export default function CreateDataManagementPage() {
 
             {showSplitterField ? (
               <div className="space-y-1.5">
-                <FieldLabel label={form.device_type_key === "ODP" ? "Kapasitas Splitter" : "Splitter Ratio"} tooltip="Pilih rasio splitter dari master data." />
+                <FieldLabel
+                  label={form.device_type_key === "ODP" ? "Kapasitas Splitter" : "Splitter Ratio"}
+                  tooltip="Pilih rasio splitter dari master data."
+                  badge={<AutoFilledBadge label="Auto-fill" />}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Pilihan splitter akan mengisi rekomendasi kapasitas port. Nilai kapasitas tetap bisa dikoreksi sesuai kondisi lapangan.
+                </p>
                 <Combobox
                   value={form.splitter_ratio || "__none__"}
                   onValueChange={(value) => {
@@ -1692,9 +1782,10 @@ export default function CreateDataManagementPage() {
               value={form.address}
               onChange={(v) => setForm((p) => ({ ...p, address: v }))}
               containerClassName={sectionSpanClass}
+              badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
             />
             <div className="space-y-1.5">
-              <FieldLabel label="Province (Master)" tooltip="Pilih provinsi dari master data." />
+              <FieldLabel label="Province (Master)" tooltip="Pilih provinsi dari master data." badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null} />
               <Combobox
                 value={form.province_id || "__none__"}
                 onValueChange={(value) => {
@@ -1723,7 +1814,7 @@ export default function CreateDataManagementPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <FieldLabel label="City/Kabupaten (Master)" tooltip="Pilih kota/kabupaten berdasarkan provinsi." />
+              <FieldLabel label="City/Kabupaten (Master)" tooltip="Pilih kota/kabupaten berdasarkan provinsi." badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null} />
               <Combobox
                 key={`city-${form.province_id || "none"}`}
                 value={form.city_id || "__none__"}
@@ -1760,12 +1851,14 @@ export default function CreateDataManagementPage() {
                   value={form.longitude}
                   onChange={(v) => setForm((p) => ({ ...p, longitude: v }))}
                   kind="longitude"
+                  badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
                 />
                 <CoordinateField
                   label="Latitude"
                   value={form.latitude}
                   onChange={(v) => setForm((p) => ({ ...p, latitude: v }))}
                   kind="latitude"
+                  badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
                 />
               </>
             ) : null}
@@ -1834,47 +1927,26 @@ export default function CreateDataManagementPage() {
         </AlertDialogContent>
         </AlertDialog>
 
-        <AlertDialog
-          open={Boolean(customerResponseDialog)}
+        <ResponseDialog
+          open={Boolean(createResponseDialog)}
+          title={createResponseDialog?.title || "Response"}
+          description={createResponseDialog?.description}
+          variant={createResponseDialog?.variant}
+          actionLabel={createResponseDialog?.actionLabel}
           onOpenChange={(open) => {
             if (open) return;
-            if (customerResponseDialog?.variant === "destructive") {
-              setCustomerResponseDialog(null);
+            if (createResponseDialog?.variant === "destructive") {
+              setCreateResponseDialog(null);
             }
           }}
-        >
-          <AlertDialogContent className="max-w-sm">
-            <AlertDialogHeader>
-              <div
-                className={`mx-auto mb-2 flex size-12 items-center justify-center rounded-xl ${
-                  customerResponseDialog?.variant === "success"
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-destructive/10 text-destructive"
-                }`}
-              >
-                {customerResponseDialog?.variant === "success" ? <CheckCircle2 className="size-5" /> : <XCircle className="size-5" />}
-              </div>
-              <AlertDialogTitle className="text-center">{customerResponseDialog?.title || "Response"}</AlertDialogTitle>
-              <AlertDialogDescription className="text-center">
-                {customerResponseDialog?.description}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction
-                className="w-full"
-                onClick={() => {
-                  const target = customerResponseDialog?.redirectTo;
-                  setCustomerResponseDialog(null);
-                  if (target) {
-                    router.push(target);
-                  }
-                }}
-              >
-                {customerResponseDialog?.variant === "success" ? "Lihat Customer" : "Perbaiki Form"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          onAction={() => {
+            const target = createResponseDialog?.redirectTo;
+            setCreateResponseDialog(null);
+            if (target) {
+              router.push(target);
+            }
+          }}
+        />
 
         <AlertDialog open={customDialogOpen && (isPop || isDevice)} onOpenChange={setCustomDialogOpen}>
         <AlertDialogContent>
@@ -2062,6 +2134,7 @@ function Field({
   placeholder,
   tooltip,
   containerClassName,
+  badge,
 }: {
   label: string;
   value: string;
@@ -2070,10 +2143,11 @@ function Field({
   placeholder?: string;
   tooltip?: string;
   containerClassName?: string;
+  badge?: ReactNode;
 }) {
   return (
     <div className={`space-y-1.5 ${containerClassName || ""}`}>
-      <FieldLabel label={label} tooltip={tooltip || getDefaultTooltip(label)} />
+      <FieldLabel label={label} tooltip={tooltip || getDefaultTooltip(label)} badge={badge} />
       <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
     </div>
   );
@@ -2112,11 +2186,13 @@ function CoordinateField({
   value,
   onChange,
   kind,
+  badge,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   kind: "longitude" | "latitude";
+  badge?: ReactNode;
 }) {
   const validation = validateCoordinateFormat(value, kind);
   const placeholder = kind === "latitude" ? "-6.200000" : "106.816666";
@@ -2125,6 +2201,7 @@ function CoordinateField({
     <div className="space-y-1.5">
       <FieldLabel
         label={label}
+        badge={badge}
         tooltip={
           kind === "latitude"
             ? "Format: -x.xxxxxx (contoh: -6.200000). Wajib minus di depan, minimal 6 digit desimal."
@@ -2142,13 +2219,18 @@ function CoordinateField({
   );
 }
 
-function FieldLabel({ label, tooltip }: { label: string; tooltip?: string | null }) {
+function FieldLabel({ label, tooltip, badge }: { label: string; tooltip?: string | null; badge?: ReactNode }) {
   if (!tooltip) {
-    return <Label>{label}</Label>;
+    return (
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Label>{label}</Label>
+        {badge}
+      </div>
+    );
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       <Label>{label}</Label>
       <TooltipProvider>
         <Tooltip>
@@ -2162,7 +2244,16 @@ function FieldLabel({ label, tooltip }: { label: string; tooltip?: string | null
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+      {badge}
     </div>
+  );
+}
+
+function AutoFilledBadge({ label = "Auto-filled" }: { label?: string }) {
+  return (
+    <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] font-medium uppercase tracking-normal text-blue-700 dark:text-blue-300">
+      {label}
+    </Badge>
   );
 }
 
@@ -2388,11 +2479,6 @@ function validateCoordinateFormat(value: string, kind: "longitude" | "latitude")
     state: "valid" as const,
     message: "Format benar.",
   };
-}
-
-function toDeviceSlug(type: string) {
-  const normalized = type.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  return normalized || "olt";
 }
 
 async function fetchAllPaginated<T>(basePath: string, token: string, pageSize = 100) {

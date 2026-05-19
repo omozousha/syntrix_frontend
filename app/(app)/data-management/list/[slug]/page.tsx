@@ -186,7 +186,7 @@ export default function DataManagementListPage() {
   const canCreateMaster = canWrite && isMasterCategory && me.role === "admin";
   const canBulkToggleStatus = supportsIsActiveResource(category?.resource || "");
   const isSoftDeleteResource = supportsSoftDeleteResource(category?.resource || "");
-  const isDeviceCategory = category?.resource === "devices";
+  const supportsPopFilter = supportsPopFilterResource(category?.resource || "");
   const isOdpCategory = category?.resource === "devices" && String(category?.deviceTypeKey || "").toUpperCase() === "ODP";
   const renameConfig = getRenameConfig(category?.resource || "");
   const createDefaults = useMemo(() => getCreateDefaults(category?.resource || ""), [category?.resource]);
@@ -204,7 +204,7 @@ export default function DataManagementListPage() {
     [popFilterOptions],
   );
   const filterGridClass =
-    isDeviceCategory
+    supportsPopFilter
       ? "sm:grid-cols-2 lg:grid-cols-5"
       : category?.resource === "cities" || isSoftDeleteResource
       ? "sm:grid-cols-4"
@@ -254,7 +254,7 @@ export default function DataManagementListPage() {
           limit,
           q: search,
           regionScopeId: effectiveRegionScopeId,
-          popId: isDeviceCategory && popQueryParam !== "__all" ? popQueryParam : undefined,
+          popId: supportsPopFilter && popQueryParam !== "__all" ? popQueryParam : undefined,
         });
         let path =
           activeCategory.resource === "cities" && provinceFilter !== "__all"
@@ -287,10 +287,10 @@ export default function DataManagementListPage() {
     return () => {
       cancelled = true;
     };
-  }, [category, token, page, limit, search, effectiveRegionScopeId, provinceFilter, refreshSeed, archiveView, isSoftDeleteResource, isDeviceCategory, popQueryParam]);
+  }, [category, token, page, limit, search, effectiveRegionScopeId, provinceFilter, refreshSeed, archiveView, isSoftDeleteResource, supportsPopFilter, popQueryParam]);
 
   useEffect(() => {
-    if (!isDeviceCategory) {
+    if (!supportsPopFilter) {
       setPopFilterOptions([]);
       setPopFilterLoading(false);
       return;
@@ -322,10 +322,10 @@ export default function DataManagementListPage() {
     return () => {
       cancelled = true;
     };
-  }, [effectiveRegionScopeId, isDeviceCategory, token]);
+  }, [effectiveRegionScopeId, supportsPopFilter, token]);
 
   useEffect(() => {
-    if (!isDeviceCategory || popQueryParam === "__all" || popFilterLoading) return;
+    if (!supportsPopFilter || popQueryParam === "__all" || popFilterLoading) return;
     const selectedPop = popFilterOptions.find((option) => option.id === popQueryParam);
     if (!selectedPop) {
       applyPopFilter("__all");
@@ -334,7 +334,7 @@ export default function DataManagementListPage() {
     if (effectiveRegionScopeId && selectedPop.regionId && selectedPop.regionId !== effectiveRegionScopeId) {
       applyPopFilter("__all");
     }
-  }, [applyPopFilter, effectiveRegionScopeId, isDeviceCategory, popQueryParam, popFilterLoading, popFilterOptions]);
+  }, [applyPopFilter, effectiveRegionScopeId, supportsPopFilter, popQueryParam, popFilterLoading, popFilterOptions]);
 
   useEffect(() => {
     if (!createOpen) return;
@@ -513,9 +513,9 @@ export default function DataManagementListPage() {
     if (!category) return [];
     if (category.resource === "pops") return [selectAllHeader, "POP ID", "Code", "Name", "Status", "Updated"];
     if (category.resource === "devices") return [selectAllHeader, "Device ID", "Name", "Type", "POP", "Status", "Validation", "Updated"];
-    if (category.resource === "poles") return [selectAllHeader, "Pole ID", "Pole Number", "Region", "Status", "Updated"];
-    if (category.resource === "customers") return [selectAllHeader, "CID", "Name", "Service", "Status", "Updated"];
-    if (category.resource === "routes") return [selectAllHeader, "Route ID", "Route Name", "Region", "Status", "Updated"];
+    if (category.resource === "poles") return [selectAllHeader, "Pole ID", "Pole Number", "Region", "POP", "Status", "Updated"];
+    if (category.resource === "customers") return [selectAllHeader, "CID", "Name", "Service", "POP", "Status", "Updated"];
+    if (category.resource === "routes") return [selectAllHeader, "Route ID", "Route Name", "Region", "POP", "Status", "Updated"];
     if (category.resource === "regions") return [selectAllHeader, "Region ID", "Inventory Code", "Region Name", "Color", "Updated"];
     if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Inventory Code", "Asset Group", "Status", "Updated"];
     if (category.resource === "popTypes") return [selectAllHeader, "Code", "POP Type", "Status", "Updated"];
@@ -529,7 +529,7 @@ export default function DataManagementListPage() {
     if (category.resource === "splitterProfiles") return [selectAllHeader, "Ratio", "Input", "Output", "Loss (dB)", "Status", "Updated"];
     if (category.resource === "provinces") return [selectAllHeader, "Province", "Status", "Updated"];
     if (category.resource === "cities") return [selectAllHeader, "Code", "City", "Province", "Updated"];
-    return [selectAllHeader, "Project ID", "Project Name", "Status", "Region", "Updated"];
+    return [selectAllHeader, "Project ID", "Project Name", "Status", "Region", "POP", "Updated"];
   }, [category, selectAllHeader]);
 
   const tableRows = useMemo(() => {
@@ -584,6 +584,7 @@ export default function DataManagementListPage() {
           pick(item, ["pole_id"]),
           pick(item, ["pole_number", "name"]),
           pick(item, ["region_id"]),
+          resolveRelationName(item.pop_id, popLabelById),
           pick(item, ["status"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -594,6 +595,7 @@ export default function DataManagementListPage() {
           pick(item, ["customer_number"]),
           pick(item, ["customer_name", "name"]),
           pick(item, ["service_type"]),
+          resolveRelationName(item.pop_id, popLabelById),
           pick(item, ["status"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -604,6 +606,7 @@ export default function DataManagementListPage() {
           pick(item, ["route_id"]),
           pick(item, ["route_name", "name"]),
           pick(item, ["region_id"]),
+          resolveRelationName(item.pop_id, popLabelById),
           pick(item, ["status"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -743,6 +746,7 @@ export default function DataManagementListPage() {
         pick(item, ["project_name", "name"]),
         pick(item, ["status"]),
         pick(item, ["region_id"]),
+        resolveRelationName(item.pop_id, popLabelById),
         formatDateTime(pick(item, ["updated_at", "created_at"])),
       ];
     });
@@ -1025,7 +1029,7 @@ export default function DataManagementListPage() {
             <CardTitle>Data {category.label}</CardTitle>
             <CardDescription>
               Total data: {total}. Klik kanan pada baris untuk aksi cepat.
-              {isDeviceCategory && popQueryParam !== "__all" && selectedPopLabel ? ` Filter POP: ${selectedPopLabel}.` : ""}
+              {supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel ? ` Filter POP: ${selectedPopLabel}.` : ""}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1092,7 +1096,7 @@ export default function DataManagementListPage() {
                   ]}
                 />
               ) : null}
-              {isDeviceCategory ? (
+              {supportsPopFilter ? (
                 <Combobox
                   value={popQueryParam}
                   onValueChange={applyPopFilter}
@@ -1155,7 +1159,7 @@ export default function DataManagementListPage() {
             {success ? (
               <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-700">{success}</p>
             ) : null}
-            {isDeviceCategory && popQueryParam !== "__all" && selectedPopLabel ? (
+            {supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel ? (
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="font-normal">
                   POP: {selectedPopLabel}
@@ -1169,7 +1173,7 @@ export default function DataManagementListPage() {
               <AppLoading label={error} variant="error" />
             ) : rows.length === 0 ? (
               <p className="rounded-md border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
-                {isDeviceCategory && popQueryParam !== "__all" && selectedPopLabel
+                {supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel
                   ? `Tidak ada ${category.label} pada POP ${selectedPopLabel}.`
                   : "Tidak ada data pada filter saat ini."}
               </p>
@@ -1214,7 +1218,7 @@ export default function DataManagementListPage() {
                           <span>Status: {pick(row, ["status", "status_pop", "is_active"]) || "-"}</span>
                           <span>{formatDateTime(pick(row, ["updated_at", "created_at"]))}</span>
                         </div>
-                        {category?.resource === "devices" ? (
+                        {supportsPopFilter ? (
                           <p className="mt-1 truncate text-xs text-muted-foreground">
                             POP: {resolveRelationName(row.pop_id, popLabelById)}
                           </p>
@@ -2393,6 +2397,10 @@ function supportsIsActiveResource(resource: string) {
 
 function supportsSoftDeleteResource(resource: string) {
   return ["regions", "deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "manufacturers", "brands", "assetModels", "provinces", "cities"].includes(resource);
+}
+
+function supportsPopFilterResource(resource: string) {
+  return ["devices", "poles", "customers", "routes", "projects"].includes(resource);
 }
 
 function isArchived(item: Record<string, unknown>) {

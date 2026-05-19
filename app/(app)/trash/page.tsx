@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Archive, RotateCcw, Search, ShieldAlert, Trash2, X } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
+import { ResponseDialog } from "@/components/response-dialog";
 import { SimpleTable } from "@/components/simple-table";
 import {
   AlertDialog,
@@ -812,17 +813,15 @@ export default function TrashPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={resultDialogOpen} onOpenChange={setResultDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{resultDialogTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{resultDialogDescription}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setResultDialogOpen(false)}>OK</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ResponseDialog
+        open={resultDialogOpen}
+        title={resultDialogTitle}
+        description={resultDialogDescription}
+        variant={resultDialogTitle.toLowerCase().includes("gagal") ? "error" : "success"}
+        actionLabel="OK"
+        onOpenChange={setResultDialogOpen}
+        onAction={() => setResultDialogOpen(false)}
+      />
     </ScrollArea>
   );
 }

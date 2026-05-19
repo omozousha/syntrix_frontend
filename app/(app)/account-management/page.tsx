@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, MailCheck, MailWarning, Send, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
+import { ResponseDialog } from "@/components/response-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -840,28 +841,14 @@ export default function AccountManagementPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        <AlertDialog
+        <ResponseDialog
           open={responseDialog.open}
+          title={responseDialog.title}
+          description={responseDialog.description}
+          variant={responseDialog.variant}
+          actionLabel="OK"
           onOpenChange={(open) => setResponseDialog((prev) => ({ ...prev, open }))}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{responseDialog.title}</AlertDialogTitle>
-              <AlertDialogDescription>{responseDialog.description}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction
-                className={
-                  responseDialog.variant === "error"
-                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    : undefined
-                }
-              >
-                OK
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        />
       </div>
     </ScrollArea>
   );

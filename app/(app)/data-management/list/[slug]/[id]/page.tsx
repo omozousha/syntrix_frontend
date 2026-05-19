@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { ArrowLeft, CheckCircle2, ChevronDown, CircleHelp, Copy, Download, ImagePlus, Pencil, QrCode, RefreshCw, Save, Trash2, X, XCircle } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
+import { ResponseDialog } from "@/components/response-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-utils";
@@ -1720,17 +1721,15 @@ export default function DataManagementDetailPage() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Berhasil</AlertDialogTitle>
-            <AlertDialogDescription>{successDialogText}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction>Tutup</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ResponseDialog
+        open={successDialogOpen}
+        title="Berhasil"
+        description={successDialogText}
+        variant="success"
+        actionLabel="Tutup"
+        onOpenChange={setSuccessDialogOpen}
+        onAction={() => setSuccessDialogOpen(false)}
+      />
     </ScrollArea>
   );
 }
@@ -2052,6 +2051,17 @@ function OdpOperationsPanel({
                   <LegendDot className="bg-amber-400" label="reserved" />
                   <LegendDot className="bg-rose-500" label="down" />
                 </div>
+              </div>
+              <div className="rounded-md border border-blue-200 bg-blue-50/70 px-3 py-2 text-xs text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-100">
+                <div className="mb-1 flex flex-wrap items-center gap-2 font-medium">
+                  <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal">
+                    Auto-fill
+                  </Badge>
+                  Relasi port ODP
+                </div>
+                <p className="text-blue-900/80 dark:text-blue-100/80">
+                  Mengisi customer atau ONT akan mengubah status port menjadi used. Jika keduanya dikosongkan, status kembali idle.
+                </p>
               </div>
 
               {loadingPorts ? (
@@ -2948,7 +2958,15 @@ function DeviceDetailForm({
           )}
           <Field label={isOdpDevice ? "Port Aktif" : "Used Ports"} type="number" value={form.used_ports} onChange={(v) => onChange((p) => ({ ...p, used_ports: v }))} disabled={!editing} compact />
           <div className="space-y-1">
-            <Label>{isOdpDevice ? "Kapasitas Splitter" : "Splitter Ratio"}</Label>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Label>{isOdpDevice ? "Kapasitas Splitter" : "Splitter Ratio"}</Label>
+              <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal text-blue-700 dark:text-blue-300">
+                Auto-fill
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pilihan splitter mengisi rekomendasi kapasitas port. Review kembali sebelum menyimpan perubahan.
+            </p>
             <Combobox
               value={form.splitter_ratio || "__none__"}
               onValueChange={(value) => {
