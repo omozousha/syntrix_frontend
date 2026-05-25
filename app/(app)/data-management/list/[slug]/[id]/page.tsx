@@ -2857,16 +2857,14 @@ function DeviceDetailForm({
             disabled={!editing}
             compact
           />
-          {!isOdpDevice ? (
-            <Field
-              label="Installation Date"
-              type="date"
-              value={form.installation_date}
-              onChange={(v) => onChange((p) => ({ ...p, installation_date: v }))}
-              disabled={!editing}
-              compact
-            />
-          ) : null}
+          <Field
+            label="Installation Date"
+            type="date"
+            value={form.installation_date}
+            onChange={(v) => onChange((p) => ({ ...p, installation_date: v }))}
+            disabled={!editing}
+            compact
+          />
           <SelectField
             label="Validation Status"
             value={form.validation_status}

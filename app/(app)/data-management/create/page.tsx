@@ -914,9 +914,9 @@ export default function CreateDataManagementPage() {
     } catch (err) {
       const message = (err as Error).message;
       setErrorMessage(message);
-      if (isCustomer || isOntDevice) {
+      if (isCustomer || isOntDevice || form.device_type_key === "ODP") {
         setCreateResponseDialog({
-          title: isOntDevice ? "Create ONT Gagal" : "Create Customer Gagal",
+          title: isOntDevice ? "Create ONT Gagal" : form.device_type_key === "ODP" ? "Create ODP Gagal" : "Create Customer Gagal",
           description: message,
           variant: "destructive",
           actionLabel: "Perbaiki Form",
