@@ -162,6 +162,7 @@ export default function AccountManagementPage() {
       isAdminRegion
         ? [{ value: "user_region", label: "Validator" }]
         : [
+            { value: "admin", label: "Superadmin" },
             { value: "user_all_region", label: "Admin Region" },
             { value: "user_region", label: "Validator" },
           ],
