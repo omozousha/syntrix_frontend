@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Network, Radar, ShieldCheck } from "lucide-react";
 import { ResponseDialog } from "@/components/response-dialog";
 import { apiFetch } from "@/lib/api";
-import { loginWithPassword, storeSessionTokens, getStoredToken } from "@/lib/session";
+import { clearStoredToken, fetchCurrentUser, loginWithPassword, storeSessionTokens, getStoredToken } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 const AUTH_DIALOG_INTERVAL_MS = 5000;
+const SYNTRIX_ONE_APP_URL = "io.syntrixone.app://login";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,7 +40,18 @@ export default function LoginPage() {
   useEffect(() => {
     const token = getStoredToken();
     if (token) {
-      router.replace(getNextPath());
+      void fetchCurrentUser(token)
+        .then((profile) => {
+          if (profile.role === "user_region") {
+            clearStoredToken();
+            openSyntrixOneApp();
+            return;
+          }
+          router.replace(getNextPath());
+        })
+        .catch(() => {
+          clearStoredToken();
+        });
     }
   }, [router, getNextPath]);
 
@@ -52,6 +64,16 @@ export default function LoginPage() {
     setStatusType("default");
     try {
       const session = await loginWithPassword(email, password);
+      const profile = await fetchCurrentUser(session.accessToken);
+      if (profile.role === "user_region") {
+        clearStoredToken();
+        setStatusTitle("Akses Validator Dialihkan");
+        setStatus("Akun validator hanya dapat digunakan melalui aplikasi Syntrix-One. Membuka aplikasi sekarang...");
+        setStatusType("default");
+        await delay(800);
+        openSyntrixOneApp();
+        return;
+      }
       storeSessionTokens(session);
       setStatusTitle("Login Berhasil");
       setStatus("Login sukses.");
@@ -252,6 +274,11 @@ export default function LoginPage() {
 
 function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function openSyntrixOneApp() {
+  if (typeof window === "undefined") return;
+  window.location.href = SYNTRIX_ONE_APP_URL;
 }
 
 function MatrixNode({

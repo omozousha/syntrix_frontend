@@ -19,6 +19,7 @@ import {
 const SESSION_CHECK_INTERVAL_MS = 15_000;
 const SESSION_REFRESH_BUFFER_MS = 60_000;
 const IDLE_WINDOW_MS = 2 * 60_000;
+const SYNTRIX_ONE_APP_URL = "io.syntrixone.app://login";
 
 export function ProtectedLayoutClient({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -67,6 +68,11 @@ export function ProtectedLayoutClient({ children }: { children: React.ReactNode 
       setTokenExpiresAt(getStoredTokenExpiresAt());
       try {
         const profile = await fetchCurrentUser(saved);
+        if (profile.role === "user_region") {
+          clearStoredToken();
+          window.location.href = SYNTRIX_ONE_APP_URL;
+          return;
+        }
         setMe(profile);
       } catch {
         clearStoredToken();
