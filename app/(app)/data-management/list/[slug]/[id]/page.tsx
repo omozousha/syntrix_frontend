@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import { ArrowLeft, CheckCircle2, ChevronDown, CircleHelp, Copy, Download, ImagePlus, Pencil, QrCode, RefreshCw, Save, Trash2, X, XCircle } from "lucide-react";
+import { ArrowLeft, BellRing, CheckCircle2, ChevronDown, CircleHelp, Download, ImagePlus, Pencil, QrCode, RefreshCw, Save, Trash2, X, XCircle } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
 import { ResponseDialog } from "@/components/response-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +85,13 @@ type OdpOntOption = {
   status?: string | null;
   region_id?: string | null;
   customer_id?: string | null;
+};
+type ValidatorOption = {
+  id: string;
+  full_name?: string | null;
+  email?: string | null;
+  user_code?: string | null;
+  default_region_id?: string | null;
 };
 type OdpCableOption = {
   id: string;
@@ -333,6 +340,12 @@ export default function DataManagementDetailPage() {
   const [odpCustomers, setOdpCustomers] = useState<OdpCustomerOption[]>([]);
   const [odpOntDevices, setOdpOntDevices] = useState<OdpOntOption[]>([]);
   const [odpCableDevices, setOdpCableDevices] = useState<OdpCableOption[]>([]);
+  const [validatorOptions, setValidatorOptions] = useState<ValidatorOption[]>([]);
+  const [loadingValidators, setLoadingValidators] = useState(false);
+  const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
+  const [selectedReminderValidatorId, setSelectedReminderValidatorId] = useState("");
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [reminderError, setReminderError] = useState("");
   const [popOptions, setPopOptions] = useState<PopLookupOption[]>([]);
   const [loadingOdpLookups, setLoadingOdpLookups] = useState(false);
   const [odpValidations, setOdpValidations] = useState<OdpValidationRecord[]>([]);
@@ -761,6 +774,49 @@ export default function DataManagementDetailPage() {
     }
 
     void loadOdpLookups();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOdpDevice, item, token]);
+
+  useEffect(() => {
+    if (!isOdpDevice || !item || !token) {
+      setValidatorOptions([]);
+      setSelectedReminderValidatorId("");
+      setLoadingValidators(false);
+      return;
+    }
+
+    const regionId = valueOf(item.region_id);
+    if (!regionId) {
+      setValidatorOptions([]);
+      setSelectedReminderValidatorId("");
+      return;
+    }
+
+    let cancelled = false;
+    async function loadValidators() {
+      setLoadingValidators(true);
+      try {
+        const result = await apiFetch<PaginatedResponse<ValidatorOption>>(
+          `/users?page=1&limit=200&role_name=user_region&region_id=${encodeURIComponent(regionId)}&is_active=true`,
+          { token },
+        );
+        if (cancelled) return;
+        const rows = result.data || [];
+        setValidatorOptions(rows);
+        setSelectedReminderValidatorId((prev) => (prev && rows.some((row) => row.id === prev) ? prev : rows[0]?.id || ""));
+      } catch {
+        if (!cancelled) {
+          setValidatorOptions([]);
+          setSelectedReminderValidatorId("");
+        }
+      } finally {
+        if (!cancelled) setLoadingValidators(false);
+      }
+    }
+
+    void loadValidators();
     return () => {
       cancelled = true;
     };
@@ -1226,16 +1282,6 @@ export default function DataManagementDetailPage() {
     }
   }
 
-  async function handleCopyQrLink() {
-    if (!deviceDirectHref) return;
-    try {
-      await navigator.clipboard.writeText(deviceDirectHref);
-      setMessage("Link QR ODP berhasil disalin.");
-    } catch {
-      setError("Browser tidak mengizinkan copy otomatis.");
-    }
-  }
-
   function handleDownloadQrLabel() {
     if (!qrDataUrl || !item) return;
     const download = async () => {
@@ -1258,6 +1304,39 @@ export default function DataManagementDetailPage() {
     void download().catch((err) => {
       setError((err as Error).message || "Gagal download QR label.");
     });
+  }
+
+  function openReminderDialog() {
+    setReminderError("");
+    setReminderDialogOpen(true);
+  }
+
+  async function handleSendValidationReminder() {
+    if (!item || !selectedReminderValidatorId) {
+      setReminderError("Pilih validator terlebih dahulu.");
+      return;
+    }
+
+    setSendingReminder(true);
+    setReminderError("");
+    setError("");
+    setMessage("");
+    try {
+      await apiFetch("/me/notifications/validation-reminders", {
+        method: "POST",
+        token,
+        body: {
+          device_id: item.id,
+          validator_user_id: selectedReminderValidatorId,
+        },
+      });
+      setReminderDialogOpen(false);
+      setMessage("Reminder validasi berhasil dikirim ke validator.");
+    } catch (err) {
+      setReminderError((err as Error).message || "Gagal mengirim reminder validasi.");
+    } finally {
+      setSendingReminder(false);
+    }
   }
 
   async function handleDownloadValidationEvidence(record: OdpValidationRecord) {
@@ -1608,13 +1687,14 @@ export default function DataManagementDetailPage() {
                 loadingValidationHistory={loadingOdpValidations}
                 submittingValidation={submittingOdpValidation}
                 qrDataUrl={qrDataUrl}
-                directHref={deviceDirectHref}
                 onProvisionPorts={() => void handleProvisionOdpPorts()}
                 onUpdatePort={(port, changes) => void handleUpdateOdpPort(port, changes)}
                 onValidationDraftChange={setOdpValidationDraft}
                 onSubmitValidation={() => void handleSubmitOdpValidation()}
                 onDownloadValidationEvidence={(record) => void handleDownloadValidationEvidence(record)}
-                onCopyQrLink={() => void handleCopyQrLink()}
+                validators={validatorOptions}
+                loadingValidators={loadingValidators}
+                onOpenReminder={openReminderDialog}
                 onDownloadQrLabel={handleDownloadQrLabel}
                 onArchiveDevice={() => void handleArchiveOdpDevice()}
                 onArchivePort={(port) => void handleArchiveOdpPort(port)}
@@ -1740,6 +1820,41 @@ export default function DataManagementDetailPage() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+      <AlertDialog open={reminderDialogOpen} onOpenChange={setReminderDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogTitle>Kirim Reminder Validasi</AlertDialogTitle>
+          <AlertDialogDescription>
+            Pilih validator sesuai region ODP. Notifikasi akan muncul di Syntrix-One sebagai reminder persistent.
+          </AlertDialogDescription>
+          <div className="space-y-2">
+            <Label>Validator</Label>
+            <Combobox
+              value={selectedReminderValidatorId || "__none__"}
+              onValueChange={(value) => setSelectedReminderValidatorId(value === "__none__" ? "" : value)}
+              disabled={loadingValidators || sendingReminder}
+              placeholder={loadingValidators ? "Memuat validator..." : "Pilih validator"}
+              searchPlaceholder="Cari validator..."
+              emptyText="Tidak ada validator aktif pada region ini."
+              options={[
+                { value: "__none__", label: loadingValidators ? "Memuat validator..." : "Pilih validator" },
+                ...validatorOptions.map((validator) => ({
+                  value: validator.id,
+                  label: [validator.full_name, validator.user_code || validator.email].filter(Boolean).join(" - ") || validator.id,
+                })),
+              ]}
+            />
+            {reminderError ? <p className="text-sm text-destructive">{reminderError}</p> : null}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setReminderDialogOpen(false)} disabled={sendingReminder}>
+              Batal
+            </Button>
+            <Button type="button" onClick={() => void handleSendValidationReminder()} disabled={!selectedReminderValidatorId || sendingReminder}>
+              {sendingReminder ? "Mengirim..." : "Kirim Reminder"}
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
       <ResponseDialog
         open={successDialogOpen}
         title="Berhasil"
@@ -1767,13 +1882,14 @@ function OdpOperationsPanel({
   loadingValidationHistory,
   submittingValidation,
   qrDataUrl,
-  directHref,
   onProvisionPorts,
   onUpdatePort,
   onValidationDraftChange,
   onSubmitValidation,
   onDownloadValidationEvidence,
-  onCopyQrLink,
+  validators,
+  loadingValidators,
+  onOpenReminder,
   onDownloadQrLabel,
   onArchiveDevice,
   onArchivePort,
@@ -1798,13 +1914,14 @@ function OdpOperationsPanel({
   loadingValidationHistory: boolean;
   submittingValidation: boolean;
   qrDataUrl: string;
-  directHref: string;
   onProvisionPorts: () => void;
   onUpdatePort: (port: DevicePort, changes: Partial<DevicePort>) => void;
   onValidationDraftChange: (next: OdpValidationDraft | ((prev: OdpValidationDraft) => OdpValidationDraft)) => void;
   onSubmitValidation: () => void;
   onDownloadValidationEvidence: (record: OdpValidationRecord) => void;
-  onCopyQrLink: () => void;
+  validators: ValidatorOption[];
+  loadingValidators: boolean;
+  onOpenReminder: () => void;
   onDownloadQrLabel: () => void;
   onArchiveDevice: () => void;
   onArchivePort: (port: DevicePort) => void;
@@ -2049,11 +2166,16 @@ function OdpOperationsPanel({
                   <div className="flex size-40 items-center justify-center text-xs text-muted-foreground">QR belum tersedia</div>
                 )}
               </div>
-              <p className="break-all text-[11px] text-muted-foreground">{directHref}</p>
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={onCopyQrLink}>
-                  <Copy className="mr-1.5 size-3.5" />
-                  Copy
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onOpenReminder}
+                  disabled={loadingValidators || validators.length === 0}
+                >
+                  <BellRing className="mr-1.5 size-3.5" />
+                  Reminder
                 </Button>
                 <Button type="button" variant="outline" size="sm" onClick={onDownloadQrLabel} disabled={!qrDataUrl}>
                   Download
