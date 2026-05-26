@@ -1493,8 +1493,8 @@ export default function DataManagementDetailPage() {
                     {category.resource === "pops" ? <Badge variant="outline">{valueOf(item.status_pop)}</Badge> : null}
                     {category.resource === "devices" ? <Badge variant="outline">{valueOf(item.status)}</Badge> : null}
                     {category.resource !== "customers" ? (
-                      <Badge variant="outline" className={mapValidationStatus(valueOf(item.validation_status, "unvalidated")).className}>
-                        {mapValidationStatus(valueOf(item.validation_status, "unvalidated")).label}
+                      <Badge variant="outline" className={mapValidationStatus(getEffectiveDeviceValidationStatus(item)).className}>
+                        {mapValidationStatus(getEffectiveDeviceValidationStatus(item)).label}
                       </Badge>
                     ) : null}
                   </div>
@@ -1527,6 +1527,7 @@ export default function DataManagementDetailPage() {
                   installationTypes={installationTypes}
                   popOptions={popOptions}
                   latestFieldValidation={odpValidations[0]?.payload?.field_validation || null}
+                  effectiveValidationStatus={getEffectiveDeviceValidationStatus(item)}
                 />
               ) : null}
 
@@ -1947,7 +1948,8 @@ function OdpOperationsPanel({
   const idlePorts = Math.max(0, totalPorts - usedPorts - reservedPorts - downPorts);
   const latestValidationRecord = validationHistory[0] || null;
   const latestRequestStatus = latestValidationRecord?.request_status || null;
-  const currentDeviceValidationUi = mapValidationStatus(String(device.validation_status || "unvalidated"));
+  const effectiveDeviceValidationStatus = getEffectiveDeviceValidationStatus(device, latestRequestStatus);
+  const currentDeviceValidationUi = mapValidationStatus(effectiveDeviceValidationStatus);
   const latestRejectNote =
     latestValidationRecord?.superadmin_review_note ||
     latestValidationRecord?.adminregion_review_note ||
@@ -2914,6 +2916,7 @@ function DeviceDetailForm({
   installationTypes,
   popOptions,
   latestFieldValidation,
+  effectiveValidationStatus,
 }: {
   form: EditableForm;
   onChange: (next: EditableForm | ((prev: EditableForm) => EditableForm)) => void;
@@ -2925,6 +2928,7 @@ function DeviceDetailForm({
   installationTypes: InstallationTypeOption[];
   popOptions: PopLookupOption[];
   latestFieldValidation?: OdpFieldValidationPayload | null;
+  effectiveValidationStatus: string;
 }) {
   const selectedSplitterProfile =
     splitterProfiles.find((item) => item.ratio_label === form.splitter_ratio) || null;
@@ -3006,14 +3010,18 @@ function DeviceDetailForm({
             disabled={!editing}
             compact
           />
-          <SelectField
-            label="Validation Status"
-            value={form.validation_status}
-            options={VALIDATION_STATUS_OPTIONS}
-            onValueChange={(v) => onChange((p) => ({ ...p, validation_status: v }))}
-            disabled={!editing}
-            compact
-          />
+          {editing ? (
+            <SelectField
+              label="Validation Status"
+              value={form.validation_status}
+              options={VALIDATION_STATUS_OPTIONS}
+              onValueChange={(v) => onChange((p) => ({ ...p, validation_status: v }))}
+              disabled={!editing}
+              compact
+            />
+          ) : (
+            <DisplayField label="Validation Status" value={mapValidationStatus(effectiveValidationStatus).label} compact />
+          )}
           <Field
             label="Validation Date"
             type="date"
@@ -3417,6 +3425,12 @@ function valueOf(value: unknown, fallback = "") {
   if (value == null) return fallback;
   const text = String(value);
   return text === "null" || text === "undefined" ? fallback : text;
+}
+
+function getEffectiveDeviceValidationStatus(item: Record<string, unknown>, requestStatusOverride?: string | null) {
+  const requestStatus = String(requestStatusOverride || item.latest_validation_request_status || "").trim().toLowerCase();
+  if (requestStatus && requestStatus !== "validated") return requestStatus;
+  return valueOf(item.validation_status, "unvalidated");
 }
 
 function stringifyValue(value: unknown) {

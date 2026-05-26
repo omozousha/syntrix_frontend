@@ -580,7 +580,9 @@ export default function DataManagementListPage() {
         ];
       }
       if (category.resource === "devices") {
-        const validation = formatValidationStatus(pick(item, ["validation_status"]));
+        const validationStatus = getDeviceDisplayValidationStatus(item);
+        const validation = formatValidationStatus(validationStatus);
+        const validationTitle = getDeviceValidationTitle(item, validation.label);
         return [
           selectCell,
           pick(item, ["device_id"]),
@@ -588,7 +590,7 @@ export default function DataManagementListPage() {
           pick(item, ["device_type_key"]),
           resolveRelationName(item.pop_id, popLabelById),
           pick(item, ["status"]),
-          <span key={`validation-${item.id}`} className={`inline-flex rounded border px-2 py-0.5 text-xs ${validation.className}`}>{validation.label}</span>,
+          <span key={`validation-${item.id}`} title={validationTitle} className={`inline-flex rounded border px-2 py-0.5 text-xs ${validation.className}`}>{validation.label}</span>,
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
       }
@@ -1244,7 +1246,9 @@ export default function DataManagementListPage() {
               <>
                 <div className="space-y-2 md:hidden">
                   {rows.map((row) => {
-                    const validation = formatValidationStatus(pick(row, ["validation_status"]));
+                    const validationStatus = getDeviceDisplayValidationStatus(row);
+                    const validation = formatValidationStatus(validationStatus);
+                    const validationTitle = getDeviceValidationTitle(row, validation.label);
                     const primaryName =
                       category?.resource === "devices"
                         ? pick(row, ["device_name", "name"])
@@ -1272,7 +1276,7 @@ export default function DataManagementListPage() {
                             <p className="truncate text-xs text-muted-foreground">{primaryCode || "-"}</p>
                           </div>
                           {category?.resource === "devices" ? (
-                            <span className={`inline-flex rounded border px-2 py-0.5 text-[11px] ${validation.className}`}>
+                            <span title={validationTitle} className={`inline-flex rounded border px-2 py-0.5 text-[11px] ${validation.className}`}>
                               {validation.label}
                             </span>
                           ) : null}
@@ -2470,6 +2474,27 @@ function formatDateTime(value: string) {
 
 function formatValidationStatus(value: string) {
   return mapValidationStatus(value);
+}
+
+function getDeviceDisplayValidationStatus(item: GenericItem) {
+  return pick(item, ["latest_validation_request_status"]) !== "-"
+    ? pick(item, ["latest_validation_request_status"])
+    : pick(item, ["validation_status"]);
+}
+
+function getDeviceValidationTitle(item: GenericItem, fallbackLabel: string) {
+  const requestStatus = pick(item, ["latest_validation_request_status"]);
+  if (requestStatus === "-") return fallbackLabel;
+
+  const requestCode = pick(item, ["latest_validation_request_code"]);
+  const submittedBy = pick(item, ["latest_validation_submitted_by_name"]);
+  const submittedAt = formatDateTime(pick(item, ["latest_validation_submitted_at"]));
+  return [
+    fallbackLabel,
+    requestCode !== "-" ? `Request: ${requestCode}` : null,
+    submittedBy !== "-" ? `Validator: ${submittedBy}` : null,
+    submittedAt !== "-" ? `Submit: ${submittedAt}` : null,
+  ].filter(Boolean).join(" | ");
 }
 
 function getRenameConfig(resource: string) {
