@@ -36,6 +36,10 @@ yarn-error.log*
 # local credentials / test accounts
 docs/account-credentials.md
 
+# local agent tooling
+.agents/
+skills-lock.json
+
 # vercel
 .vercel
 
