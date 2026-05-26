@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import type { jsPDF as JsPdfDocument } from "jspdf";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -10,6 +12,7 @@ import {
   Boxes,
   Cable,
   CircleDot,
+  Download,
   Eye,
   HardDrive,
   Monitor,
@@ -60,6 +63,8 @@ import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { buildCategoryApiPath, getCategoryBySlug } from "@/lib/data-management-config";
 import { mapValidationStatus } from "@/lib/validation-status";
 
+const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() || "";
+
 type GenericItem = Record<string, unknown> & {
   id: string;
   updated_at?: string | null;
@@ -78,6 +83,13 @@ type RelationMaps = {
   manufacturers: Record<string, string>;
   brands: Record<string, string>;
   provinces: Record<string, string>;
+};
+type BulkQrLabelRow = {
+  deviceName: string;
+  deviceCode: string;
+  deviceType: string;
+  popName: string;
+  qrDataUrl: string;
 };
 type BulkActionType = "delete" | "activate" | "deactivate" | "restore";
 const DEVICE_ICON_OPTIONS = [
@@ -146,6 +158,7 @@ export default function DataManagementListPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<Record<string, string>>({});
   const [createError, setCreateError] = useState("");
+  const [downloadingQr, setDownloadingQr] = useState(false);
   const [lookupOptions, setLookupOptions] = useState<{
     manufacturers: LookupOption[];
     brands: LookupOption[];
@@ -187,6 +200,7 @@ export default function DataManagementListPage() {
   const canBulkToggleStatus = supportsIsActiveResource(category?.resource || "");
   const isSoftDeleteResource = supportsSoftDeleteResource(category?.resource || "");
   const supportsPopFilter = supportsPopFilterResource(category?.resource || "");
+  const supportsQrBulkDownload = category?.resource === "devices";
   const isOdpCategory = category?.resource === "devices" && String(category?.deviceTypeKey || "").toUpperCase() === "ODP";
   const renameConfig = getRenameConfig(category?.resource || "");
   const createDefaults = useMemo(() => getCreateDefaults(category?.resource || ""), [category?.resource]);
@@ -759,6 +773,7 @@ export default function DataManagementListPage() {
     });
     return set;
   }, [rows, selectedIds]);
+  const selectedRows = useMemo(() => rows.filter((row) => selectedIds.has(row.id)), [rows, selectedIds]);
 
   function getDetailHref(itemId: string) {
     return `/data-management/list/${category?.slug}/${itemId}${queryString ? `?${queryString}` : ""}`;
@@ -928,6 +943,42 @@ export default function DataManagementListPage() {
     }
   }
 
+  async function handleBulkDownloadQr() {
+    if (!category || category.resource !== "devices") return;
+    if (!selectedRows.length) {
+      setError("Pilih minimal 1 device untuk download QR.");
+      return;
+    }
+
+    setDownloadingQr(true);
+    setError("");
+    setSuccess("");
+    try {
+      const qrRows = await Promise.all(
+        selectedRows.map(async (row) => ({
+          deviceName: pick(row, ["device_name", "name"]),
+          deviceCode: pick(row, ["device_id", "id"]),
+          deviceType: pick(row, ["device_type_key"]),
+          popName: resolveRelationName(row.pop_id, popLabelById),
+          qrDataUrl: await QRCode.toDataURL(buildDeviceDirectHref(category.slug, row), {
+            width: 360,
+            margin: 2,
+            errorCorrectionLevel: "M",
+          }),
+        })),
+      );
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      drawQrLabelPdf(doc, qrRows);
+      doc.save(`${sanitizeFileName(category.slug)}-qr-labels-${new Date().toISOString().slice(0, 10)}.pdf`);
+      setSuccess(`${qrRows.length} QR device berhasil dibuat dalam PDF.`);
+    } catch (err) {
+      setError((err as Error).message || "Gagal membuat bulk QR download.");
+    } finally {
+      setDownloadingQr(false);
+    }
+  }
+
   async function submitRestore(item: GenericItem) {
     if (!category || !isSoftDeleteResource) return;
     setActionLoading(true);
@@ -1036,6 +1087,18 @@ export default function DataManagementListPage() {
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
               <span className="text-muted-foreground">Item terpilih: {selectedIds.size}</span>
               <div className="flex flex-wrap items-center gap-2">
+                {supportsQrBulkDownload ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleBulkDownloadQr()}
+                    disabled={selectedRows.length === 0 || downloadingQr || actionLoading}
+                  >
+                    <Download className="mr-1 size-4" />
+                    {downloadingQr ? "Membuat QR..." : "Download QR Selected"}
+                  </Button>
+                ) : null}
                 {canWrite && selectedIds.size > 0 ? (
                   <>
                     {isSoftDeleteResource && rows.some((row) => selectedIds.has(row.id) && isArchived(row)) ? (
@@ -2265,6 +2328,61 @@ function resolveRelationName(value: unknown, map: Record<string, string>) {
   const key = String(value).trim();
   if (!key) return "-";
   return map[key] || key;
+}
+
+function buildDeviceDirectHref(categorySlug: string, item: GenericItem) {
+  const isOdp = String(item.device_type_key || "").toUpperCase() === "ODP";
+  const path = isOdp ? `/field/odp/${item.id}` : `/data-management/list/${categorySlug}/${item.id}`;
+  const baseUrl = APP_BASE_URL.replace(/\/+$/, "");
+  if (baseUrl) return `${baseUrl}${path}`;
+  if (typeof window === "undefined") return path;
+  return `${window.location.origin}${path}`;
+}
+
+function drawQrLabelPdf(doc: JsPdfDocument, rows: BulkQrLabelRow[]) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 10;
+  const gap = 4;
+  const columns = 2;
+  const rowsPerPage = 8;
+  const labelWidth = (pageWidth - margin * 2 - gap * (columns - 1)) / columns;
+  const labelHeight = (pageHeight - margin * 2 - gap * (rowsPerPage - 1)) / rowsPerPage;
+
+  rows.forEach((row, index) => {
+    if (index > 0 && index % (columns * rowsPerPage) === 0) doc.addPage();
+    const pageIndex = index % (columns * rowsPerPage);
+    const column = pageIndex % columns;
+    const rowIndex = Math.floor(pageIndex / columns);
+    const x = margin + column * (labelWidth + gap);
+    const y = margin + rowIndex * (labelHeight + gap);
+
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(x, y, labelWidth, labelHeight, 3, 3);
+    doc.addImage(row.qrDataUrl, "PNG", x + 3, y + 3, 20, 20);
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.text(truncatePdfText(row.deviceName, 42), x + 27, y + 7);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.8);
+    doc.text(`ID: ${truncatePdfText(row.deviceCode, 44)}`, x + 27, y + 12);
+    doc.text(`Type: ${truncatePdfText(row.deviceType, 40)}`, x + 27, y + 16);
+    doc.text(`POP: ${truncatePdfText(row.popName, 43)}`, x + 27, y + 20);
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(5);
+    doc.text("Scan QR untuk membuka detail/validasi device.", x + 27, y + 25);
+  });
+}
+
+function truncatePdfText(value: string, maxLength: number) {
+  const text = value && value !== "-" ? value : "-";
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(0, maxLength - 3))}...`;
+}
+
+function sanitizeFileName(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "devices";
 }
 
 function mapLookupToOptions(items: LookupOption[]) {

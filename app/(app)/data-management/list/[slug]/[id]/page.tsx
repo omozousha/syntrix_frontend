@@ -278,6 +278,7 @@ type RelationLabels = {
   manufacturer?: string;
   brand?: string;
   model?: string;
+  popCode?: string;
   popType?: string;
   province?: string;
   city?: string;
@@ -569,6 +570,7 @@ export default function DataManagementDetailPage() {
 
           labels.region = region ? valueOf(region.data.region_name) : "";
           labels.pop = pop ? valueOf(pop.data.pop_name) : "";
+          labels.popCode = pop ? valueOf(pop.data.pop_code || pop.data.pop_id) : "";
           labels.manufacturer = manufacturer ? valueOf(manufacturer.data.manufacturer_name) : "";
           labels.brand = brand ? valueOf(brand.data.brand_name) : "";
           labels.model = model ? valueOf(model.data.model_name) : "";
@@ -620,6 +622,7 @@ export default function DataManagementDetailPage() {
 
           labels.region = region ? valueOf(region.data.region_name) : "";
           labels.pop = pop ? valueOf(pop.data.pop_name) : "";
+          labels.popCode = pop ? valueOf(pop.data.pop_code || pop.data.pop_id) : "";
           labels.project = project ? valueOf(project.data.project_name) : "";
           labels.province = province ? valueOf(province.data.province_name) : valueOf(activeItem.province);
           labels.city = city ? valueOf(city.data.city_name) : valueOf(activeItem.city);
@@ -1235,10 +1238,26 @@ export default function DataManagementDetailPage() {
 
   function handleDownloadQrLabel() {
     if (!qrDataUrl || !item) return;
-    const link = document.createElement("a");
-    link.href = qrDataUrl;
-    link.download = `${valueOf(item.device_id, "odp")}-qr.png`;
-    link.click();
+    const download = async () => {
+      const dataUrl = await buildQrLabelPngDataUrl({
+        deviceName: valueOf(item.device_name, "-"),
+        deviceCode: valueOf(item.device_id, "-"),
+        deviceType: valueOf(item.device_type_key, "-"),
+        popName: formatQrPopLabel(
+          relationLabels.pop || valueOf(item.pop_name || item.pop_id, "-"),
+          relationLabels.popCode || valueOf(item.pop_code || item.pop_id, ""),
+        ),
+        qrDataUrl,
+      });
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `${sanitizeFileName(valueOf(item.device_id, "odp"))}-qr-label.png`;
+      link.click();
+    };
+
+    void download().catch((err) => {
+      setError((err as Error).message || "Gagal download QR label.");
+    });
   }
 
   async function handleDownloadValidationEvidence(record: OdpValidationRecord) {
@@ -3282,6 +3301,81 @@ function stringifyValue(value: unknown) {
   if (value == null) return "-";
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+function formatQrPopLabel(popName: string, popCode: string) {
+  const name = valueOf(popName, "-");
+  const code = valueOf(popCode);
+  if (!code || code === "-" || code === name) return name;
+  return `${name} | ${code}`;
+}
+
+async function buildQrLabelPngDataUrl({
+  deviceName,
+  deviceCode,
+  deviceType,
+  popName,
+  qrDataUrl,
+}: {
+  deviceName: string;
+  deviceCode: string;
+  deviceType: string;
+  popName: string;
+  qrDataUrl: string;
+}) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 600;
+  canvas.height = 240;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Browser tidak mendukung canvas export.");
+
+  const qrImage = await loadImage(qrDataUrl);
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.imageSmoothingEnabled = false;
+  context.drawImage(qrImage, 12, 18, 175, 175);
+
+  context.fillStyle = "#0f172a";
+  context.font = "700 19px Arial, sans-serif";
+  drawTruncatedText(context, deviceName, 228, 42, 320);
+
+  context.font = "500 14px Arial, sans-serif";
+  drawTruncatedText(context, `ID: ${deviceCode}`, 228, 78, 330);
+  drawTruncatedText(context, `Type: ${deviceType}`, 228, 112, 330);
+  drawTruncatedText(context, `POP: ${popName}`, 228, 146, 330);
+
+  context.fillStyle = "#64748b";
+  context.font = "500 11px Arial, sans-serif";
+  drawTruncatedText(context, "Scan QR untuk membuka detail/validasi device.", 228, 192, 330);
+
+  return canvas.toDataURL("image/png");
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Gagal memuat QR image."));
+    image.src = src;
+  });
+}
+
+function drawTruncatedText(context: CanvasRenderingContext2D, value: string, x: number, y: number, maxWidth: number) {
+  const text = value && value !== "-" ? value : "-";
+  if (context.measureText(text).width <= maxWidth) {
+    context.fillText(text, x, y);
+    return;
+  }
+
+  let candidate = text;
+  while (candidate.length > 1 && context.measureText(`${candidate}...`).width > maxWidth) {
+    candidate = candidate.slice(0, -1);
+  }
+  context.fillText(`${candidate}...`, x, y);
+}
+
+function sanitizeFileName(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "device";
 }
 
 function nullIfEmpty(value: string) {
