@@ -220,6 +220,9 @@ type OdpValidationRecord = {
   status?: "valid" | "warning" | "invalid" | null;
   validated_at?: string | null;
   validator_user_id?: string | null;
+  validator_name?: string | null;
+  validator_email?: string | null;
+  validator_user_code?: string | null;
   findings?: string | null;
   adminregion_review_note?: string | null;
   superadmin_review_note?: string | null;
@@ -248,6 +251,18 @@ type ValidationRequestRecord = {
   id: string;
   request_id?: string | null;
   current_status?: string | null;
+  submitted_by_user_id?: string | null;
+  submitted_by_name?: string | null;
+  submitted_by_email?: string | null;
+  submitted_by_user_code?: string | null;
+  adminregion_actor_name?: string | null;
+  adminregion_actor_email?: string | null;
+  adminregion_actor_user_code?: string | null;
+  adminregion_action_at?: string | null;
+  superadmin_actor_name?: string | null;
+  superadmin_actor_email?: string | null;
+  superadmin_actor_user_code?: string | null;
+  superadmin_action_at?: string | null;
   updated_at?: string | null;
   created_at?: string | null;
   finding_note?: string | null;
@@ -447,21 +462,14 @@ export default function DataManagementDetailPage() {
     () => extractImageAttachments(item?.image_attachments, valueOf(item?.image_attachment_id)),
     [item],
   );
-  const validationImageAttachments = useMemo<AttachmentRef[]>(
-    () =>
-      (odpValidations || []).flatMap((record, index) => extractValidationImageAttachments(record, index)),
+  const galleryImageAttachments = useMemo<AttachmentRef[]>(
+    () => infoImageAttachments,
+    [infoImageAttachments],
+  );
+  const latestApprovedOdpValidation = useMemo(
+    () => (odpValidations || []).find(isFinalValidationRecord) || null,
     [odpValidations],
   );
-  const galleryImageAttachments = useMemo<AttachmentRef[]>(() => {
-    const merged = new Map<string, AttachmentRef>();
-    [...infoImageAttachments, ...validationImageAttachments].forEach((attachment) => {
-      if (!attachment?.id) return;
-      if (!merged.has(attachment.id)) {
-        merged.set(attachment.id, attachment);
-      }
-    });
-    return Array.from(merged.values());
-  }, [infoImageAttachments, validationImageAttachments]);
 
   useEffect(() => {
     if (!message) return;
@@ -865,6 +873,10 @@ export default function DataManagementDetailPage() {
               request.evidence_attachments?.[0]?.attachment_id ||
               null,
             evidence_attachments: request.evidence_attachments || [],
+            validator_user_id: request.submitted_by_user_id || null,
+            validator_name: request.submitted_by_name || null,
+            validator_email: request.submitted_by_email || null,
+            validator_user_code: request.submitted_by_user_code || null,
             created_at: request.created_at || null,
             updated_at: request.updated_at || null,
           }));
@@ -1364,7 +1376,6 @@ export default function DataManagementDetailPage() {
       }
 
       const now = new Date().toISOString();
-      const today = currentDateISO();
       await apiFetch("/validations", {
         method: "POST",
         token,
@@ -1385,33 +1396,8 @@ export default function DataManagementDetailPage() {
         }),
       });
 
-      await apiFetch(`/${category.resource}/${item.id}`, {
-        method: "PATCH",
-        token,
-        body: JSON.stringify({
-          validation_status: odpValidationDraft.status,
-          validation_date: today,
-          last_validation_at: now,
-        }),
-      });
-
-      setItem((prev) =>
-        prev
-          ? {
-              ...prev,
-              validation_status: odpValidationDraft.status,
-              validation_date: today,
-              last_validation_at: now,
-            }
-          : prev,
-      );
-      setForm((prev) => ({
-        ...prev,
-        validation_status: odpValidationDraft.status,
-        validation_date: today,
-      }));
       setOdpValidationDraft((prev) => ({ ...prev, findings: "" }));
-      setMessage("Validasi lapangan ODP berhasil disimpan.");
+      setMessage("Catatan validasi tersimpan sebagai histori. Status dan detail ODP tidak berubah sampai request disetujui adminregion dan superadmin.");
     } catch (err) {
       setError((err as Error).message || "Gagal menyimpan validasi lapangan ODP.");
     } finally {
@@ -1469,6 +1455,14 @@ export default function DataManagementDetailPage() {
 
         {!loading && item ? (
           <>
+            {category.resource === "devices" ? (
+              <DeviceOperationalSummary
+                item={item}
+                relationLabels={relationLabels}
+                effectiveValidationStatus={getEffectiveDeviceValidationStatus(item)}
+              />
+            ) : null}
+
             <Collapsible open={isOdpDevice ? odpInfoOpen : true} onOpenChange={isOdpDevice ? setOdpInfoOpen : undefined}>
               <Card>
               <CardHeader>
@@ -1526,7 +1520,7 @@ export default function DataManagementDetailPage() {
                   odpTypes={odpTypes}
                   installationTypes={installationTypes}
                   popOptions={popOptions}
-                  latestFieldValidation={odpValidations[0]?.payload?.field_validation || null}
+                  latestFieldValidation={latestApprovedOdpValidation?.payload?.field_validation || null}
                   effectiveValidationStatus={getEffectiveDeviceValidationStatus(item)}
                 />
               ) : null}
@@ -1988,7 +1982,7 @@ function OdpOperationsPanel({
   const defaultOdpPortId = (ports.find((port) => (port.status || "").toLowerCase() === "idle") || ports[0])?.id || "";
   const effectiveDraftTargetPortId = draftTargetPortId || defaultOdpPortId;
   const latestPortSnapshotByIndex = useMemo(() => {
-    const latest = validationHistory.find((record) => record.payload?.device_ports?.length);
+    const latest = validationHistory.find((record) => isFinalValidationRecord(record) && record.payload?.device_ports?.length);
     return new Map((latest?.payload?.device_ports || []).map((port) => [Number(port.port_index), port]));
   }, [validationHistory]);
 
@@ -2213,6 +2207,8 @@ function OdpOperationsPanel({
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
                   {ports.map((port) => {
                     const portSnapshot = latestPortSnapshotByIndex.get(Number(port.port_index));
+                    const assignedCustomer = customers.find((customer) => customer.id === port.customer_id);
+                    const assignedOnt = ontDevices.find((device) => device.id === port.ont_device_id);
                     return (
                     <div key={port.id} className="rounded-md border bg-background p-3">
                       <div className="mb-3 flex items-center justify-between gap-2">
@@ -2239,6 +2235,9 @@ function OdpOperationsPanel({
                       </div>
                       <div className="mb-2 grid grid-cols-2 gap-2 text-xs">
                         <RelationInfo label="Status Aktual" value={port.status || "idle"} />
+                        <RelationInfo label="CID" value={assignedCustomer?.customer_number || assignedCustomer?.customer_id || "-"} />
+                        <RelationInfo label="Customer" value={assignedCustomer?.customer_name || "-"} />
+                        <RelationInfo label="ONT" value={assignedOnt?.device_name || assignedOnt?.device_id || "-"} />
                         <RelationInfo
                           label="Redaman Terakhir"
                           value={portSnapshot?.attenuation_db == null ? "-" : `${portSnapshot.attenuation_db} dB`}
@@ -2414,6 +2413,7 @@ function OdpOperationsPanel({
                             </div>
                             <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                               <span>Nama: {valueOf(validation?.new_device_name || validation?.old_device_name, "-")}</span>
+                              <span>Validator: {getValidatorLabel(record, validators)}</span>
                               <span>Tanggal validasi: {formatDate(valueOf(validation?.validation_date))}</span>
                               <span>Evidence: {evidenceCount}</span>
                             </div>
@@ -2707,9 +2707,6 @@ function ServicePortRelationsPanel({
                       <Button asChild variant="outline" size="sm">
                         <Link href={`/data-management/list/odp/${odp.id}`}>Open ODP</Link>
                       </Button>
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/field/odp/${odp.id}`}>Field View</Link>
-                      </Button>
                     </div>
                   ) : null}
                 </div>
@@ -2721,6 +2718,37 @@ function ServicePortRelationsPanel({
             Belum ada port ODP yang terhubung ke data ini.
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DeviceOperationalSummary({
+  item,
+  relationLabels,
+  effectiveValidationStatus,
+}: {
+  item: GenericItem;
+  relationLabels: RelationLabels;
+  effectiveValidationStatus: string;
+}) {
+  const validationUi = mapValidationStatus(effectiveValidationStatus);
+  return (
+    <Card className="border-primary/10 bg-muted/20">
+      <CardContent className="grid grid-cols-2 gap-2 p-3 md:grid-cols-4 xl:grid-cols-6">
+        <DisplayField label="Device Name" value={valueOf(item.device_name, "-")} compact />
+        <DisplayField label="Inventory ID" value={valueOf(item.device_id || item.device_code, "-")} compact />
+        <DisplayField label="Type" value={valueOf(item.device_type_key, "-")} compact />
+        <DisplayField label="Region" value={relationLabels.region || valueOf(item.region_id, "-")} compact />
+        <DisplayField label="POP" value={relationLabels.pop || valueOf(item.pop_id, "-")} compact />
+        <DisplayField label="Installation Date" value={formatDate(valueOf(item.installation_date))} compact />
+        <div className="rounded-md border bg-background p-2 xl:col-span-2">
+          <p className="text-[10px] font-medium uppercase text-muted-foreground">Validation Status</p>
+          <Badge variant="outline" className={`mt-1 ${validationUi.className}`}>
+            {validationUi.label}
+          </Badge>
+        </div>
+        <DisplayField className="xl:col-span-2" label="Updated" value={formatDateTime(valueOf(item.updated_at || item.created_at))} compact />
       </CardContent>
     </Card>
   );
@@ -2807,6 +2835,20 @@ function getOdpPortStatusClass(status?: string | null) {
 function describePortAssignmentState(port: DevicePort) {
   if (port.customer_id || port.ont_device_id) return "Endpoint terhubung";
   return "Belum terhubung customer/ONT";
+}
+
+function getValidatorLabel(record: OdpValidationRecord, validators: ValidatorOption[]) {
+  const directName = [record.validator_name, record.validator_email, record.validator_user_code]
+    .map((value) => String(value || "").trim())
+    .find((value) => value && !/^[0-9a-f-]{32,36}$/i.test(value));
+  if (directName) return directName;
+
+  const id = String(record.validator_user_id || "").trim();
+  if (!id) return "-";
+  const validator = validators.find((item) => item.id === id);
+  return validator
+    ? [validator.full_name, validator.user_code || validator.email].filter(Boolean).join(" - ")
+    : "-";
 }
 
 function summarizeOdpPorts(ports: DevicePort[], device: GenericItem) {
@@ -3431,6 +3473,11 @@ function getEffectiveDeviceValidationStatus(item: Record<string, unknown>, reque
   const requestStatus = String(requestStatusOverride || item.latest_validation_request_status || "").trim().toLowerCase();
   if (requestStatus && requestStatus !== "validated") return requestStatus;
   return valueOf(item.validation_status, "unvalidated");
+}
+
+function isFinalValidationRecord(record: OdpValidationRecord) {
+  const requestStatus = String(record.request_status || "").trim().toLowerCase();
+  return !requestStatus || requestStatus === "validated";
 }
 
 function stringifyValue(value: unknown) {

@@ -11,10 +11,12 @@ import {
   Box,
   Boxes,
   Cable,
+  CheckSquare,
   CircleDot,
   Download,
   Eye,
   HardDrive,
+  MapPin,
   Monitor,
   Network,
   Pencil,
@@ -23,12 +25,14 @@ import {
   RotateCcw,
   Router as RouterIcon,
   Server,
+  Shield,
   Split,
   Trash2,
   Waypoints,
   type LucideIcon,
 } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
+import { OperationalKpiCard, OperationalState } from "@/components/operational-ui";
 import { SimpleTable } from "@/components/simple-table";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -1067,6 +1071,13 @@ export default function DataManagementListPage() {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <OperationalKpiCard label="Total Data" value={total.toLocaleString("id-ID")} caption={`${category.label} pada filter aktif`} icon={Boxes} tone="blue" />
+          <OperationalKpiCard label="Selected" value={selectedIds.size.toLocaleString("id-ID")} caption="Item siap bulk action" icon={CheckSquare} tone={selectedIds.size ? "amber" : "slate"} />
+          <OperationalKpiCard label="POP Filter" value={supportsPopFilter && popQueryParam !== "__all" ? "Active" : "All"} caption={selectedPopLabel || "Semua POP"} icon={MapPin} tone={supportsPopFilter && popQueryParam !== "__all" ? "emerald" : "slate"} />
+          <OperationalKpiCard label="Access" value={canWrite ? "Manage" : "View"} caption={me.role === "admin" ? "Superadmin" : me.role === "user_all_region" ? "Adminregion" : me.role} icon={Shield} tone={canWrite ? "emerald" : "slate"} />
+        </div>
+
         {isOdpCategory ? (
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "list" | "quality")}>
             <TabsList className="w-full justify-start md:w-auto">
@@ -1235,13 +1246,18 @@ export default function DataManagementListPage() {
             {loading ? (
               <AppLoading label="Sedang memuat data list..." />
             ) : error ? (
-              <AppLoading label={error} variant="error" />
+              <OperationalState title="Gagal memuat data" description={error} variant="error" actionLabel="Coba lagi" onAction={() => setRefreshSeed((prev) => prev + 1)} />
             ) : rows.length === 0 ? (
-              <p className="rounded-md border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
-                {supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel
-                  ? `Tidak ada ${category.label} pada POP ${selectedPopLabel}.`
-                  : "Tidak ada data pada filter saat ini."}
-              </p>
+              <OperationalState
+                title="Tidak ada data"
+                description={
+                  supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel
+                    ? `Tidak ada ${category.label} pada POP ${selectedPopLabel}.`
+                    : "Tidak ada data pada filter saat ini."
+                }
+                actionLabel="Reset Filter"
+                onAction={resetListFilters}
+              />
             ) : (
               <>
                 <div className="space-y-2 md:hidden">
@@ -1989,7 +2005,6 @@ function OdpQualityTab({ regionId, token }: { regionId: string; token: string })
                 <p className="mt-1 text-xs text-muted-foreground">{row.note}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button asChild variant="outline" size="sm"><Link href={`/data-management/list/odp/${row.odpId}`}>Open ODP</Link></Button>
-                  <Button asChild variant="outline" size="sm"><Link href={`/field/odp/${row.odpId}`}>Field View</Link></Button>
                   <Button asChild variant="outline" size="sm"><Link href={`/audit-trail?entity_type=${encodeURIComponent(row.auditEntityType)}&entity_id=${encodeURIComponent(row.auditEntityId)}`}>Audit Trail</Link></Button>
                 </div>
               </div>

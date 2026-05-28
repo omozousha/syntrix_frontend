@@ -239,7 +239,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
           const copy = getNotificationCopy(latest, normalizedRole);
           const showToast = copy.variant === "warning" || latest.urgent ? toast.warning : toast.success;
           showToast(`${copy.toastTitle}${urgentLabel}`, {
-            description: `${latest.request_id || latest.id} - ${copy.stageLabel}.`,
+            description: [copy.targetName, copy.stageLabel].filter(Boolean).join(" - "),
             action: {
               label: "Buka",
               onClick: () => router.push(REQUESTS_PATH),
@@ -370,6 +370,9 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
                   </div>
                 )}
               </div>
+              <div className="rounded-md border border-dashed bg-background/80 p-2 text-[11px] text-muted-foreground">
+                Broadcast Announcement siap ditempatkan di sini saat endpoint event notification aktif.
+              </div>
             </div>
             {notificationCount > 0 ? (
               <div className="px-2 pb-1">
@@ -408,7 +411,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
                           {item.urgent ? <span className="ml-1 text-amber-600">URGENT</span> : null}
                         </span>
                         <span className="line-clamp-1 text-[11px] text-muted-foreground">
-                          {item.request_id || item.id} - {copy.stageLabel}
+                          {copy.targetName || "Asset terkait"} - {copy.stageLabel}
                         </span>
                         <span className="text-[11px] text-muted-foreground">
                           {formatDateTime(item.updated_at)}
@@ -536,6 +539,7 @@ function getNotificationCopy(item: ValidationRequestNotificationItem, role: stri
 
   return {
     requestType,
+    targetName,
     title,
     stageLabel,
     toastTitle: isWarning ? `${requestType} perlu tindak lanjut` : `${requestType} masuk inbox`,
@@ -560,10 +564,14 @@ function getNotificationTargetName(item: ValidationRequestNotificationItem) {
   const payload = item.payload_snapshot || {};
   const device = payload.device || {};
   const resource = payload.resource || {};
+  const fieldValidation = (payload as { field_validation?: Record<string, unknown> | null }).field_validation || {};
   return pickText(
     device.device_name,
     device.new_device_name,
     device.device_id,
+    fieldValidation.new_device_name,
+    fieldValidation.old_device_name,
+    fieldValidation.inventory_id,
     resource.device_name,
     resource.pop_name,
     resource.route_name,

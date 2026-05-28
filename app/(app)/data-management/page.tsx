@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, RefreshCcw } from "lucide-react";
+import { Building2, Cable, ChevronDown, Database, FolderKanban, Globe2, MapPin, Network, RefreshCcw } from "lucide-react";
 import { AddDataMenu } from "@/components/add-data-menu";
 import { AppLoading } from "@/components/app-loading-new";
+import { OperationalKpiCard, OperationalState } from "@/components/operational-ui";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -664,20 +665,16 @@ export default function DataManagementPage() {
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   {isValidator ? "Ringkasan Field" : "Summary"}
                 </h3>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                 {(isSuperadmin ? coreStats : coreStats.filter((item) => item.key !== "regions")).map((stat) => (
-                  <Card key={stat.key} className="overflow-hidden">
-                    <CardHeader className="px-3 py-2">
-                      <CardTitle className="text-sm font-semibold">{stat.label}</CardTitle>
-                    </CardHeader>
-                      <CardContent className="px-3 pb-3 pt-0">
-                        <p className="text-2xl font-bold leading-none">{formatStatValue(stat.value, stat.unit)}</p>
-                        {stat.caption ? <p className="mt-1 text-[11px] text-muted-foreground">{stat.caption}</p> : null}
-                        <p className="mt-1 text-[11px] text-muted-foreground">
-                          Update: {formatDateTime(stat.latestUpdatedAt)}
-                        </p>
-                      </CardContent>
-                    </Card>
+                  <OperationalKpiCard
+                    key={stat.key}
+                    label={stat.label}
+                    value={formatStatValue(stat.value, stat.unit)}
+                    caption={stat.caption || `Update: ${formatDateTime(stat.latestUpdatedAt)}`}
+                    icon={getStatIcon(stat.key)}
+                    tone={getStatTone(stat.key)}
+                  />
                   ))}
                 </div>
               </section>
@@ -696,13 +693,10 @@ export default function DataManagementPage() {
                 </div>
 
                 {pagedRegions.length === 0 ? (
-                  <Card>
-                    <CardContent className="py-6 text-sm text-muted-foreground">
-                      {regions.length === 0
-                        ? "Belum ada region yang tersedia untuk akun ini."
-                        : "Region tidak ditemukan. Coba kata kunci lain."}
-                    </CardContent>
-                  </Card>
+                  <OperationalState
+                    title={regions.length === 0 ? "Belum ada region" : "Region tidak ditemukan"}
+                    description={regions.length === 0 ? "Akun ini belum memiliki data region yang bisa ditampilkan." : "Coba gunakan kata kunci region lain atau reset pencarian."}
+                  />
                 ) : (
                   <>
                   <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-4">
@@ -830,11 +824,7 @@ export default function DataManagementPage() {
                   </div>
 
                   {!focusedRegion ? (
-                    <Card>
-                      <CardContent className="py-6 text-sm text-muted-foreground">
-                        Belum ada region yang tersedia untuk akun ini.
-                      </CardContent>
-                    </Card>
+                    <OperationalState title="Belum ada region" description="Akun ini belum memiliki scope region yang bisa ditampilkan." />
                   ) : (
                     <Card>
                       <CardHeader className="space-y-1 px-3 py-3">
@@ -959,7 +949,9 @@ export default function DataManagementPage() {
                       ))}
                       {!activeQualityKpis.length ? (
                         <Card className="sm:col-span-2 xl:col-span-3">
-                          <CardContent className="py-6 text-sm text-muted-foreground">Belum ada data KPI untuk filter ini.</CardContent>
+                          <CardContent className="p-0">
+                            <OperationalState title="Belum ada KPI" description="Data quality belum tersedia untuk filter region ini." />
+                          </CardContent>
                         </Card>
                       ) : null}
                     </div>
@@ -990,7 +982,7 @@ export default function DataManagementPage() {
                             </div>
                           ))
                         ) : (
-                          <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">Belum ada issue ODP untuk filter ini.</p>
+                          <OperationalState title="Tidak ada issue ODP" description="Belum ada issue ODP untuk filter yang sedang dipilih." />
                         )}
                       </CardContent>
                     </Card>
@@ -1185,6 +1177,27 @@ function formatStatValue(value: number, unit?: string) {
     return value.toLocaleString("id-ID", { maximumFractionDigits: 1 });
   }
   return value.toLocaleString("id-ID");
+}
+
+function getStatIcon(key: string) {
+  const icons = {
+    regions: Globe2,
+    pop: MapPin,
+    devices: Database,
+    "route-length": Network,
+    "cable-devices": Cable,
+    projects: FolderKanban,
+    "device-types": Building2,
+  };
+  return icons[key as keyof typeof icons] || Database;
+}
+
+function getStatTone(key: string): "blue" | "emerald" | "amber" | "rose" | "slate" {
+  if (key === "devices" || key === "device-types") return "blue";
+  if (key === "pop" || key === "regions") return "emerald";
+  if (key === "route-length" || key === "cable-devices") return "amber";
+  if (key === "projects") return "slate";
+  return "blue";
 }
 
 function buildDataQualityReport(

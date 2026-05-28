@@ -145,19 +145,10 @@
   body {
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
-    overflow: hidden;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
   }
   html {
     @apply font-sans;
-    overflow: hidden;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  html::-webkit-scrollbar,
-  body::-webkit-scrollbar {
-    display: none;
+    scroll-behavior: smooth;
   }
 }
 

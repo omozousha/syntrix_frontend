@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, MailCheck, MailWarning, Send, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
+import { OperationalState } from "@/components/operational-ui";
 import { ResponseDialog } from "@/components/response-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -595,40 +596,53 @@ export default function AccountManagementPage() {
               </div>
             </div>
 
-            <SimpleTable
-              headers={["Name", "Email", "Verified", "Role", "Region", "Active", "Actions"]}
-              rows={filteredUsers.map((item) => [
-                <div key={`${item.id}-name`}>
-                  <p className="font-medium">{item.full_name || "-"}</p>
-                  <p className="text-xs text-muted-foreground">{item.user_code || "-"}</p>
-                </div>,
-                item.email,
-                <VerificationBadge key={`${item.id}-verified`} user={item} />,
-                ROLE_LABELS[item.role_name] || item.role_name,
-                item.default_region_id ? regionMap.get(item.default_region_id) || item.default_region_id : "-",
-                item.is_active ? <Badge key="active">Active</Badge> : <Badge key="inactive" variant="secondary">Inactive</Badge>,
-                <div key={item.id} className="flex flex-wrap gap-2">
-                  {getVerificationState(item) !== "verified" ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1"
-                      onClick={() => void resendVerification(item)}
-                      disabled={!canManageUser(item) || resendLoadingId === item.id}
-                    >
-                      <Send className="size-3.5" />
-                      {resendLoadingId === item.id ? "Sending..." : "Resend"}
+            {filteredUsers.length ? (
+              <SimpleTable
+                headers={["Name", "Email", "Verified", "Role", "Region", "Active", "Actions"]}
+                rows={filteredUsers.map((item) => [
+                  <div key={`${item.id}-name`}>
+                    <p className="font-medium">{item.full_name || "-"}</p>
+                    <p className="text-xs text-muted-foreground">{item.user_code || "-"}</p>
+                  </div>,
+                  item.email,
+                  <VerificationBadge key={`${item.id}-verified`} user={item} />,
+                  <Badge key={`${item.id}-role`} variant="outline">{ROLE_LABELS[item.role_name] || item.role_name}</Badge>,
+                  item.default_region_id ? regionMap.get(item.default_region_id) || item.default_region_id : "-",
+                  item.is_active ? <Badge key="active">Active</Badge> : <Badge key="inactive" variant="secondary">Inactive</Badge>,
+                  <div key={item.id} className="flex flex-wrap gap-2">
+                    {getVerificationState(item) !== "verified" ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1"
+                        onClick={() => void resendVerification(item)}
+                        disabled={!canManageUser(item) || resendLoadingId === item.id}
+                      >
+                        <Send className="size-3.5" />
+                        {resendLoadingId === item.id ? "Sending..." : "Resend"}
+                      </Button>
+                    ) : null}
+                    <Button size="sm" variant="outline" onClick={() => openEditDrawer(item)} disabled={!canManageUser(item)}>
+                      Edit
                     </Button>
-                  ) : null}
-                  <Button size="sm" variant="outline" onClick={() => openEditDrawer(item)} disabled={!canManageUser(item)}>
-                    Edit
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => openDeleteDialog(item)} disabled={!canManageUser(item)}>
-                    Hapus
-                  </Button>
-                </div>,
-              ])}
-            />
+                    <Button size="sm" variant="destructive" onClick={() => openDeleteDialog(item)} disabled={!canManageUser(item)}>
+                      Hapus
+                    </Button>
+                  </div>,
+                ])}
+              />
+            ) : (
+              <OperationalState
+                title="Tidak ada akun"
+                description="Tidak ada akun yang cocok dengan filter role, region, atau pencarian saat ini."
+                actionLabel="Reset Filter"
+                onAction={() => {
+                  setFilterRegion("__all__");
+                  setFilterRole(isAdminRegion ? "user_region" : "__all__");
+                  setSearchTerm("");
+                }}
+              />
+            )}
           </CardContent>
         </Card>
 

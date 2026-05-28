@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, RefreshCw, X } from "lucide-react";
+import { Check, Clock, Inbox, RefreshCw, Search, ShieldCheck, X } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
+import { OperationalKpiCard, OperationalState } from "@/components/operational-ui";
 import { ResponseDialog } from "@/components/response-dialog";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,6 +33,30 @@ type ValidationRequestItem = {
   entity_id?: string | null;
   region_id?: string | null;
   submitted_by_user_id?: string | null;
+  submitted_by_name?: string | null;
+  submitted_by_email?: string | null;
+  submitted_by_user_code?: string | null;
+  adminregion_actor_name?: string | null;
+  adminregion_actor_email?: string | null;
+  adminregion_actor_user_code?: string | null;
+  adminregion_action_at?: string | null;
+  adminregion_action_type?: string | null;
+  superadmin_actor_name?: string | null;
+  superadmin_actor_email?: string | null;
+  superadmin_actor_user_code?: string | null;
+  superadmin_action_at?: string | null;
+  superadmin_action_type?: string | null;
+  actor_timeline?: Array<{
+    action_type?: string | null;
+    actor_role?: string | null;
+    actor_name?: string | null;
+    actor_email?: string | null;
+    actor_user_code?: string | null;
+    before_status?: string | null;
+    after_status?: string | null;
+    note?: string | null;
+    created_at?: string | null;
+  }> | null;
   current_status?: RequestStatus | null;
   payload_snapshot?: {
     source?: string;
@@ -64,6 +90,7 @@ type LookupLabels = {
   regions: Record<string, string>;
   pops: Record<string, string>;
   projects: Record<string, string>;
+  users: Record<string, string>;
 };
 type ReviewViewerRole = "adminregion" | "superadmin";
 type RequestTypeFilter = "all" | "create_asset" | "update_asset" | "archive_asset" | "field_validation";
@@ -90,6 +117,7 @@ export default function ValidationRequestsPage() {
   const [selectedId, setSelectedId] = useState("");
   const [typeFilter, setTypeFilter] = useState<RequestTypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<RequestStatusFilter>("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [error, setError] = useState("");
@@ -104,17 +132,33 @@ export default function ValidationRequestsPage() {
   const [evidencePreviewUrl, setEvidencePreviewUrl] = useState("");
   const [evidencePreviewLabel, setEvidencePreviewLabel] = useState("");
   const [evidenceThumbUrls, setEvidenceThumbUrls] = useState<Record<string, string>>({});
-  const [lookupLabels, setLookupLabels] = useState<LookupLabels>({ regions: {}, pops: {}, projects: {} });
+  const [lookupLabels, setLookupLabels] = useState<LookupLabels>({ regions: {}, pops: {}, projects: {}, users: {} });
+  const [selectedDeviceSnapshot, setSelectedDeviceSnapshot] = useState<Record<string, unknown> | null>(null);
 
   const filteredItems = useMemo(
-    () =>
-      items.filter((item) => {
+    () => {
+      const keyword = searchTerm.trim().toLowerCase();
+      return items.filter((item) => {
         const requestType = getRequestType(item);
         const matchesType = typeFilter === "all" || requestType.kind === typeFilter;
         const matchesStatus = statusFilter === "all" || item.current_status === statusFilter;
-        return matchesType && matchesStatus;
-      }),
-    [items, statusFilter, typeFilter],
+        const matchesSearch =
+          !keyword ||
+          [
+            item.request_id,
+            item.id,
+            getOdpName(item),
+            requestType.label,
+            getRequestSummary(item, lookupLabels),
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+            .includes(keyword);
+        return matchesType && matchesStatus && matchesSearch;
+      });
+    },
+    [items, lookupLabels, searchTerm, statusFilter, typeFilter],
   );
   const selected = useMemo(
     () => filteredItems.find((item) => item.id === selectedId) || filteredItems[0] || null,
@@ -123,6 +167,20 @@ export default function ValidationRequestsPage() {
   const queueSummary = useMemo(() => buildQueueSummary(items), [items]);
   const selectedType = getRequestType(selected);
   const evidenceRefs = useMemo(() => normalizeEvidenceRefs(selected?.evidence_attachments), [selected]);
+  const visibleEvidenceRefs = useMemo(() => {
+    const byKey = new Map<string, EvidenceRef>();
+    [
+      ...filteredItems.slice(0, 20).flatMap((item) => [
+        ...normalizeEvidenceRefs(item.evidence_attachments),
+        ...normalizeInspectionEvidenceRefs(item.payload_snapshot?.field_inspection),
+      ]),
+      ...evidenceRefs,
+      ...normalizeInspectionEvidenceRefs(selected?.payload_snapshot?.field_inspection),
+    ].forEach((ref) => {
+      if (!byKey.has(ref.key)) byKey.set(ref.key, ref);
+    });
+    return Array.from(byKey.values());
+  }, [evidenceRefs, filteredItems, selected]);
   const attachmentLabel = selectedType.kind === "field_validation" ? "Evidence" : "Attachment";
   const isAdminRegionView = activeQueue === "adminregion";
   const isRejectedBySuperadmin = selected?.current_status === "rejected_by_superadmin";
@@ -132,7 +190,7 @@ export default function ValidationRequestsPage() {
   );
 
   useEffect(() => {
-    if (!token || evidenceRefs.length === 0) {
+    if (!token || visibleEvidenceRefs.length === 0) {
       setEvidenceThumbUrls({});
       return;
     }
@@ -142,7 +200,7 @@ export default function ValidationRequestsPage() {
 
     async function loadThumbs() {
       const next: Record<string, string> = {};
-      for (const ref of evidenceRefs) {
+      for (const ref of visibleEvidenceRefs) {
         const resolved = await resolveAttachmentCandidates(ref.candidates, token);
         for (const candidate of resolved) {
           try {
@@ -164,7 +222,7 @@ export default function ValidationRequestsPage() {
       cancelled = true;
       objectUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [evidenceRefs, token]);
+  }, [visibleEvidenceRefs, token]);
 
   useEffect(() => {
     if (!canAdminRegionQueue && !canSuperAdminQueue) return;
@@ -173,25 +231,55 @@ export default function ValidationRequestsPage() {
   }, [activeQueue, token, canAdminRegionQueue, canSuperAdminQueue]);
 
   useEffect(() => {
+    if (!selected || selectedType.kind !== "field_validation" || !selected.entity_id || !token) {
+      setSelectedDeviceSnapshot(null);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadSelectedDeviceSnapshot() {
+      try {
+        const result = await apiFetch<{ data?: Record<string, unknown> } | Record<string, unknown>>(
+          `/devices/${encodeURIComponent(selected.entity_id || "")}`,
+          { token },
+        );
+        if (cancelled) return;
+        setSelectedDeviceSnapshot(extractApiData(result));
+      } catch {
+        if (!cancelled) setSelectedDeviceSnapshot(null);
+      }
+    }
+
+    void loadSelectedDeviceSnapshot();
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, selectedType.kind, token]);
+
+  useEffect(() => {
     if (!selected || !token) return;
     const lookupIds = collectLookupIds(selected);
+    const currentDevicePopId = String(selectedDeviceSnapshot?.pop_id || "").trim();
     const missingRegions = lookupIds.regionIds.filter((id) => !lookupLabels.regions[id]);
-    const missingPops = lookupIds.popIds.filter((id) => !lookupLabels.pops[id]);
+    const missingPops = uniqueIds([...lookupIds.popIds, currentDevicePopId]).filter((id) => !lookupLabels.pops[id]);
     const missingProjects = lookupIds.projectIds.filter((id) => !lookupLabels.projects[id]);
-    if (!missingRegions.length && !missingPops.length && !missingProjects.length) return;
+    const missingUsers = lookupIds.userIds.filter((id) => !lookupLabels.users[id]);
+    if (!missingRegions.length && !missingPops.length && !missingProjects.length && !missingUsers.length) return;
 
     let cancelled = false;
     async function loadLookupLabels() {
-      const [regions, pops, projects] = await Promise.all([
+      const [regions, pops, projects, users] = await Promise.all([
         fetchLookupBatch(missingRegions, token, "regions", formatRegionLabel),
         fetchLookupBatch(missingPops, token, "pops", formatPopLabel),
         fetchLookupBatch(missingProjects, token, "projects", formatProjectLabel),
+        fetchLookupBatch(missingUsers, token, "users", formatUserLabel),
       ]);
       if (cancelled) return;
       setLookupLabels((prev) => ({
         regions: { ...prev.regions, ...regions },
         pops: { ...prev.pops, ...pops },
         projects: { ...prev.projects, ...projects },
+        users: { ...prev.users, ...users },
       }));
     }
 
@@ -199,7 +287,7 @@ export default function ValidationRequestsPage() {
     return () => {
       cancelled = true;
     };
-  }, [selected, token, lookupLabels]);
+  }, [selected, selectedDeviceSnapshot, token, lookupLabels]);
 
   useEffect(() => {
     if (!filteredItems.length) {
@@ -390,6 +478,11 @@ export default function ValidationRequestsPage() {
 
         {!loading ? (
           <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+            <div className="xl:col-span-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <OperationalKpiCard label="Queue" value={items.length} caption={activeQueue === "adminregion" ? "Review Admin Region" : "Approval Superadmin"} icon={Inbox} tone="blue" />
+              <OperationalKpiCard label="Validation" value={queueSummary.validation} caption="Field validation request" icon={ShieldCheck} tone="emerald" />
+              <OperationalKpiCard label="Asset Change" value={queueSummary.assetChanges} caption="Create, update, archive" icon={Clock} tone="amber" />
+            </div>
             <Card>
               <CardHeader className="px-3 py-2">
                 <CardTitle className="text-base">Daftar Request</CardTitle>
@@ -397,6 +490,15 @@ export default function ValidationRequestsPage() {
               </CardHeader>
               <CardContent className="space-y-2 px-3 pb-3">
                 <QueueSummaryChips summary={queueSummary} />
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search request, device, atau region..."
+                    className="pl-8"
+                  />
+                </div>
                 <div className="grid grid-cols-1 gap-2">
                   <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as RequestTypeFilter)}>
                     <SelectTrigger size="sm" className="w-full">
@@ -443,24 +545,31 @@ export default function ValidationRequestsPage() {
                         </div>
                       </button>
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        <Button asChild type="button" size="sm" variant="outline" className="h-6 px-2 text-[11px]">
-                          <Link href={`/audit-trail?request_id=${encodeURIComponent(item.request_id || "")}`}>Audit</Link>
-                        </Button>
-                        {getFieldValidationHref(item) ? (
-                          <Button asChild type="button" size="sm" variant="outline" className="h-6 px-2 text-[11px]">
-                            <Link href={getFieldValidationHref(item)}>Open Validation</Link>
-                          </Button>
-                        ) : null}
                         {getQuickOpenHref(item) ? (
                           <Button asChild type="button" size="sm" variant="outline" className="h-6 px-2 text-[11px]">
                             <Link href={getQuickOpenHref(item)}>Open Detail</Link>
                           </Button>
                         ) : null}
                       </div>
+                      <EvidenceThumbStrip
+                        refs={normalizeEvidenceRefs(item.evidence_attachments)}
+                        thumbUrls={evidenceThumbUrls}
+                        label="Evidence"
+                        onPreview={previewEvidence}
+                      />
                     </div>
                   ))
                 ) : (
-                  <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">Tidak ada request yang cocok dengan filter.</p>
+                  <OperationalState
+                    title="Tidak ada request"
+                    description="Tidak ada request yang cocok dengan filter dan pencarian saat ini."
+                    actionLabel="Reset Filter"
+                    onAction={() => {
+                      setSearchTerm("");
+                      setTypeFilter("all");
+                      setStatusFilter("all");
+                    }}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -482,11 +591,14 @@ export default function ValidationRequestsPage() {
               <CardContent className="space-y-3 px-3 pb-3">
                 {selected ? (
                   <>
-                    <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-2 md:grid-cols-3 xl:grid-cols-5">
                       <Info title="Tipe Request" value={selectedType.label} />
                       <Info title="Device" value={getOdpName(selected)} />
+                      <Info title="Submitted By" value={getSubmitterText(selected, lookupLabels)} />
+                      <Info title="Current Owner" value={getNextOwnerLabel(selected.current_status)} />
                       <Info title="Updated" value={formatDateTime(selected.updated_at)} />
                     </div>
+                    <ActorTimelineCard item={selected} lookupLabels={lookupLabels} />
 
                     <RequestStageBanner context={reviewContext} />
 
@@ -495,7 +607,20 @@ export default function ValidationRequestsPage() {
                       requestType={selectedType}
                       lookupLabels={lookupLabels}
                       reviewContext={reviewContext}
+                      currentDeviceSnapshot={selectedDeviceSnapshot}
+                      onPreviewEvidence={previewEvidence}
+                      onDownloadEvidence={openEvidence}
                     />
+                    {selectedType.kind !== "field_validation" ? (
+                      <EvidenceReviewCard
+                        title={attachmentLabel}
+                        refs={evidenceRefs}
+                        thumbUrls={evidenceThumbUrls}
+                        isFieldValidation={false}
+                        onPreview={previewEvidence}
+                        onDownload={openEvidence}
+                      />
+                    ) : null}
 
                     {!isAdminRegionView ? (
                       <div className="flex flex-wrap gap-2">
@@ -518,59 +643,6 @@ export default function ValidationRequestsPage() {
                       <PortSummaryCard ports={selected.payload_snapshot?.device_ports || []} />
                     ) : null}
                     <TechnicalSnapshotDetails item={selected} />
-
-                    <div className="rounded-md border p-2">
-                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-medium">{attachmentLabel}</p>
-                        {selectedType.kind === "field_validation" ? (
-                          <Badge variant="outline" className="text-[10px]">Request aktif</Badge>
-                        ) : null}
-                      </div>
-                      {selectedType.kind === "field_validation" ? (
-                        <p className="mb-2 text-xs text-muted-foreground">
-                          Lampiran di panel ini hanya berasal dari request validasi aktif. Evidence histori tetap dibaca dari histori validasi/detail ODP.
-                        </p>
-                      ) : null}
-                      {evidenceRefs.length ? (
-                        <div className="flex flex-wrap gap-1.5">
-                          {evidenceRefs.map((ref, index) => (
-                            <div key={ref.key} className="overflow-hidden rounded-md border bg-muted/30">
-                              <button
-                                type="button"
-                                onClick={() => void previewEvidence(ref.candidates, `${attachmentLabel} ${index + 1}`)}
-                                disabled={!ref.available}
-                                className="block size-14 overflow-hidden border-b disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {evidenceThumbUrls[ref.key] ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={evidenceThumbUrls[ref.key]}
-                                    alt={`${attachmentLabel} ${index + 1}`}
-                                    className="size-full object-cover"
-                                  />
-                                ) : (
-                                  <span className="flex size-full items-center justify-center text-[10px] text-muted-foreground">No preview</span>
-                                )}
-                              </button>
-                              <div className="flex size-14 items-center justify-center p-1">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => void openEvidence(ref.candidates)}
-                                  disabled={!ref.available}
-                                  className="h-5 w-full px-1 text-[9px]"
-                                >
-                                  Download
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">Tidak ada {attachmentLabel.toLowerCase()}.</p>
-                      )}
-                    </div>
 
                     {selected.adminregion_review_note ? (
                       <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">Catatan Admin Region: {selected.adminregion_review_note}</p>
@@ -600,7 +672,7 @@ export default function ValidationRequestsPage() {
                     )}
                   </>
                 ) : (
-                  <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">Pilih request di panel kiri.</p>
+                  <OperationalState title="Pilih request" description="Pilih salah satu request di panel kiri untuk melihat detail review." />
                 )}
               </CardContent>
             </Card>
@@ -778,6 +850,38 @@ function normalizeEvidenceRefs(value: ValidationRequestItem["evidence_attachment
     .filter((row): row is EvidenceRef => Boolean(row));
 }
 
+function normalizeInspectionEvidenceRefs(inspection?: Record<string, unknown> | null): EvidenceRef[] {
+  const refs: EvidenceRef[] = [];
+  objectRecordValues(inspection?.initial_photos).forEach((item, index) => {
+    const ref = getInspectionAttachmentRef(item.attachment, `initial-${index}`);
+    if (ref) refs.push(ref);
+  });
+  objectRecordValues(inspection?.condition_checks).forEach((item, index) => {
+    const ref = getInspectionAttachmentRef(item.attachment, `condition-${index}`);
+    if (ref) refs.push(ref);
+  });
+  return refs;
+}
+
+function getInspectionAttachmentRef(value: unknown, keyPrefix: string): EvidenceRef | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const attachment = value as Record<string, unknown>;
+  const candidates = [
+    attachment.id,
+    attachment.attachment_id,
+    attachment.storage_file_id,
+    attachment.file_id,
+  ]
+    .map((candidate) => String(candidate || "").trim())
+    .filter(Boolean);
+  if (!candidates.length) return null;
+  return {
+    key: `${keyPrefix}-${candidates[0]}`,
+    candidates,
+    available: true,
+  };
+}
+
 async function resolveAttachmentCandidates(candidates: string[], token: string): Promise<string[]> {
   const ordered = new Set<string>(candidates.filter(Boolean));
   for (const candidate of candidates) {
@@ -802,6 +906,45 @@ function Info({ title, value }: { title: string; value: string }) {
     <div className="rounded-md border bg-muted/20 px-2 py-1.5">
       <p className="text-[10px] uppercase leading-4 text-muted-foreground">{title}</p>
       <p className="break-all text-sm leading-5">{value}</p>
+    </div>
+  );
+}
+
+function ActorTimelineCard({ item, lookupLabels }: { item: ValidationRequestItem; lookupLabels: LookupLabels }) {
+  const submitterText = getSubmitterText(item, lookupLabels);
+  const rows = [
+    {
+      actionType: item.adminregion_action_type,
+      label: formatActorAction(item.adminregion_action_type, "Adminregion review"),
+      name: getActorText(item.adminregion_actor_name, item.adminregion_actor_email, item.adminregion_actor_user_code),
+      at: item.adminregion_action_at,
+    },
+    {
+      actionType: item.superadmin_action_type,
+      label: formatActorAction(item.superadmin_action_type, "Superadmin review"),
+      name: getActorText(item.superadmin_actor_name, item.superadmin_actor_email, item.superadmin_actor_user_code),
+      at: item.superadmin_action_at,
+    },
+  ].filter((row) => {
+    if (row.name === "-") return false;
+    if (String(row.actionType || "").toLowerCase() === "resubmitted_by_adminregion") return false;
+    return normalizeActorDisplay(row.name) !== normalizeActorDisplay(submitterText);
+  });
+
+  if (!rows.length) return null;
+
+  return (
+    <div className="rounded-md border bg-muted/20 px-2.5 py-2">
+      <p className="text-[10px] uppercase leading-4 text-muted-foreground">Actor Timeline</p>
+      <div className="mt-1 grid gap-1 md:grid-cols-3">
+        {rows.map((row) => (
+          <div key={row.label} className="rounded-md border bg-background/70 px-2 py-1.5">
+            <p className="text-[10px] font-medium uppercase text-muted-foreground">{row.label}</p>
+            <p className="truncate text-sm font-medium">{row.name}</p>
+            <p className="text-[11px] text-muted-foreground">{formatDateTime(row.at)}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -902,13 +1045,6 @@ function getQuickOpenHref(item: ValidationRequestItem) {
     return `/data-management/list/projects/${encodeURIComponent(item.entity_id)}`;
   }
   return "";
-}
-
-function getFieldValidationHref(item: ValidationRequestItem) {
-  if (!item.entity_id) return "";
-  return getRequestType(item).kind === "field_validation"
-    ? `/field/odp/${encodeURIComponent(item.entity_id)}`
-    : "";
 }
 
 function buildQueueSummary(items: ValidationRequestItem[]) {
@@ -1028,6 +1164,34 @@ function getFieldValidationReviewFields(item: ValidationRequestItem) {
   ];
 }
 
+function buildFieldValidationComparisonFields(
+  field: Record<string, unknown>,
+  currentDevice: Record<string, unknown>,
+  lookupLabels: LookupLabels,
+) {
+  const currentPop = currentDevice.pop_name || getPopText(currentDevice.pop_id, lookupLabels);
+  const pairs = [
+    ["Nama ODP Lama", currentDevice.device_name || field.old_device_name, field.old_device_name],
+    ["Nama ODP Baru", null, field.new_device_name],
+    ["POP", currentPop, field.pop_name || getPopText(field.pop_id, lookupLabels)],
+    ["Longitude", currentDevice.longitude, field.longitude],
+    ["Latitude", currentDevice.latitude, field.latitude],
+    ["Tipe ODP", currentDevice.odp_type, field.odp_type],
+    ["Jenis Instalasi", currentDevice.installation_type, field.installation_type],
+    ["Splitter", currentDevice.splitter_ratio, field.splitter_ratio],
+    ["Kapasitas", currentDevice.total_ports, field.total_ports],
+  ];
+
+  return pairs
+    .map(([label, before, after]) => ({
+      label: String(label),
+      before: valueText(before),
+      after: valueText(after),
+      changed: normalizeComparableValue(before) !== normalizeComparableValue(after),
+    }))
+    .filter((field) => field.label === "Nama ODP Lama" || field.label === "Nama ODP Baru" || field.before !== "-" || field.after !== "-");
+}
+
 type RequestType = ReturnType<typeof getRequestType>;
 
 function RequestReviewTemplate({
@@ -1035,11 +1199,17 @@ function RequestReviewTemplate({
   requestType,
   lookupLabels,
   reviewContext,
+  currentDeviceSnapshot,
+  onPreviewEvidence,
+  onDownloadEvidence,
 }: {
   item: ValidationRequestItem;
   requestType: RequestType;
   lookupLabels: LookupLabels;
   reviewContext: ReviewContext;
+  currentDeviceSnapshot?: Record<string, unknown> | null;
+  onPreviewEvidence: (candidates: string[], label: string) => Promise<void>;
+  onDownloadEvidence: (candidates: string[]) => Promise<void>;
 }) {
   if (requestType.kind === "create_asset") {
     return <CreateAssetRequestReview item={item} requestType={requestType} lookupLabels={lookupLabels} />;
@@ -1050,7 +1220,16 @@ function RequestReviewTemplate({
   if (requestType.kind === "archive_asset") {
     return <ArchiveAssetRequestReview item={item} requestType={requestType} lookupLabels={lookupLabels} />;
   }
-  return <ValidationRequestReview item={item} reviewContext={reviewContext} />;
+  return (
+      <ValidationRequestReview
+        item={item}
+        reviewContext={reviewContext}
+        lookupLabels={lookupLabels}
+        currentDeviceSnapshot={currentDeviceSnapshot}
+        onPreviewEvidence={onPreviewEvidence}
+        onDownloadEvidence={onDownloadEvidence}
+      />
+  );
 }
 
 function CreateAssetRequestReview({
@@ -1174,11 +1353,24 @@ function ArchiveAssetRequestReview({
 function ValidationRequestReview({
   item,
   reviewContext,
+  lookupLabels,
+  currentDeviceSnapshot,
+  onPreviewEvidence,
+  onDownloadEvidence,
 }: {
   item: ValidationRequestItem;
   reviewContext: ReviewContext;
+  lookupLabels: LookupLabels;
+  currentDeviceSnapshot?: Record<string, unknown> | null;
+  onPreviewEvidence: (candidates: string[], label: string) => Promise<void>;
+  onDownloadEvidence: (candidates: string[]) => Promise<void>;
 }) {
   const fieldRows = getFieldValidationReviewFields(item);
+  const comparisonRows = buildFieldValidationComparisonFields(
+    item.payload_snapshot?.field_validation || {},
+    currentDeviceSnapshot || item.payload_snapshot?.before || item.payload_snapshot?.device || {},
+    lookupLabels,
+  );
   const inspectionSummary = getInspectionSummary(item.payload_snapshot?.field_inspection);
   const portSummary = getPortSummary(item.payload_snapshot?.device_ports || []);
   const validationDescription =
@@ -1214,11 +1406,164 @@ function ValidationRequestReview({
           ))}
         </div>
       </div>
-      <FieldInspectionReview inspection={item.payload_snapshot?.field_inspection} />
+      <ComparisonReviewCard rows={comparisonRows} />
+      <FieldInspectionReview
+        inspection={item.payload_snapshot?.field_inspection}
+        onPreview={onPreviewEvidence}
+        onDownload={onDownloadEvidence}
+      />
       <div className="rounded-md border p-2.5">
         <p className="mb-1.5 text-sm font-medium">Temuan</p>
         <p className="text-xs text-muted-foreground">{item.finding_note || "-"}</p>
       </div>
+    </div>
+  );
+}
+
+function ComparisonReviewCard({
+  rows,
+}: {
+  rows: Array<{ label: string; before: string; after: string; changed: boolean }>;
+}) {
+  return (
+    <div className="rounded-md border p-2.5">
+      <ReviewSectionHeader
+        eyebrow="Compare"
+        title="Pembanding Data"
+        description="Bandingkan data existing dengan hasil validasi validator sebelum mengambil keputusan."
+      />
+      {rows.length ? (
+        <div className="mt-2 space-y-1.5">
+          {rows.map((row) => (
+            <div
+              key={row.label}
+              className={`grid grid-cols-1 gap-1 rounded-md border px-2 py-1.5 text-xs md:grid-cols-[140px_1fr_1fr] ${
+                row.changed ? "border-amber-200 bg-amber-50/50" : "bg-background"
+              }`}
+            >
+              <span className="font-medium">{row.label}</span>
+              <span className="text-muted-foreground">Existing: {row.before}</span>
+              <span>Validator: {row.after}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 text-xs text-muted-foreground">Tidak ada data pembanding pada snapshot request ini.</p>
+      )}
+    </div>
+  );
+}
+
+function EvidenceThumbStrip({
+  refs,
+  thumbUrls,
+  label,
+  onPreview,
+}: {
+  refs: EvidenceRef[];
+  thumbUrls: Record<string, string>;
+  label: string;
+  onPreview: (candidates: string[], label: string) => Promise<void>;
+}) {
+  const availableRefs = refs.filter((ref) => ref.available).slice(0, 4);
+  if (!availableRefs.length) return null;
+
+  return (
+    <div className="mt-2 flex items-center gap-1.5 overflow-hidden">
+      {availableRefs.map((ref, index) => (
+        <button
+          key={ref.key}
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void onPreview(ref.candidates, `${label} ${index + 1}`);
+          }}
+          className="size-9 overflow-hidden rounded-md border bg-muted/30"
+          title={`${label} ${index + 1}`}
+        >
+          {thumbUrls[ref.key] ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={thumbUrls[ref.key]} alt={`${label} ${index + 1}`} className="size-full object-cover" />
+          ) : (
+            <span className="flex size-full items-center justify-center text-[9px] text-muted-foreground">IMG</span>
+          )}
+        </button>
+      ))}
+      {refs.length > availableRefs.length ? (
+        <Badge variant="outline" className="h-6 px-1.5 text-[10px]">
+          +{refs.length - availableRefs.length}
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
+function EvidenceReviewCard({
+  title,
+  refs,
+  thumbUrls,
+  isFieldValidation,
+  onPreview,
+  onDownload,
+}: {
+  title: string;
+  refs: EvidenceRef[];
+  thumbUrls: Record<string, string>;
+  isFieldValidation: boolean;
+  onPreview: (candidates: string[], label: string) => Promise<void>;
+  onDownload: (candidates: string[]) => Promise<void>;
+}) {
+  return (
+    <div className="rounded-md border p-2.5">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <ReviewSectionHeader
+          eyebrow="Evidence"
+          title={`Foto ${title}`}
+          description={
+            isFieldValidation
+              ? "Preview evidence aktif dari request validasi ini. Evidence histori tetap tersedia di detail ODP."
+              : "Preview attachment request untuk membantu review perubahan asset."
+          }
+        />
+        {isFieldValidation ? <Badge variant="outline" className="text-[10px]">Request aktif</Badge> : null}
+      </div>
+      {refs.length ? (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {refs.map((ref, index) => (
+            <div key={ref.key} className="overflow-hidden rounded-md border bg-muted/30">
+              <button
+                type="button"
+                onClick={() => void onPreview(ref.candidates, `${title} ${index + 1}`)}
+                disabled={!ref.available}
+                className="block aspect-[4/3] w-full overflow-hidden border-b disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {thumbUrls[ref.key] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={thumbUrls[ref.key]} alt={`${title} ${index + 1}`} className="size-full object-cover" />
+                ) : (
+                  <span className="flex size-full items-center justify-center text-[10px] text-muted-foreground">No preview</span>
+                )}
+              </button>
+              <div className="flex items-center justify-between gap-2 p-1.5">
+                <span className="truncate text-[11px] text-muted-foreground">{title} {index + 1}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void onDownload(ref.candidates)}
+                  disabled={!ref.available}
+                  className="h-6 px-2 text-[10px]"
+                >
+                  Download
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Tidak ada {title.toLowerCase()} pada request ini.</p>
+      )}
     </div>
   );
 }
@@ -1298,7 +1643,15 @@ function TechnicalSnapshotDetails({ item }: { item: ValidationRequestItem }) {
   );
 }
 
-function FieldInspectionReview({ inspection }: { inspection?: Record<string, unknown> | null }) {
+function FieldInspectionReview({
+  inspection,
+  onPreview,
+  onDownload,
+}: {
+  inspection?: Record<string, unknown> | null;
+  onPreview: (candidates: string[], label: string) => Promise<void>;
+  onDownload: (candidates: string[]) => Promise<void>;
+}) {
   const initialPhotos = objectRecordValues(inspection?.initial_photos);
   const conditionChecks = objectRecordValues(inspection?.condition_checks);
 
@@ -1315,6 +1668,12 @@ function FieldInspectionReview({ inspection }: { inspection?: Record<string, unk
               <div key={`${valueText(item.label)}-${index}`} className="rounded-md border bg-muted/20 p-2">
                 <p className="text-xs font-medium">{valueText(item.label)}</p>
                 <p className="text-xs text-muted-foreground">Foto: {getInspectionAttachmentName(item.attachment)}</p>
+                <InspectionEvidenceActions
+                  attachment={item.attachment}
+                  label={`${valueText(item.label)} ${index + 1}`}
+                  onPreview={onPreview}
+                  onDownload={onDownload}
+                />
               </div>
             ))}
           </div>
@@ -1334,11 +1693,57 @@ function FieldInspectionReview({ inspection }: { inspection?: Record<string, unk
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">Keterangan: {valueText(item.note)}</p>
                 <p className="text-xs text-muted-foreground">Foto: {getInspectionAttachmentName(item.attachment)}</p>
+                <InspectionEvidenceActions
+                  attachment={item.attachment}
+                  label={`${valueText(item.label)} ${index + 1}`}
+                  onPreview={onPreview}
+                  onDownload={onDownload}
+                />
               </div>
             ))}
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function InspectionEvidenceActions({
+  attachment,
+  label,
+  onPreview,
+  onDownload,
+}: {
+  attachment: unknown;
+  label: string;
+  onPreview: (candidates: string[], label: string) => Promise<void>;
+  onDownload: (candidates: string[]) => Promise<void>;
+}) {
+  const ref = getInspectionAttachmentRef(attachment, label);
+  if (!ref) {
+    return <p className="mt-2 rounded-md border border-dashed px-2 py-1 text-[11px] text-muted-foreground">Evidence belum tersedia.</p>;
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-7 px-2 text-[11px]"
+        onClick={() => void onPreview(ref.candidates, label)}
+      >
+        Preview
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-7 px-2 text-[11px]"
+        onClick={() => void onDownload(ref.candidates)}
+      >
+        Download
+      </Button>
     </div>
   );
 }
@@ -1398,6 +1803,7 @@ function collectLookupIds(item: ValidationRequestItem) {
     regionIds: uniqueIds([payload.region_id, item.region_id]),
     popIds: uniqueIds([payload.pop_id]),
     projectIds: uniqueIds([payload.project_id]),
+    userIds: uniqueIds([item.submitted_by_user_id]),
   };
 }
 
@@ -1414,7 +1820,7 @@ function uniqueIds(values: unknown[]) {
 async function fetchLookupBatch(
   ids: string[],
   token: string,
-  resource: "regions" | "pops" | "projects",
+  resource: "regions" | "pops" | "projects" | "users",
   formatter: (item: Record<string, unknown>) => string,
 ) {
   const entries = await Promise.all(
@@ -1449,6 +1855,14 @@ function formatProjectLabel(item: Record<string, unknown>) {
   return code !== "-" ? `${name} (${code})` : name;
 }
 
+function formatUserLabel(item: Record<string, unknown>) {
+  const name = valueText(item.full_name);
+  const code = valueText(item.email || item.user_code);
+  if (name === "-" && code === "-") return "-";
+  if (name === "-") return code;
+  return name;
+}
+
 function getRegionText(value: unknown, lookupLabels: LookupLabels) {
   const id = String(value || "").trim();
   if (!id) return "-";
@@ -1465,6 +1879,38 @@ function getProjectText(value: unknown, lookupLabels: LookupLabels) {
   const id = String(value || "").trim();
   if (!id) return "-";
   return lookupLabels.projects[id] || valueText(value);
+}
+
+function getUserText(value: unknown, lookupLabels: LookupLabels) {
+  const id = String(value || "").trim();
+  if (!id) return "-";
+  return lookupLabels.users[id] || "-";
+}
+
+function getActorText(...values: Array<unknown>) {
+  for (const value of values) {
+    const text = valueText(value);
+    if (text !== "-" && !/^[0-9a-f-]{32,36}$/i.test(text)) return text;
+  }
+  return "-";
+}
+
+function normalizeActorDisplay(value: unknown) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getSubmitterText(item: ValidationRequestItem, lookupLabels: LookupLabels) {
+  return getActorText(item.submitted_by_name, item.submitted_by_email, item.submitted_by_user_code, getUserText(item.submitted_by_user_id, lookupLabels));
+}
+
+function formatActorAction(value: unknown, fallback: string) {
+  const action = String(value || "").trim().toLowerCase();
+  if (action === "approved_by_adminregion") return "Adminregion approved";
+  if (action === "rejected_by_adminregion") return "Adminregion rejected";
+  if (action === "resubmitted_by_adminregion") return "Adminregion resubmitted";
+  if (action === "approved_by_superadmin") return "Superadmin approved";
+  if (action === "rejected_by_superadmin") return "Superadmin rejected";
+  return fallback;
 }
 
 function shortId(value: string) {
@@ -1500,6 +1946,13 @@ function valueText(value: unknown) {
   if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "boolean") return value ? "Ya" : "Tidak";
   return String(value);
+}
+
+function extractApiData(result: { data?: Record<string, unknown> } | Record<string, unknown>) {
+  if (result && typeof result === "object" && "data" in result && result.data && typeof result.data === "object") {
+    return result.data as Record<string, unknown>;
+  }
+  return result as Record<string, unknown>;
 }
 
 function renderPortStats(ports: Array<Record<string, unknown>>) {

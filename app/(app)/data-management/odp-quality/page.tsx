@@ -286,9 +286,6 @@ export default function OdpQualityPage() {
                         <Link href={`/data-management/list/odp/${row.odpId}`}>Open ODP</Link>
                       </Button>
                       <Button asChild variant="outline" size="sm">
-                        <Link href={`/field/odp/${row.odpId}`}>Field View</Link>
-                      </Button>
-                      <Button asChild variant="outline" size="sm">
                         <Link
                           href={`/audit-trail?entity_type=${encodeURIComponent(row.auditEntityType)}&entity_id=${encodeURIComponent(row.auditEntityId)}`}
                         >
@@ -459,7 +456,7 @@ function getWorkflowIssueNote(issue: IssueKey, request: ValidationQualityRequest
 }
 
 function exportIssueCsv(rows: IssueRow[], issueLabel: string) {
-  const headers = ["issue_label", "odp_id", "odp_name", "port_label", "port_status", "note", "detail_url", "field_url"];
+  const headers = ["issue_label", "odp_id", "odp_name", "port_label", "port_status", "note", "detail_url", "qr_url"];
   const lines = rows.map((row) => [
     issueLabel,
     row.odpDeviceId,

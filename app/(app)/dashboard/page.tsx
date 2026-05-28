@@ -317,7 +317,7 @@ function ValidatorOverviewDashboard({
       id: `pending:${item.id}`,
       title: item.device_name || item.device_id || "ODP",
       description: `${item.device_id || item.id} belum memiliki validasi final.`,
-      href: `/field/odp/${item.id}`,
+      href: `/data-management/list/odp/${item.id}`,
       badge: item.validation_status || "unvalidated",
       tone: "amber" as const,
     }));
@@ -603,7 +603,7 @@ function ValidatorDashboard({ data, loading, singleRegionScope }: { data: Dashbo
       id: item.id,
       title: item.device_name || item.device_id || "ODP",
       description: `${item.device_id || item.id} belum memiliki validasi final.`,
-      href: `/field/odp/${item.id}`,
+      href: `/data-management/list/odp/${item.id}`,
       badge: item.validation_status || "unvalidated",
       tone: "amber" as const,
     }));
@@ -928,7 +928,7 @@ function requestItems(items: ValidationRequestItem[], kind: "pending_adminregion
     id: `${kind}:${item.id}`,
     title: getRequestTitle(item),
     description: getRequestDescription(item),
-    href: kind === "pending_adminregion" || kind === "pending_superadmin" || kind === "rejected_superadmin" ? "/requests" : `/field/odp/${item.entity_id || ""}`,
+    href: kind === "pending_adminregion" || kind === "pending_superadmin" || kind === "rejected_superadmin" ? "/requests" : `/data-management/list/odp/${item.entity_id || ""}`,
     badge: statusLabel(item.current_status || kind),
     tone: kind.includes("rejected") ? "red" : "blue",
   }));

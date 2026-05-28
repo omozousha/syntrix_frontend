@@ -121,22 +121,22 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-dvh bg-background lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="hidden border-r bg-muted/20 lg:flex lg:items-center lg:justify-center">
-        <div className="w-full max-w-2xl space-y-6 px-10">
+    <main className="grid min-h-dvh bg-[radial-gradient(circle_at_top_left,var(--accent),transparent_34%),linear-gradient(135deg,var(--background),var(--muted))] lg:grid-cols-[1.08fr_0.92fr]">
+      <section className="hidden border-r bg-card/45 lg:flex lg:items-center lg:justify-center">
+        <div className="w-full max-w-2xl space-y-7 px-10">
           <div className="space-y-3">
-            <Badge variant="outline" className="w-fit">
-              Synchronization & Validation Matrix
+            <Badge variant="outline" className="w-fit rounded-md bg-background/70">
+              Network Assurance Console
             </Badge>
             <div className="space-y-2">
-              <h1 className="text-4xl font-semibold tracking-tight">Syntrix</h1>
+              <h1 className="text-5xl font-semibold tracking-tight text-balance">Syntrix</h1>
               <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-                Operations console untuk menyelaraskan inventory region, POP, device, validasi ODP, dan approval chain dalam satu alur kerja yang terukur.
+                Synchronization & Validation Matrix untuk inventory region, POP, device, validasi ODP, dan approval chain dalam satu alur kerja yang terukur.
               </p>
             </div>
           </div>
 
-          <div className="rounded-xl border bg-card p-4 shadow-sm">
+          <div className="rounded-2xl border bg-card/85 p-4 shadow-sm">
             <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-3">
               <MatrixNode icon={Network} title="Inventory" description="Region, POP, Device" />
               <ArrowRight className="size-4 text-muted-foreground" />
@@ -152,9 +152,9 @@ export default function LoginPage() {
             <SignalCard label="Control" value="Audit ready" />
           </div>
 
-          <div className="rounded-lg border bg-background p-4">
+          <div className="rounded-xl border bg-background/80 p-4 shadow-sm">
             <div className="flex items-start gap-3">
-              <div className="rounded-md bg-primary/10 p-2 text-primary">
+              <div className="rounded-md border border-primary/15 bg-primary/10 p-2 text-primary shadow-inner">
                 <LockKeyhole className="size-4" />
               </div>
               <div className="space-y-1">
@@ -169,11 +169,11 @@ export default function LoginPage() {
       </section>
 
       <section className="flex items-center justify-center px-3 py-6 sm:px-6 sm:py-10">
-        <Card className="w-full max-w-md border-border/80 shadow-sm">
+        <Card className="w-full max-w-md border-border/80 bg-card/95 shadow-xl shadow-primary/5">
           <CardHeader className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                <div className="rounded-md border border-primary/15 bg-primary/10 p-2 text-primary shadow-inner">
                   <Network className="size-4" />
                 </div>
                 <div>
@@ -185,8 +185,8 @@ export default function LoginPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-md border bg-muted/30 px-3 py-2">
-              <p className="text-xs text-muted-foreground">Destination</p>
+            <div className="rounded-md border bg-muted/35 px-3 py-2">
+              <p className="text-xs text-muted-foreground">Tujuan setelah login</p>
               <p className="truncate text-sm font-medium">{getNextPath()}</p>
             </div>
 
@@ -231,7 +231,7 @@ export default function LoginPage() {
                   </div>
                 </Field>
 
-                <Button type="submit" disabled={loading} className="w-full">
+                <Button type="submit" disabled={loading} className="w-full shadow-sm shadow-primary/20">
                   {loading ? <Loader2 className="size-4 animate-spin" /> : null}
                   {loading ? "Memproses..." : "Login"}
                 </Button>
@@ -291,7 +291,7 @@ function MatrixNode({
   description: string;
 }) {
   return (
-    <div className="min-w-0 rounded-lg border bg-background p-3">
+    <div className="min-w-0 rounded-xl border bg-background/80 p-3 shadow-sm">
       <Icon className="mb-3 size-5 text-primary" />
       <p className="truncate text-sm font-medium">{title}</p>
       <p className="mt-1 truncate text-xs text-muted-foreground">{description}</p>
@@ -301,8 +301,8 @@ function MatrixNode({
 
 function SignalCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-card p-3">
-      <p className="text-[11px] uppercase text-muted-foreground">{label}</p>
+    <div className="rounded-xl border bg-card/80 p-3 shadow-sm">
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-1 text-sm font-medium">{value}</p>
     </div>
   );
