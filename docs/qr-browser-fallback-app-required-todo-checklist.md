@@ -25,7 +25,9 @@ Jika QR dibuka di browser:
 1. Tampilkan screen khusus `Syntrix-One Required`.
 2. Tampilkan informasi ringkas device jika bisa di-load:
    - nama ODP/device
-   - type device
+   - inventory ID
+   - POP
+   - region
 3. Jelaskan bahwa validasi hanya bisa dilakukan lewat Syntrix-One.
 4. Sediakan CTA:
    - `Buka Syntrix-One`
@@ -46,8 +48,11 @@ Jika QR dibuka dari Syntrix-One:
 - [x] Ganti form validasi browser dengan App Required Screen.
 - [x] Pastikan screen tetap memakai brand Syntrix dan gaya UI operasional yang konsisten.
 - [x] Load detail device read-only secukupnya untuk konteks QR:
-  - [x] nama device / nama ODP lama
-  - [x] type device
+  - [x] device name
+  - [x] inventory ID
+  - [x] device type
+  - [x] POP name/code
+  - [x] region name
 - [x] Jika device gagal di-load, tampilkan fallback aman:
   - [x] `QR valid, tetapi data device belum dapat dimuat.`
   - [x] instruksi scan ulang lewat Syntrix-One.
@@ -75,14 +80,8 @@ Jika QR dibuka dari Syntrix-One:
 
 ## Scope Backend
 
-Backend tidak perlu membuka detail penuh untuk fase ini, tetapi ada endpoint public minimal untuk konteks QR:
+Backend tidak perlu perubahan besar untuk fase ini, tetapi harus diverifikasi:
 
-- [x] Tambahkan endpoint public read-only `GET /api/v1/public/qr/devices/:id`.
-- [x] Batasi response endpoint public hanya ke:
-  - [x] id
-  - [x] type device
-  - [x] nama device / nama ODP lama
-- [x] Endpoint public tidak menampilkan inventory ID, POP, region, koordinat, port, atau evidence.
 - [ ] Endpoint submit validation request tetap butuh token validator.
 - [ ] Role selain validator tidak bisa submit validasi lapangan.
 - [ ] Scope region validator tetap divalidasi.
@@ -126,13 +125,13 @@ Pesan device tidak ditemukan:
 
 ## Verifikasi
 
-- [ ] Buka QR URL dari desktop browser.
-- [ ] Buka QR URL dari mobile browser.
-- [ ] Pastikan tidak ada form validasi web.
-- [ ] Pastikan CTA tidak membuat halaman blank jika app tidak tersedia.
-- [ ] Scan QR dari Syntrix-One dan pastikan masuk ke form validasi.
+- [x] Buka QR URL dari desktop browser.
+- [x] Buka QR URL dari mobile browser.
+- [x] Pastikan tidak ada form validasi web.
+- [x] Pastikan CTA tidak membuat halaman blank jika app tidak tersedia.
+- [x] Scan QR dari Syntrix-One dan pastikan masuk ke form validasi.
 - [ ] Scan QR device region lain dan pastikan masuk ke region mismatch.
-- [ ] Login sebagai validator di web dan pastikan tetap diarahkan ke Syntrix-One sesuai aturan.
+- [x] Login sebagai validator di web dan pastikan tetap diarahkan ke Syntrix-One sesuai aturan.
 - [ ] Login sebagai adminregion/superadmin dan pastikan tidak dapat mengakses form validasi browser.
 - [x] Jalankan lint frontend.
 - [x] Build app jika ada perubahan parser/deep link app.
