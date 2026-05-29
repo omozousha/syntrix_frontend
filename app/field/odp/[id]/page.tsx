@@ -7,13 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiFetch } from "@/lib/api";
-import { getStoredToken } from "@/lib/session";
 
 type DeviceQrContext = {
   id: string;
-  device_id?: string | null;
   device_name?: string | null;
   device_type_key?: string | null;
+  tenant?: {
+    id?: string | null;
+    tenant_code?: string | null;
+    tenant_name?: string | null;
+  } | null;
 };
 
 const SYNTRIX_ONE_SCHEME = "io.syntrixone.app://field/odp";
@@ -33,26 +36,21 @@ export default function OdpQrBrowserFallbackPage() {
 
   useEffect(() => {
     if (!id) return;
-    const token = getStoredToken();
-    if (!token) {
-      setLoadMessage("Detail device hanya ditampilkan jika sesi web masih tersedia.");
-      return;
-    }
 
     let cancelled = false;
     async function loadDeviceContext() {
       setLoading(true);
       setLoadMessage("");
       try {
-        const result = await apiFetch<{ data?: DeviceQrContext }>(`/devices/${encodeURIComponent(id)}`, { token });
+        const result = await apiFetch<{ data?: DeviceQrContext }>(`/public/qr/devices/${encodeURIComponent(id)}`);
         if (cancelled) return;
         setDevice(result.data || null);
         if (!result.data) {
-          setLoadMessage("Data device belum dapat dimuat.");
+          setLoadMessage("Nama device belum tersedia. Buka Syntrix-One lalu scan ulang QR.");
         }
       } catch {
         if (!cancelled) {
-          setLoadMessage("Data device belum dapat dimuat. Scan ulang QR melalui Syntrix-One atau hubungi admin jika label QR rusak.");
+          setLoadMessage("Nama device belum tersedia. Buka Syntrix-One lalu scan ulang QR.");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -142,6 +140,14 @@ export default function OdpQrBrowserFallbackPage() {
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                 <InfoRow label="Type Device" value={device?.device_type_key || "ODP"} />
                 <InfoRow label="Nama Device" value={device?.device_name || "-"} />
+                <InfoRow
+                  label="Tenant"
+                  value={
+                    device?.tenant?.tenant_name
+                      ? [device.tenant.tenant_name, device.tenant.tenant_code].filter(Boolean).join(" | ")
+                      : "-"
+                  }
+                />
               </div>
 
               {loadMessage ? (

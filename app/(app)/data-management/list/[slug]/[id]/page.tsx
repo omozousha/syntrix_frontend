@@ -114,6 +114,7 @@ type SplitterProfileOption = {
 };
 type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
+type TenantOption = { id: string; tenant_name: string; tenant_code?: string | null };
 type OdpCoreChainSummary = {
   is_odp: boolean;
   is_complete: boolean;
@@ -300,6 +301,7 @@ type RelationLabels = {
   manufacturer?: string;
   brand?: string;
   model?: string;
+  tenant?: string;
   popCode?: string;
   popType?: string;
   province?: string;
@@ -342,6 +344,7 @@ export default function DataManagementDetailPage() {
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
+  const [tenants, setTenants] = useState<TenantOption[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [newImagePreviewUrls, setNewImagePreviewUrls] = useState<string[]>([]);
   const [renamingAttachmentId, setRenamingAttachmentId] = useState("");
@@ -571,7 +574,7 @@ export default function DataManagementDetailPage() {
       const labels: RelationLabels = {};
       try {
         if (activeCategory.resource === "devices") {
-          const [region, pop, manufacturer, brand, model] = await Promise.all([
+          const [region, pop, manufacturer, brand, model, tenant] = await Promise.all([
             valueOf(activeItem.region_id)
               ? apiFetch<{ data: Record<string, unknown> }>(`/regions/${valueOf(activeItem.region_id)}`, { token }).catch(() => null)
               : Promise.resolve(null),
@@ -587,6 +590,9 @@ export default function DataManagementDetailPage() {
             valueOf(activeItem.model_id)
               ? apiFetch<{ data: Record<string, unknown> }>(`/assetModels/${valueOf(activeItem.model_id)}`, { token }).catch(() => null)
               : Promise.resolve(null),
+            valueOf(activeItem.tenant_id)
+              ? apiFetch<{ data: Record<string, unknown> }>(`/tenants/${valueOf(activeItem.tenant_id)}`, { token }).catch(() => null)
+              : Promise.resolve(null),
           ]);
 
           labels.region = region ? valueOf(region.data.region_name) : "";
@@ -595,6 +601,7 @@ export default function DataManagementDetailPage() {
           labels.manufacturer = manufacturer ? valueOf(manufacturer.data.manufacturer_name) : "";
           labels.brand = brand ? valueOf(brand.data.brand_name) : "";
           labels.model = model ? valueOf(model.data.model_name) : "";
+          labels.tenant = tenant ? valueOf(tenant.data.tenant_name) : "";
         }
 
         if (activeCategory.resource === "pops") {
@@ -665,25 +672,29 @@ export default function DataManagementDetailPage() {
       setSplitterProfiles([]);
       setOdpTypes([]);
       setInstallationTypes([]);
+      setTenants([]);
       return;
     }
     let cancelled = false;
     async function loadSplitterProfiles() {
       try {
-        const [splitterResponse, odpTypesResponse, installationTypesResponse] = await Promise.all([
+        const [splitterResponse, odpTypesResponse, installationTypesResponse, tenantsResponse] = await Promise.all([
           apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<OdpTypeOption>>("/odpTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token }),
+          apiFetch<PaginatedResponse<TenantOption>>("/tenants?page=1&limit=200&is_active=true", { token }),
         ]);
         if (cancelled) return;
         setSplitterProfiles(splitterResponse.data || []);
         setOdpTypes(odpTypesResponse.data || []);
         setInstallationTypes(installationTypesResponse.data || []);
+        setTenants(tenantsResponse.data || []);
       } catch {
         if (cancelled) return;
         setSplitterProfiles([]);
         setOdpTypes([]);
         setInstallationTypes([]);
+        setTenants([]);
       }
     }
     void loadSplitterProfiles();
@@ -1519,6 +1530,7 @@ export default function DataManagementDetailPage() {
                   splitterProfiles={splitterProfiles}
                   odpTypes={odpTypes}
                   installationTypes={installationTypes}
+                  tenants={tenants}
                   popOptions={popOptions}
                   latestFieldValidation={latestApprovedOdpValidation?.payload?.field_validation || null}
                   effectiveValidationStatus={getEffectiveDeviceValidationStatus(item)}
@@ -2956,6 +2968,7 @@ function DeviceDetailForm({
   splitterProfiles,
   odpTypes,
   installationTypes,
+  tenants,
   popOptions,
   latestFieldValidation,
   effectiveValidationStatus,
@@ -2968,6 +2981,7 @@ function DeviceDetailForm({
   splitterProfiles: SplitterProfileOption[];
   odpTypes: OdpTypeOption[];
   installationTypes: InstallationTypeOption[];
+  tenants: TenantOption[];
   popOptions: PopLookupOption[];
   latestFieldValidation?: OdpFieldValidationPayload | null;
   effectiveValidationStatus: string;
@@ -3100,6 +3114,26 @@ function DeviceDetailForm({
             </div>
           ) : (
             <DisplayField label="POP" value={relationLabels.pop || "-"} compact />
+          )}
+          {editing ? (
+            <div className="space-y-1">
+              <Label>Tenant</Label>
+              <Combobox
+                value={form.tenant_id || "__none__"}
+                onValueChange={(value) => onChange((p) => ({ ...p, tenant_id: value === "__none__" ? "" : value }))}
+                triggerClassName="h-8 text-xs"
+                options={[
+                  { value: "__none__", label: "Tidak ada tenant" },
+                  ...tenants.map((tenant) => ({
+                    value: tenant.id,
+                    label: tenant.tenant_code ? `${tenant.tenant_name} (${tenant.tenant_code})` : tenant.tenant_name,
+                  })),
+                ]}
+                searchPlaceholder="Cari tenant..."
+              />
+            </div>
+          ) : (
+            <DisplayField label="Tenant" value={relationLabels.tenant || "-"} compact />
           )}
           <DisplayField label="Manufacturer" value={relationLabels.manufacturer || "-"} compact />
           <DisplayField label="Brand" value={relationLabels.brand || "-"} compact />
@@ -3379,6 +3413,7 @@ function buildEditableForm(item: GenericItem, resource: string): EditableForm {
       validation_date: valueOf(item.validation_date),
       region_id: valueOf(item.region_id),
       pop_id: valueOf(item.pop_id),
+      tenant_id: valueOf(item.tenant_id),
       manufacturer_id: valueOf(item.manufacturer_id),
       brand_id: valueOf(item.brand_id),
       model_id: valueOf(item.model_id),
@@ -3441,6 +3476,7 @@ function buildUpdatePayload(form: EditableForm, resource: string): Record<string
       validation_date: normalizedValidation.validation_date,
       region_id: nullIfEmpty(form.region_id),
       pop_id: nullIfEmpty(form.pop_id),
+      tenant_id: nullIfEmpty(form.tenant_id),
       manufacturer_id: nullIfEmpty(form.manufacturer_id),
       brand_id: nullIfEmpty(form.brand_id),
       model_id: nullIfEmpty(form.model_id),

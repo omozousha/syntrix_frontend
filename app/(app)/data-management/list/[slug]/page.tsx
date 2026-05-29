@@ -541,6 +541,7 @@ export default function DataManagementListPage() {
     if (category.resource === "odpTypes") return [selectAllHeader, "Code", "ODP Type", "Status", "Updated"];
     if (category.resource === "installationTypes") return [selectAllHeader, "Code", "Installation Type", "Status", "Updated"];
     if (category.resource === "serviceTypes") return [selectAllHeader, "Code", "Service Type", "Status", "Updated"];
+    if (category.resource === "tenants") return [selectAllHeader, "Code", "Tenant", "Status", "Updated"];
     if (category.resource === "manufacturers") return [selectAllHeader, "Code", "Manufacturer", "Updated"];
     if (category.resource === "brands") return [selectAllHeader, "Code", "Brand", "Manufacturer", "Updated"];
     if (category.resource === "assetModels") return [selectAllHeader, "Code", "Model", "Brand", "Updated"];
@@ -702,6 +703,15 @@ export default function DataManagementListPage() {
           selectCell,
           pick(item, ["service_type_code"]),
           withArchivedLabel(item, pick(item, ["service_type_name"])),
+          pick(item, ["is_active"]),
+          formatDateTime(pick(item, ["updated_at", "created_at"])),
+        ];
+      }
+      if (category.resource === "tenants") {
+        return [
+          selectCell,
+          pick(item, ["tenant_code"]),
+          withArchivedLabel(item, pick(item, ["tenant_name"])),
           pick(item, ["is_active"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -1736,6 +1746,29 @@ function renderCreateFields(
     );
   }
 
+  if (resource === "tenants") {
+    return (
+      <>
+        <div className="space-y-1.5">
+          <Label>Tenant Name *</Label>
+          <Input value={form.tenant_name || ""} onChange={(e) => setValue("tenant_name", e.target.value)} placeholder="Contoh: FiberPro" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Tenant Code</Label>
+          <Input value={form.tenant_code || ""} onChange={(e) => setValue("tenant_code", e.target.value.toUpperCase())} placeholder="Contoh: FIBERPRO" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Description</Label>
+          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi tenant" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Sort Order</Label>
+          <Input type="number" value={form.sort_order || "0"} onChange={(e) => setValue("sort_order", e.target.value)} />
+        </div>
+      </>
+    );
+  }
+
   if (resource === "manufacturers") {
     return (
       <>
@@ -1898,6 +1931,7 @@ function getCreateDefaults(resource: string): Record<string, string> {
   if (resource === "odpTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "installationTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "serviceTypes") return { is_active: "true", sort_order: "0" };
+  if (resource === "tenants") return { is_active: "true", sort_order: "0" };
   if (resource === "splitterProfiles") return { input_port_count: "1", output_port_count: "8", is_active: "true" };
   if (resource === "provinces") return { is_active: "true" };
   if (resource === "cities") return { is_active: "true" };
@@ -2149,6 +2183,15 @@ function buildEditFormFromItem(resource: string, item: GenericItem): Record<stri
       is_active: readBool("is_active", true),
     };
   }
+  if (resource === "tenants") {
+    return {
+      tenant_name: read("tenant_name"),
+      tenant_code: read("tenant_code"),
+      description: read("description"),
+      sort_order: read("sort_order") || "0",
+      is_active: readBool("is_active", true),
+    };
+  }
   if (resource === "manufacturers") {
     return {
       manufacturer_name: read("manufacturer_name"),
@@ -2267,6 +2310,15 @@ function buildCreatePayload(resource: string, form: Record<string, string>) {
     if (!trim("service_type_name")) return null;
     assign("service_type_name");
     assign("service_type_code");
+    assign("description");
+    payload.sort_order = Number(trim("sort_order") || "0");
+    payload.is_active = (trim("is_active") || "true") !== "false";
+    return payload;
+  }
+  if (resource === "tenants") {
+    if (!trim("tenant_name")) return null;
+    assign("tenant_name");
+    assign("tenant_code");
     assign("description");
     payload.sort_order = Number(trim("sort_order") || "0");
     payload.is_active = (trim("is_active") || "true") !== "false";
@@ -2526,6 +2578,7 @@ function getRenameConfig(resource: string) {
   if (resource === "odpTypes") return { field: "odp_type_name", label: "nama tipe ODP" };
   if (resource === "installationTypes") return { field: "installation_type_name", label: "nama jenis instalasi" };
   if (resource === "serviceTypes") return { field: "service_type_name", label: "nama jenis layanan" };
+  if (resource === "tenants") return { field: "tenant_name", label: "nama tenant" };
   if (resource === "manufacturers") return { field: "manufacturer_name", label: "nama manufacturer" };
   if (resource === "brands") return { field: "brand_name", label: "nama brand" };
   if (resource === "assetModels") return { field: "model_name", label: "nama model" };
@@ -2550,11 +2603,11 @@ function canWriteResource(role: string, resource: string) {
 }
 
 function supportsIsActiveResource(resource: string) {
-  return ["deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "splitterProfiles", "provinces", "cities"].includes(resource);
+  return ["deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "splitterProfiles", "provinces", "cities"].includes(resource);
 }
 
 function supportsSoftDeleteResource(resource: string) {
-  return ["regions", "deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "manufacturers", "brands", "assetModels", "provinces", "cities"].includes(resource);
+  return ["regions", "deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "manufacturers", "brands", "assetModels", "provinces", "cities"].includes(resource);
 }
 
 function supportsPopFilterResource(resource: string) {

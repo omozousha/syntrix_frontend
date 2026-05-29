@@ -78,6 +78,7 @@ type AssetModelOption = {
 type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
 type ServiceTypeOption = { id: string; service_type_name: string; service_type_code?: string | null };
+type TenantOption = { id: string; tenant_name: string; tenant_code?: string | null };
 type SplitterProfileOption = {
   id: string;
   ratio_label: string;
@@ -184,6 +185,7 @@ export default function CreateDataManagementPage() {
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeOption[]>([]);
+  const [tenants, setTenants] = useState<TenantOption[]>([]);
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -231,6 +233,7 @@ export default function CreateDataManagementPage() {
     installation_date: "",
     pop_id: "",
     customer_id: "",
+    tenant_id: "",
     manufacturer_id: "",
     brand_id: "",
     model_id: "",
@@ -287,7 +290,7 @@ export default function CreateDataManagementPage() {
         const needsDeviceMasterData = isDevice;
         const needsCustomerMasterData = isCustomer;
 
-        const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, serviceTypesRes, splitterProfilesRes] = await Promise.all([
+        const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, serviceTypesRes, tenantsRes, splitterProfilesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
           optionalPaginatedRequest<PopOption>(needsPops, () => apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token })),
           optionalPaginatedRequest<ProjectOption>(needsProjects, () => apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token })),
@@ -302,6 +305,7 @@ export default function CreateDataManagementPage() {
           optionalPaginatedRequest<OdpTypeOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<OdpTypeOption>>("/odpTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<InstallationTypeOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<ServiceTypeOption>(needsCustomerMasterData, () => apiFetch<PaginatedResponse<ServiceTypeOption>>("/serviceTypes?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<TenantOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<TenantOption>>("/tenants?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<SplitterProfileOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token })),
         ]);
 
@@ -326,6 +330,7 @@ export default function CreateDataManagementPage() {
         setOdpTypes(odpTypesRes.data || []);
         setInstallationTypes(installationTypesRes.data || []);
         setServiceTypes(serviceTypesRes.data || []);
+        setTenants(tenantsRes.data || []);
         setSplitterProfiles(splitterProfilesRes.data || []);
         setForm((prev) => ({
           ...prev,
@@ -836,6 +841,7 @@ export default function CreateDataManagementPage() {
         region_id: form.region_id,
         pop_id: nullIfEmpty(form.pop_id),
         customer_id: isOntDevice ? nullIfEmpty(form.customer_id) : null,
+        tenant_id: nullIfEmpty(form.tenant_id),
         manufacturer_id: nullIfEmpty(form.manufacturer_id),
         brand_id: nullIfEmpty(form.brand_id),
         model_id: nullIfEmpty(form.model_id),
@@ -1068,6 +1074,22 @@ export default function CreateDataManagementPage() {
                     ])}
                     placeholder="Pilih POP"
                     searchPlaceholder="Cari POP..."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <FieldLabel label="Tenant" tooltip="Pilih tenant perangkat dari master data." />
+                  <Combobox
+                    value={form.tenant_id || "__none__"}
+                    onValueChange={(value) => setForm((p) => ({ ...p, tenant_id: value === "__none__" ? "" : value }))}
+                    options={toOptions([
+                      { value: "__none__", label: "None" },
+                      ...tenants.map((item) => ({
+                        value: item.id,
+                        label: item.tenant_code ? `${item.tenant_name} (${item.tenant_code})` : item.tenant_name,
+                      })),
+                    ])}
+                    placeholder="Pilih tenant"
+                    searchPlaceholder="Cari tenant..."
                   />
                 </div>
                 {isOntDevice ? (
@@ -2270,7 +2292,7 @@ function getDefaultTooltip(label: string) {
     "BAST Number": "Nomor BAST untuk referensi serah terima project.",
     "SPK Number": "Nomor SPK untuk referensi kontrak pekerjaan.",
     "Validation Date": "Tanggal validasi terakhir untuk data ini.",
-    Tenant: "Nama tenant/penyewa site POP jika ada.",
+    Tenant: "Nama tenant/penyewa site POP jika ada. Tenant perangkat dikelola dari master data Tenant.",
     "PLN CID Number": "Nomor pelanggan listrik PLN untuk POP.",
     "PLN Payment Method": "Metode pembayaran listrik, misalnya prepaid/postpaid.",
     "PLN Phase": "Jenis phase listrik, misalnya 1 phase atau 3 phase.",

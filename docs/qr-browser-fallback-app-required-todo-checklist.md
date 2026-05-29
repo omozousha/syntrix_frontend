@@ -25,9 +25,7 @@ Jika QR dibuka di browser:
 1. Tampilkan screen khusus `Syntrix-One Required`.
 2. Tampilkan informasi ringkas device jika bisa di-load:
    - nama ODP/device
-   - inventory ID
-   - POP
-   - region
+   - type device
 3. Jelaskan bahwa validasi hanya bisa dilakukan lewat Syntrix-One.
 4. Sediakan CTA:
    - `Buka Syntrix-One`
@@ -48,11 +46,8 @@ Jika QR dibuka dari Syntrix-One:
 - [x] Ganti form validasi browser dengan App Required Screen.
 - [x] Pastikan screen tetap memakai brand Syntrix dan gaya UI operasional yang konsisten.
 - [x] Load detail device read-only secukupnya untuk konteks QR:
-  - [x] device name
-  - [x] inventory ID
-  - [x] device type
-  - [x] POP name/code
-  - [x] region name
+  - [x] nama device / nama ODP lama
+  - [x] type device
 - [x] Jika device gagal di-load, tampilkan fallback aman:
   - [x] `QR valid, tetapi data device belum dapat dimuat.`
   - [x] instruksi scan ulang lewat Syntrix-One.
@@ -80,8 +75,14 @@ Jika QR dibuka dari Syntrix-One:
 
 ## Scope Backend
 
-Backend tidak perlu perubahan besar untuk fase ini, tetapi harus diverifikasi:
+Backend tidak perlu membuka detail penuh untuk fase ini, tetapi ada endpoint public minimal untuk konteks QR:
 
+- [x] Tambahkan endpoint public read-only `GET /api/v1/public/qr/devices/:id`.
+- [x] Batasi response endpoint public hanya ke:
+  - [x] id
+  - [x] type device
+  - [x] nama device / nama ODP lama
+- [x] Endpoint public tidak menampilkan inventory ID, POP, region, koordinat, port, atau evidence.
 - [ ] Endpoint submit validation request tetap butuh token validator.
 - [ ] Role selain validator tidak bisa submit validasi lapangan.
 - [ ] Scope region validator tetap divalidasi.
