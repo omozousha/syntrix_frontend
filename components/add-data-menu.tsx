@@ -257,6 +257,13 @@ export function AddDataMenu({
                 <p className="text-xs text-muted-foreground">Standardize vendor references.</p>
               </div>
             </DropdownMenuItem>
+            <DropdownMenuItem className="items-start gap-3 py-2" onSelect={() => go("/data-management/list/master-tenants")}>
+              <Building2 className="mt-0.5 size-4 text-muted-foreground" />
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">Tenants</p>
+                <p className="text-xs text-muted-foreground">Kelola referensi tenant perangkat.</p>
+              </div>
+            </DropdownMenuItem>
             <DropdownMenuItem className="items-start gap-3 py-2" onSelect={() => go("/data-management/list/master-provinces")}>
               <MapPinned className="mt-0.5 size-4 text-muted-foreground" />
               <div className="space-y-0.5">

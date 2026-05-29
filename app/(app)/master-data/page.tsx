@@ -37,10 +37,10 @@ const MASTER_SECTIONS: Array<{
     slugs: ["master-device-types", "master-odp-types", "master-installation-types", "master-models", "master-splitter-profiles"],
   },
   {
-    title: "Referensi Vendor",
-    description: "Master manufacturer dan brand untuk memastikan naming konsisten.",
+    title: "Referensi Vendor & Tenant",
+    description: "Master tenant, manufacturer, dan brand untuk memastikan naming kepemilikan serta vendor konsisten.",
     icon: Building2,
-    slugs: ["master-manufacturers", "master-brands"],
+    slugs: ["master-tenants", "master-manufacturers", "master-brands"],
   },
   {
     title: "Referensi Lokasi",

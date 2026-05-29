@@ -676,19 +676,19 @@ export default function DataManagementDetailPage() {
       return;
     }
     let cancelled = false;
-    async function loadSplitterProfiles() {
+    async function loadDeviceMasterData() {
       try {
-        const [splitterResponse, odpTypesResponse, installationTypesResponse, tenantsResponse] = await Promise.all([
+        const [splitterResponse, odpTypesResponse, installationTypesResponse, tenantsResponse] = await Promise.allSettled([
           apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<OdpTypeOption>>("/odpTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<TenantOption>>("/tenants?page=1&limit=200&is_active=true", { token }),
         ]);
         if (cancelled) return;
-        setSplitterProfiles(splitterResponse.data || []);
-        setOdpTypes(odpTypesResponse.data || []);
-        setInstallationTypes(installationTypesResponse.data || []);
-        setTenants(tenantsResponse.data || []);
+        setSplitterProfiles(splitterResponse.status === "fulfilled" ? splitterResponse.value.data || [] : []);
+        setOdpTypes(odpTypesResponse.status === "fulfilled" ? odpTypesResponse.value.data || [] : []);
+        setInstallationTypes(installationTypesResponse.status === "fulfilled" ? installationTypesResponse.value.data || [] : []);
+        setTenants(tenantsResponse.status === "fulfilled" ? tenantsResponse.value.data || [] : []);
       } catch {
         if (cancelled) return;
         setSplitterProfiles([]);
@@ -697,7 +697,7 @@ export default function DataManagementDetailPage() {
         setTenants([]);
       }
     }
-    void loadSplitterProfiles();
+    void loadDeviceMasterData();
     return () => {
       cancelled = true;
     };
