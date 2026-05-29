@@ -141,7 +141,7 @@ export default function OdpQrBrowserFallbackPage() {
             <CardContent className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                 <InfoRow label="Type Device" value={device?.device_type_key || "ODP"} />
-                <InfoRow label="Nama Device" value={device?.device_name || "Device belum dimuat"} />
+                <InfoRow label="Nama Device" value={device?.device_name || "-"} />
               </div>
 
               {loadMessage ? (
