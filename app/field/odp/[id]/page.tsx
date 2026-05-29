@@ -14,15 +14,10 @@ type DeviceQrContext = {
   device_id?: string | null;
   device_name?: string | null;
   device_type_key?: string | null;
-  region_id?: string | null;
-  region_name?: string | null;
-  pop_id?: string | null;
-  pop_name?: string | null;
-  pop_code?: string | null;
 };
 
 const SYNTRIX_ONE_SCHEME = "io.syntrixone.app://field/odp";
-const APK_CONTACT_TEXT = "Minta APK ke Admin";
+const APK_DOWNLOAD_URL = "https://od.lk/fl/OTRfMTcyOTg2MDBf";
 
 export default function OdpQrBrowserFallbackPage() {
   const params = useParams<{ id: string }>();
@@ -75,9 +70,9 @@ export default function OdpQrBrowserFallbackPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-6 sm:px-8 lg:px-10">
-        <header className="flex items-center justify-between gap-3">
+    <main className="min-h-dvh bg-slate-950 text-white">
+      <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
+        <header className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex size-11 items-center justify-center rounded-2xl border border-blue-300/25 bg-blue-500/15 text-blue-200">
               <QrCode className="size-5" />
@@ -92,13 +87,13 @@ export default function OdpQrBrowserFallbackPage() {
           </Badge>
         </header>
 
-        <section className="grid flex-1 items-center gap-6 py-10 lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="grid flex-1 items-center gap-6 py-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:gap-10">
           <div className="space-y-6">
             <div className="space-y-3">
               <Badge variant="outline" className="border-blue-300/40 bg-blue-400/10 text-blue-100">
                 Validasi resmi
               </Badge>
-              <h1 className="max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
+              <h1 className="max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
                 Validasi hanya melalui Syntrix-One
               </h1>
               <p className="max-w-2xl text-base leading-7 text-slate-300">
@@ -118,15 +113,15 @@ export default function OdpQrBrowserFallbackPage() {
                 variant="outline"
                 className="h-12 rounded-xl border-white/15 bg-white/5 px-5 text-white hover:bg-white/10 hover:text-white"
                 onClick={() => {
-                  window.location.href = "mailto:admin@syntrix.local?subject=Permintaan APK Syntrix-One";
+                  window.location.href = APK_DOWNLOAD_URL;
                 }}
               >
                 <Download className="mr-2 size-4" />
-                {APK_CONTACT_TEXT}
+                Download APK
               </Button>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-3 lg:max-w-2xl">
               <SafetyPoint title="QR-first" description="Form validasi dibuka dari scanner app." />
               <SafetyPoint title="Region scope" description="Device dicek sesuai akses validator." />
               <SafetyPoint title="Evidence aman" description="Foto dan koordinat dikirim dari app." />
@@ -144,11 +139,10 @@ export default function OdpQrBrowserFallbackPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <InfoRow label="Device" value={device?.device_name || "-"} />
-              <InfoRow label="Inventory ID" value={device?.device_id || id || "-"} />
-              <InfoRow label="Type" value={device?.device_type_key || "ODP"} />
-              <InfoRow label="POP" value={formatPop(device)} />
-              <InfoRow label="Region" value={device?.region_name || device?.region_id || "-"} />
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                <InfoRow label="Type Device" value={device?.device_type_key || "ODP"} />
+                <InfoRow label="Nama Device" value={device?.device_name || "Device belum dimuat"} />
+              </div>
 
               {loadMessage ? (
                 <p className="rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-50">
@@ -194,12 +188,4 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <p className="mt-1 break-words text-sm font-semibold text-slate-100">{value}</p>
     </div>
   );
-}
-
-function formatPop(device: DeviceQrContext | null) {
-  if (!device) return "-";
-  const name = device.pop_name || "";
-  const code = device.pop_code || "";
-  if (name && code) return `${name} | ${code}`;
-  return name || code || device.pop_id || "-";
 }
