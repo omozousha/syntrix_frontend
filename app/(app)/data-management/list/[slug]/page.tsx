@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import type { jsPDF as JsPdfDocument } from "jspdf";
@@ -11,28 +11,27 @@ import {
   Box,
   Boxes,
   Cable,
-  CheckSquare,
   CircleDot,
-  Download,
   Eye,
   HardDrive,
-  MapPin,
   Monitor,
   Network,
   Pencil,
-  Plus,
   RadioTower,
   RotateCcw,
   Router as RouterIcon,
   Server,
-  Shield,
   Split,
   Trash2,
   Waypoints,
   type LucideIcon,
 } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
-import { OperationalKpiCard, OperationalState } from "@/components/operational-ui";
+import { DataBulkActions } from "@/components/features/data-management/device-list/data-bulk-actions";
+import { DataListFilterBar } from "@/components/features/data-management/device-list/data-list-filter-bar";
+import { DataListHeader } from "@/components/features/data-management/device-list/data-list-header";
+import { DataListKpiStrip } from "@/components/features/data-management/device-list/data-list-kpi-strip";
+import { OperationalState } from "@/components/operational-ui";
 import { SimpleTable } from "@/components/simple-table";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -1057,36 +1056,25 @@ export default function DataManagementListPage() {
   return (
     <div className="h-full min-h-0 w-full overflow-auto">
       <div className="space-y-4 pr-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <h2 className="text-2xl font-semibold tracking-tight">{category.label} List</h2>
-            <p className="text-sm text-muted-foreground">
-              {category.description}
-              {effectiveRegionScopeId ? " • Filter region aktif" : ""}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {canCreateMaster ? (
-              <Button type="button" onClick={() => setCreateOpen(true)}>
-                <Plus className="mr-2 size-4" />
-                Add {category.label}
-              </Button>
-            ) : null}
-            <Button asChild variant="outline">
-              <Link href={isMasterCategory ? "/master-data" : "/data-management"}>
-                <ArrowLeft className="mr-2 size-4" />
-                Kembali
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <DataListHeader
+          label={category.label}
+          description={category.description}
+          isRegionScoped={Boolean(effectiveRegionScopeId)}
+          canCreateMaster={canCreateMaster}
+          isMasterCategory={isMasterCategory}
+          onCreate={() => setCreateOpen(true)}
+        />
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <OperationalKpiCard label="Total Data" value={total.toLocaleString("id-ID")} caption={`${category.label} pada filter aktif`} icon={Boxes} tone="blue" />
-          <OperationalKpiCard label="Selected" value={selectedIds.size.toLocaleString("id-ID")} caption="Item siap bulk action" icon={CheckSquare} tone={selectedIds.size ? "amber" : "slate"} />
-          <OperationalKpiCard label="POP Filter" value={supportsPopFilter && popQueryParam !== "__all" ? "Active" : "All"} caption={selectedPopLabel || "Semua POP"} icon={MapPin} tone={supportsPopFilter && popQueryParam !== "__all" ? "emerald" : "slate"} />
-          <OperationalKpiCard label="Access" value={canWrite ? "Manage" : "View"} caption={me.role === "admin" ? "Superadmin" : me.role === "user_all_region" ? "Adminregion" : me.role} icon={Shield} tone={canWrite ? "emerald" : "slate"} />
-        </div>
+        <DataListKpiStrip
+          total={total}
+          categoryLabel={category.label}
+          selectedCount={selectedIds.size}
+          supportsPopFilter={supportsPopFilter}
+          isPopFilterActive={popQueryParam !== "__all"}
+          selectedPopLabel={selectedPopLabel}
+          canWrite={canWrite}
+          role={me.role}
+        />
 
         {isOdpCategory ? (
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "list" | "quality")}>
@@ -1107,140 +1095,62 @@ export default function DataManagementListPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
-              <span className="text-muted-foreground">Item terpilih: {selectedIds.size}</span>
-              <div className="flex flex-wrap items-center gap-2">
-                {supportsQrBulkDownload ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void handleBulkDownloadQr()}
-                    disabled={selectedRows.length === 0 || downloadingQr || actionLoading}
-                  >
-                    <Download className="mr-1 size-4" />
-                    {downloadingQr ? "Membuat QR..." : "Download QR Selected"}
-                  </Button>
-                ) : null}
-                {canWrite && selectedIds.size > 0 ? (
-                  <>
-                    {isSoftDeleteResource && rows.some((row) => selectedIds.has(row.id) && isArchived(row)) ? (
-                      <Button type="button" variant="outline" size="sm" onClick={() => requestBulkAction("restore")} disabled={actionLoading}>
-                        <RotateCcw className="mr-1 size-4" />
-                        Restore Selected
-                      </Button>
-                    ) : null}
-                    {canBulkToggleStatus ? (
-                      <>
-                        <Button type="button" variant="outline" size="sm" onClick={() => requestBulkAction("activate")} disabled={actionLoading}>
-                          Activate
-                        </Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => requestBulkAction("deactivate")} disabled={actionLoading}>
-                          Deactivate
-                        </Button>
-                      </>
-                    ) : null}
-                    <Button type="button" variant="destructive" size="sm" onClick={() => requestBulkAction("delete")} disabled={actionLoading}>
-                      <Trash2 className="mr-1 size-4" />
-                      {isSoftDeleteResource ? "Bulk Archive" : "Bulk Delete"}
-                    </Button>
-                  </>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedIds(new Set())}
-                  disabled={selectedIds.size === 0 || actionLoading}
-                >
-                  Clear Selection
-                </Button>
-              </div>
-            </div>
-            <div className={`grid grid-cols-1 gap-3 ${filterGridClass}`}>
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder={category.resource === "cities" ? "Cari city..." : "Cari data..."}
-              />
-              {category.resource === "cities" ? (
-                <Combobox
-                  value={provinceFilter}
-                  onValueChange={(value) => {
-                    setProvinceFilter(value);
-                    setPage(1);
-                    setSearch("");
-                    setSearchInput("");
-                  }}
-                  placeholder="Filter province"
-                  searchPlaceholder="Cari province..."
-                  options={[
-                    { value: "__all", label: "Semua province" },
-                    ...Object.entries(relationMaps.provinces)
-                      .sort((a, b) => a[1].localeCompare(b[1], "id"))
-                      .map(([id, name]) => ({ value: id, label: name })),
-                  ]}
-                />
-              ) : null}
-              {supportsPopFilter ? (
-                <Combobox
-                  value={popQueryParam}
-                  onValueChange={applyPopFilter}
-                  placeholder={popFilterLoading ? "Memuat POP..." : "Filter POP"}
-                  searchPlaceholder="Cari POP..."
-                  emptyText={effectiveRegionScopeId ? "Tidak ada POP pada region ini." : "Tidak ada POP."}
-                  disabled={popFilterLoading}
-                  options={[
-                    { value: "__all", label: effectiveRegionScopeId ? "Semua POP di region ini" : "Semua POP" },
-                    ...popFilterOptions
-                      .slice()
-                      .sort((a, b) => a.label.localeCompare(b.label, "id"))
-                      .map((option) => ({ value: option.id, label: option.label })),
-                  ]}
-                />
-              ) : null}
-              {isSoftDeleteResource ? (
-                <Combobox
-                  value={archiveView}
-                  onValueChange={(value) => {
-                    if (!value || (value !== "active" && value !== "archived" && value !== "all")) return;
-                    setArchiveView(value);
-                    setSelectedIds(new Set());
-                    setPage(1);
-                  }}
-                  options={[
-                    { value: "active", label: "Active Only" },
-                    { value: "archived", label: "Archived Only" },
-                    { value: "all", label: "Active + Archived" },
-                  ]}
-                />
-              ) : null}
-              <Combobox
-                value={String(limit)}
-                onValueChange={(value) => {
-                  setPage(1);
-                  setLimit(Number(value));
-                }}
-                placeholder="Rows per page"
-                searchPlaceholder="Cari jumlah..."
-                options={[
-                  { value: "10", label: "10 / halaman" },
-                  { value: "20", label: "20 / halaman" },
-                  { value: "50", label: "50 / halaman" },
-                ]}
-              />
-              <Button
-                onClick={() => {
-                  setPage(1);
-                  setSearch(searchInput.trim());
-                }}
-              >
-                Terapkan Filter
-              </Button>
-              <Button type="button" variant="outline" onClick={resetListFilters}>
-                Reset
-              </Button>
-            </div>
+            <DataBulkActions
+              selectedCount={selectedIds.size}
+              selectedDownloadCount={selectedRows.length}
+              supportsQrBulkDownload={supportsQrBulkDownload}
+              downloadingQr={downloadingQr}
+              actionLoading={actionLoading}
+              canWrite={canWrite}
+              canRestoreSelected={isSoftDeleteResource && rows.some((row) => selectedIds.has(row.id) && isArchived(row))}
+              canBulkToggleStatus={canBulkToggleStatus}
+              isSoftDeleteResource={isSoftDeleteResource}
+              onDownloadQr={() => void handleBulkDownloadQr()}
+              onRestore={() => requestBulkAction("restore")}
+              onActivate={() => requestBulkAction("activate")}
+              onDeactivate={() => requestBulkAction("deactivate")}
+              onDelete={() => requestBulkAction("delete")}
+              onClearSelection={() => setSelectedIds(new Set())}
+            />
+            <DataListFilterBar
+              filterGridClass={filterGridClass}
+              categoryResource={category.resource}
+              searchInput={searchInput}
+              provinceFilter={provinceFilter}
+              provinceOptions={Object.entries(relationMaps.provinces)
+                .sort((a, b) => a[1].localeCompare(b[1], "id"))
+                .map(([id, name]) => ({ id, label: name }))}
+              supportsPopFilter={supportsPopFilter}
+              popFilterValue={popQueryParam}
+              popFilterLoading={popFilterLoading}
+              popFilterOptions={popFilterOptions}
+              hasRegionScope={Boolean(effectiveRegionScopeId)}
+              isSoftDeleteResource={isSoftDeleteResource}
+              archiveView={archiveView}
+              limit={limit}
+              onSearchInputChange={setSearchInput}
+              onProvinceFilterChange={(value) => {
+                setProvinceFilter(value);
+                setPage(1);
+                setSearch("");
+                setSearchInput("");
+              }}
+              onPopFilterChange={applyPopFilter}
+              onArchiveViewChange={(value) => {
+                setArchiveView(value);
+                setSelectedIds(new Set());
+                setPage(1);
+              }}
+              onLimitChange={(value) => {
+                setPage(1);
+                setLimit(value);
+              }}
+              onApplyFilter={() => {
+                setPage(1);
+                setSearch(searchInput.trim());
+              }}
+              onResetFilters={resetListFilters}
+            />
 
             {success ? (
               <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-700">{success}</p>

@@ -1,14 +1,41 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, CircleHelp, ImagePlus, Trash2, X, XCircle } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
-import { ResponseDialog } from "@/components/response-dialog";
 import { useSession } from "@/components/session-context";
+import {
+  CreateFormCardHeader,
+  CreateFormPageHeader,
+} from "@/components/features/data-management/device-form/create-form-chrome";
+import { CreateFormStatusAlerts } from "@/components/features/data-management/device-form/create-form-status-alerts";
+import {
+  CreateApprovalDialog,
+  CreateResponseDialog,
+  type CreateApprovalNotice,
+  type CreateResponseDialogState,
+} from "@/components/features/data-management/device-form/create-submit-dialog";
+import { CustomerCreateForm } from "@/components/features/data-management/device-form/customer-create-form";
+import { CreateLocationFields } from "@/components/features/data-management/device-form/create-location-fields";
+import { CreateOperationalFields } from "@/components/features/data-management/device-form/create-operational-fields";
+import { DeviceCapacityFields } from "@/components/features/data-management/device-form/device-capacity-fields";
+import { DeviceCreateForm } from "@/components/features/data-management/device-form/device-create-form";
+import { DeviceHardwareFields } from "@/components/features/data-management/device-form/device-hardware-fields";
+import {
+  ImageAttachmentField,
+  SupportDocumentField,
+} from "@/components/features/data-management/device-form/media-attachment-fields";
+import {
+  PopCreateIdentityFields,
+  PopCreateOperationalFields,
+} from "@/components/features/data-management/device-form/pop-create-form";
+import { ProjectCreateForm } from "@/components/features/data-management/device-form/project-create-form";
+import { RouteCreateForm } from "@/components/features/data-management/device-form/route-create-form";
+import {
+  AutoFilledBadge,
+  Field,
+  FieldLabel,
+} from "@/components/features/data-management/device-form/form-field-grid";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -22,15 +49,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
 import { deviceTypeKeyToSlug } from "@/lib/data-management-config";
+import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
 
 type PopOption = {
   id: string;
@@ -156,18 +183,8 @@ export default function CreateDataManagementPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const submitLockRef = useRef(false);
-  const [approvalNotice, setApprovalNotice] = useState<{
-    title: string;
-    description: string;
-    redirectTo: string;
-  } | null>(null);
-  const [createResponseDialog, setCreateResponseDialog] = useState<{
-    title: string;
-    description: string;
-    variant: "success" | "destructive";
-    actionLabel: string;
-    redirectTo?: string;
-  } | null>(null);
+  const [approvalNotice, setApprovalNotice] = useState<CreateApprovalNotice | null>(null);
+  const [createResponseDialog, setCreateResponseDialog] = useState<CreateResponseDialogState | null>(null);
 
   const [regions, setRegions] = useState<RegionsListResponse["data"]>([]);
   const [pops, setPops] = useState<PopOption[]>([]);
@@ -289,6 +306,7 @@ export default function CreateDataManagementPage() {
         const needsProjects = isRoute || isCustomer;
         const needsDeviceMasterData = isDevice;
         const needsCustomerMasterData = isCustomer;
+        const needsTenantMasterData = isDevice || isPop;
 
         const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, serviceTypesRes, tenantsRes, splitterProfilesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
@@ -305,7 +323,7 @@ export default function CreateDataManagementPage() {
           optionalPaginatedRequest<OdpTypeOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<OdpTypeOption>>("/odpTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<InstallationTypeOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<ServiceTypeOption>(needsCustomerMasterData, () => apiFetch<PaginatedResponse<ServiceTypeOption>>("/serviceTypes?page=1&limit=200&is_active=true", { token })),
-          optionalPaginatedRequest<TenantOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<TenantOption>>("/tenants?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<TenantOption>(needsTenantMasterData, () => apiFetch<PaginatedResponse<TenantOption>>("/tenants?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<SplitterProfileOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token })),
         ]);
 
@@ -568,7 +586,7 @@ export default function CreateDataManagementPage() {
         }
 
         const payload: Record<string, unknown> = {
-          pop_name: form.pop_name.trim(),
+          pop_name: normalizePopName(form.pop_name),
           pop_code: form.pop_code.trim().toUpperCase(),
           tenant: nullIfEmpty(form.tenant),
           pln_cid_number: nullIfEmpty(form.pln_cid_number),
@@ -835,7 +853,7 @@ export default function CreateDataManagementPage() {
       }
 
       const payload: Record<string, unknown> = {
-        device_name: form.device_name.trim() || null,
+        device_name: normalizeDeviceName(form.device_name) || null,
         device_type_key: form.device_type_key,
         asset_group: PASSIVE_TYPES.has(form.device_type_key) ? "passive" : "active",
         region_id: form.region_id,
@@ -920,14 +938,19 @@ export default function CreateDataManagementPage() {
     } catch (err) {
       const message = (err as Error).message;
       setErrorMessage(message);
-      if (isCustomer || isOntDevice || form.device_type_key === "ODP") {
-        setCreateResponseDialog({
-          title: isOntDevice ? "Create ONT Gagal" : form.device_type_key === "ODP" ? "Create ODP Gagal" : "Create Customer Gagal",
-          description: message,
-          variant: "destructive",
-          actionLabel: "Perbaiki Form",
-        });
-      }
+      setCreateResponseDialog({
+        title: getCreateErrorTitle({
+          isPop,
+          isRoute,
+          isProject,
+          isCustomer,
+          isOntDevice,
+          deviceTypeKey: form.device_type_key,
+        }),
+        description: message,
+        variant: "destructive",
+        actionLabel: "Perbaiki Form",
+      });
       submitLockRef.current = false;
     } finally {
       setSaving(false);
@@ -937,60 +960,15 @@ export default function CreateDataManagementPage() {
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 pr-3">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">
-            {isPop
-              ? "Create POP"
-              : isRoute
-              ? "Create Route"
-              : isProject
-              ? "Create Project"
-              : isCustomer
-              ? "Create Customer"
-              : `Create ${form.device_type_key}`}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Form menyesuaikan tipe data yang dipilih dari dialog Data Management.
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link href="/data-management">
-            <ArrowLeft className="mr-2 size-4" />
-            Kembali
-          </Link>
-        </Button>
-      </div>
+      <CreateFormPageHeader
+        flags={{ isPop, isRoute, isProject, isCustomer }}
+        deviceTypeKey={form.device_type_key}
+      />
 
-      {errorMessage ? (
-        <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
-      ) : null}
-      {successMessage ? (
-        <Alert>
-          <AlertTitle>Success</AlertTitle>
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
-      ) : null}
+      <CreateFormStatusAlerts errorMessage={errorMessage} successMessage={successMessage} />
 
       <Card>
-        <CardHeader>
-          <CardTitle>{isPop ? "POP Form" : isRoute ? "Route Form" : isProject ? "Project Form" : isCustomer ? "Customer Form" : "Device Form"}</CardTitle>
-          <CardDescription className="flex items-center gap-2">
-            {isPop
-              ? "Field wajib disesuaikan dengan data POP."
-              : isRoute
-              ? "Field route untuk baseline topology dan perhitungan panjang jalur."
-              : isProject
-              ? "Field project untuk konteks delivery dan as-built lifecycle."
-              : isCustomer
-              ? "Field customer untuk data pelanggan dan lokasi layanan."
-              : "Field wajib disesuaikan dengan data perangkat."}
-            <Badge variant="outline" className="font-normal">Compact Mode</Badge>
-          </CardDescription>
-        </CardHeader>
+        <CreateFormCardHeader flags={{ isPop, isRoute, isProject, isCustomer }} />
         <CardContent className="space-y-5">
           {!loaded ? <AppLoading label="Sedang memuat data region dan POP..." /> : null}
           {isDevice ? (
@@ -1007,91 +985,39 @@ export default function CreateDataManagementPage() {
               Informasi Utama
             </div>
             {isPop ? (
-              <>
-                <Field label="POP Name" value={form.pop_name} onChange={(v) => setForm((p) => ({ ...p, pop_name: v }))} />
-                <Field label="POP Code (3 huruf)" value={form.pop_code} onChange={(v) => setForm((p) => ({ ...p, pop_code: v.toUpperCase() }))} />
-              </>
+              <PopCreateIdentityFields
+                values={{
+                  pop_name: form.pop_name,
+                  pop_code: form.pop_code,
+                }}
+                onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+              />
             ) : null}
 
             {isDevice ? (
               <>
-                <Field label={form.device_type_key === "ODP" ? "Nama ODP" : "Device Name"} value={form.device_name} onChange={(v) => setForm((p) => ({ ...p, device_name: v }))} />
-                {form.device_type_key === "ODP" ? (
-                  <>
-                    <div className="space-y-1.5">
-                      <FieldLabel label="Tipe ODP" tooltip="Pilih tipe ODP dari master data." />
-                      <Combobox
-                        value={form.odp_type || "__none__"}
-                        onValueChange={(value) => setForm((p) => ({ ...p, odp_type: value === "__none__" ? "" : value }))}
-                        options={toOptions([
-                          { value: "__none__", label: "Pilih tipe ODP" },
-                          ...odpTypes.map((item) => ({
-                            value: item.odp_type_name,
-                            label: [item.odp_type_name, item.odp_type_code].filter(Boolean).join(" - "),
-                          })),
-                        ])}
-                        placeholder="Pilih tipe ODP"
-                        searchPlaceholder="Cari tipe ODP..."
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <FieldLabel label="Jenis Instalasi" tooltip="Pilih jenis instalasi dari master data." />
-                      <Combobox
-                        value={form.installation_type || "__none__"}
-                        onValueChange={(value) => setForm((p) => ({ ...p, installation_type: value === "__none__" ? "" : value }))}
-                        options={toOptions([
-                          { value: "__none__", label: "Pilih jenis instalasi" },
-                          ...installationTypes.map((item) => ({
-                            value: item.installation_type_name,
-                            label: [item.installation_type_name, item.installation_type_code].filter(Boolean).join(" - "),
-                          })),
-                        ])}
-                        placeholder="Pilih jenis instalasi"
-                        searchPlaceholder="Cari jenis instalasi..."
-                      />
-                    </div>
-                  </>
-                ) : null}
-                <div className="space-y-1.5">
-                  <FieldLabel label="POP (opsional)" tooltip="Hubungkan device ke POP jika perangkat berada di POP tertentu." />
-                  <Combobox
-                    value={form.pop_id || "__none__"}
-                    onValueChange={(v) => {
-                      const nextPopId = v === "__none__" ? "" : v;
+                <DeviceCreateForm
+                  values={{
+                    device_type_key: form.device_type_key,
+                    device_name: form.device_name,
+                    odp_type: form.odp_type,
+                    installation_type: form.installation_type,
+                    pop_id: form.pop_id,
+                    region_id: form.region_id,
+                    tenant_id: form.tenant_id,
+                  }}
+                  pops={pops}
+                  odpTypes={odpTypes}
+                  installationTypes={installationTypes}
+                  tenants={tenants}
+                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+                  onPopChange={(nextPopId) => {
                       if (form.customer_id && form.pop_id !== nextPopId) {
                         setAutoFillNotice("Customer reference dikosongkan karena POP berubah. Pilih customer dari POP baru untuk mengisi ulang data lokasi.");
                       }
                       setForm((p) => ({ ...p, pop_id: nextPopId, customer_id: "" }));
-                    }}
-                    options={toOptions([
-                      { value: "__none__", label: "None" },
-                      ...pops
-                        .filter((p) => !form.region_id || p.region_id === form.region_id)
-                        .map((pop) => ({
-                          value: pop.id,
-                          label: `${pop.pop_name} (${pop.pop_code})`,
-                        })),
-                    ])}
-                    placeholder="Pilih POP"
-                    searchPlaceholder="Cari POP..."
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <FieldLabel label="Tenant" tooltip="Pilih tenant perangkat dari master data." />
-                  <Combobox
-                    value={form.tenant_id || "__none__"}
-                    onValueChange={(value) => setForm((p) => ({ ...p, tenant_id: value === "__none__" ? "" : value }))}
-                    options={toOptions([
-                      { value: "__none__", label: "None" },
-                      ...tenants.map((item) => ({
-                        value: item.id,
-                        label: item.tenant_code ? `${item.tenant_name} (${item.tenant_code})` : item.tenant_name,
-                      })),
-                    ])}
-                    placeholder="Pilih tenant"
-                    searchPlaceholder="Cari tenant..."
-                  />
-                </div>
+                  }}
+                />
                 {isOntDevice ? (
                   <div className="space-y-1.5">
                     <FieldLabel label="Customer Reference (opsional)" tooltip="Customer yang tampil hanya customer dengan POP yang sama dengan POP ONT." />
@@ -1159,175 +1085,58 @@ export default function CreateDataManagementPage() {
             ) : null}
 
             {isRoute ? (
-              <>
-                <Field label="Route Name" value={form.route_name} onChange={(v) => setForm((p) => ({ ...p, route_name: v }))} />
-                <div className="space-y-1.5">
-                  <FieldLabel label="Route Type" tooltip="Pilih dari master Route Types. Kelola opsinya di Tata Kelola Master Data." />
-                  <Combobox
-                    value={form.route_type || "__none__"}
-                    onValueChange={(value) => setForm((p) => ({ ...p, route_type: value === "__none__" ? "" : value }))}
-                    options={toOptions([
-                      { value: "__none__", label: "None" },
-                      ...routeTypes.map((item) => ({
-                        value: item.route_type_code || item.route_type_name,
-                        label: item.route_type_code ? `${item.route_type_name} (${item.route_type_code})` : item.route_type_name,
-                      })),
-                    ])}
-                    placeholder="Pilih route type"
-                    searchPlaceholder="Cari route type..."
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <FieldLabel label="POP (opsional)" tooltip="Titik POP utama untuk route ini." />
-                  <Combobox
-                    value={form.pop_id || "__none__"}
-                    onValueChange={(v) => setForm((p) => ({ ...p, pop_id: v === "__none__" ? "" : v }))}
-                    options={toOptions([
-                      { value: "__none__", label: "None" },
-                      ...pops
-                        .filter((p) => !form.region_id || p.region_id === form.region_id)
-                        .map((pop) => ({
-                          value: pop.id,
-                          label: `${pop.pop_name} (${pop.pop_code})`,
-                        })),
-                    ])}
-                    placeholder="Pilih POP"
-                    searchPlaceholder="Cari POP..."
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <FieldLabel label="Project (opsional)" tooltip="Project delivery yang menaungi route ini." />
-                  <Combobox
-                    value={form.route_project_id || "__none__"}
-                    onValueChange={(v) => setForm((p) => ({ ...p, route_project_id: v === "__none__" ? "" : v }))}
-                    options={toOptions([
-                      { value: "__none__", label: "None" },
-                      ...projects
-                        .filter((item) => !form.region_id || !item.region_id || item.region_id === form.region_id)
-                        .map((item) => ({
-                          value: item.id,
-                          label: item.project_name || item.project_code || item.id,
-                        })),
-                    ])}
-                    placeholder="Pilih project"
-                    searchPlaceholder="Cari project..."
-                  />
-                </div>
-                <Field
-                  label="Distance (meters)"
-                  type="number"
-                  value={form.distance_meters}
-                  onChange={(v) => setForm((p) => ({ ...p, distance_meters: v }))}
-                />
-              </>
+              <RouteCreateForm
+                values={{
+                  route_name: form.route_name,
+                  route_type: form.route_type,
+                  pop_id: form.pop_id,
+                  route_project_id: form.route_project_id,
+                  region_id: form.region_id,
+                  distance_meters: form.distance_meters,
+                }}
+                pops={pops}
+                projects={projects}
+                routeTypes={routeTypes}
+                onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+              />
             ) : null}
 
             {isProject ? (
-              <>
-                <Field label="Project Name" value={form.project_name} onChange={(v) => setForm((p) => ({ ...p, project_name: v }))} />
-                <Field label="Vendor Name" value={form.vendor_name} onChange={(v) => setForm((p) => ({ ...p, vendor_name: v }))} />
-                <Field label="BAST Number" value={form.bast_number} onChange={(v) => setForm((p) => ({ ...p, bast_number: v }))} />
-                <Field label="SPK Number" value={form.spk_number} onChange={(v) => setForm((p) => ({ ...p, spk_number: v }))} />
-                <div className="space-y-1.5">
-                  <FieldLabel label="POP (opsional)" tooltip="POP utama project." />
-                  <Combobox
-                    value={form.pop_id || "__none__"}
-                    onValueChange={(v) => setForm((p) => ({ ...p, pop_id: v === "__none__" ? "" : v }))}
-                    options={toOptions([
-                      { value: "__none__", label: "None" },
-                      ...pops
-                        .filter((p) => !form.region_id || p.region_id === form.region_id)
-                        .map((pop) => ({
-                          value: pop.id,
-                          label: `${pop.pop_name} (${pop.pop_code})`,
-                        })),
-                    ])}
-                    placeholder="Pilih POP"
-                    searchPlaceholder="Cari POP..."
-                  />
-                </div>
-                <Field
-                  label="Description"
-                  value={form.project_description}
-                  onChange={(v) => setForm((p) => ({ ...p, project_description: v }))}
-                  containerClassName={sectionSpanClass}
-                />
-                <Field label="Start Date" type="date" value={form.start_date} onChange={(v) => setForm((p) => ({ ...p, start_date: v }))} />
-                <Field label="End Date" type="date" value={form.end_date} onChange={(v) => setForm((p) => ({ ...p, end_date: v }))} />
-                <Field label="Budget Value" type="number" value={form.budget_value} onChange={(v) => setForm((p) => ({ ...p, budget_value: v }))} />
-              </>
+              <ProjectCreateForm
+                values={{
+                  project_name: form.project_name,
+                  vendor_name: form.vendor_name,
+                  bast_number: form.bast_number,
+                  spk_number: form.spk_number,
+                  pop_id: form.pop_id,
+                  region_id: form.region_id,
+                  project_description: form.project_description,
+                  start_date: form.start_date,
+                  end_date: form.end_date,
+                  budget_value: form.budget_value,
+                }}
+                pops={pops}
+                sectionSpanClass={sectionSpanClass}
+                onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+              />
             ) : null}
 
             {isCustomer ? (
-              <>
-                <Field label="Customer Name" value={form.customer_name} onChange={(v) => setForm((p) => ({ ...p, customer_name: v }))} />
-                <CidField value={form.customer_number} onChange={(v) => setForm((p) => ({ ...p, customer_number: v }))} />
-                <div className="space-y-1.5">
-                  <FieldLabel label="Service Type (opsional)" tooltip="Pilih dari master Service Types agar jenis layanan bisa dikelola ulang." />
-                  <Combobox
-                    value={form.service_type_id || "__none__"}
-                    onValueChange={(value) => {
-                      if (value === "__none__") {
-                        setForm((p) => ({ ...p, service_type_id: "", service_type: "" }));
-                        return;
-                      }
-                      const selected = serviceTypes.find((item) => item.id === value);
-                      setForm((p) => ({
-                        ...p,
-                        service_type_id: value,
-                        service_type: selected?.service_type_name || p.service_type,
-                      }));
-                    }}
-                    options={toOptions([
-                      { value: "__none__", label: "None" },
-                      ...serviceTypes.map((item) => ({
-                        value: item.id,
-                        label: item.service_type_code
-                          ? `${item.service_type_name} (${item.service_type_code})`
-                          : item.service_type_name,
-                      })),
-                    ])}
-                    placeholder="Pilih service type"
-                    searchPlaceholder="Cari service type..."
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <FieldLabel label="POP" tooltip="POP/site yang melayani lokasi customer. Wajib dipilih." />
-                  <Combobox
-                    value={form.pop_id || "__none__"}
-                    onValueChange={(v) => setForm((p) => ({ ...p, pop_id: v === "__none__" ? "" : v }))}
-                    options={toOptions([
-                      { value: "__none__", label: "Pilih POP" },
-                      ...pops
-                        .filter((p) => !form.region_id || p.region_id === form.region_id)
-                        .map((pop) => ({
-                          value: pop.id,
-                          label: `${pop.pop_name} (${pop.pop_code})`,
-                        })),
-                    ])}
-                    placeholder="Pilih POP"
-                    searchPlaceholder="Cari POP..."
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <FieldLabel label="Project (opsional)" tooltip="Project delivery atau aktivasi yang terkait dengan customer ini." />
-                  <Combobox
-                    value={form.customer_project_id || "__none__"}
-                    onValueChange={(v) => setForm((p) => ({ ...p, customer_project_id: v === "__none__" ? "" : v }))}
-                    options={toOptions([
-                      { value: "__none__", label: "None" },
-                      ...projects
-                        .filter((item) => !form.region_id || !item.region_id || item.region_id === form.region_id)
-                        .map((item) => ({
-                          value: item.id,
-                          label: item.project_name || item.project_code || item.id,
-                        })),
-                    ])}
-                    placeholder="Pilih project"
-                    searchPlaceholder="Cari project..."
-                  />
-                </div>
-              </>
+              <CustomerCreateForm
+                values={{
+                  customer_name: form.customer_name,
+                  customer_number: form.customer_number,
+                  service_type_id: form.service_type_id,
+                  service_type: form.service_type,
+                  pop_id: form.pop_id,
+                  customer_project_id: form.customer_project_id,
+                  region_id: form.region_id,
+                }}
+                serviceTypes={serviceTypes}
+                pops={pops}
+                projects={projects}
+                onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+              />
             ) : null}
 
             <div className="space-y-1.5">
@@ -1355,118 +1164,21 @@ export default function CreateDataManagementPage() {
               Validasi & Operasional
             </div>
 
-            <div className="space-y-1.5">
-              <FieldLabel
-                label="Status"
-                badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
-                tooltip={
-                  isPop
-                    ? "Status operasional POP."
-                    : isRoute
-                    ? "Status progress route."
-                    : isProject
-                    ? "Status progress project."
-                    : isCustomer
-                    ? "Status layanan customer."
-                    : "Status lifecycle perangkat."
-                }
-              />
-              <Combobox
-                value={isPop ? form.status_pop : isRoute ? form.route_status : isProject ? form.project_status : isCustomer ? form.customer_status : form.status}
-                onValueChange={(v) =>
-                  setForm((p) =>
-                    isPop
-                      ? { ...p, status_pop: v }
-                      : isRoute
-                      ? { ...p, route_status: v }
-                      : isProject
-                      ? { ...p, project_status: v }
-                      : isCustomer
-                      ? { ...p, customer_status: v }
-                      : { ...p, status: v },
-                  )
-                }
-                options={
-                  isPop
-                    ? toOptions([
-                        { value: "planning", label: "planning" },
-                        { value: "active", label: "active" },
-                        { value: "inactive", label: "inactive" },
-                        { value: "maintenance", label: "maintenance" },
-                      ])
-                    : isRoute
-                    ? toOptions([
-                        { value: "planning", label: "planning" },
-                        { value: "active", label: "active" },
-                        { value: "maintenance", label: "maintenance" },
-                        { value: "closed", label: "closed" },
-                      ])
-                    : isProject
-                    ? toOptions([
-                        { value: "planning", label: "planning" },
-                        { value: "running", label: "running" },
-                        { value: "done", label: "done" },
-                        { value: "hold", label: "hold" },
-                        { value: "cancelled", label: "cancelled" },
-                      ])
-                    : isCustomer
-                    ? toOptions([
-                        { value: "prospect", label: "prospect" },
-                        { value: "active", label: "active" },
-                        { value: "suspend", label: "suspend" },
-                        { value: "inactive", label: "inactive" },
-                        { value: "terminated", label: "terminated" },
-                      ])
-                    : toOptions([
-                        { value: "draft", label: "draft" },
-                        { value: "installed", label: "installed" },
-                        { value: "active", label: "active" },
-                        { value: "inactive", label: "inactive" },
-                        { value: "maintenance", label: "maintenance" },
-                        { value: "retired", label: "retired" },
-                      ])
-                }
-                placeholder="Pilih status"
-                searchPlaceholder="Cari status..."
-              />
-            </div>
-
-            {isDevice || isCustomer ? (
-              <Field
-                label="Installation Date"
-                type="date"
-                value={form.installation_date}
-                onChange={(v) => setForm((p) => ({ ...p, installation_date: v }))}
-                badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
-              />
-            ) : null}
-
-            {isPop || isDevice ? (
-              <>
-                <div className="space-y-1.5">
-                  <FieldLabel label="Validation Status" tooltip="Status hasil validasi lapangan/meja. Jika bukan unvalidated, sebaiknya isi Validation Date." />
-                  <Combobox
-                    value={form.validation_status}
-                    onValueChange={(v) => setForm((p) => ({ ...p, validation_status: v }))}
-                    options={toOptions([
-                      { value: "unvalidated", label: "unvalidated" },
-                      { value: "valid", label: "valid" },
-                      { value: "warning", label: "warning" },
-                      { value: "invalid", label: "invalid" },
-                    ])}
-                    placeholder="Pilih status validasi"
-                    searchPlaceholder="Cari status validasi..."
-                  />
-                </div>
-
-                <Field
-                  label="Validation Date"
-                  type="date"
-                  value={form.validation_date}
-                  onChange={(v) => setForm((p) => ({ ...p, validation_date: v }))}
-                />
-              </>
-            ) : null}
+            <CreateOperationalFields
+              flags={{ isPop, isRoute, isProject, isCustomer, isDevice }}
+              values={{
+                status_pop: form.status_pop,
+                route_status: form.route_status,
+                project_status: form.project_status,
+                customer_status: form.customer_status,
+                status: form.status,
+                installation_date: form.installation_date,
+                validation_status: form.validation_status,
+                validation_date: form.validation_date,
+              }}
+              hasCustomerAutoFill={hasCustomerAutoFill}
+              onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+            />
 
             {isPop || isProject || showDeviceImageField ? (
               <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
@@ -1479,145 +1191,39 @@ export default function CreateDataManagementPage() {
                 <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
                   Identitas Perangkat
                 </div>
-                <div className="space-y-1.5">
-                  <FieldLabel label="Manufacturer" tooltip="Pilih manufacturer dari master data." />
-                  <Combobox
-                    value={form.manufacturer_id || "__none__"}
-                    onValueChange={(value) => {
-                      if (value === "__none__") {
-                        setForm((p) => ({ ...p, manufacturer_id: "", brand_id: "", model_id: "" }));
-                        return;
-                      }
-                      setForm((p) => ({ ...p, manufacturer_id: value, brand_id: "", model_id: "" }));
-                    }}
-                    options={toOptions([
-                      { value: "__none__", label: "Pilih manufacturer" },
-                      ...manufacturers.map((item) => ({
-                        value: item.id,
-                        label: item.manufacturer_name || item.manufacturer_code || item.id,
-                      })),
-                    ])}
-                    placeholder="Pilih manufacturer"
-                    searchPlaceholder="Cari manufacturer..."
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <FieldLabel label="Brand" tooltip="Pilih brand dari master data (opsional filter by manufacturer)." />
-                  <Combobox
-                    value={form.brand_id || "__none__"}
-                    onValueChange={(value) => {
-                      if (value === "__none__") {
-                        setForm((p) => ({ ...p, brand_id: "", model_id: "" }));
-                        return;
-                      }
-                      setForm((p) => ({ ...p, brand_id: value, model_id: "" }));
-                    }}
-                    options={toOptions([
-                      { value: "__none__", label: "Pilih brand" },
-                      ...brands
-                        .filter((item) => !form.manufacturer_id || !item.manufacturer_id || item.manufacturer_id === form.manufacturer_id)
-                        .map((item) => ({
-                          value: item.id,
-                          label: item.brand_name || item.brand_code || item.id,
-                        })),
-                    ])}
-                    placeholder="Pilih brand"
-                    searchPlaceholder="Cari brand..."
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <FieldLabel label="Model" tooltip="Pilih model dari master data (opsional filter by brand/manufacturer)." />
-                  <Combobox
-                    value={form.model_id || "__none__"}
-                    onValueChange={(value) => setForm((p) => ({ ...p, model_id: value === "__none__" ? "" : value }))}
-                    options={toOptions([
-                      { value: "__none__", label: "Pilih model" },
-                      ...assetModels
-                        .filter((item) => !form.brand_id || !item.brand_id || item.brand_id === form.brand_id)
-                        .filter((item) => !form.manufacturer_id || !item.manufacturer_id || item.manufacturer_id === form.manufacturer_id)
-                        .map((item) => ({
-                          value: item.id,
-                          label: item.model_name || item.model_code || item.id,
-                        })),
-                    ])}
-                    placeholder="Pilih model"
-                    searchPlaceholder="Cari model..."
-                  />
-                </div>
-                <Field
-                  label="Serial Number"
-                  value={form.serial_number}
-                  onChange={(v) => setForm((p) => ({ ...p, serial_number: v }))}
-                  placeholder="Nomor serial perangkat"
+                <DeviceHardwareFields
+                  values={{
+                    manufacturer_id: form.manufacturer_id,
+                    brand_id: form.brand_id,
+                    model_id: form.model_id,
+                    serial_number: form.serial_number,
+                  }}
+                  manufacturers={manufacturers}
+                  brands={brands}
+                  assetModels={assetModels}
+                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
                 />
               </>
             ) : null}
 
             {isPop ? (
               <>
-                <Field label="Tenant" value={form.tenant} onChange={(v) => setForm((p) => ({ ...p, tenant: v }))} />
-                <Field
-                  label="PLN CID Number"
-                  value={form.pln_cid_number}
-                  onChange={(v) => setForm((p) => ({ ...p, pln_cid_number: v }))}
-                />
-                <Field
-                  label="PLN Payment Method"
-                  value={form.pln_payment_method}
-                  onChange={(v) => setForm((p) => ({ ...p, pln_payment_method: v }))}
-                  placeholder="prepaid / postpaid"
-                />
-                <Field
-                  label="PLN Phase"
-                  value={form.pln_phase}
-                  onChange={(v) => setForm((p) => ({ ...p, pln_phase: v }))}
-                  placeholder="1 phase / 3 phase"
-                />
-                <Field
-                  label="PLN Wattage"
-                  type="number"
-                  value={form.pln_wattage}
-                  onChange={(v) => setForm((p) => ({ ...p, pln_wattage: v }))}
-                />
-                <div className="space-y-1.5">
-                  <FieldLabel label="POP Type" tooltip="Pilih dari master POP Types. Kelola opsinya di Tata Kelola Master Data." />
-                  <Combobox
-                    value={form.pop_type_id || "__none__"}
-                    onValueChange={(value) => {
-                      if (value === "__none__") {
-                        setForm((p) => ({ ...p, pop_type_id: "", pop_type: "" }));
-                        return;
-                      }
-                      const selected = popTypes.find((item) => item.id === value);
-                      setForm((p) => ({
-                        ...p,
-                        pop_type_id: value,
-                        pop_type: selected?.pop_type_name || p.pop_type,
-                      }));
-                    }}
-                    options={toOptions([
-                      { value: "__none__", label: "None" },
-                      ...popTypes.map((item) => ({
-                        value: item.id,
-                        label: item.pop_type_code ? `${item.pop_type_name} (${item.pop_type_code})` : item.pop_type_name,
-                      })),
-                    ])}
-                    placeholder="Pilih POP type"
-                    searchPlaceholder="Cari POP type..."
-                  />
-                </div>
-                <Field
-                  label="Tanggal POP Aktif"
-                  type="date"
-                  value={form.tanggal_pop_aktif}
-                  onChange={(v) => setForm((p) => ({ ...p, tanggal_pop_aktif: v }))}
-                />
-                <Field
-                  label="Tags (comma separated)"
-                  value={form.tags}
-                  onChange={(v) => setForm((p) => ({ ...p, tags: v }))}
-                  placeholder="jabodebek,core,premium"
-                  containerClassName={sectionSpanClass}
+                <PopCreateOperationalFields
+                  values={{
+                    tenant: form.tenant,
+                    pln_cid_number: form.pln_cid_number,
+                    pln_payment_method: form.pln_payment_method,
+                    pln_phase: form.pln_phase,
+                    pln_wattage: form.pln_wattage,
+                    pop_type_id: form.pop_type_id,
+                    pop_type: form.pop_type,
+                    tanggal_pop_aktif: form.tanggal_pop_aktif,
+                    tags: form.tags,
+                  }}
+                  popTypes={popTypes}
+                  tenants={tenants}
+                  sectionSpanClass={sectionSpanClass}
+                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
                 />
                 <div className={`space-y-1.5 ${sectionSpanClass}`}>
                   <ImageAttachmentField
@@ -1631,21 +1237,12 @@ export default function CreateDataManagementPage() {
                   />
                 </div>
                 <div className={`space-y-1.5 ${sectionSpanClass}`}>
-                  <FieldLabel label="Support Documents" tooltip="Upload dokumen pendukung POP: image, excel, word, atau pdf." />
-                  <Input
-                    type="file"
-                    multiple
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
-                    onChange={(event) => setSupportFiles(Array.from(event.target.files || []))}
+                  <SupportDocumentField
+                    label="Support Documents"
+                    tooltip="Upload dokumen pendukung POP: image, excel, word, atau pdf."
+                    files={supportFiles}
+                    onChange={setSupportFiles}
                   />
-                  <p className="text-xs text-muted-foreground">Format: image, excel, word, pdf</p>
-                  {supportFiles.length ? (
-                    <ul className="space-y-1 text-xs text-muted-foreground">
-                      {supportFiles.map((file) => (
-                        <li key={`${file.name}-${file.size}`}>{file.name}</li>
-                      ))}
-                    </ul>
-                  ) : null}
                 </div>
               </>
             ) : null}
@@ -1664,21 +1261,12 @@ export default function CreateDataManagementPage() {
                   />
                 </div>
                 <div className={`space-y-1.5 ${sectionSpanClass}`}>
-                  <FieldLabel label="Document Attachments" tooltip="Upload dokumen pendukung project: image, excel, word, atau pdf." />
-                  <Input
-                    type="file"
-                    multiple
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
-                    onChange={(event) => setSupportFiles(Array.from(event.target.files || []))}
+                  <SupportDocumentField
+                    label="Document Attachments"
+                    tooltip="Upload dokumen pendukung project: image, excel, word, atau pdf."
+                    files={supportFiles}
+                    onChange={setSupportFiles}
                   />
-                  <p className="text-xs text-muted-foreground">Format: image, excel, word, pdf</p>
-                  {supportFiles.length ? (
-                    <ul className="space-y-1 text-xs text-muted-foreground">
-                      {supportFiles.map((file) => (
-                        <li key={`${file.name}-${file.size}`}>{file.name}</li>
-                      ))}
-                    </ul>
-                  ) : null}
                 </div>
               </>
             ) : null}
@@ -1707,183 +1295,44 @@ export default function CreateDataManagementPage() {
               </div>
             ) : null}
 
-            {showCoreFields ? (
-              <>
-                <Field
-                  label="Capacity Core"
-                  type="number"
-                  value={form.capacity_core}
-                  onChange={(v) => setForm((p) => ({ ...p, capacity_core: v }))}
-                />
-                <Field
-                  label="Used Core"
-                  type="number"
-                  value={form.used_core}
-                  onChange={(v) => setForm((p) => ({ ...p, used_core: v }))}
-                />
-              </>
-            ) : null}
-
-            {showPortFields ? (
-              <>
-                {needsPortPresetSelector ? (
-                  <div className="space-y-1.5">
-                    <FieldLabel
-                      label={form.device_type_key === "ODP" ? "Kapasitas ODP" : "Total Ports"}
-                      tooltip="Untuk splitter ratio 1:16 ke atas, pilih jumlah port aktual terpasang di lapangan."
-                    />
-                    <Combobox
-                      value={form.total_ports || "__none__"}
-                      onValueChange={(value) => setForm((p) => ({ ...p, total_ports: value === "__none__" ? "" : value }))}
-                      options={toOptions([
-                        { value: "__none__", label: "Pilih total port" },
-                        ...splitterPortPresetOptions.map((port) => ({ value: String(port), label: `${port} port` })),
-                      ])}
-                      placeholder="Pilih total port"
-                      searchPlaceholder="Cari total port..."
-                    />
-                  </div>
-                ) : (
-                  <Field
-                    label={form.device_type_key === "ODP" ? "Kapasitas ODP" : "Total Ports"}
-                    type="number"
-                    value={form.total_ports}
-                    onChange={(v) => setForm((p) => ({ ...p, total_ports: v }))}
-                  />
-                )}
-                <Field
-                  label={form.device_type_key === "ODP" ? "Port Aktif" : "Used Ports"}
-                  type="number"
-                  value={form.used_ports}
-                  onChange={(v) => setForm((p) => ({ ...p, used_ports: v }))}
-                />
-              </>
-            ) : null}
-
-            {showSplitterField ? (
-              <div className="space-y-1.5">
-                <FieldLabel
-                  label={form.device_type_key === "ODP" ? "Kapasitas Splitter" : "Splitter Ratio"}
-                  tooltip="Pilih rasio splitter dari master data."
-                  badge={<AutoFilledBadge label="Auto-fill" />}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Pilihan splitter akan mengisi rekomendasi kapasitas port. Nilai kapasitas tetap bisa dikoreksi sesuai kondisi lapangan.
-                </p>
-                <Combobox
-                  value={form.splitter_ratio || "__none__"}
-                  onValueChange={(value) => {
-                    const ratioValue = value === "__none__" ? "" : value;
-                    const profile = splitterProfiles.find((item) => item.ratio_label === ratioValue) || null;
-                    const output = Number(profile?.output_port_count || 0);
-                    const autoTotal = Number.isFinite(output) && output > 0 ? (output >= 16 ? 8 : output) : 0;
-                    setForm((p) => ({
-                      ...p,
-                      splitter_ratio: ratioValue,
-                      total_ports: autoTotal ? String(autoTotal) : p.total_ports,
-                    }));
-                  }}
-                  options={toOptions([
-                    { value: "__none__", label: "Pilih splitter ratio" },
-                    ...splitterProfiles.map((item) => ({
-                      value: item.ratio_label,
-                      label: item.output_port_count ? `${item.ratio_label} (${item.output_port_count} port)` : item.ratio_label,
-                    })),
-                  ])}
-                  placeholder="Pilih splitter ratio"
-                  searchPlaceholder="Cari splitter ratio..."
-                />
-              </div>
-            ) : null}
+            <DeviceCapacityFields
+              values={{
+                device_type_key: form.device_type_key,
+                capacity_core: form.capacity_core,
+                used_core: form.used_core,
+                total_ports: form.total_ports,
+                used_ports: form.used_ports,
+                splitter_ratio: form.splitter_ratio,
+              }}
+              showCoreFields={showCoreFields}
+              showPortFields={showPortFields}
+              showSplitterField={showSplitterField}
+              needsPortPresetSelector={needsPortPresetSelector}
+              splitterPortPresetOptions={splitterPortPresetOptions}
+              splitterProfiles={splitterProfiles}
+              onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+            />
 
             <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
               Lokasi
             </div>
-            <Field
-              label="Address"
-              value={form.address}
-              onChange={(v) => setForm((p) => ({ ...p, address: v }))}
-              containerClassName={sectionSpanClass}
+            <CreateLocationFields
+              values={{
+                address: form.address,
+                province: form.province,
+                province_id: form.province_id,
+                city: form.city,
+                city_id: form.city_id,
+                longitude: form.longitude,
+                latitude: form.latitude,
+              }}
+              provinces={provinces}
+              cities={cities}
+              sectionSpanClass={sectionSpanClass}
+              showCoordinates={!isProject}
               badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
+              onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
             />
-            <div className="space-y-1.5">
-              <FieldLabel label="Province (Master)" tooltip="Pilih provinsi dari master data." badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null} />
-              <Combobox
-                value={form.province_id || "__none__"}
-                onValueChange={(value) => {
-                  if (value === "__none__") {
-                    setForm((p) => ({ ...p, province_id: "", province: "", city_id: "", city: "" }));
-                    return;
-                  }
-                  const selected = provinces.find((item) => item.id === value);
-                  setForm((p) => ({
-                    ...p,
-                    province_id: value,
-                    province: selected?.province_name || p.province,
-                    city_id: "",
-                    city: "",
-                  }));
-                }}
-                options={toOptions([
-                  { value: "__none__", label: "Pilih provinsi" },
-                  ...provinces.map((item) => ({
-                    value: item.id,
-                    label: item.province_name,
-                  })),
-                ])}
-                placeholder="Pilih provinsi"
-                searchPlaceholder="Cari provinsi..."
-              />
-            </div>
-            <div className="space-y-1.5">
-              <FieldLabel label="City/Kabupaten (Master)" tooltip="Pilih kota/kabupaten berdasarkan provinsi." badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null} />
-              <Combobox
-                key={`city-${form.province_id || "none"}`}
-                value={form.city_id || "__none__"}
-                onValueChange={(value) => {
-                  if (value === "__none__") {
-                    setForm((p) => ({ ...p, city_id: "", city: "" }));
-                    return;
-                  }
-                  const selected = cities.find((item) => item.id === value);
-                  setForm((p) => ({
-                    ...p,
-                    city_id: value,
-                    city: selected?.city_name || p.city,
-                  }));
-                }}
-                disabled={!form.province_id}
-                options={toOptions([
-                  { value: "__none__", label: "Pilih kota/kabupaten" },
-                  ...cities
-                    .filter((item) => !form.province_id || item.province_id === form.province_id)
-                    .map((item) => ({
-                      value: item.id,
-                      label: item.city_name,
-                    })),
-                ])}
-                placeholder="Pilih kota/kabupaten"
-                searchPlaceholder="Cari kota/kabupaten..."
-              />
-            </div>
-            {!isProject ? (
-              <>
-                <CoordinateField
-                  label="Longitude"
-                  value={form.longitude}
-                  onChange={(v) => setForm((p) => ({ ...p, longitude: v }))}
-                  kind="longitude"
-                  badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
-                />
-                <CoordinateField
-                  label="Latitude"
-                  value={form.latitude}
-                  onChange={(v) => setForm((p) => ({ ...p, latitude: v }))}
-                  kind="latitude"
-                  badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
-                />
-              </>
-            ) : null}
           </div>
 
           {isPop || isDevice ? (
@@ -1927,42 +1376,18 @@ export default function CreateDataManagementPage() {
         </CardContent>
       </Card>
 
-        <AlertDialog open={Boolean(approvalNotice)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{approvalNotice?.title || "Request approval terkirim"}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {approvalNotice?.description}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction
-                onClick={() => {
-                  const target = approvalNotice?.redirectTo || "/data-management";
-                  setApprovalNotice(null);
-                  router.push(target);
-                }}
-              >
-                Kembali ke list
-              </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-        </AlertDialog>
-
-        <ResponseDialog
-          open={Boolean(createResponseDialog)}
-          title={createResponseDialog?.title || "Response"}
-          description={createResponseDialog?.description}
-          variant={createResponseDialog?.variant}
-          actionLabel={createResponseDialog?.actionLabel}
-          onOpenChange={(open) => {
-            if (open) return;
-            if (createResponseDialog?.variant === "destructive") {
-              setCreateResponseDialog(null);
-            }
+        <CreateApprovalDialog
+          notice={approvalNotice}
+          onClose={(target) => {
+            setApprovalNotice(null);
+            router.push(target);
           }}
-          onAction={() => {
-            const target = createResponseDialog?.redirectTo;
+        />
+
+        <CreateResponseDialog
+          state={createResponseDialog}
+          onClose={() => setCreateResponseDialog(null)}
+          onAction={(target) => {
             setCreateResponseDialog(null);
             if (target) {
               router.push(target);
@@ -2077,247 +1502,6 @@ export default function CreateDataManagementPage() {
   );
 }
 
-function ImageAttachmentField({
-  label,
-  tooltip,
-  files,
-  previewUrls,
-  onChange,
-  onRemove,
-  onClear,
-}: {
-  label: string;
-  tooltip: string;
-  files: File[];
-  previewUrls: string[];
-  onChange: (files: FileList | null) => void;
-  onRemove: (index: number) => void;
-  onClear: () => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <FieldLabel label={label} tooltip={tooltip} />
-      <Input type="file" accept="image/*" multiple onChange={(event) => onChange(event.target.files)} />
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <ImagePlus className="size-3.5" />
-        Maksimal {MAX_IMAGE_ATTACHMENTS} file, masing-masing max 5MB.
-      </div>
-
-      {files.length ? (
-        <div className="space-y-2 rounded-lg border bg-muted/20 p-2">
-          <div className="flex items-center justify-between">
-            <Badge variant="secondary">{files.length} file dipilih</Badge>
-            <Button type="button" variant="ghost" size="sm" onClick={onClear}>
-              <Trash2 className="mr-1 size-4" />
-              Clear
-            </Button>
-          </div>
-          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-2 md:grid-cols-5 lg:grid-cols-6">
-            {files.map((file, index) => (
-              <div key={`${file.name}-${file.size}-${index}`} className="relative overflow-hidden rounded-md border bg-background">
-                {previewUrls[index] ? (
-                  <Image
-                    src={previewUrls[index]}
-                    alt={file.name}
-                    width={320}
-                    height={96}
-                    unoptimized
-                    className="h-14 w-full object-cover sm:h-16 md:h-20"
-                  />
-                ) : (
-                  <div className="h-14 w-full bg-muted sm:h-16 md:h-20" />
-                )}
-                <div className="space-y-1 p-1.5">
-                  <p className="truncate text-[10px] text-muted-foreground">{file.name}</p>
-                </div>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="destructive"
-                  className="absolute right-1 top-1 size-5 sm:size-6"
-                  onClick={() => onRemove(index)}
-                >
-                  <X className="size-3 sm:size-3.5" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-  placeholder,
-  tooltip,
-  containerClassName,
-  badge,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-  placeholder?: string;
-  tooltip?: string;
-  containerClassName?: string;
-  badge?: ReactNode;
-}) {
-  return (
-    <div className={`space-y-1.5 ${containerClassName || ""}`}>
-      <FieldLabel label={label} tooltip={tooltip || getDefaultTooltip(label)} badge={badge} />
-      <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
-    </div>
-  );
-}
-
-function CidField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const validation = validateCid(value);
-
-  return (
-    <div className="space-y-1.5">
-      <FieldLabel label="CID" tooltip="Customer ID dari sistem layanan/billing. Jika diisi, wajib tepat 8 digit angka." />
-      <Input
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        maxLength={8}
-        value={value}
-        onChange={(event) => onChange(normalizeCidInput(event.target.value))}
-        placeholder="12345678"
-      />
-      {validation.state !== "idle" ? (
-        <Badge
-          variant="outline"
-          className={`${validation.state === "valid" ? "border-emerald-300 text-emerald-700" : "border-rose-300 text-rose-700"} h-4 w-fit gap-0.5 px-1.5 text-[10px]`}
-        >
-          {validation.state === "valid" ? <CheckCircle2 className="mr-0.5 size-3" /> : <XCircle className="mr-0.5 size-3" />}
-          {validation.message}
-        </Badge>
-      ) : null}
-    </div>
-  );
-}
-
-function CoordinateField({
-  label,
-  value,
-  onChange,
-  kind,
-  badge,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  kind: "longitude" | "latitude";
-  badge?: ReactNode;
-}) {
-  const validation = validateCoordinateFormat(value, kind);
-  const placeholder = kind === "latitude" ? "-6.200000" : "106.816666";
-
-  return (
-    <div className="space-y-1.5">
-      <FieldLabel
-        label={label}
-        badge={badge}
-        tooltip={
-          kind === "latitude"
-            ? "Format: -x.xxxxxx (contoh: -6.200000). Wajib minus di depan, minimal 6 digit desimal."
-            : "Format: xxx.xxxxxx (contoh: 106.816666). Tiga digit di depan, minimal 6 digit desimal."
-        }
-      />
-      <Input type="text" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
-      {validation.state !== "idle" ? (
-        <Badge variant="outline" className={`${validation.state === "valid" ? "border-emerald-300 text-emerald-700" : "border-rose-300 text-rose-700"} h-4 w-fit gap-0.5 px-1.5 text-[10px]`}>
-          {validation.state === "valid" ? <CheckCircle2 className="mr-0.5 size-3" /> : <XCircle className="mr-0.5 size-3" />}
-          {validation.message}
-        </Badge>
-      ) : null}
-    </div>
-  );
-}
-
-function FieldLabel({ label, tooltip, badge }: { label: string; tooltip?: string | null; badge?: ReactNode }) {
-  if (!tooltip) {
-    return (
-      <div className="flex flex-wrap items-center gap-1.5">
-        <Label>{label}</Label>
-        {badge}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <Label>{label}</Label>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button type="button" className="text-muted-foreground hover:text-foreground" aria-label={`Info ${label}`}>
-              <CircleHelp className="size-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={6}>
-            {tooltip}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      {badge}
-    </div>
-  );
-}
-
-function AutoFilledBadge({ label = "Auto-filled" }: { label?: string }) {
-  return (
-    <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] font-medium uppercase tracking-normal text-blue-700 dark:text-blue-300">
-      {label}
-    </Badge>
-  );
-}
-
-function getDefaultTooltip(label: string) {
-  const map: Record<string, string> = {
-    "POP Name": "Nama POP yang mudah dikenali di lapangan dan laporan.",
-    "POP Code (3 huruf)": "Kode singkat 3 huruf unik per POP, contoh CBO.",
-    "Device Name": "Nama perangkat sesuai penamaan operasional.",
-    "Customer Name": "Nama pelanggan atau titik layanan.",
-    "CID": "Customer ID dari sistem layanan/billing jika tersedia.",
-    "Service Type": "Jenis layanan customer dari master data, misalnya Internet, Metro Ethernet, atau Dedicated Link.",
-    "Contact Name": "Nama PIC customer yang dapat dihubungi.",
-    "Contact Phone": "Nomor telepon PIC customer.",
-    "BAST Number": "Nomor BAST untuk referensi serah terima project.",
-    "SPK Number": "Nomor SPK untuk referensi kontrak pekerjaan.",
-    "Validation Date": "Tanggal validasi terakhir untuk data ini.",
-    Tenant: "Nama tenant/penyewa site POP jika ada. Tenant perangkat dikelola dari master data Tenant.",
-    "PLN CID Number": "Nomor pelanggan listrik PLN untuk POP.",
-    "PLN Payment Method": "Metode pembayaran listrik, misalnya prepaid/postpaid.",
-    "PLN Phase": "Jenis phase listrik, misalnya 1 phase atau 3 phase.",
-    "PLN Wattage": "Daya listrik terpasang pada POP dalam watt.",
-    "POP Type": "Klasifikasi POP, misalnya core/distribution/edge.",
-    "Tanggal POP Aktif": "Tanggal POP mulai beroperasi aktif.",
-    "Tags (comma separated)": "Tag dipisahkan koma untuk pencarian/filter data.",
-    "Capacity Core": "Total kapasitas core pada perangkat.",
-    "Used Core": "Jumlah core yang sudah dipakai.",
-    "Total Ports": "Total port yang tersedia pada perangkat.",
-    "Used Ports": "Jumlah port yang sudah terpakai.",
-    "Splitter Ratio": "Rasio splitter perangkat ODP, misalnya 1:8.",
-    Address: "Alamat lengkap lokasi POP/perangkat/customer. Wajib diisi untuk customer.",
-    City: "Kota/Kabupaten lokasi.",
-    Province: "Provinsi lokasi.",
-    Longitude: "Koordinat bujur lokasi.",
-    Latitude: "Koordinat lintang lokasi.",
-    Title: "Judul yang ditampilkan untuk custom field.",
-    "Field Key": "Kode internal custom field (snake_case), dipakai sebagai key data.",
-    "Options (CSV)": "Opsi nilai untuk select/multiselect, pisahkan dengan koma.",
-    "Help Text": "Bantuan singkat yang akan tampil sebagai tooltip field.",
-  };
-  return map[label] || "";
-}
-
 function nullIfEmpty(value: string) {
   return value.trim() ? value.trim() : null;
 }
@@ -2367,10 +1551,6 @@ function numberOrNull(value: string) {
   return Number.isFinite(number) ? number : null;
 }
 
-function normalizeCidInput(value: string) {
-  return value.replace(/\D/g, "").slice(0, 8);
-}
-
 function validateCid(value: string) {
   const text = String(value || "").trim();
   if (!text) {
@@ -2383,6 +1563,30 @@ function validateCid(value: string) {
     return { valid: false, state: "invalid" as const, message: "CID wajib tepat 8 digit." };
   }
   return { valid: true, state: "valid" as const, message: "CID valid." };
+}
+
+function getCreateErrorTitle({
+  isPop,
+  isRoute,
+  isProject,
+  isCustomer,
+  isOntDevice,
+  deviceTypeKey,
+}: {
+  isPop: boolean;
+  isRoute: boolean;
+  isProject: boolean;
+  isCustomer: boolean;
+  isOntDevice: boolean;
+  deviceTypeKey: string;
+}) {
+  if (isPop) return "Create POP Gagal";
+  if (isRoute) return "Create Route Gagal";
+  if (isProject) return "Create Project Gagal";
+  if (isCustomer) return "Create Customer Gagal";
+  if (isOntDevice) return "Create ONT Gagal";
+  if (deviceTypeKey === "ODP") return "Create ODP Gagal";
+  return "Create Device Gagal";
 }
 
 function getMissingCustomerRequiredFields(form: Record<string, string>) {

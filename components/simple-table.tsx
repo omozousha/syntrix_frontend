@@ -1,14 +1,6 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import {
-  type ColumnDef,
-  type SortingState,
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
 import { ChevronDown, ChevronUp, ChevronsUpDown, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +20,11 @@ type TableRowData = {
   __originalIndex: number;
   __cells: CellValue[];
 };
+
+type SortState = {
+  columnId: string;
+  desc: boolean;
+} | null;
 
 export function SimpleTable({
   headers,
@@ -56,7 +53,7 @@ export function SimpleTable({
   columnVisibilityLabel?: string;
   columnVisibilityLabels?: string[];
 }) {
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortState>(null);
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({});
 
   const data = useMemo<TableRowData[]>(
@@ -68,37 +65,34 @@ export function SimpleTable({
     [rows],
   );
 
-  const columns = useMemo<ColumnDef<TableRowData>[]>(
-    () =>
-      headers.map((header, index) => ({
-        id: `col_${index}`,
-        header: () => header,
-        accessorFn: (row) => row.__cells[index],
-        enableSorting: enableSorting && !disableSortColumns.includes(index),
-        sortingFn: (a, b, columnId) => {
-          const left = getComparableValue(a.getValue(columnId) as CellValue);
-          const right = getComparableValue(b.getValue(columnId) as CellValue);
-          if (left < right) return -1;
-          if (left > right) return 1;
-          return 0;
-        },
-        cell: ({ row }) => row.original.__cells[index] ?? null,
-      })),
-    [headers, enableSorting, disableSortColumns],
+  const visibleColumnIndices = useMemo(
+    () => headers.map((_, index) => index).filter((index) => columnVisibility[`col_${index}`] !== false),
+    [headers, columnVisibility],
   );
 
-  const table = useReactTable({
-    data,
-    columns,
-    state: {
-      sorting,
-      columnVisibility,
-    },
-    onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
+  const sortedData = useMemo(() => {
+    if (!sorting) return data;
+
+    const columnIndex = Number(sorting.columnId.replace(/^col_/, ""));
+    if (!Number.isInteger(columnIndex)) return data;
+
+    return [...data].sort((a, b) => {
+      const left = getComparableValue(a.__cells[columnIndex]);
+      const right = getComparableValue(b.__cells[columnIndex]);
+      if (left < right) return sorting.desc ? 1 : -1;
+      if (left > right) return sorting.desc ? -1 : 1;
+      return 0;
+    });
+  }, [data, sorting]);
+
+  function toggleSort(columnIndex: number) {
+    const columnId = `col_${columnIndex}`;
+    setSorting((current) => {
+      if (!current || current.columnId !== columnId) return { columnId, desc: false };
+      if (!current.desc) return { columnId, desc: true };
+      return null;
+    });
+  }
 
   return (
     <div className="space-y-3">
@@ -114,18 +108,23 @@ export function SimpleTable({
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuLabel>{tableLabel}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => (
+              {headers.map((header, index) => {
+                const columnId = `col_${index}`;
+                return (
                   <DropdownMenuCheckboxItem
-                    key={column.id}
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    key={columnId}
+                    checked={columnVisibility[columnId] !== false}
+                    onCheckedChange={(value) =>
+                      setColumnVisibility((current) => ({
+                        ...current,
+                        [columnId]: !!value,
+                      }))
+                    }
                   >
-                    {getHeaderLabel(column.columnDef.header, column.id, columnVisibilityLabels)}
+                    {getHeaderLabel(header, columnId, columnVisibilityLabels)}
                   </DropdownMenuCheckboxItem>
-                ))}
+                );
+              })}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -134,53 +133,47 @@ export function SimpleTable({
       <div className="w-full overflow-x-auto rounded-md border bg-card">
         <Table className="min-w-full">
           <TableHeader className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  const sorted = header.column.getIsSorted();
+            <TableRow>
+              {visibleColumnIndices.map((columnIndex) => {
+                const columnId = `col_${columnIndex}`;
+                const canSort = enableSorting && !disableSortColumns.includes(columnIndex);
+                const sorted = sorting?.columnId === columnId ? (sorting.desc ? "desc" : "asc") : false;
                   return (
-                    <TableHead key={header.id} className="h-10 px-4 text-xs font-medium text-muted-foreground">
-                      {header.isPlaceholder ? null : (
-                        <button
-                          type="button"
-                          className={`inline-flex items-center gap-1 ${
-                            header.column.getCanSort() ? "hover:text-foreground" : "cursor-default"
-                          }`}
-                          onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
-                        >
-                          <span className="whitespace-nowrap">
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                          </span>
-                          {header.column.getCanSort() ? (
-                            sorted === "asc" ? (
-                              <ChevronUp className="size-3.5" />
-                            ) : sorted === "desc" ? (
-                              <ChevronDown className="size-3.5" />
-                            ) : (
-                              <ChevronsUpDown className="size-3.5 opacity-60" />
-                            )
-                          ) : null}
-                        </button>
-                      )}
+                    <TableHead key={columnId} className="h-10 px-4 text-xs font-medium text-muted-foreground">
+                      <button
+                        type="button"
+                        className={`inline-flex items-center gap-1 ${canSort ? "hover:text-foreground" : "cursor-default"}`}
+                        onClick={canSort ? () => toggleSort(columnIndex) : undefined}
+                      >
+                        <span className="whitespace-nowrap">{headers[columnIndex]}</span>
+                        {canSort ? (
+                          sorted === "asc" ? (
+                            <ChevronUp className="size-3.5" />
+                          ) : sorted === "desc" ? (
+                            <ChevronDown className="size-3.5" />
+                          ) : (
+                            <ChevronsUpDown className="size-3.5 opacity-60" />
+                          )
+                        ) : null}
+                      </button>
                     </TableHead>
                   );
                 })}
-              </TableRow>
-            ))}
+            </TableRow>
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => {
-                const originalIndex = row.original.__originalIndex;
-                const rowCells = row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="max-w-[320px] px-4 py-2 align-middle">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            {sortedData.length ? (
+              sortedData.map((row) => {
+                const originalIndex = row.__originalIndex;
+                const rowCells = visibleColumnIndices.map((columnIndex) => (
+                  <TableCell key={`row-${originalIndex}-col-${columnIndex}`} className="max-w-[320px] px-4 py-2 align-middle">
+                    {row.__cells[columnIndex] ?? null}
                   </TableCell>
                 ));
 
                 if (rowContextMenu) {
                   return (
-                    <ContextMenu key={row.id}>
+                    <ContextMenu key={originalIndex}>
                       <ContextMenuTrigger asChild>
                         <TableRow
                           data-state={selectedRowIndices?.has(originalIndex) ? "selected" : undefined}
@@ -198,7 +191,7 @@ export function SimpleTable({
 
                 return (
                   <TableRow
-                    key={row.id}
+                    key={originalIndex}
                     data-state={selectedRowIndices?.has(originalIndex) ? "selected" : undefined}
                     className="transition-colors hover:bg-muted/40 data-[state=selected]:bg-muted"
                     onClick={() => onRowClick?.(originalIndex)}
@@ -210,7 +203,7 @@ export function SimpleTable({
               })
             ) : (
               <TableRow>
-                <TableCell className="px-4 py-8 text-center text-muted-foreground" colSpan={headers.length}>
+                <TableCell className="px-4 py-8 text-center text-muted-foreground" colSpan={Math.max(visibleColumnIndices.length, 1)}>
                   No data.
                 </TableCell>
               </TableRow>

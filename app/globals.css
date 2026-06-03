@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Inter", sans-serif;
-  --font-mono: "IBM Plex Mono", monospace;
-  --font-heading: "Source Serif 4", serif;
+  --font-sans: var(--font-geist-sans), "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), "SFMono-Regular", monospace;
+  --font-heading: var(--font-geist-sans), "Segoe UI", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -91,17 +91,17 @@
   --sidebar-accent-foreground: oklch(0.280 0.070 225);
   --sidebar-border: oklch(0.900 0.012 250);
   --sidebar-ring: oklch(0.560 0.170 250);
-  --shadow-2xs: 0 1px 3px 0px oklch(0.00 0 0 / 0.05);
-  --shadow-xs: 0 1px 3px 0px oklch(0.00 0 0 / 0.05);
-  --shadow-2xl: 0 1px 3px 0px oklch(0.00 0 0 / 0.25);
-  --shadow-sm: 0 1px 3px 0px oklch(0.00 0 0 / 0.10), 0 1px 2px -1px oklch(0.00 0 0 / 0.10);
-  --shadow: 0 1px 3px 0px oklch(0.00 0 0 / 0.10), 0 1px 2px -1px oklch(0.00 0 0 / 0.10);
-  --shadow-md: 0 1px 3px 0px oklch(0.00 0 0 / 0.10), 0 2px 4px -1px oklch(0.00 0 0 / 0.10);
-  --shadow-lg: 0 1px 3px 0px oklch(0.00 0 0 / 0.10), 0 4px 6px -1px oklch(0.00 0 0 / 0.10);
-  --shadow-xl: 0 1px 3px 0px oklch(0.00 0 0 / 0.10), 0 8px 10px -1px oklch(0.00 0 0 / 0.10);
-  --font-sans: Inter, sans-serif;
-  --font-serif: Source Serif 4, serif;
-  --font-mono: IBM Plex Mono, monospace;
+  --shadow-2xs: 0 1px 2px 0 oklch(0.300 0.040 255 / 0.05);
+  --shadow-xs: 0 1px 3px 0 oklch(0.300 0.040 255 / 0.06);
+  --shadow-2xl: 0 24px 60px -24px oklch(0.300 0.075 255 / 0.34);
+  --shadow-sm: 0 1px 3px 0 oklch(0.300 0.040 255 / 0.08), 0 1px 2px -1px oklch(0.300 0.040 255 / 0.08);
+  --shadow: 0 8px 24px -18px oklch(0.300 0.050 255 / 0.28), 0 1px 2px 0 oklch(0.300 0.040 255 / 0.08);
+  --shadow-md: 0 14px 32px -22px oklch(0.300 0.060 255 / 0.30), 0 2px 6px -2px oklch(0.300 0.040 255 / 0.10);
+  --shadow-lg: 0 20px 44px -28px oklch(0.300 0.070 255 / 0.34), 0 5px 12px -6px oklch(0.300 0.040 255 / 0.12);
+  --shadow-xl: 0 28px 64px -34px oklch(0.300 0.075 255 / 0.38), 0 8px 18px -10px oklch(0.300 0.040 255 / 0.14);
+  --font-sans: var(--font-geist-sans), "Segoe UI", sans-serif;
+  --font-serif: var(--font-geist-sans), "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), "SFMono-Regular", monospace;
 }
 
 .dark {
@@ -136,6 +136,14 @@
   --sidebar-accent-foreground: oklch(0.905 0.050 210);
   --sidebar-border: oklch(0.300 0.024 255);
   --sidebar-ring: oklch(0.705 0.145 250);
+  --shadow-2xs: 0 1px 2px 0 oklch(0.040 0.020 255 / 0.18);
+  --shadow-xs: 0 1px 3px 0 oklch(0.040 0.020 255 / 0.20);
+  --shadow-2xl: 0 28px 70px -28px oklch(0.040 0.040 255 / 0.70);
+  --shadow-sm: 0 1px 3px 0 oklch(0.040 0.020 255 / 0.26), 0 1px 2px -1px oklch(0.040 0.020 255 / 0.24);
+  --shadow: 0 14px 34px -24px oklch(0.040 0.040 255 / 0.62), 0 1px 2px 0 oklch(0.040 0.020 255 / 0.24);
+  --shadow-md: 0 18px 42px -26px oklch(0.040 0.040 255 / 0.66), 0 2px 6px -2px oklch(0.040 0.020 255 / 0.28);
+  --shadow-lg: 0 24px 56px -30px oklch(0.040 0.045 255 / 0.72), 0 5px 14px -8px oklch(0.040 0.020 255 / 0.30);
+  --shadow-xl: 0 30px 76px -34px oklch(0.040 0.050 255 / 0.78), 0 8px 20px -12px oklch(0.040 0.020 255 / 0.34);
 }
 
 @layer base {
@@ -144,11 +152,62 @@
   }
   body {
     @apply bg-background text-foreground;
+    min-height: 100dvh;
+    background-image:
+      linear-gradient(180deg, oklch(1 0 0 / 0.56), transparent 18rem),
+      linear-gradient(135deg, oklch(0.940 0.020 250 / 0.55), transparent 42rem);
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
     letter-spacing: var(--tracking-normal);
+    text-rendering: optimizeLegibility;
   }
   html {
     @apply font-sans;
     scroll-behavior: smooth;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+    font-weight: 650;
+    letter-spacing: 0;
+    text-wrap: balance;
+  }
+  p,
+  li,
+  dd {
+    text-wrap: pretty;
+  }
+  table,
+  [data-slot="table"],
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 22%, transparent);
+    color: var(--foreground);
+  }
+  :where(a, button, [role="button"], input, select, textarea) {
+    transition-duration: 180ms;
+    transition-property: background-color, border-color, box-shadow, color, opacity, transform;
+    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  :where(button, [role="button"]):active:not(:disabled) {
+    transform: translateY(1px) scale(0.99);
+  }
+  .dark body {
+    background-image:
+      linear-gradient(180deg, oklch(0.225 0.026 255 / 0.70), transparent 18rem),
+      linear-gradient(135deg, oklch(0.155 0.028 255 / 0.72), transparent 44rem);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
   }
 }
 

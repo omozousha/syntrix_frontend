@@ -5,9 +5,23 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import { ArrowLeft, BellRing, CheckCircle2, ChevronDown, CircleHelp, Download, ImagePlus, Pencil, QrCode, RefreshCw, Save, Trash2, X, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronDown, CircleHelp, Download, ImagePlus, Pencil, Save, X, XCircle } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
 import { ResponseDialog } from "@/components/response-dialog";
+import {
+  DeviceDetailForm,
+  DeviceDetailHeader,
+  DeviceGallerySection,
+  DeviceOperationalSummary,
+  GenericDeviceRawSection,
+  OdpCoreChainSummarySection,
+  OdpOperationsShell,
+  OdpPortMetrics,
+  OdpPortSection,
+  OdpQrActionPanel,
+  OdpValidationHistorySection,
+  ValidationReminderDialog,
+} from "@/components/features/data-management/device-detail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +38,7 @@ import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-utils";
 import { resolveAttachment } from "@/lib/attachment-utils";
 import { getCategoryBySlug } from "@/lib/data-management-config";
+import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
 import { mapValidationStatus } from "@/lib/validation-status";
 const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() || "";
 
@@ -309,9 +324,7 @@ type RelationLabels = {
 };
 
 const POP_STATUS_OPTIONS = ["planning", "active", "inactive", "maintenance"];
-const DEVICE_STATUS_OPTIONS = ["draft", "installed", "active", "inactive", "maintenance", "retired"];
 const VALIDATION_STATUS_OPTIONS = ["unvalidated", "valid", "warning", "invalid"];
-const ODP_PORT_STATUS_OPTIONS = ["idle", "used", "reserved", "down", "maintenance"];
 const MAX_IMAGE_ATTACHMENTS = 10;
 const MAX_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
@@ -1435,30 +1448,25 @@ export default function DataManagementDetailPage() {
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 pr-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <h2 className="text-2xl font-semibold tracking-tight">Detail {category.label}</h2>
-            <p className="text-sm text-muted-foreground">{title}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {canOpenTopology && item ? (
-              <Button asChild variant="outline">
-                <Link href={topologyHref}>{category.resource === "devices" ? "Trace Topology" : "Open Topology"}</Link>
-              </Button>
-            ) : null}
-            {canOpenAsBuilt && category?.resource === "devices" && item ? (
-              <Button asChild variant="outline">
-                <Link href={asBuiltHref}>Open As-Built</Link>
-              </Button>
-            ) : null}
-            <Button asChild variant="outline">
-              <Link href={backToListHref}>
-                <ArrowLeft className="mr-2 size-4" />
-                Kembali
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <DeviceDetailHeader
+          categoryLabel={category.label}
+          title={title}
+          backHref={backToListHref}
+          actions={
+            <>
+              {canOpenTopology && item ? (
+                <Button asChild variant="outline">
+                  <Link href={topologyHref}>{category.resource === "devices" ? "Trace Topology" : "Open Topology"}</Link>
+                </Button>
+              ) : null}
+              {canOpenAsBuilt && category?.resource === "devices" && item ? (
+                <Button asChild variant="outline">
+                  <Link href={asBuiltHref}>Open As-Built</Link>
+                </Button>
+              ) : null}
+            </>
+          }
+        />
 
         {loading ? <AppLoading label="Sedang memuat detail data..." /> : null}
         {!loading && error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -1538,14 +1546,7 @@ export default function DataManagementDetailPage() {
               ) : null}
 
               {category.resource !== "pops" && category.resource !== "devices" && category.resource !== "customers" ? (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {Object.entries(item).map(([key, value]) => (
-                    <div key={key} className="space-y-1.5">
-                      <Label>{key}</Label>
-                      <Input value={stringifyValue(value)} disabled />
-                    </div>
-                  ))}
-                </div>
+                <GenericDeviceRawSection item={item} />
               ) : null}
 
               {showServicePortRelations ? (
@@ -1561,100 +1562,20 @@ export default function DataManagementDetailPage() {
                 />
               ) : null}
 
-              <div className="space-y-1.5 md:max-w-xs">
-                <Label>Total Image Attachments</Label>
-                <Input value={String(galleryImageAttachments.length)} disabled />
-              </div>
-              {galleryImageAttachments.length > 0 ? (
-                <div className="space-y-2">
-                  <Label>Mini Gallery</Label>
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-                    {galleryImageAttachments.map((attachment, index) => {
-                      const src = imagePreviewUrls[attachment.id];
-                      const fileName = attachmentNames[attachment.id] || attachment.name || attachment.id;
-                      return (
-                        <button
-                          type="button"
-                          key={attachment.id}
-                          className="overflow-hidden rounded-md border bg-muted/30 text-left transition hover:ring-2 hover:ring-primary/40"
-                          title={fileName}
-                          onClick={() => openGalleryAt(index)}
-                        >
-                          {src ? (
-                            <Image
-                              src={src}
-                              alt={fileName}
-                              width={120}
-                              height={90}
-                              className="h-20 w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-20 items-center justify-center text-[10px] text-muted-foreground">
-                              {loadingImagePreviews ? "Loading..." : "No preview"}
-                            </div>
-                          )}
-                          <p className="truncate px-1.5 py-1 text-[10px] text-muted-foreground">{fileName}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-
-              {editable && isEditing ? (
-                <div className="space-y-2">
-                  <Label>Tambah Image Attachment</Label>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(event) => handleNewImageFilesChange(event.target.files)}
-                  />
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <ImagePlus className="size-3.5" />
-                    Maksimal total {MAX_IMAGE_ATTACHMENTS} file (existing + baru), masing-masing max 5MB.
-                  </div>
-                  {newImageFiles.length ? (
-                    <div className="space-y-2 rounded-lg border bg-muted/20 p-2">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="secondary">{newImageFiles.length} file baru</Badge>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => setNewImageFiles([])}>
-                          <Trash2 className="mr-1 size-4" />
-                          Clear
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-                        {newImageFiles.map((file, index) => (
-                          <div key={`${file.name}-${file.size}-${index}`} className="relative overflow-hidden rounded-md border bg-background">
-                            {newImagePreviewUrls[index] ? (
-                              <Image
-                                src={newImagePreviewUrls[index]}
-                                alt={file.name}
-                                width={120}
-                                height={90}
-                                className="h-20 w-full object-cover"
-                                unoptimized
-                              />
-                            ) : (
-                              <div className="h-20 w-full bg-muted" />
-                            )}
-                            <p className="truncate px-1.5 py-1 text-[10px] text-muted-foreground">{file.name}</p>
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="destructive"
-                              className="absolute right-1 top-1 size-5"
-                              onClick={() => removeNewImageAt(index)}
-                            >
-                              <X className="size-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
+              <DeviceGallerySection
+                attachments={galleryImageAttachments}
+                imagePreviewUrls={imagePreviewUrls}
+                attachmentNames={attachmentNames}
+                loadingImagePreviews={loadingImagePreviews}
+                editing={editable && isEditing}
+                maxImageAttachments={MAX_IMAGE_ATTACHMENTS}
+                newImageFiles={newImageFiles}
+                newImagePreviewUrls={newImagePreviewUrls}
+                onOpenGallery={openGalleryAt}
+                onNewImageFilesChange={handleNewImageFilesChange}
+                onClearNewImages={() => setNewImageFiles([])}
+                onRemoveNewImage={removeNewImageAt}
+              />
 
                   {editable && isEditing ? (
                     <div className="flex justify-end gap-2">
@@ -1827,41 +1748,17 @@ export default function DataManagementDetailPage() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={reminderDialogOpen} onOpenChange={setReminderDialogOpen}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogTitle>Kirim Reminder Validasi</AlertDialogTitle>
-          <AlertDialogDescription>
-            Pilih validator sesuai region ODP. Notifikasi akan muncul di Syntrix-One sebagai reminder persistent.
-          </AlertDialogDescription>
-          <div className="space-y-2">
-            <Label>Validator</Label>
-            <Combobox
-              value={selectedReminderValidatorId || "__none__"}
-              onValueChange={(value) => setSelectedReminderValidatorId(value === "__none__" ? "" : value)}
-              disabled={loadingValidators || sendingReminder}
-              placeholder={loadingValidators ? "Memuat validator..." : "Pilih validator"}
-              searchPlaceholder="Cari validator..."
-              emptyText="Tidak ada validator aktif pada region ini."
-              options={[
-                { value: "__none__", label: loadingValidators ? "Memuat validator..." : "Pilih validator" },
-                ...validatorOptions.map((validator) => ({
-                  value: validator.id,
-                  label: [validator.full_name, validator.user_code || validator.email].filter(Boolean).join(" - ") || validator.id,
-                })),
-              ]}
-            />
-            {reminderError ? <p className="text-sm text-destructive">{reminderError}</p> : null}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setReminderDialogOpen(false)} disabled={sendingReminder}>
-              Batal
-            </Button>
-            <Button type="button" onClick={() => void handleSendValidationReminder()} disabled={!selectedReminderValidatorId || sendingReminder}>
-              {sendingReminder ? "Mengirim..." : "Kirim Reminder"}
-            </Button>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ValidationReminderDialog
+        open={reminderDialogOpen}
+        validators={validatorOptions}
+        loadingValidators={loadingValidators}
+        sendingReminder={sendingReminder}
+        selectedValidatorId={selectedReminderValidatorId}
+        error={reminderError}
+        onOpenChange={setReminderDialogOpen}
+        onSelectedValidatorChange={setSelectedReminderValidatorId}
+        onSend={() => void handleSendValidationReminder()}
+      />
       <ResponseDialog
         open={successDialogOpen}
         title="Berhasil"
@@ -1960,20 +1857,6 @@ function OdpOperationsPanel({
     latestValidationRecord?.superadmin_review_note ||
     latestValidationRecord?.adminregion_review_note ||
     "";
-  const customerOptions = [
-    { value: "__none__", label: "Tanpa customer" },
-    ...customers.map((customer) => ({
-      value: customer.id,
-      label: [customer.customer_name, customer.customer_id || customer.customer_number].filter(Boolean).join(" - ") || customer.id,
-    })),
-  ];
-  const ontOptions = [
-    { value: "__none__", label: "Tanpa ONT" },
-    ...ontDevices.map((device) => ({
-      value: device.id,
-      label: [device.device_name, device.device_id].filter(Boolean).join(" - ") || device.id,
-    })),
-  ];
   const odpPortOptions = ports.map((port) => ({
     value: port.id,
     label: `${port.port_label || `Port ${port.port_index}`} (${port.status || "idle"})`,
@@ -2000,330 +1883,62 @@ function OdpOperationsPanel({
 
   return (
     <div className="space-y-3">
-      <Card>
-        <CardHeader className="px-3 py-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div>
-                <CardTitle className="text-sm">ODP Operations</CardTitle>
-                <CardDescription>Port, splitter, QR label, dan validasi lapangan.</CardDescription>
-              </div>
-              <Collapsible open={operationsOpen} onOpenChange={setOperationsOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon" className="size-8">
-                    <ChevronDown className={`size-4 transition-transform ${operationsOpen ? "rotate-180" : ""}`} />
-                  </Button>
-                </CollapsibleTrigger>
-              </Collapsible>
-            </div>
-            <div className="flex items-center gap-2">
-              {!editing ? (
-                <Button type="button" variant="outline" size="sm" onClick={onStartEdit}>
-                  <Pencil className="mr-2 size-4" />
-                  Edit
-                </Button>
-              ) : null}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button type="button" variant="outline" size="sm" onClick={onProvisionPorts} disabled={provisioning || !editing}>
-                      <RefreshCw className="mr-2 size-4" />
-                      {provisioning ? "Generating..." : "Generate Ports"}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-72 text-xs">
-                    Generate port detail awal sesuai total port ODP. Tombol ini tidak dipakai untuk menaikkan kapasitas port.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <Button type="button" variant="destructive" size="sm" onClick={onArchiveDevice} disabled={!editing}>
-                <Trash2 className="mr-2 size-4" />
-                Archive ODP
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <Collapsible open={operationsOpen} onOpenChange={setOperationsOpen}>
-          <CollapsibleContent>
-            <CardContent className="space-y-4 px-3 pb-3 pt-0">
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-            <OdpMetric label="Total Port" value={totalPorts} />
-            <OdpMetric label="Used" value={usedPorts} tone="used" />
-            <OdpMetric label="Idle" value={idlePorts} tone="idle" />
-            <OdpMetric label="Reserved" value={reservedPorts} tone="reserved" />
-            <OdpMetric label="Down/Maint." value={downPorts} tone="down" />
-          </div>
+      <OdpOperationsShell
+        open={operationsOpen}
+        editing={editing}
+        provisioning={provisioning}
+        onOpenChange={setOperationsOpen}
+        onStartEdit={onStartEdit}
+        onProvisionPorts={onProvisionPorts}
+        onArchiveDevice={onArchiveDevice}
+      >
+          <OdpPortMetrics
+            totalPorts={totalPorts}
+            usedPorts={usedPorts}
+            idlePorts={idlePorts}
+            reservedPorts={reservedPorts}
+            downPorts={downPorts}
+          />
 
-          <div className="rounded-md border p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-sm font-medium">Core Chain Summary</p>
-              <Badge variant={coreChainSummary?.is_complete ? "secondary" : "outline"}>
-                {coreChainSummary?.is_complete ? "Complete" : "Incomplete"}
-              </Badge>
-            </div>
-            {loadingCoreChainSummary ? (
-              <AppLoading label="Memuat rantai core ODP..." />
-            ) : coreChainSummary ? (
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                  <ChainCheck label="Port Inventory" ok={coreChainSummary.checks.has_ports} />
-                  <ChainCheck label="Upstream Link" ok={coreChainSummary.checks.has_upstream_link} />
-                  <ChainCheck label="Main Splitter" ok={coreChainSummary.checks.has_main_splitter} />
-                  <ChainCheck label="Distribution Cable" ok={coreChainSummary.checks.has_distribution_cable} />
-                  <ChainCheck label="Core Mapping" ok={coreChainSummary.checks.has_core_mapping} />
-                  <ChainCheck label="ODC Source Path" ok={coreChainSummary.checks.has_odc_source_path} />
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground md:grid-cols-3">
-                  <p>Upstream Devices: <span className="font-medium text-foreground">{coreChainSummary.summary?.upstream_device_count ?? 0}</span></p>
-                  <p>Distribution Cables: <span className="font-medium text-foreground">{coreChainSummary.summary?.distribution_cable_count ?? 0}</span></p>
-                  <p>Fiber Cores Used/Total: <span className="font-medium text-foreground">{coreChainSummary.summary?.fiber_core_used ?? 0}/{coreChainSummary.summary?.fiber_core_total ?? 0}</span></p>
-                </div>
-                {coreChainSummary.suggestions?.length ? (
-                  <div className="space-y-1 rounded-md border bg-muted/20 p-2">
-                    <p className="text-xs font-medium">Auto Suggest Actions</p>
-                    {coreChainSummary.suggestions.map((item) => (
-                      <p key={item.key} className="text-xs text-muted-foreground">
-                        <span className="font-medium text-foreground">{item.title}:</span> {item.description}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-                {coreChainSummary.upstream_port_candidates?.length ? (
-                  <div className="space-y-1 rounded-md border p-2">
-                    <p className="text-xs font-medium">Suggested Upstream Ports</p>
-                    <div className="grid grid-cols-1 gap-2 pb-1 md:grid-cols-2">
-                      <Combobox
-                        value={effectiveDraftTargetPortId || "__none__"}
-                        onValueChange={(value) => setDraftTargetPortId(value === "__none__" ? "" : value)}
-                        options={[
-                          { value: "__none__", label: "Pilih port ODP target" },
-                          ...odpPortOptions,
-                        ]}
-                        triggerClassName="h-8 text-xs"
-                      />
-                      <Combobox
-                        value={draftCableDeviceId}
-                        onValueChange={setDraftCableDeviceId}
-                        options={cableOptions}
-                        triggerClassName="h-8 text-xs"
-                      />
-                      <Input
-                        type="number"
-                        min={1}
-                        placeholder="Core start (opsional)"
-                        value={draftCoreStart}
-                        onChange={(event) => setDraftCoreStart(event.target.value)}
-                        className="h-8 text-xs"
-                      />
-                      <Input
-                        type="number"
-                        min={1}
-                        placeholder="Core end (opsional)"
-                        value={draftCoreEnd}
-                        onChange={(event) => setDraftCoreEnd(event.target.value)}
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
-                      {coreChainSummary.upstream_port_candidates.slice(0, 8).map((candidate) => (
-                        <div key={candidate.port_id} className="flex items-center justify-between gap-2 rounded border px-2 py-1">
-                          <p className="truncate text-xs text-muted-foreground">
-                            <span className="font-medium text-foreground">{candidate.device?.device_id || candidate.device?.device_name || "-"}</span>
-                            {" · "}
-                            {candidate.port_label || `Port ${candidate.port_index ?? "-"}`}
-                          </p>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-6 px-2 text-[11px]"
-                            disabled={creatingDraftLink}
-                            onClick={() =>
-                              onCreateDraftLink({
-                                upstreamPortId: candidate.port_id,
-                                odpPortId: effectiveDraftTargetPortId,
-                                cableDeviceId: draftCableDeviceId === "__none__" ? "" : draftCableDeviceId,
-                                coreStart: draftCoreStart ? Number(draftCoreStart) : undefined,
-                                coreEnd: draftCoreEnd ? Number(draftCoreEnd) : undefined,
-                              })
-                            }
-                          >
-                            {creatingDraftLink ? "..." : "Draft Link"}
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">Ringkasan rantai core belum tersedia.</p>
-            )}
-          </div>
+          <OdpCoreChainSummarySection
+            coreChainSummary={coreChainSummary}
+            loading={loadingCoreChainSummary}
+            odpPortOptions={odpPortOptions}
+            cableOptions={cableOptions}
+            effectiveDraftTargetPortId={effectiveDraftTargetPortId}
+            draftCableDeviceId={draftCableDeviceId}
+            draftCoreStart={draftCoreStart}
+            draftCoreEnd={draftCoreEnd}
+            creatingDraftLink={creatingDraftLink}
+            onDraftTargetPortChange={setDraftTargetPortId}
+            onDraftCableDeviceChange={setDraftCableDeviceId}
+            onDraftCoreStartChange={setDraftCoreStart}
+            onDraftCoreEndChange={setDraftCoreEnd}
+            onCreateDraftLink={onCreateDraftLink}
+          />
 
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[260px_1fr]">
-            <div className="space-y-2 rounded-md border p-3">
-              <div className="flex items-center gap-2">
-                <QrCode className="size-4 text-muted-foreground" />
-                <p className="text-sm font-medium">QR Label ODP</p>
-              </div>
-              <div className="flex items-center justify-center rounded-md border bg-background p-3">
-                {qrDataUrl ? (
-                  <Image src={qrDataUrl} alt="QR ODP" width={180} height={180} unoptimized className="size-40" />
-                ) : (
-                  <div className="flex size-40 items-center justify-center text-xs text-muted-foreground">QR belum tersedia</div>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={onOpenReminder}
-                  disabled={loadingValidators || validators.length === 0}
-                >
-                  <BellRing className="mr-1.5 size-3.5" />
-                  Reminder
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={onDownloadQrLabel} disabled={!qrDataUrl}>
-                  Download
-                </Button>
-              </div>
-            </div>
+            <OdpQrActionPanel
+              qrDataUrl={qrDataUrl}
+              reminderDisabled={loadingValidators || validators.length === 0}
+              onOpenReminder={onOpenReminder}
+              onDownloadQrLabel={onDownloadQrLabel}
+            />
 
-            <div className="space-y-2 rounded-md border p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium">Port ODP</p>
-                <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                  <LegendDot className="bg-emerald-500" label="used" />
-                  <LegendDot className="bg-slate-300" label="idle" />
-                  <LegendDot className="bg-amber-400" label="reserved" />
-                  <LegendDot className="bg-rose-500" label="down" />
-                </div>
-              </div>
-              <div className="rounded-md border border-blue-200 bg-blue-50/70 px-3 py-2 text-xs text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-100">
-                <div className="mb-1 flex flex-wrap items-center gap-2 font-medium">
-                  <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal">
-                    Auto-fill
-                  </Badge>
-                  Relasi port ODP
-                </div>
-                <p className="text-blue-900/80 dark:text-blue-100/80">
-                  Mengisi customer atau ONT akan mengubah status port menjadi used. Jika keduanya dikosongkan, status kembali idle.
-                </p>
-              </div>
-
-              {loadingPorts ? (
-                <AppLoading label="Memuat port ODP..." />
-              ) : ports.length ? (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                  {ports.map((port) => {
-                    const portSnapshot = latestPortSnapshotByIndex.get(Number(port.port_index));
-                    const assignedCustomer = customers.find((customer) => customer.id === port.customer_id);
-                    const assignedOnt = ontDevices.find((device) => device.id === port.ont_device_id);
-                    return (
-                    <div key={port.id} className="rounded-md border bg-background p-3">
-                      <div className="mb-3 flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{port.port_label || `#${port.port_index}`}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {describePortAssignmentState(port)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`h-3 w-3 shrink-0 rounded-full ${getOdpPortStatusClass(port.status)}`} />
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="size-7 text-destructive hover:text-destructive"
-                            disabled={updatingPortId === port.id || !editing}
-                            onClick={() => onArchivePort(port)}
-                            title="Archive Port"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="mb-2 grid grid-cols-2 gap-2 text-xs">
-                        <RelationInfo label="Status Aktual" value={port.status || "idle"} />
-                        <RelationInfo label="CID" value={assignedCustomer?.customer_number || assignedCustomer?.customer_id || "-"} />
-                        <RelationInfo label="Customer" value={assignedCustomer?.customer_name || "-"} />
-                        <RelationInfo label="ONT" value={assignedOnt?.device_name || assignedOnt?.device_id || "-"} />
-                        <RelationInfo
-                          label="Redaman Terakhir"
-                          value={portSnapshot?.attenuation_db == null ? "-" : `${portSnapshot.attenuation_db} dB`}
-                        />
-                        <RelationInfo label="Status Validasi" value={portSnapshot?.status || "-"} />
-                        <RelationInfo label="Catatan" value={portSnapshot?.notes || port.notes || "-"} />
-                      </div>
-                      <div className="grid grid-cols-1 gap-2">
-                        <Combobox
-                          value={port.status || "idle"}
-                          onValueChange={(status) => onUpdatePort(port, { status })}
-                          disabled={updatingPortId === port.id || !editing}
-                          triggerClassName="h-9"
-                          options={ODP_PORT_STATUS_OPTIONS.map((status) => ({ value: status, label: status }))}
-                        />
-                        <Combobox
-                          value={port.customer_id || "__none__"}
-                          onValueChange={(value) => {
-                            const customerId = value === "__none__" ? null : value;
-                            const changes: Partial<DevicePort> = { customer_id: customerId };
-                            if (customerId) changes.status = "used";
-                            if (!customerId && !port.ont_device_id) changes.status = "idle";
-                            onUpdatePort(port, changes);
-                          }}
-                          disabled={updatingPortId === port.id || loadingLookups || !editing}
-                          triggerClassName="h-9"
-                          searchPlaceholder="Cari customer..."
-                          emptyText="Customer tidak ditemukan."
-                          options={customerOptions}
-                        />
-                        <Combobox
-                          value={port.ont_device_id || "__none__"}
-                          onValueChange={(value) => {
-                            const ontDeviceId = value === "__none__" ? null : value;
-                            const changes: Partial<DevicePort> = { ont_device_id: ontDeviceId };
-                            if (ontDeviceId) changes.status = "used";
-                            if (!ontDeviceId && !port.customer_id) changes.status = "idle";
-                            onUpdatePort(port, changes);
-                          }}
-                          disabled={updatingPortId === port.id || loadingLookups || !editing}
-                          triggerClassName="h-9"
-                          searchPlaceholder="Cari ONT..."
-                          emptyText="ONT tidak ditemukan."
-                          options={ontOptions}
-                        />
-                        <Input
-                          key={`${port.id}-notes-${port.notes || ""}`}
-                          defaultValue={port.notes || ""}
-                          onBlur={(event) => {
-                            if (event.target.value !== (port.notes || "")) {
-                              onUpdatePort(port, { notes: event.target.value });
-                            }
-                          }}
-                          disabled={updatingPortId === port.id || !editing}
-                          placeholder="Catatan port"
-                          className="h-9"
-                        />
-                      </div>
-                    </div>
-                  );
-                  })}
-                </div>
-              ) : (
-                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                  Belum ada port untuk ODP ini. Gunakan tombol Generate Ports untuk membuat port dari template ODP.
-                </div>
-              )}
-            </div>
+            <OdpPortSection
+              ports={ports}
+              customers={customers}
+              ontDevices={ontDevices}
+              loadingPorts={loadingPorts}
+              loadingLookups={loadingLookups}
+              updatingPortId={updatingPortId}
+              editing={editing}
+              latestPortSnapshotByIndex={latestPortSnapshotByIndex}
+              onUpdatePort={onUpdatePort}
+              onArchivePort={onArchivePort}
+            />
           </div>
-
-            </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
+      </OdpOperationsShell>
 
       <Card>
         <Collapsible open={validationOpen} onOpenChange={setValidationOpen}>
@@ -2385,281 +2000,19 @@ function OdpOperationsPanel({
                 </Button>
               </div>
 
-              <div className="space-y-2">
-                {latestRequestStatus ? (
-                  <OdpValidationWorkflowTimeline status={latestRequestStatus} updatedAt={latestValidationRecord?.validated_at || latestValidationRecord?.updated_at || null} />
-                ) : null}
-                {latestRejectNote ? (
-                  <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">
-                    <p className="font-medium">Reject note terakhir</p>
-                    <p className="mt-1">{latestRejectNote}</p>
-                  </div>
-                ) : null}
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium">Histori Validasi</p>
-                  <p className="text-xs text-muted-foreground">{validationHistory.length} record terbaru</p>
-                </div>
-                {loadingValidationHistory ? (
-                  <AppLoading label="Memuat histori validasi..." />
-                ) : validationHistory.length ? (
-                  <div className="space-y-2">
-                    {validationHistory.map((record, index) => {
-                      const evidenceCount = extractValidationImageAttachments(record, index).length;
-                      const validation = record.payload?.field_validation;
-                      return (
-                      <div key={record.id} className="rounded-md border bg-background p-3">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant={record.status === "valid" ? "default" : "outline"}>
-                                {record.status || "-"}
-                              </Badge>
-                              {record.request_status ? (
-                                <Badge variant="outline" className={mapValidationStatus(record.request_status).className}>
-                                  {mapValidationStatus(record.request_status).label}
-                                </Badge>
-                              ) : null}
-                              <p className="text-xs text-muted-foreground">
-                                {record.validation_id || record.id} - {formatDateTime(valueOf(record.validated_at || record.created_at))}
-                              </p>
-                            </div>
-                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                              <span>Nama: {valueOf(validation?.new_device_name || validation?.old_device_name, "-")}</span>
-                              <span>Validator: {getValidatorLabel(record, validators)}</span>
-                              <span>Tanggal validasi: {formatDate(valueOf(validation?.validation_date))}</span>
-                              <span>Evidence: {evidenceCount}</span>
-                            </div>
-                            {record.findings ? <p className="mt-2 text-sm">{record.findings}</p> : null}
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={!evidenceCount}
-                            onClick={() => onDownloadValidationEvidence(record)}
-                          >
-                            <Download className="mr-1.5 size-3.5" />
-                            Evidence ({evidenceCount})
-                          </Button>
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                          <span>Kondisi {formatOdpInspectionSummary(record.payload?.field_inspection)}</span>
-                          <span>Splitter {valueOf(record.payload?.field_validation?.splitter_ratio, "-")}</span>
-                          <span>Total {record.payload?.port_summary?.total ?? "-"}</span>
-                          <span>Used {record.payload?.port_summary?.used ?? "-"}</span>
-                          <span>Idle {record.payload?.port_summary?.idle ?? "-"}</span>
-                          <span>Down {record.payload?.port_summary?.down ?? "-"}</span>
-                        </div>
-                        <OdpFieldValidationSummary validation={record.payload?.field_validation} />
-                        <OdpPortSnapshotSummary ports={record.payload?.device_ports} />
-                        <OdpInspectionSummary inspection={record.payload?.field_inspection} />
-                      </div>
-                    );
-                    })}
-                  </div>
-                ) : (
-                  <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-                    Belum ada histori validasi lapangan untuk ODP ini.
-                  </div>
-                )}
-              </div>
+              <OdpValidationHistorySection
+                records={validationHistory}
+                validators={validators}
+                loading={loadingValidationHistory}
+                latestRequestStatus={latestRequestStatus}
+                latestUpdatedAt={latestValidationRecord?.validated_at || latestValidationRecord?.updated_at || null}
+                latestRejectNote={latestRejectNote}
+                onDownloadEvidence={(record) => onDownloadValidationEvidence(record)}
+              />
             </CardContent>
           </CollapsibleContent>
         </Collapsible>
       </Card>
-    </div>
-  );
-}
-
-function OdpInspectionSummary({ inspection }: { inspection?: OdpFieldInspectionPayload | null }) {
-  const photos = Object.values(inspection?.initial_photos || {});
-  const checks = Object.values(inspection?.condition_checks || {});
-  if (!photos.length && !checks.length) return null;
-
-  return (
-    <div className="mt-2 rounded-md border bg-muted/10 p-2">
-      <p className="mb-1.5 text-xs font-medium">Pemeriksaan Awal & Checklist Kondisi</p>
-      {photos.length ? (
-        <div className="mb-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
-          {photos.map((item, index) => (
-            <div key={`${item.label || "photo"}-${index}`} className="rounded border bg-background px-2 py-1.5 text-xs">
-              <p className="truncate font-medium">{item.label || "Foto pemeriksaan awal"}</p>
-              <p className="mt-1 text-muted-foreground">Foto: {item.attachment ? "Ada" : "-"}</p>
-            </div>
-          ))}
-        </div>
-      ) : null}
-      {checks.length ? (
-        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
-          {checks.map((item, index) => (
-            <div key={`${item.label || "condition"}-${index}`} className="rounded border bg-background px-2 py-1.5 text-xs">
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate font-medium">{item.label || "Checklist kondisi"}</span>
-                <span className={isGoodOdpInspectionCondition(item.condition) ? "text-emerald-700" : "text-amber-700"}>
-                  {item.condition || "-"}
-                </span>
-              </div>
-              {item.note ? <p className="mt-1 text-muted-foreground">Keterangan: {item.note}</p> : null}
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function OdpValidationWorkflowTimeline({
-  status,
-  updatedAt,
-}: {
-  status: string;
-  updatedAt?: string | null;
-}) {
-  const steps = getOdpWorkflowSteps(status);
-  return (
-    <div className="rounded-md border p-2.5">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium">Timeline Workflow</p>
-        <span className="text-xs text-muted-foreground">Update: {formatDateTime(valueOf(updatedAt))}</span>
-      </div>
-      <div className="grid grid-cols-1 gap-1.5 md:grid-cols-3">
-        {steps.map((step) => (
-          <div key={step.label} className={`rounded-md border px-2 py-1.5 text-xs ${step.className}`}>
-            <p className="font-medium">{step.label}</p>
-            <p className="mt-0.5">{step.value}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function getOdpWorkflowSteps(status: string) {
-  const raw = String(status || "").trim();
-  const submitted = { label: "Validator", value: "Submitted", className: "border-emerald-200 bg-emerald-50 text-emerald-800" };
-  if (raw === "rejected_by_adminregion") {
-    return [
-      submitted,
-      { label: "Admin Region", value: "Rejected", className: "border-rose-200 bg-rose-50 text-rose-800" },
-      { label: "Superadmin", value: "Belum masuk", className: "border-slate-200 bg-slate-50 text-slate-700" },
-    ];
-  }
-  if (raw === "ongoing_validated") {
-    return [
-      submitted,
-      { label: "Admin Region", value: "Menunggu review", className: "border-amber-200 bg-amber-50 text-amber-800" },
-      { label: "Superadmin", value: "Belum masuk", className: "border-slate-200 bg-slate-50 text-slate-700" },
-    ];
-  }
-  if (raw === "rejected_by_superadmin") {
-    return [
-      submitted,
-      { label: "Admin Region", value: "Approved", className: "border-emerald-200 bg-emerald-50 text-emerald-800" },
-      { label: "Superadmin", value: "Rejected", className: "border-rose-200 bg-rose-50 text-rose-800" },
-    ];
-  }
-  if (raw === "validated") {
-    return [
-      submitted,
-      { label: "Admin Region", value: "Approved", className: "border-emerald-200 bg-emerald-50 text-emerald-800" },
-      { label: "Superadmin", value: "Approved final", className: "border-emerald-200 bg-emerald-50 text-emerald-800" },
-    ];
-  }
-  return [
-    submitted,
-    { label: "Admin Region", value: raw === "pending_async" ? "Approved" : "Menunggu", className: raw === "pending_async" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-slate-50 text-slate-700" },
-    { label: "Superadmin", value: raw === "pending_async" ? "Menunggu approval final" : "Belum masuk", className: raw === "pending_async" ? "border-blue-200 bg-blue-50 text-blue-800" : "border-slate-200 bg-slate-50 text-slate-700" },
-  ];
-}
-
-function OdpFieldValidationSummary({ validation }: { validation?: OdpFieldValidationPayload | null }) {
-  if (!validation || !Object.keys(validation).length) return null;
-
-  const fields = [
-    { label: "Tanggal", value: formatDate(valueOf(validation.validation_date)) },
-    { label: "Inventory", value: valueOf(validation.inventory_id, "-") },
-    { label: "Nama Lama", value: valueOf(validation.old_device_name, "-") },
-    { label: "Nama Baru", value: valueOf(validation.new_device_name, "-") },
-    { label: "POP", value: valueOf(validation.pop_name || validation.pop_id, "-") },
-    { label: "Tipe ODP", value: valueOf(validation.odp_type, "-") },
-    { label: "Instalasi", value: valueOf(validation.installation_type, "-") },
-    { label: "Splitter", value: valueOf(validation.splitter_ratio, "-") },
-    { label: "Kapasitas", value: valueOf(validation.total_ports, "-") },
-    { label: "Longitude", value: valueOf(validation.longitude, "-") },
-    { label: "Latitude", value: valueOf(validation.latitude, "-") },
-  ];
-
-  return (
-    <div className="mt-2 rounded-md border bg-muted/10 p-2">
-      <p className="mb-1.5 text-xs font-medium">Identitas & Kapasitas Aktual</p>
-      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-        {fields.map((field) => (
-          <RelationInfo key={field.label} label={field.label} value={field.value} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function OdpPortSnapshotSummary({ ports }: { ports?: OdpValidationPortSnapshot[] | null }) {
-  if (!ports?.length) return null;
-
-  return (
-    <div className="mt-2 rounded-md border bg-muted/10 p-2">
-      <p className="mb-1.5 text-xs font-medium">Port & Redaman</p>
-      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
-        {ports.map((port, index) => (
-          <div key={`${port.id || port.port_index || index}`} className="rounded border bg-background px-2 py-1.5 text-xs">
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate font-medium">{port.port_label || `Port ${port.port_index || index + 1}`}</span>
-              <span className="text-muted-foreground">{port.status || "-"}</span>
-            </div>
-            <p className="mt-1 text-muted-foreground">
-              Redaman: {port.attenuation_db == null ? "-" : `${port.attenuation_db} dB`}
-            </p>
-            {port.notes ? <p className="mt-1 text-muted-foreground">Catatan: {port.notes}</p> : null}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function formatOdpInspectionSummary(inspection?: OdpFieldInspectionPayload | null) {
-  const checks = Object.values(inspection?.condition_checks || {});
-  if (!checks.length) return "-";
-  const good = checks.filter((item) => isGoodOdpInspectionCondition(item.condition)).length;
-  return `${good}/${checks.length} baik`;
-}
-
-function isGoodOdpInspectionCondition(value?: string | null) {
-  return ["Baik", "Bersih", "Lengkap", "Rapi"].includes(String(value || ""));
-}
-
-function OdpMetric({ label, value, tone }: { label: string; value: number; tone?: "used" | "idle" | "reserved" | "down" }) {
-  const toneClass =
-    tone === "used"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-      : tone === "idle"
-        ? "border-slate-200 bg-slate-50 text-slate-800"
-        : tone === "reserved"
-          ? "border-amber-200 bg-amber-50 text-amber-800"
-          : tone === "down"
-            ? "border-rose-200 bg-rose-50 text-rose-800"
-            : "border-border bg-muted/30";
-  return (
-    <div className={`rounded-md border p-3 ${toneClass}`}>
-      <p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
-      <p className="text-2xl font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function ChainCheck({ label, ok }: { label: string; ok: boolean }) {
-  return (
-    <div className={`rounded-md border px-2 py-1.5 text-xs ${ok ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
-      <p className="font-medium">{label}</p>
-      <p className={ok ? "text-emerald-700" : "text-amber-700"}>{ok ? "OK" : "Pending"}</p>
     </div>
   );
 }
@@ -2735,37 +2088,6 @@ function ServicePortRelationsPanel({
   );
 }
 
-function DeviceOperationalSummary({
-  item,
-  relationLabels,
-  effectiveValidationStatus,
-}: {
-  item: GenericItem;
-  relationLabels: RelationLabels;
-  effectiveValidationStatus: string;
-}) {
-  const validationUi = mapValidationStatus(effectiveValidationStatus);
-  return (
-    <Card className="border-primary/10 bg-muted/20">
-      <CardContent className="grid grid-cols-2 gap-2 p-3 md:grid-cols-4 xl:grid-cols-6">
-        <DisplayField label="Device Name" value={valueOf(item.device_name, "-")} compact />
-        <DisplayField label="Inventory ID" value={valueOf(item.device_id || item.device_code, "-")} compact />
-        <DisplayField label="Type" value={valueOf(item.device_type_key, "-")} compact />
-        <DisplayField label="Region" value={relationLabels.region || valueOf(item.region_id, "-")} compact />
-        <DisplayField label="POP" value={relationLabels.pop || valueOf(item.pop_id, "-")} compact />
-        <DisplayField label="Installation Date" value={formatDate(valueOf(item.installation_date))} compact />
-        <div className="rounded-md border bg-background p-2 xl:col-span-2">
-          <p className="text-[10px] font-medium uppercase text-muted-foreground">Validation Status</p>
-          <Badge variant="outline" className={`mt-1 ${validationUi.className}`}>
-            {validationUi.label}
-          </Badge>
-        </div>
-        <DisplayField className="xl:col-span-2" label="Updated" value={formatDateTime(valueOf(item.updated_at || item.created_at))} compact />
-      </CardContent>
-    </Card>
-  );
-}
-
 function CustomerDetailForm({
   item,
   relationLabels,
@@ -2802,65 +2124,11 @@ function RelationInfo({ label, value }: { label: string; value: string }) {
   );
 }
 
-function extractValidationImageAttachments(record: OdpValidationRecord, recordIndex: number): AttachmentRef[] {
-  const refs: AttachmentRef[] = [];
-  const seen = new Set<string>();
-  const baseName = record.validation_id || `validation-${recordIndex + 1}`;
-  const pushRef = (id: unknown, name: unknown) => {
-    const normalizedId = String(id || "").trim();
-    if (!normalizedId || seen.has(normalizedId)) return;
-    seen.add(normalizedId);
-    refs.push({ id: normalizedId, name: String(name || `${baseName}-evidence-${refs.length + 1}`) });
-  };
-
-  (record.evidence_attachments || []).forEach((attachment, index) => {
-    pushRef(attachment.id || attachment.attachment_id, attachment.original_name || attachment.name || `${baseName}-evidence-${index + 1}`);
-  });
-  pushRef(record.evidence_attachment_id, `${baseName}-evidence`);
-
-  Object.values(record.payload?.field_inspection?.initial_photos || {}).forEach((item) => {
-    pushRef(item.attachment?.id || item.attachment?.attachment_id, item.attachment?.name || item.label);
-  });
-  Object.values(record.payload?.field_inspection?.condition_checks || {}).forEach((item) => {
-    pushRef(item.attachment?.id || item.attachment?.attachment_id, item.attachment?.name || item.label);
-  });
-
-  return refs;
-}
-
-function LegendDot({ className, label }: { className: string; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      <span className={`size-2 rounded-full ${className}`} />
-      {label}
-    </span>
-  );
-}
-
 function getOdpPortStatusClass(status?: string | null) {
   if (status === "used") return "bg-emerald-500";
   if (status === "reserved") return "bg-amber-400";
   if (status === "down" || status === "maintenance") return "bg-rose-500";
   return "bg-slate-300";
-}
-
-function describePortAssignmentState(port: DevicePort) {
-  if (port.customer_id || port.ont_device_id) return "Endpoint terhubung";
-  return "Belum terhubung customer/ONT";
-}
-
-function getValidatorLabel(record: OdpValidationRecord, validators: ValidatorOption[]) {
-  const directName = [record.validator_name, record.validator_email, record.validator_user_code]
-    .map((value) => String(value || "").trim())
-    .find((value) => value && !/^[0-9a-f-]{32,36}$/i.test(value));
-  if (directName) return directName;
-
-  const id = String(record.validator_user_id || "").trim();
-  if (!id) return "-";
-  const validator = validators.find((item) => item.id === id);
-  return validator
-    ? [validator.full_name, validator.user_code || validator.email].filter(Boolean).join(" - ")
-    : "-";
 }
 
 function summarizeOdpPorts(ports: DevicePort[], device: GenericItem) {
@@ -2942,288 +2210,6 @@ function PopDetailForm({
           <Field className="md:col-span-2 xl:col-span-3" label="Address" value={form.address} onChange={(v) => onChange((p) => ({ ...p, address: v }))} disabled={!editing} compact />
           <DisplayField label="Province" value={relationLabels.province || form.province || "-"} compact />
           <DisplayField label="City" value={relationLabels.city || form.city || "-"} compact />
-          <CoordinateField label="Longitude" value={form.longitude} onChange={(v) => onChange((p) => ({ ...p, longitude: v }))} disabled={!editing} compact kind="longitude" />
-          <CoordinateField label="Latitude" value={form.latitude} onChange={(v) => onChange((p) => ({ ...p, latitude: v }))} disabled={!editing} compact kind="latitude" />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="px-3 py-2">
-          <CardTitle className="text-sm">Tags</CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 pb-3 pt-0">
-          <Field label="Tags (CSV)" value={form.tags} onChange={(v) => onChange((p) => ({ ...p, tags: v }))} disabled={!editing} compact />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function DeviceDetailForm({
-  form,
-  onChange,
-  editing,
-  relationLabels,
-  isOdpDevice,
-  splitterProfiles,
-  odpTypes,
-  installationTypes,
-  tenants,
-  popOptions,
-  latestFieldValidation,
-  effectiveValidationStatus,
-}: {
-  form: EditableForm;
-  onChange: (next: EditableForm | ((prev: EditableForm) => EditableForm)) => void;
-  editing: boolean;
-  relationLabels: RelationLabels;
-  isOdpDevice: boolean;
-  splitterProfiles: SplitterProfileOption[];
-  odpTypes: OdpTypeOption[];
-  installationTypes: InstallationTypeOption[];
-  tenants: TenantOption[];
-  popOptions: PopLookupOption[];
-  latestFieldValidation?: OdpFieldValidationPayload | null;
-  effectiveValidationStatus: string;
-}) {
-  const selectedSplitterProfile =
-    splitterProfiles.find((item) => item.ratio_label === form.splitter_ratio) || null;
-  const selectedSplitterOutputPort = Number(selectedSplitterProfile?.output_port_count || 0);
-  const needsPortPresetSelector = isOdpDevice && Number.isFinite(selectedSplitterOutputPort) && selectedSplitterOutputPort >= 16;
-  const splitterPortPresetOptions = (() => {
-    if (!needsPortPresetSelector) return [] as number[];
-    const maxPort = selectedSplitterOutputPort;
-    const presets = [8, 16, 32, 64].filter((value) => value <= maxPort);
-    if (!presets.includes(maxPort)) presets.push(maxPort);
-    return Array.from(new Set(presets)).sort((a, b) => a - b);
-  })();
-
-  return (
-    <div className="space-y-3">
-      <Card>
-        <CardHeader className="px-3 py-2">
-          <CardTitle className="text-sm">{isOdpDevice ? "Identitas ODP" : "Identitas Device"}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
-          <Field label={isOdpDevice ? "ID Inventory" : "Device ID"} value={form.device_id} disabled compact />
-          <Field label={isOdpDevice ? "Nama ODP" : "Device Name"} value={form.device_name} onChange={(v) => onChange((p) => ({ ...p, device_name: v }))} disabled={!editing} compact />
-          {isOdpDevice ? (
-            <DisplayField label="Nama ODP Baru" value={valueOf(latestFieldValidation?.new_device_name, "-")} compact />
-          ) : null}
-          {isOdpDevice ? (
-            <div className="space-y-1">
-              <Label>Tipe ODP</Label>
-              <Combobox
-                value={form.odp_type || "__none__"}
-                onValueChange={(value) => onChange((p) => ({ ...p, odp_type: value === "__none__" ? "" : value }))}
-                disabled={!editing}
-                triggerClassName="h-8 text-xs"
-                options={[
-                  { value: "__none__", label: "Pilih tipe ODP" },
-                  ...odpTypes.map((item) => ({
-                    value: item.odp_type_name,
-                    label: [item.odp_type_name, item.odp_type_code].filter(Boolean).join(" - "),
-                  })),
-                ]}
-                searchPlaceholder="Cari tipe ODP..."
-              />
-            </div>
-          ) : null}
-          {isOdpDevice ? (
-            <div className="space-y-1">
-              <Label>Jenis Instalasi</Label>
-              <Combobox
-                value={form.installation_type || "__none__"}
-                onValueChange={(value) => onChange((p) => ({ ...p, installation_type: value === "__none__" ? "" : value }))}
-                disabled={!editing}
-                triggerClassName="h-8 text-xs"
-                options={[
-                  { value: "__none__", label: "Pilih jenis instalasi" },
-                  ...installationTypes.map((item) => ({
-                    value: item.installation_type_name,
-                    label: [item.installation_type_name, item.installation_type_code].filter(Boolean).join(" - "),
-                  })),
-                ]}
-                searchPlaceholder="Cari jenis instalasi..."
-              />
-            </div>
-          ) : null}
-          <Field label={isOdpDevice ? "Kategori Device" : "Device Type"} value={form.device_type_key} disabled compact />
-          <Field label="Asset Group" value={form.asset_group} disabled compact />
-          <SelectField
-            label="Status"
-            value={form.status}
-            options={DEVICE_STATUS_OPTIONS}
-            onValueChange={(v) => onChange((p) => ({ ...p, status: v }))}
-            disabled={!editing}
-            compact
-          />
-          <Field
-            label="Installation Date"
-            type="date"
-            value={form.installation_date}
-            onChange={(v) => onChange((p) => ({ ...p, installation_date: v }))}
-            disabled={!editing}
-            compact
-          />
-          {editing ? (
-            <SelectField
-              label="Validation Status"
-              value={form.validation_status}
-              options={VALIDATION_STATUS_OPTIONS}
-              onValueChange={(v) => onChange((p) => ({ ...p, validation_status: v }))}
-              disabled={!editing}
-              compact
-            />
-          ) : (
-            <DisplayField label="Validation Status" value={mapValidationStatus(effectiveValidationStatus).label} compact />
-          )}
-          <Field
-            label="Validation Date"
-            type="date"
-            value={form.validation_date}
-            onChange={(v) => onChange((p) => ({ ...p, validation_date: v }))}
-            disabled={!editing}
-            compact
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="px-3 py-2">
-          <CardTitle className="text-sm">Relasi & Vendor</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
-          <DisplayField label="Region" value={relationLabels.region || "-"} compact />
-          {editing ? (
-            <div className="space-y-1">
-              <Label>POP</Label>
-              <Combobox
-                value={form.pop_id || "__none__"}
-                onValueChange={(value) => onChange((p) => ({ ...p, pop_id: value === "__none__" ? "" : value }))}
-                triggerClassName="h-8 text-xs"
-                options={[
-                  { value: "__none__", label: "Tidak ada POP" },
-                  ...popOptions.map((pop) => ({
-                    value: pop.id,
-                    label: [pop.pop_name, pop.pop_code || pop.pop_id].filter(Boolean).join(" - ") || pop.id,
-                  })),
-                ]}
-                searchPlaceholder="Cari POP..."
-              />
-            </div>
-          ) : (
-            <DisplayField label="POP" value={relationLabels.pop || "-"} compact />
-          )}
-          {editing ? (
-            <div className="space-y-1">
-              <Label>Tenant</Label>
-              <Combobox
-                value={form.tenant_id || "__none__"}
-                onValueChange={(value) => onChange((p) => ({ ...p, tenant_id: value === "__none__" ? "" : value }))}
-                triggerClassName="h-8 text-xs"
-                options={[
-                  { value: "__none__", label: "Tidak ada tenant" },
-                  ...tenants.map((tenant) => ({
-                    value: tenant.id,
-                    label: tenant.tenant_code ? `${tenant.tenant_name} (${tenant.tenant_code})` : tenant.tenant_name,
-                  })),
-                ]}
-                searchPlaceholder="Cari tenant..."
-              />
-            </div>
-          ) : (
-            <DisplayField label="Tenant" value={relationLabels.tenant || "-"} compact />
-          )}
-          <DisplayField label="Manufacturer" value={relationLabels.manufacturer || "-"} compact />
-          <DisplayField label="Brand" value={relationLabels.brand || "-"} compact />
-          <DisplayField label="Model" value={relationLabels.model || "-"} compact />
-          <Field label="Serial Number" value={form.serial_number} onChange={(v) => onChange((p) => ({ ...p, serial_number: v }))} disabled={!editing} compact />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="px-3 py-2">
-          <CardTitle className="text-sm">Kapasitas & Jaringan</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
-          {!isOdpDevice ? (
-            <Field label="Management IP" value={form.management_ip} onChange={(v) => onChange((p) => ({ ...p, management_ip: v }))} disabled={!editing} compact />
-          ) : null}
-          {!isOdpDevice ? (
-            <>
-              <Field label="Capacity Core" type="number" value={form.capacity_core} onChange={(v) => onChange((p) => ({ ...p, capacity_core: v }))} disabled={!editing} compact />
-              <Field label="Used Core" type="number" value={form.used_core} onChange={(v) => onChange((p) => ({ ...p, used_core: v }))} disabled={!editing} compact />
-            </>
-          ) : (
-            <DisplayField label="Capacity Core" value="Auto from core chain" compact />
-          )}
-          {needsPortPresetSelector ? (
-            <div className="space-y-1">
-              <Label>{isOdpDevice ? "Kapasitas ODP" : "Total Ports"}</Label>
-              <Combobox
-                value={form.total_ports || "__none__"}
-                onValueChange={(value) => onChange((p) => ({ ...p, total_ports: value === "__none__" ? "" : value }))}
-                disabled={!editing}
-                triggerClassName="h-8 text-xs"
-                options={[
-                  { value: "__none__", label: "Pilih total port" },
-                  ...splitterPortPresetOptions.map((port) => ({
-                    value: String(port),
-                    label: `${port} port`,
-                  })),
-                ]}
-                searchPlaceholder="Cari total port..."
-              />
-            </div>
-          ) : (
-            <Field label={isOdpDevice ? "Kapasitas ODP" : "Total Ports"} type="number" value={form.total_ports} onChange={(v) => onChange((p) => ({ ...p, total_ports: v }))} disabled={!editing} compact />
-          )}
-          <Field label={isOdpDevice ? "Port Aktif" : "Used Ports"} type="number" value={form.used_ports} onChange={(v) => onChange((p) => ({ ...p, used_ports: v }))} disabled={!editing} compact />
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Label>{isOdpDevice ? "Kapasitas Splitter" : "Splitter Ratio"}</Label>
-              <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal text-blue-700 dark:text-blue-300">
-                Auto-fill
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Pilihan splitter mengisi rekomendasi kapasitas port. Review kembali sebelum menyimpan perubahan.
-            </p>
-            <Combobox
-              value={form.splitter_ratio || "__none__"}
-              onValueChange={(value) => {
-                const ratioValue = value === "__none__" ? "" : value;
-                const profile = splitterProfiles.find((item) => item.ratio_label === ratioValue) || null;
-                const output = Number(profile?.output_port_count || 0);
-                const autoTotal = Number.isFinite(output) && output > 0 ? (output >= 16 ? 8 : output) : 0;
-                onChange((p) => ({
-                  ...p,
-                  splitter_ratio: ratioValue,
-                  total_ports: autoTotal ? String(autoTotal) : p.total_ports,
-                }));
-              }}
-              disabled={!editing}
-              triggerClassName="h-8 text-xs"
-              options={[
-                { value: "__none__", label: "Pilih splitter ratio" },
-                ...splitterProfiles.map((item) => ({
-                  value: item.ratio_label,
-                  label: item.output_port_count ? `${item.ratio_label} (${item.output_port_count} port)` : item.ratio_label,
-                })),
-              ]}
-              searchPlaceholder="Cari splitter ratio..."
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="px-3 py-2">
-          <CardTitle className="text-sm">Lokasi</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
-          <Field className="md:col-span-2 xl:col-span-3" label="Address" value={form.address} onChange={(v) => onChange((p) => ({ ...p, address: v }))} disabled={!editing} compact />
           <CoordinateField label="Longitude" value={form.longitude} onChange={(v) => onChange((p) => ({ ...p, longitude: v }))} disabled={!editing} compact kind="longitude" />
           <CoordinateField label="Latitude" value={form.latitude} onChange={(v) => onChange((p) => ({ ...p, latitude: v }))} disabled={!editing} compact kind="latitude" />
         </CardContent>
@@ -3446,7 +2432,7 @@ function buildUpdatePayload(form: EditableForm, resource: string): Record<string
     }
 
     return {
-      pop_name: nullIfEmpty(form.pop_name),
+      pop_name: normalizePopName(form.pop_name) || null,
       pop_code: normalizedPopCode,
       status_pop: nullIfEmpty(form.status_pop),
       validation_status: normalizedValidation.validation_status,
@@ -3469,7 +2455,7 @@ function buildUpdatePayload(form: EditableForm, resource: string): Record<string
 
   if (resource === "devices") {
     return {
-      device_name: nullIfEmpty(form.device_name),
+      device_name: normalizeDeviceName(form.device_name) || null,
       status: nullIfEmpty(form.status),
       installation_date: nullIfEmpty(form.installation_date),
       validation_status: normalizedValidation.validation_status,
@@ -3514,12 +2500,6 @@ function getEffectiveDeviceValidationStatus(item: Record<string, unknown>, reque
 function isFinalValidationRecord(record: OdpValidationRecord) {
   const requestStatus = String(record.request_status || "").trim().toLowerCase();
   return !requestStatus || requestStatus === "validated";
-}
-
-function stringifyValue(value: unknown) {
-  if (value == null) return "-";
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
 }
 
 function formatQrPopLabel(popName: string, popCode: string) {

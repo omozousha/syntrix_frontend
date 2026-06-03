@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AppShell } from "@/components/app-shell";
+import { AppShell } from "@/components/shell";
 import { AppLoading } from "@/components/app-loading-new";
 import { SessionProvider } from "@/components/session-context";
 import {
@@ -49,9 +49,8 @@ export function ProtectedLayoutClient({ children }: { children: React.ReactNode 
     setRefreshToken("");
     setTokenExpiresAt(0);
     setMe(null);
-    const nextPath = getNextTarget();
-    router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
-  }, [getNextTarget, router]);
+    router.replace("/login");
+  }, [router]);
 
   useEffect(() => {
     async function bootstrap() {
