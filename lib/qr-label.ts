@@ -105,7 +105,7 @@ export async function buildQrLabelPngDataUrl({
   return canvas.toDataURL("image/png");
 }
 
-export function drawQrLabelPdf(doc: JsPdfDocument, rows: QrLabelPayload[]) {
+export async function drawQrLabelPdf(doc: JsPdfDocument, rows: QrLabelPayload[]) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 8;
@@ -114,44 +114,16 @@ export function drawQrLabelPdf(doc: JsPdfDocument, rows: QrLabelPayload[]) {
   const rowsPerPage = 6;
   const labelWidth = (pageWidth - margin * 2 - gap * (columns - 1)) / columns;
   const labelHeight = (pageHeight - margin * 2 - gap * (rowsPerPage - 1)) / rowsPerPage;
+  const labelImages = await Promise.all(rows.map((row) => buildQrLabelPngDataUrl(row)));
 
-  rows.forEach((row, index) => {
+  labelImages.forEach((labelDataUrl, index) => {
     if (index > 0 && index % (columns * rowsPerPage) === 0) doc.addPage();
     const pageIndex = index % (columns * rowsPerPage);
     const column = pageIndex % columns;
     const rowIndex = Math.floor(pageIndex / columns);
     const x = margin + column * (labelWidth + gap);
     const y = margin + rowIndex * (labelHeight + gap);
-    const inset = 1.2;
-    const qrSize = Math.min(labelHeight - 5.2, labelWidth * 0.43);
-    const qrX = x + 2.2;
-    const qrY = y + (labelHeight - qrSize) / 2;
-    const separatorX = qrX + qrSize + 2.2;
-    const textX = separatorX + 3.2;
-    const textWidth = labelWidth - (textX - x) - 2.2;
-
-    doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(17, 24, 39);
-    doc.setLineWidth(0.7);
-    doc.roundedRect(x, y, labelWidth, labelHeight, 2.2, 2.2, "FD");
-    doc.setLineWidth(0.32);
-    doc.roundedRect(x + inset, y + inset, labelWidth - inset * 2, labelHeight - inset * 2, 1.6, 1.6);
-
-    doc.addImage(row.qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
-    if (row.logoDataUrl) drawQrLogoImagePdf(doc, row.logoDataUrl, qrX + qrSize / 2, qrY + qrSize / 2, qrSize * 0.22);
-    else drawDefaultQrLogoPdf(doc, qrX + qrSize / 2, qrY + qrSize / 2, qrSize * 0.22);
-
-    doc.setFillColor(17, 24, 39);
-    doc.rect(separatorX, y + 2, 1.1, labelHeight - 4, "F");
-
-    doc.setTextColor(2, 6, 23);
-    doc.setFont("helvetica", "bold");
-    drawAdaptivePdfText(doc, row.deviceName, textX, y + 7.2, textWidth, 9.1, 6.4);
-    drawAdaptivePdfText(doc, `ID: ${row.deviceCode}`, textX, y + 14.8, textWidth, 5.9, 4.3);
-    drawAdaptivePdfText(doc, `TYPE: ${row.deviceType}`, textX, y + 20.6, textWidth, 5.9, 4.3);
-    drawAdaptivePdfText(doc, `POP: ${row.popName}`, textX, y + 26.4, textWidth, 5.9, 4);
-    doc.setTextColor(220, 38, 38);
-    drawAdaptivePdfText(doc, QR_LABEL_FOOTER, textX, y + labelHeight - 3, textWidth, 4.5, 3.4);
+    doc.addImage(labelDataUrl, "PNG", x, y, labelWidth, labelHeight);
   });
 }
 
@@ -322,57 +294,6 @@ function drawQrLogoImageCanvas(
   context.restore();
 }
 
-function drawDefaultQrLogoPdf(doc: JsPdfDocument, centerX: number, centerY: number, size: number) {
-  const rectX = centerX - size / 2;
-  const rectY = centerY - size / 2;
-  const innerPadding = size * 0.07;
-  const innerX = rectX + innerPadding;
-  const innerY = rectY + innerPadding;
-  const innerSize = size - innerPadding * 2;
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(255, 255, 255);
-  doc.setLineWidth(Math.max(0.18, size * 0.06));
-  doc.roundedRect(rectX, rectY, size, size, 1.2, 1.2, "FD");
-  doc.setFillColor(2, 6, 23);
-  doc.setDrawColor(2, 6, 23);
-  doc.roundedRect(innerX, innerY, innerSize, innerSize, 1.2, 1.2, "FD");
-
-  const points = [
-    [centerX, centerY - size * 0.23],
-    [centerX - size * 0.2, centerY + size * 0.12],
-    [centerX + size * 0.2, centerY + size * 0.12],
-  ];
-  doc.setDrawColor(255, 255, 255);
-  doc.setLineWidth(Math.max(0.12, size * 0.045));
-  doc.line(points[0][0], points[0][1], points[1][0], points[1][1]);
-  doc.line(points[1][0], points[1][1], points[2][0], points[2][1]);
-  doc.line(points[2][0], points[2][1], points[0][0], points[0][1]);
-
-  points.forEach(([x, y], index) => {
-    if (index === 2) doc.setFillColor(45, 212, 191);
-    else doc.setFillColor(96, 165, 250);
-    doc.circle(x, y, size * 0.07, "F");
-  });
-}
-
-function drawQrLogoImagePdf(doc: JsPdfDocument, logoDataUrl: string, centerX: number, centerY: number, size: number) {
-  const rectX = centerX - size / 2;
-  const rectY = centerY - size / 2;
-  const innerPadding = size * 0.07;
-  const innerX = rectX + innerPadding;
-  const innerY = rectY + innerPadding;
-  const innerSize = size - innerPadding * 2;
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(255, 255, 255);
-  doc.setLineWidth(Math.max(0.18, size * 0.06));
-  doc.roundedRect(rectX, rectY, size, size, 1.2, 1.2, "FD");
-  doc.setFillColor(2, 6, 23);
-  doc.setDrawColor(2, 6, 23);
-  doc.roundedRect(innerX, innerY, innerSize, innerSize, 1.2, 1.2, "FD");
-  const imageSize = size * 0.88;
-  doc.addImage(logoDataUrl, "PNG", centerX - imageSize / 2, centerY - imageSize / 2, imageSize, imageSize);
-}
-
 function drawAdaptiveCanvasText(
   context: CanvasRenderingContext2D,
   value: string,
@@ -399,35 +320,4 @@ function drawAdaptiveCanvasText(
     candidate = candidate.slice(0, -1);
   }
   context.fillText(`${candidate}...`, x, y);
-}
-
-function drawAdaptivePdfText(
-  doc: JsPdfDocument,
-  value: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  maxFontSize: number,
-  minFontSize: number,
-) {
-  const text = normalizeQrText(value, "-");
-  let fontSize = maxFontSize;
-  while (fontSize > minFontSize) {
-    doc.setFontSize(fontSize);
-    if (doc.getTextWidth(text) <= maxWidth) break;
-    fontSize -= 0.2;
-  }
-  doc.setFontSize(fontSize);
-  const fittedText = doc.getTextWidth(text) <= maxWidth ? text : truncatePdfTextByWidth(doc, text, maxWidth);
-  doc.text(fittedText, x, y, { maxWidth });
-}
-
-function truncatePdfTextByWidth(doc: JsPdfDocument, value: string, maxWidth: number) {
-  const text = normalizeQrText(value, "-");
-  if (doc.getTextWidth(text) <= maxWidth) return text;
-  let candidate = text;
-  while (candidate.length > 1 && doc.getTextWidth(`${candidate}...`) > maxWidth) {
-    candidate = candidate.slice(0, -1);
-  }
-  return `${candidate}...`;
 }

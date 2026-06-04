@@ -983,7 +983,7 @@ export default function DataManagementListPage() {
       );
       const { jsPDF } = await import("jspdf");
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      drawQrLabelPdf(doc, qrRows);
+      await drawQrLabelPdf(doc, qrRows);
       doc.save(`${sanitizeFileName(category.slug)}-qr-labels-${new Date().toISOString().slice(0, 10)}.pdf`);
       setSuccess(`${qrRows.length} QR device berhasil dibuat dalam PDF.`);
     } catch (err) {
