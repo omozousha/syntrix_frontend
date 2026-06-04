@@ -48,7 +48,7 @@ export function AppShell({
 
       <SidebarInset className="h-dvh min-h-0 overflow-hidden">
         <header className="sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-          <div className="flex w-full items-center justify-between gap-2 px-2 py-2 sm:gap-3 sm:px-4 sm:py-2.5">
+          <div className="flex min-h-14 w-full items-center justify-between gap-2 px-2 py-1.5 sm:gap-3 sm:px-4 sm:py-2.5">
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
               <SidebarTrigger className="shrink-0" />
               <div className="min-w-0 flex-1">
@@ -62,8 +62,8 @@ export function AppShell({
                   </Badge>
                 </div>
                 <div className="mt-0.5 flex min-w-0 items-baseline gap-3">
-                  <h1 className="truncate text-base font-semibold tracking-tight text-foreground sm:text-lg">{pageContext.title}</h1>
-                  <p className="hidden truncate text-sm text-muted-foreground lg:block">{pageContext.description}</p>
+                  <h1 className="truncate text-sm font-semibold tracking-tight text-foreground sm:text-lg">{pageContext.title}</h1>
+                  <p className="hidden truncate text-sm text-muted-foreground xl:block">{pageContext.description}</p>
                 </div>
               </div>
             </div>
@@ -71,8 +71,8 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-hidden bg-muted/25 px-3 py-3 sm:px-4">
-          <section className="h-full overflow-hidden rounded-xl border bg-card/95 p-4 shadow-sm">{children}</section>
+        <main className="min-h-0 flex-1 overflow-hidden bg-muted/25 px-2 py-2 sm:px-4 sm:py-3">
+          <section className="h-full overflow-hidden rounded-lg border bg-card/95 p-3 shadow-sm sm:rounded-xl sm:p-4">{children}</section>
         </main>
       </SidebarInset>
     </SidebarProvider>

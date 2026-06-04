@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/components/session-context";
 import { API_BASE_URL, apiFetch } from "@/lib/api";
+import { formatRoleLabel } from "@/lib/domain-formatters";
 
 const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
 const AVATAR_CACHE_PREFIX = "syntrix_avatar_cache";
@@ -313,7 +314,7 @@ export default function ProfilePage() {
                 <CardTitle>{me.app_user.full_name}</CardTitle>
                 <CardDescription>{me.app_user.email}</CardDescription>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">{me.role}</Badge>
+                  <Badge variant="outline">{formatRoleLabel(me.role)}</Badge>
                   <span className="text-xs text-muted-foreground">Klik avatar untuk mengganti foto</span>
                 </div>
                 {selectedFile ? (

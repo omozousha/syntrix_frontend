@@ -15,10 +15,10 @@ export function mapValidationStatus(value: string | null | undefined): Validatio
     return { label: "Pending Superadmin", className: "border-blue-300 bg-blue-50 text-blue-700" };
   }
   if (raw === "ongoing_validated") {
-    return { label: "Ongoing Adminregion", className: "border-amber-300 bg-amber-50 text-amber-700" };
+    return { label: "Ongoing Admin Region", className: "border-amber-300 bg-amber-50 text-amber-700" };
   }
   if (raw === "rejected_by_adminregion") {
-    return { label: "Rejected Adminregion", className: "border-rose-300 bg-rose-50 text-rose-700" };
+    return { label: "Rejected Admin Region", className: "border-rose-300 bg-rose-50 text-rose-700" };
   }
   if (raw === "rejected_by_superadmin") {
     return { label: "Rejected Superadmin", className: "border-rose-300 bg-rose-50 text-rose-700" };
@@ -31,4 +31,3 @@ export function mapValidationStatus(value: string | null | undefined): Validatio
   }
   return { label: raw.replaceAll("_", " "), className: "border-slate-300 bg-slate-50 text-slate-700" };
 }
-

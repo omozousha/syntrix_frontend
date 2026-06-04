@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { API_BASE_URL, apiFetch } from "@/lib/api";
+import { formatRoleLabel, normalizeRole } from "@/lib/domain-formatters";
 import { mapValidationStatus } from "@/lib/validation-status";
 import { useSession } from "@/components/session-context";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -329,7 +330,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
               ) : null}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
+          <DropdownMenuContent align="end" className="w-[calc(100vw-1rem)] max-w-80">
             <DropdownMenuLabel className="flex items-center justify-between">
               <span>Request Inbox</span>
               <Badge variant="outline">{notificationQueueLabel}</Badge>
@@ -492,7 +493,7 @@ function NavUserAccountMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="size-9 justify-center p-0 sm:h-9 sm:w-auto sm:justify-between sm:gap-2 sm:px-3">
+        <Button variant="outline" className="size-9 justify-center p-0 sm:h-9 sm:w-auto sm:max-w-[220px] sm:justify-between sm:gap-2 sm:px-3">
           <Avatar className="size-7">
             {avatarUrl ? <AvatarImage src={avatarUrl} alt={me.app_user.full_name} /> : null}
             <AvatarFallback>{initials}</AvatarFallback>
@@ -501,7 +502,7 @@ function NavUserAccountMenu({
           <ChevronDown className="hidden size-4 sm:block" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
+      <DropdownMenuContent align="end" className="w-[calc(100vw-1rem)] max-w-64">
         <DropdownMenuLabel className="space-y-1">
           <div className="flex items-center gap-2">
             <Avatar className="size-8">
@@ -512,7 +513,7 @@ function NavUserAccountMenu({
           </div>
           <p className="truncate text-xs text-muted-foreground">{me.app_user.email}</p>
           <Badge variant="outline" className="mt-1">
-            {me.role}
+            {formatRoleLabel(me.role)}
           </Badge>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -531,13 +532,6 @@ function NavUserAccountMenu({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
-
-function normalizeRole(role: string) {
-  if (role === "admin") return "superadmin";
-  if (role === "user_all_region") return "adminregion";
-  if (role === "user_region") return "validator";
-  return role;
 }
 
 function formatDateTime(value?: string | null) {

@@ -817,7 +817,7 @@ function odpValidationChart(items: DeviceItem[], data: DashboardData): Dashboard
   return [
     { label: "Validated", value: odpStats.validated, color: "#16a34a" },
     { label: "Unvalidated", value: odpStats.unvalidated, color: "#f59e0b" },
-    { label: "Pending Adminregion", value: data.adminregionRequests.length, color: "#2563eb" },
+    { label: "Pending Admin Region", value: data.adminregionRequests.length, color: "#2563eb" },
     { label: "Pending Superadmin", value: data.superadminRequests.length, color: "#7c3aed" },
     { label: "Rejected", value: data.rejectedAdminregion.length + data.rejectedSuperadmin.length, color: "#dc2626" },
   ];
@@ -995,9 +995,9 @@ function getRequestDescription(item: ValidationRequestItem) {
 }
 
 function statusLabel(value: string) {
-  if (value === "ongoing_validated" || value === "pending_adminregion") return "Pending Adminregion";
+  if (value === "ongoing_validated" || value === "pending_adminregion") return "Pending Admin Region";
   if (value === "pending_async" || value === "pending_superadmin") return "Pending Superadmin";
-  if (value === "rejected_by_adminregion" || value === "rejected_adminregion") return "Rejected Adminregion";
+  if (value === "rejected_by_adminregion" || value === "rejected_adminregion") return "Rejected Admin Region";
   if (value === "rejected_by_superadmin" || value === "rejected_superadmin") return "Rejected Superadmin";
   return value.replaceAll("_", " ");
 }

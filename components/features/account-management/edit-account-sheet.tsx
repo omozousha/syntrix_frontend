@@ -84,7 +84,7 @@ export function EditAccountSheet({
               searchPlaceholder="Cari region..."
             />
             <p className="text-xs text-muted-foreground">
-              Daftar region diambil dari Master Data Regions. Adminregion hanya melihat region yang menjadi scope-nya.
+          Daftar region diambil dari Master Data Regions. Admin Region hanya melihat region yang menjadi scope-nya.
             </p>
           </div>
 

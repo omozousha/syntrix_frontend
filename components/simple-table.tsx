@@ -39,6 +39,7 @@ export function SimpleTable({
   tableLabel = "Table",
   columnVisibilityLabel = "Columns",
   columnVisibilityLabels,
+  emptyMessage = "No data.",
 }: {
   headers: ReactNode[];
   rows: CellValue[][];
@@ -52,6 +53,7 @@ export function SimpleTable({
   tableLabel?: string;
   columnVisibilityLabel?: string;
   columnVisibilityLabels?: string[];
+  emptyMessage?: string;
 }) {
   const [sorting, setSorting] = useState<SortState>(null);
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({});
@@ -130,8 +132,8 @@ export function SimpleTable({
         </div>
       ) : null}
 
-      <div className="w-full overflow-x-auto rounded-md border bg-card">
-        <Table className="min-w-full">
+      <div className="w-full overflow-x-auto rounded-lg border bg-card shadow-xs">
+        <Table className="min-w-max w-full">
           <TableHeader className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
             <TableRow>
               {visibleColumnIndices.map((columnIndex) => {
@@ -142,7 +144,7 @@ export function SimpleTable({
                     <TableHead key={columnId} className="h-10 px-4 text-xs font-medium text-muted-foreground">
                       <button
                         type="button"
-                        className={`inline-flex items-center gap-1 ${canSort ? "hover:text-foreground" : "cursor-default"}`}
+                        className={`inline-flex items-center gap-1 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/45 ${canSort ? "hover:text-foreground" : "cursor-default"}`}
                         onClick={canSort ? () => toggleSort(columnIndex) : undefined}
                       >
                         <span className="whitespace-nowrap">{headers[columnIndex]}</span>
@@ -166,7 +168,7 @@ export function SimpleTable({
               sortedData.map((row) => {
                 const originalIndex = row.__originalIndex;
                 const rowCells = visibleColumnIndices.map((columnIndex) => (
-                  <TableCell key={`row-${originalIndex}-col-${columnIndex}`} className="max-w-[320px] px-4 py-2 align-middle">
+                  <TableCell key={`row-${originalIndex}-col-${columnIndex}`} className="max-w-[320px] break-words px-4 py-2 align-middle text-sm">
                     {row.__cells[columnIndex] ?? null}
                   </TableCell>
                 ));
@@ -203,8 +205,8 @@ export function SimpleTable({
               })
             ) : (
               <TableRow>
-                <TableCell className="px-4 py-8 text-center text-muted-foreground" colSpan={Math.max(visibleColumnIndices.length, 1)}>
-                  No data.
+                <TableCell className="px-4 py-10 text-center text-sm text-muted-foreground" colSpan={Math.max(visibleColumnIndices.length, 1)}>
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             )}

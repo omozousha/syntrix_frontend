@@ -450,7 +450,7 @@ export default function ValidationRequestsPage() {
       <ScrollArea className="h-full min-h-0 w-full">
         <div className="pr-3">
           <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-            Halaman ini hanya untuk adminregion/superadmin.
+            Halaman ini hanya untuk Admin Region/Superadmin.
           </div>
         </div>
       </ScrollArea>
@@ -851,7 +851,7 @@ function ActorTimelineCard({ item, lookupLabels }: { item: ValidationRequestItem
   const rows = [
     {
       actionType: item.adminregion_action_type,
-      label: formatActorAction(item.adminregion_action_type, "Adminregion review"),
+      label: formatActorAction(item.adminregion_action_type, "Admin Region review"),
       name: getActorText(item.adminregion_actor_name, item.adminregion_actor_email, item.adminregion_actor_user_code),
       at: item.adminregion_action_at,
     },
@@ -908,7 +908,7 @@ function getRequestType(item: ValidationRequestItem | null) {
       resourceLabel,
       operationLabel: "Create",
       label: `Create ${resourceLabel} Request`,
-      description: `Review data ${resourceLabel.toLowerCase()} baru dari adminregion sebelum masuk Asset Overview.`,
+      description: `Review data ${resourceLabel.toLowerCase()} baru dari Admin Region sebelum masuk Asset Overview.`,
     };
   }
 
@@ -1702,9 +1702,9 @@ function getSubmitterText(item: ValidationRequestItem, lookupLabels: LookupLabel
 
 function formatActorAction(value: unknown, fallback: string) {
   const action = String(value || "").trim().toLowerCase();
-  if (action === "approved_by_adminregion") return "Adminregion approved";
-  if (action === "rejected_by_adminregion") return "Adminregion rejected";
-  if (action === "resubmitted_by_adminregion") return "Adminregion resubmitted";
+  if (action === "approved_by_adminregion") return "Admin Region approved";
+  if (action === "rejected_by_adminregion") return "Admin Region rejected";
+  if (action === "resubmitted_by_adminregion") return "Admin Region resubmitted";
   if (action === "approved_by_superadmin") return "Superadmin approved";
   if (action === "rejected_by_superadmin") return "Superadmin rejected";
   return fallback;

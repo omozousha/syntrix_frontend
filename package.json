@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:consistency": "node scripts/check-frontend-consistency.mjs"
   },
   "dependencies": {
     "@tanstack/react-table": "^8.21.3",

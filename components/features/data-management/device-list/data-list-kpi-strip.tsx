@@ -2,12 +2,7 @@
 
 import { Boxes, CheckSquare, MapPin, Shield } from "lucide-react";
 import { OperationalKpiCard } from "@/components/operational-ui";
-
-function getRoleLabel(role: string) {
-  if (role === "admin") return "Superadmin";
-  if (role === "user_all_region") return "Adminregion";
-  return role;
-}
+import { formatRoleLabel } from "@/lib/domain-formatters";
 
 export function DataListKpiStrip({
   total,
@@ -54,7 +49,7 @@ export function DataListKpiStrip({
       <OperationalKpiCard
         label="Access"
         value={canWrite ? "Manage" : "View"}
-        caption={getRoleLabel(role)}
+        caption={formatRoleLabel(role)}
         icon={Shield}
         tone={canWrite ? "emerald" : "slate"}
       />

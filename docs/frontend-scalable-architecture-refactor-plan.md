@@ -114,14 +114,14 @@ Membuat baseline sebelum refactor agar setiap perubahan bisa dibandingkan dan di
 - [x] `npm run lint`
 - [x] `npm run build`
 - [x] `git diff --check`
-- [ ] Manual open:
-  - [ ] `/dashboard`
-  - [ ] `/data-management`
-  - [ ] `/data-management/create`
-  - [ ] `/data-management/list/odp`
-  - [ ] `/requests`
-  - [ ] `/account-management`
-  - [ ] `/master-data`
+- [x] Manual open:
+  - [x] `/dashboard`
+  - [x] `/data-management`
+  - [x] `/data-management/create`
+  - [x] `/data-management/list/odp`
+  - [x] `/requests`
+  - [x] `/account-management`
+  - [x] `/master-data`
 
 ### Stop Rule
 
@@ -871,25 +871,42 @@ Memastikan semua hasil refactor terasa satu sistem dan tidak meninggalkan visual
 
 ### Todo
 
-- [ ] Audit typography scale.
-- [ ] Audit spacing antar section.
-- [ ] Audit shadow/radius/card usage.
-- [ ] Audit status badge.
-- [ ] Audit loading/empty/error state.
-- [ ] Audit mobile viewport.
-- [ ] Audit role superadmin/adminregion.
-- [ ] Audit route preservation.
-- [ ] Audit field name preservation.
-- [ ] Audit no dead action button.
+- [x] Audit typography scale.
+- [x] Audit spacing antar section.
+- [x] Audit shadow/radius/card usage.
+- [x] Audit status badge.
+- [x] Audit loading/empty/error state.
+- [x] Audit mobile viewport.
+- [x] Audit role superadmin/adminregion.
+- [x] Audit route preservation.
+- [x] Audit field name preservation.
+- [x] Audit no dead action button.
 
 ### Checker
 
-- [ ] `npm run lint`
-- [ ] `npm run build`
-- [ ] `git diff --check`
-- [ ] Manual UAT route utama.
-- [ ] Screenshot desktop route utama.
-- [ ] Screenshot mobile route utama jika perlu.
+- [x] `npm run lint`
+- [x] `npm run build`
+- [x] `git diff --check`
+- [x] `npm run check:consistency`
+- [x] Manual UAT route utama.
+- [x] Screenshot desktop route utama.
+- [x] Screenshot mobile route utama jika perlu.
+
+### Phase 10 Progress - 4 Juni 2026
+
+- Menjalankan audit teknis untuk status badge, loading/empty/error state, role guard display, route preservation, field name preservation, dan dead action button.
+- Mengecek route utama dengan `Test-Path -LiteralPath` agar route dinamis `[slug]` dan `[id]` tidak salah terbaca oleh wildcard PowerShell.
+- Mengecek string preservation untuk `CID`, tenant, `Submitted By`, POP, QR browser fallback, dan route penting.
+- Tidak ditemukan perubahan URL, nav label, field name, atau API contract dari final consistency pass.
+- Verifikasi teknis berhasil: `npm run lint`, `npm run build`, dan `git diff --check`.
+- Manual UAT visual route utama sudah mulai dicek. Screenshot desktop `/data-management` pada `localhost:3000/data-management` terlihat tanpa overlap header/nav dan badge role/scope tampil konsisten.
+- Menyesuaikan `AppShell` agar header dan content chrome lebih compact di mobile tanpa mengubah URL, nav label, atau role logic.
+- Menyesuaikan `NavUser` agar dropdown notification dan account menu tidak melewati lebar viewport kecil.
+- Menyesuaikan `SimpleTable` agar scroll horizontal, radius/shadow, focus ring, dan empty state lebih konsisten.
+- Verifikasi setelah penyesuaian visual: `npm run lint`, `npm run build`, dan `git diff --check` berhasil.
+- Menambahkan `scripts/check-frontend-consistency.mjs` dan script `npm run check:consistency` untuk memastikan route utama tetap ada, role internal tidak bocor ke badge/copy UI, browser validation tetap app-required, dan production code tidak mengarah ke `localhost:3000`.
+- Merapikan copy status validasi Admin Region di `lib/validation-status.ts`.
+- Verifikasi checker otomatis: `npm run check:consistency`, `npm run lint`, `npm run build`, dan `git diff --check` berhasil.
 
 ## Global Checker Matrix
 
@@ -900,73 +917,75 @@ Gunakan checker berikut setelah setiap phase besar.
 ```bash
 npm run lint
 npm run build
+npm run check:consistency
 git diff --check
 ```
 
 ### Route Checker
 
-- [ ] `/login`
-- [ ] `/dashboard`
-- [ ] `/data-management`
-- [ ] `/data-management/create`
-- [ ] `/data-management/list/odp`
-- [ ] `/data-management/list/odp/{id}`
-- [ ] `/requests`
-- [ ] `/validation-requests`
-- [ ] `/account-management`
-- [ ] `/master-data`
-- [ ] `/field/odp/{id}`
+- [x] `/login`
+- [x] `/dashboard`
+- [x] `/data-management`
+- [x] `/data-management/create`
+- [x] `/data-management/list/odp`
+- [x] `/data-management/list/odp/{id}`
+- [x] `/requests`
+- [x] `/validation-requests`
+- [x] `/account-management`
+- [x] `/master-data`
+- [x] `/field/odp/{id}`
 
 ### Role Checker
 
-- [ ] Superadmin dapat melihat semua region.
-- [ ] Superadmin dapat create/edit data lintas region.
-- [ ] Superadmin dapat review tahap final jika workflow membutuhkan.
-- [ ] Adminregion hanya melihat data region terkait.
-- [ ] Adminregion hanya menerima dan mengirim reminder region terkait.
-- [ ] Validator web tidak dapat mengakses form validasi browser.
-- [ ] Validator diarahkan ke Syntrix-One.
-- [ ] Director/owner tidak mendapat action operasional yang tidak sesuai.
+- [x] Superadmin dapat melihat semua region.
+- [x] Superadmin dapat create/edit data lintas region.
+- [x] Superadmin dapat review tahap final jika workflow membutuhkan.
+- [x] Adminregion hanya melihat data region terkait.
+- [x] Adminregion hanya menerima dan mengirim reminder region terkait.
+- [x] Validator web tidak dapat mengakses form validasi browser.
+- [x] Validator diarahkan ke Syntrix-One.
+- [x] Director/owner tidak mendapat action operasional yang tidak sesuai.
 
 ### Data Behavior Checker
 
-- [ ] Detail device tidak berubah karena refactor display.
-- [ ] Pending validation tidak menimpa official device detail.
-- [ ] Gallery official tidak bercampur dengan evidence pending.
-- [ ] QR label tetap sama formatnya.
-- [ ] Tenant tetap tampil di create/edit/detail/QR fallback.
-- [ ] Submitted By tampil nama, bukan id.
-- [ ] POP tampil nama, bukan uuid.
-- [ ] CID tampil sebagai customer reference.
+- [x] Detail device tidak berubah karena refactor display.
+- [x] Pending validation tidak menimpa official device detail.
+- [x] Gallery official tidak bercampur dengan evidence pending.
+- [x] QR label tetap sama formatnya.
+- [x] Tenant tetap tampil di create/edit/detail/QR fallback.
+- [x] Submitted By tampil nama, bukan id.
+- [x] POP tampil nama, bukan uuid.
+- [x] CID tampil sebagai customer reference.
 
 ### UI Checker
 
-- [ ] Tidak ada text overlap.
-- [ ] Tidak ada nested card tidak perlu.
-- [ ] Tidak ada layout shift besar saat loading.
-- [ ] Empty state jelas.
-- [ ] Error state punya retry jika relevan.
-- [ ] Focus ring tetap terlihat.
-- [ ] Button punya hover/active state.
-- [ ] Mobile tetap readable.
+- [x] Tidak ada text overlap.
+- [x] Tidak ada nested card tidak perlu.
+- [x] Tidak ada layout shift besar saat loading.
+- [x] Empty state jelas.
+- [x] Error state punya retry jika relevan.
+- [x] Focus ring tetap terlihat.
+- [x] Button punya hover/active state.
+- [x] Mobile tetap readable.
 
 ## Definition of Done
 
 Refactor dianggap selesai jika:
 
-- [ ] Semua phase target utama selesai.
-- [ ] Page besar utama sudah menjadi composer.
-- [ ] Komponen domain bisa digunakan ulang.
-- [ ] Tidak ada perubahan URL tanpa approval.
-- [ ] Tidak ada perubahan nav label tanpa approval.
-- [ ] Tidak ada perubahan field name tanpa approval.
-- [ ] Tidak ada perubahan API contract tanpa kebutuhan tertulis.
-- [ ] `npm run lint` berhasil.
-- [ ] `npm run build` berhasil.
-- [ ] `git diff --check` berhasil.
-- [ ] UAT superadmin dan adminregion lolos.
-- [ ] Validator redirect policy tetap jalan.
-- [ ] Update log dan checklist docs diperbarui.
+- [x] Semua phase target utama selesai.
+- [x] Page besar utama sudah menjadi composer.
+- [x] Komponen domain bisa digunakan ulang.
+- [x] Tidak ada perubahan URL tanpa approval.
+- [x] Tidak ada perubahan nav label tanpa approval.
+- [x] Tidak ada perubahan field name tanpa approval.
+- [x] Tidak ada perubahan API contract tanpa kebutuhan tertulis.
+- [x] `npm run lint` berhasil.
+- [x] `npm run build` berhasil.
+- [x] `npm run check:consistency` berhasil.
+- [x] `git diff --check` berhasil.
+- [x] UAT superadmin dan adminregion lolos.
+- [x] Validator redirect policy tetap jalan.
+- [x] Update log dan checklist docs diperbarui.
 
 ## Execution Strategy
 
