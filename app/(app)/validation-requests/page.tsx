@@ -2,21 +2,26 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, Clock, Inbox, RefreshCw, Search, ShieldCheck, X } from "lucide-react";
+import { Clock, Inbox, RefreshCw, ShieldCheck } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
+import { ApprovalActions } from "@/components/features/requests/approval-actions";
+import { EvidenceChecklistPreview } from "@/components/features/requests/evidence-checklist-preview";
+import { RequestActorLine } from "@/components/features/requests/request-actor-line";
+import { RequestCard } from "@/components/features/requests/request-card";
+import { RequestComparison } from "@/components/features/requests/request-comparison";
+import { RequestList } from "@/components/features/requests/request-list";
+import { RequestStatusBadge } from "@/components/features/requests/request-status-badge";
 import { OperationalKpiCard, OperationalState } from "@/components/operational-ui";
 import { ResponseDialog } from "@/components/response-dialog";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiFetch } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob, resolveAttachment } from "@/lib/attachment-utils";
-import { mapValidationStatus } from "@/lib/validation-status";
+import { formatDateTime, normalizeRole, shortId, valueText } from "@/lib/domain-formatters";
 
 type QueueType = "adminregion" | "superadmin";
 type RequestStatus =
@@ -483,81 +488,39 @@ export default function ValidationRequestsPage() {
               <OperationalKpiCard label="Validation" value={queueSummary.validation} caption="Field validation request" icon={ShieldCheck} tone="emerald" />
               <OperationalKpiCard label="Asset Change" value={queueSummary.assetChanges} caption="Create, update, archive" icon={Clock} tone="amber" />
             </div>
-            <Card>
-              <CardHeader className="px-3 py-2">
-                <CardTitle className="text-base">Daftar Request</CardTitle>
-                <CardDescription>{filteredItems.length} dari {items.length} request ditampilkan.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 px-3 pb-3">
-                <QueueSummaryChips summary={queueSummary} />
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-                  <Input
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Search request, device, atau region..."
-                    className="pl-8"
-                  />
-                </div>
-                <div className="grid grid-cols-1 gap-2">
-                  <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as RequestTypeFilter)}>
-                    <SelectTrigger size="sm" className="w-full">
-                      <SelectValue placeholder="Filter jenis request" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Jenis Request</SelectItem>
-                      <SelectItem value="create_asset">Create</SelectItem>
-                      <SelectItem value="update_asset">Update</SelectItem>
-                      <SelectItem value="archive_asset">Archive</SelectItem>
-                      <SelectItem value="field_validation">Field Validation</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as RequestStatusFilter)}>
-                    <SelectTrigger size="sm" className="w-full">
-                      <SelectValue placeholder="Filter status workflow" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Status</SelectItem>
-                      <SelectItem value="ongoing_validated">Ongoing Validated</SelectItem>
-                      <SelectItem value="pending_async">Pending Async</SelectItem>
-                      <SelectItem value="rejected_by_adminregion">Rejected by Admin Region</SelectItem>
-                      <SelectItem value="rejected_by_superadmin">Rejected by Superadmin</SelectItem>
-                      <SelectItem value="validated">Validated</SelectItem>
-                      <SelectItem value="unvalidated">Unvalidated</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <RequestList
+              filteredCount={filteredItems.length}
+              totalCount={items.length}
+              searchTerm={searchTerm}
+              typeFilter={typeFilter}
+              statusFilter={statusFilter}
+              summarySlot={<QueueSummaryChips summary={queueSummary} />}
+              onSearchChange={setSearchTerm}
+              onTypeFilterChange={(value) => setTypeFilter(value as RequestTypeFilter)}
+              onStatusFilterChange={(value) => setStatusFilter(value as RequestStatusFilter)}
+            >
                 {filteredItems.length ? (
                   filteredItems.map((item) => (
-                    <div
+                    <RequestCard
                       key={item.id}
-                      className={`rounded-md border p-2.5 transition ${selected?.id === item.id ? "border-primary bg-primary/5" : "bg-background hover:bg-muted/40"}`}
-                    >
-                      <button type="button" onClick={() => setSelectedId(item.id)} className="w-full text-left">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <p className="text-sm font-medium">{getOdpName(item) || "-"}</p>
-                          <Badge variant="outline" className="text-[10px]">{getRequestType(item).label}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{mapValidationStatus(item.current_status).label} | {getRequestSummary(item, lookupLabels)}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                          <Badge variant="outline" className="text-[10px]">{getNextOwnerLabel(item.current_status)}</Badge>
-                          <span className="text-[11px] text-muted-foreground">Updated: {formatDateTime(item.updated_at)}</span>
-                        </div>
-                      </button>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {getQuickOpenHref(item) ? (
-                          <Button asChild type="button" size="sm" variant="outline" className="h-6 px-2 text-[11px]">
-                            <Link href={getQuickOpenHref(item)}>Open Detail</Link>
-                          </Button>
-                        ) : null}
-                      </div>
-                      <EvidenceThumbStrip
-                        refs={normalizeEvidenceRefs(item.evidence_attachments)}
-                        thumbUrls={evidenceThumbUrls}
-                        label="Evidence"
-                        onPreview={previewEvidence}
-                      />
-                    </div>
+                      selected={selected?.id === item.id}
+                      title={getOdpName(item)}
+                      typeLabel={getRequestType(item).label}
+                      status={item.current_status}
+                      summary={getRequestSummary(item, lookupLabels)}
+                      ownerLabel={getNextOwnerLabel(item.current_status)}
+                      updatedAt={formatDateTime(item.updated_at)}
+                      quickOpenHref={getQuickOpenHref(item)}
+                      onSelect={() => setSelectedId(item.id)}
+                      evidenceSlot={
+                        <EvidenceThumbStrip
+                          refs={normalizeEvidenceRefs(item.evidence_attachments)}
+                          thumbUrls={evidenceThumbUrls}
+                          label="Evidence"
+                          onPreview={previewEvidence}
+                        />
+                      }
+                    />
                   ))
                 ) : (
                   <OperationalState
@@ -571,8 +534,7 @@ export default function ValidationRequestsPage() {
                     }}
                   />
                 )}
-              </CardContent>
-            </Card>
+            </RequestList>
 
             <Card>
               <CardHeader className="px-3 py-2">
@@ -582,9 +544,7 @@ export default function ValidationRequestsPage() {
                     <CardDescription>{selectedType.description}</CardDescription>
                   </div>
                   {selected ? (
-                    <Badge variant="outline" className={mapValidationStatus(selected.current_status).className}>
-                      {mapValidationStatus(selected.current_status).label}
-                    </Badge>
+                    <RequestStatusBadge status={selected.current_status} />
                   ) : null}
                 </div>
               </CardHeader>
@@ -594,7 +554,7 @@ export default function ValidationRequestsPage() {
                     <div className="grid grid-cols-1 gap-2 md:grid-cols-3 xl:grid-cols-5">
                       <Info title="Tipe Request" value={selectedType.label} />
                       <Info title="Device" value={getOdpName(selected)} />
-                      <Info title="Submitted By" value={getSubmitterText(selected, lookupLabels)} />
+                      <RequestActorLine value={getSubmitterText(selected, lookupLabels)} />
                       <Info title="Current Owner" value={getNextOwnerLabel(selected.current_status)} />
                       <Info title="Updated" value={formatDateTime(selected.updated_at)} />
                     </div>
@@ -651,25 +611,15 @@ export default function ValidationRequestsPage() {
                       <p className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">Catatan Superadmin: {selected.superadmin_review_note}</p>
                     ) : null}
 
-                    {isRejectedBySuperadmin && isAdminRegionView ? (
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="button" onClick={() => void resubmitSelected()} disabled={acting}>
-                          <RefreshCw className="mr-2 size-4" />
-                          Resubmit ke Superadmin
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="button" onClick={() => void approveSelected()} disabled={acting}>
-                          <Check className="mr-2 size-4" />
-                          {reviewContext.approveLabel}
-                        </Button>
-                        <Button type="button" variant="destructive" onClick={() => setRejectDialogOpen(true)} disabled={acting}>
-                          <X className="mr-2 size-4" />
-                          {reviewContext.rejectLabel}
-                        </Button>
-                      </div>
-                    )}
+                    <ApprovalActions
+                      acting={acting}
+                      showResubmit={isRejectedBySuperadmin && isAdminRegionView}
+                      approveLabel={reviewContext.approveLabel}
+                      rejectLabel={reviewContext.rejectLabel}
+                      onApprove={() => void approveSelected()}
+                      onReject={() => setRejectDialogOpen(true)}
+                      onResubmit={() => void resubmitSelected()}
+                    />
                   </>
                 ) : (
                   <OperationalState title="Pilih request" description="Pilih salah satu request di panel kiri untuk melihat detail review." />
@@ -763,13 +713,6 @@ export default function ValidationRequestsPage() {
       </div>
     </ScrollArea>
   );
-}
-
-function normalizeRole(role: string) {
-  if (role === "admin") return "superadmin";
-  if (role === "user_all_region") return "adminregion";
-  if (role === "user_region") return "validator";
-  return role;
 }
 
 function getReviewContext(
@@ -892,13 +835,6 @@ async function resolveAttachmentCandidates(candidates: string[], token: string):
     if (resolved?.storage_file_id) ordered.add(String(resolved.storage_file_id));
   }
   return Array.from(ordered);
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 function Info({ title, value }: { title: string; value: string }) {
@@ -1406,8 +1342,8 @@ function ValidationRequestReview({
           ))}
         </div>
       </div>
-      <ComparisonReviewCard rows={comparisonRows} />
-      <FieldInspectionReview
+      <RequestComparison rows={comparisonRows} />
+      <EvidenceChecklistPreview
         inspection={item.payload_snapshot?.field_inspection}
         onPreview={onPreviewEvidence}
         onDownload={onDownloadEvidence}
@@ -1416,40 +1352,6 @@ function ValidationRequestReview({
         <p className="mb-1.5 text-sm font-medium">Temuan</p>
         <p className="text-xs text-muted-foreground">{item.finding_note || "-"}</p>
       </div>
-    </div>
-  );
-}
-
-function ComparisonReviewCard({
-  rows,
-}: {
-  rows: Array<{ label: string; before: string; after: string; changed: boolean }>;
-}) {
-  return (
-    <div className="rounded-md border p-2.5">
-      <ReviewSectionHeader
-        eyebrow="Compare"
-        title="Pembanding Data"
-        description="Bandingkan data existing dengan hasil validasi validator sebelum mengambil keputusan."
-      />
-      {rows.length ? (
-        <div className="mt-2 space-y-1.5">
-          {rows.map((row) => (
-            <div
-              key={row.label}
-              className={`grid grid-cols-1 gap-1 rounded-md border px-2 py-1.5 text-xs md:grid-cols-[140px_1fr_1fr] ${
-                row.changed ? "border-amber-200 bg-amber-50/50" : "bg-background"
-              }`}
-            >
-              <span className="font-medium">{row.label}</span>
-              <span className="text-muted-foreground">Existing: {row.before}</span>
-              <span>Validator: {row.after}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="mt-2 text-xs text-muted-foreground">Tidak ada data pembanding pada snapshot request ini.</p>
-      )}
     </div>
   );
 }
@@ -1643,111 +1545,6 @@ function TechnicalSnapshotDetails({ item }: { item: ValidationRequestItem }) {
   );
 }
 
-function FieldInspectionReview({
-  inspection,
-  onPreview,
-  onDownload,
-}: {
-  inspection?: Record<string, unknown> | null;
-  onPreview: (candidates: string[], label: string) => Promise<void>;
-  onDownload: (candidates: string[]) => Promise<void>;
-}) {
-  const initialPhotos = objectRecordValues(inspection?.initial_photos);
-  const conditionChecks = objectRecordValues(inspection?.condition_checks);
-
-  if (!initialPhotos.length && !conditionChecks.length) return null;
-
-  return (
-    <div className="rounded-md border p-2.5">
-      <p className="mb-1.5 text-sm font-medium">Pemeriksaan Awal & Checklist Kondisi</p>
-      {initialPhotos.length ? (
-        <div className="mb-3">
-          <p className="mb-1 text-xs font-medium text-muted-foreground">Pemeriksaan Awal</p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {initialPhotos.map((item, index) => (
-              <div key={`${valueText(item.label)}-${index}`} className="rounded-md border bg-muted/20 p-2">
-                <p className="text-xs font-medium">{valueText(item.label)}</p>
-                <p className="text-xs text-muted-foreground">Foto: {getInspectionAttachmentName(item.attachment)}</p>
-                <InspectionEvidenceActions
-                  attachment={item.attachment}
-                  label={`${valueText(item.label)} ${index + 1}`}
-                  onPreview={onPreview}
-                  onDownload={onDownload}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-      {conditionChecks.length ? (
-        <div>
-          <p className="mb-1 text-xs font-medium text-muted-foreground">Checklist Kondisi</p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {conditionChecks.map((item, index) => (
-              <div key={`${valueText(item.label)}-${index}`} className="rounded-md border bg-muted/20 p-2">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-medium">{valueText(item.label)}</p>
-                  <Badge variant="outline" className="shrink-0 text-[10px]">
-                    {valueText(item.condition)}
-                  </Badge>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">Keterangan: {valueText(item.note)}</p>
-                <p className="text-xs text-muted-foreground">Foto: {getInspectionAttachmentName(item.attachment)}</p>
-                <InspectionEvidenceActions
-                  attachment={item.attachment}
-                  label={`${valueText(item.label)} ${index + 1}`}
-                  onPreview={onPreview}
-                  onDownload={onDownload}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function InspectionEvidenceActions({
-  attachment,
-  label,
-  onPreview,
-  onDownload,
-}: {
-  attachment: unknown;
-  label: string;
-  onPreview: (candidates: string[], label: string) => Promise<void>;
-  onDownload: (candidates: string[]) => Promise<void>;
-}) {
-  const ref = getInspectionAttachmentRef(attachment, label);
-  if (!ref) {
-    return <p className="mt-2 rounded-md border border-dashed px-2 py-1 text-[11px] text-muted-foreground">Evidence belum tersedia.</p>;
-  }
-
-  return (
-    <div className="mt-2 flex flex-wrap gap-1.5">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="h-7 px-2 text-[11px]"
-        onClick={() => void onPreview(ref.candidates, label)}
-      >
-        Preview
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="h-7 px-2 text-[11px]"
-        onClick={() => void onDownload(ref.candidates)}
-      >
-        Download
-      </Button>
-    </div>
-  );
-}
-
 function getCreateAssetPayload(item: ValidationRequestItem) {
   return (
     nonEmptyObject(item.payload_snapshot?.resource_payload) ||
@@ -1913,10 +1710,6 @@ function formatActorAction(value: unknown, fallback: string) {
   return fallback;
 }
 
-function shortId(value: string) {
-  return value.length > 13 ? `${value.slice(0, 8)}...${value.slice(-4)}` : value;
-}
-
 function nonEmptyObject(value?: Record<string, unknown>) {
   if (!value || !Object.keys(value).length) return null;
   return value;
@@ -1929,12 +1722,6 @@ function objectRecordValues(value: unknown) {
   );
 }
 
-function getInspectionAttachmentName(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return "-";
-  const attachment = value as Record<string, unknown>;
-  return valueText(attachment.name || attachment.attachment_id || attachment.id);
-}
-
 function getInspectionSummary(inspection?: Record<string, unknown> | null) {
   const checks = objectRecordValues(inspection?.condition_checks);
   if (!checks.length) return "Kondisi -";
@@ -1942,11 +1729,6 @@ function getInspectionSummary(inspection?: Record<string, unknown> | null) {
   return `Kondisi ${good}/${checks.length} baik`;
 }
 
-function valueText(value: unknown) {
-  if (value === null || value === undefined || value === "") return "-";
-  if (typeof value === "boolean") return value ? "Ya" : "Tidak";
-  return String(value);
-}
 
 function extractApiData(result: { data?: Record<string, unknown> } | Record<string, unknown>) {
   if (result && typeof result === "object" && "data" in result && result.data && typeof result.data === "object") {

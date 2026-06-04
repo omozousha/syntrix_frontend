@@ -1,23 +1,23 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Cable, ChevronDown, Database, FolderKanban, Globe2, MapPin, Network, RefreshCcw } from "lucide-react";
+import { Building2, Cable, Database, FolderKanban, Globe2, MapPin, Network } from "lucide-react";
 import { AddDataMenu } from "@/components/add-data-menu";
 import { AppLoading } from "@/components/app-loading-new";
-import { OperationalKpiCard, OperationalState } from "@/components/operational-ui";
+import {
+  AssetSummaryLoading,
+  AssetSummaryStrip,
+  DataQualityPanel,
+  FocusedRegionCard,
+  RegionCardGrid,
+} from "@/components/features/data-management/asset-overview";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Combobox } from "@/components/ui/combobox";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
 import { ASSET_DATA_CATEGORIES, buildCategoryApiPath, deviceTypeKeyToSlug, type DataCategory } from "@/lib/data-management-config";
+import { formatDateTime, normalizeRole } from "@/lib/domain-formatters";
 
 type GenericItem = {
   id: string;
@@ -395,6 +395,22 @@ export default function DataManagementPage() {
     ],
     [regions.length, globalSummary, activeDeviceTypesCount],
   );
+  const visibleCoreStats = useMemo(
+    () => (isSuperadmin ? coreStats : coreStats.filter((item) => item.key !== "regions")),
+    [coreStats, isSuperadmin],
+  );
+  const summaryStats = useMemo(
+    () =>
+      visibleCoreStats.map((stat) => ({
+        key: stat.key,
+        label: stat.label,
+        value: formatStatValue(stat.value, stat.unit),
+        caption: stat.caption || `Update: ${formatDateTime(stat.latestUpdatedAt)}`,
+        icon: getStatIcon(stat.key),
+        tone: getStatTone(stat.key),
+      })),
+    [visibleCoreStats],
+  );
 
   const focusedRegion = useMemo(
     () => regions.find((region) => region.id === focusedRegionId) || null,
@@ -649,7 +665,7 @@ export default function DataManagementPage() {
           />
         </div>
 
-        {loading ? <SummaryLoading /> : null}
+        {loading ? <AssetSummaryLoading /> : null}
         {!loading && error ? <AppLoading label={error} variant="error" /> : null}
 
         {!loading && !error ? (
@@ -661,417 +677,78 @@ export default function DataManagementPage() {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-3">
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  {isValidator ? "Ringkasan Field" : "Summary"}
-                </h3>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-                {(isSuperadmin ? coreStats : coreStats.filter((item) => item.key !== "regions")).map((stat) => (
-                  <OperationalKpiCard
-                    key={stat.key}
-                    label={stat.label}
-                    value={formatStatValue(stat.value, stat.unit)}
-                    caption={stat.caption || `Update: ${formatDateTime(stat.latestUpdatedAt)}`}
-                    icon={getStatIcon(stat.key)}
-                    tone={getStatTone(stat.key)}
-                  />
-                  ))}
-                </div>
-              </section>
+              <AssetSummaryStrip title={isValidator ? "Ringkasan Field" : "Summary"} stats={summaryStats} />
 
               {isSuperadmin ? (
-                <section className="space-y-2">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Region Cards</h3>
-                  <div className="w-full sm:w-72">
-                    <Input
-                      value={searchRegion}
-                      onChange={(event) => setSearchRegion(event.target.value)}
-                      placeholder="Search region..."
-                    />
-                  </div>
-                </div>
-
-                {pagedRegions.length === 0 ? (
-                  <OperationalState
-                    title={regions.length === 0 ? "Belum ada region" : "Region tidak ditemukan"}
-                    description={regions.length === 0 ? "Akun ini belum memiliki data region yang bisa ditampilkan." : "Coba gunakan kata kunci region lain atau reset pencarian."}
-                  />
-                ) : (
-                  <>
-                  <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-4">
-                    {pagedRegions.map((region) => {
-                      const summary = regionSummaryCache[region.id];
-                      const isLoadingCard = regionSummaryLoadingIds.has(region.id) && !summary;
-                      const isOpen = openRegionIds.has(region.id);
-                      const regionDetail = regionDetailsCache[region.id];
-                      const regionDetailLoading = regionDetailsLoadingIds.has(region.id) && !regionDetail;
-                      const regionLastUpdated = latestDate(summary?.popLatestUpdatedAt, summary?.deviceLatestUpdatedAt, summary?.routeLatestUpdatedAt);
-                      return (
-                        <Collapsible
-                          key={region.id}
-                          open={isOpen}
-                          onOpenChange={(nextOpen) => {
-                            setOpenRegionIds((prev) => {
-                              const next = new Set(prev);
-                              if (nextOpen) next.add(region.id);
-                              else next.delete(region.id);
-                              return next;
-                            });
-                          }}
-                        >
-                          <Card>
-                            <CollapsibleTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                className="h-auto w-full justify-start p-0 text-left hover:bg-transparent"
-                              >
-                                <CardHeader className="w-full space-y-1 px-3 py-3">
-                                  <CardTitle className="flex items-start justify-between gap-2 text-sm">
-                                    <span className="truncate">{region.region_name}</span>
-                                    <div className="flex items-center gap-1">
-                                      <Badge variant="outline" className="text-[10px] uppercase">
-                                        {region.region_id}
-                                      </Badge>
-                                      <ChevronDown className={`size-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                                    </div>
-                                  </CardTitle>
-                                  <div className="space-y-1 text-[11px] text-muted-foreground">
-                                    <p>
-                                      POP {isLoadingCard ? "..." : summary?.pops ?? 0} | Devices {isLoadingCard ? "..." : summary?.devices ?? 0}
-                                    </p>
-                                    <p>
-                                      Route {isLoadingCard ? "..." : formatKilometers(summary?.routeDistanceMeters ?? 0)} | Cable on Route{" "}
-                                      {isLoadingCard ? "..." : summary?.cableDevices ?? 0}
-                                    </p>
-                                    <p>Update terakhir: {formatDateTime(regionLastUpdated)}</p>
-                                  </div>
-                                </CardHeader>
-                              </Button>
-                            </CollapsibleTrigger>
-
-                            <CollapsibleContent>
-                              <CardContent className="space-y-2 px-3 pb-3 pt-0">
-                                <div className="grid grid-cols-2 gap-1.5">
-                                  {assetCategories.map((category) => {
-                                    const value = regionDetail?.[category.slug]?.total;
-                                    const href = `/data-management/list/${category.slug}?region_id=${encodeURIComponent(region.id)}`;
-                                    return (
-                                      <QuickCountButton
-                                        key={category.slug}
-                                        href={href}
-                                        label={category.label}
-                                        value={regionDetailLoading ? undefined : value ?? 0}
-                                      />
-                                    );
-                                  })}
-                                </div>
-                              </CardContent>
-                            </CollapsibleContent>
-                          </Card>
-                        </Collapsible>
-                      );
-                    })}
-                  </div>
-
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setRegionPage((prev) => Math.max(1, prev - 1))}
-                        disabled={safeRegionPage <= 1}
-                      >
-                        Prev
-                      </Button>
-                      <span className="text-xs text-muted-foreground">
-                        Page {safeRegionPage} / {totalRegionPages}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setRegionPage((prev) => Math.min(totalRegionPages, prev + 1))}
-                        disabled={safeRegionPage >= totalRegionPages}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </>
-                )}
-                </section>
+                <RegionCardGrid
+                  regions={pagedRegions}
+                  allRegionsCount={regions.length}
+                  assetCategories={assetCategories}
+                  regionSummaryCache={regionSummaryCache}
+                  regionSummaryLoadingIds={regionSummaryLoadingIds}
+                  regionDetailsCache={regionDetailsCache}
+                  regionDetailsLoadingIds={regionDetailsLoadingIds}
+                  openRegionIds={openRegionIds}
+                  searchRegion={searchRegion}
+                  safeRegionPage={safeRegionPage}
+                  totalRegionPages={totalRegionPages}
+                  onSearchRegionChange={setSearchRegion}
+                  onRegionOpenChange={(regionId, nextOpen) => {
+                    setOpenRegionIds((prev) => {
+                      const next = new Set(prev);
+                      if (nextOpen) next.add(regionId);
+                      else next.delete(regionId);
+                      return next;
+                    });
+                  }}
+                  onPrevPage={() => setRegionPage((prev) => Math.max(1, prev - 1))}
+                  onNextPage={() => setRegionPage((prev) => Math.min(totalRegionPages, prev + 1))}
+                  formatDateTime={formatDateTime}
+                  formatKilometers={formatKilometers}
+                  latestDate={latestDate}
+                />
               ) : null}
 
               {!isSuperadmin ? (
-                <section className="space-y-2">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      {isAdminRegion ? "Region Aktif" : "Area Kerja Validator"}
-                    </h3>
-                    {regions.length > 1 ? (
-                      <div className="w-full sm:w-80">
-                        <Combobox
-                          value={focusedRegionId}
-                          onValueChange={setFocusedRegionId}
-                          options={regions.map((region) => ({
-                            value: region.id,
-                            label: `${region.region_name} (${region.region_id})`,
-                          }))}
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {!focusedRegion ? (
-                    <OperationalState title="Belum ada region" description="Akun ini belum memiliki scope region yang bisa ditampilkan." />
-                  ) : (
-                    <Card>
-                      <CardHeader className="space-y-1 px-3 py-3">
-                        <CardTitle className="flex items-start justify-between gap-2 text-sm">
-                          <span className="truncate">{focusedRegion.region_name}</span>
-                          <Badge variant="outline" className="text-[10px] uppercase">
-                            {focusedRegion.region_id}
-                          </Badge>
-                        </CardTitle>
-                        <div className="space-y-1 text-[11px] text-muted-foreground">
-                          <p>
-                            POP {focusedRegionLoading ? "..." : focusedRegionSummary?.pops ?? 0} | Devices{" "}
-                            {focusedRegionLoading ? "..." : focusedRegionSummary?.devices ?? 0}
-                          </p>
-                          <p>
-                            Route {focusedRegionLoading ? "..." : formatKilometers(focusedRegionSummary?.routeDistanceMeters ?? 0)} | Cable on
-                            Route {focusedRegionLoading ? "..." : ` ${focusedRegionSummary?.cableDevices ?? 0}`}
-                          </p>
-                          <p>Update terakhir: {formatDateTime(focusedRegionLastUpdated)}</p>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3 px-3 pb-3 pt-0">
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {focusedAssetCategories.map((category) => {
-                            const value = focusedRegionDetail?.[category.slug]?.total;
-                            const href = `/data-management/list/${category.slug}?region_id=${encodeURIComponent(focusedRegion.id)}`;
-                            return (
-                              <QuickCountButton
-                                key={category.slug}
-                                href={href}
-                                label={category.label}
-                                value={focusedRegionDetailLoading ? undefined : value ?? 0}
-                              />
-                            );
-                          })}
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                          {isAdminRegion ? (
-                            <>
-                              <Button asChild variant="outline" size="sm" className="justify-between">
-                                <Link href="/requests">
-                                  <span>Approval Queue</span>
-                                  <span>Open</span>
-                                </Link>
-                              </Button>
-                              <Button asChild variant="outline" size="sm" className="justify-between">
-                                <Link href={`/data-management/list/odp?region_id=${encodeURIComponent(focusedRegion.id)}`}>
-                                  <span>List ODP</span>
-                                  <span>Open</span>
-                                </Link>
-                              </Button>
-                              <Button asChild variant="outline" size="sm" className="justify-between">
-                                <Link href={`/data-management/odp-quality?region_id=${encodeURIComponent(focusedRegion.id)}`}>
-                                  <span>ODP Quality</span>
-                                  <span>Open</span>
-                                </Link>
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button asChild variant="outline" size="sm" className="justify-between">
-                                <Link href={`/data-management/list/odp?region_id=${encodeURIComponent(focusedRegion.id)}`}>
-                                  <span>Pilih ODP</span>
-                                  <span>Open</span>
-                                </Link>
-                              </Button>
-                              <Button asChild variant="outline" size="sm" className="justify-between">
-                                <Link href={`/data-management/odp-quality?region_id=${encodeURIComponent(focusedRegion.id)}`}>
-                                  <span>Issue ODP</span>
-                                  <span>Open</span>
-                                </Link>
-                              </Button>
-                              <Button asChild variant="outline" size="sm" className="justify-between">
-                                <Link href={`/maps?region_id=${encodeURIComponent(focusedRegion.id)}`}>
-                                  <span>Peta Region</span>
-                                  <span>Open</span>
-                                </Link>
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </section>
+                <FocusedRegionCard
+                  title={isAdminRegion ? "Region Aktif" : "Area Kerja Validator"}
+                  focusedRegion={focusedRegion}
+                  regions={regions}
+                  focusedRegionId={focusedRegionId}
+                  focusedRegionSummary={focusedRegionSummary}
+                  focusedRegionLoading={focusedRegionLoading}
+                  focusedRegionDetail={focusedRegionDetail}
+                  focusedRegionDetailLoading={focusedRegionDetailLoading}
+                  focusedRegionLastUpdated={focusedRegionLastUpdated}
+                  focusedAssetCategories={focusedAssetCategories}
+                  isAdminRegion={isAdminRegion}
+                  onFocusedRegionChange={setFocusedRegionId}
+                  formatDateTime={formatDateTime}
+                  formatKilometers={formatKilometers}
+                />
               ) : null}
             </TabsContent>
 
-            {canViewQuality ? <TabsContent value="quality" className="space-y-3">
-              <section className="space-y-2">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Data Quality KPI</h3>
-                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                    <div className="w-full sm:w-72">
-                      <Combobox value={qualityRegionId} onValueChange={setQualityRegionId} options={regionOptions} />
-                    </div>
-                    <Button type="button" variant="outline" size="sm" onClick={() => void handleRefreshQuality()} disabled={qualityLoading}>
-                      <RefreshCcw className={`mr-1 size-4 ${qualityLoading ? "animate-spin" : ""}`} />
-                      Refresh
-                    </Button>
-                  </div>
-                </div>
-
-                {qualityError ? (
-                  <AppLoading label={qualityError} variant="error" />
-                ) : qualityLoading && activeQualityKpis.length === 0 ? (
-                  <QualityLoading />
-                ) : (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                      {activeQualityKpis.map((kpi) => (
-                        <Card key={kpi.key}>
-                          <CardHeader className="px-3 py-2">
-                            <CardTitle className="text-sm font-semibold">{kpi.label}</CardTitle>
-                          </CardHeader>
-                          <CardContent className="px-3 pb-3 pt-0">
-                            <p className="text-2xl font-bold leading-none">{kpi.value}</p>
-                            <p className="mt-1 text-[11px] text-muted-foreground">{kpi.note}</p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                      {!activeQualityKpis.length ? (
-                        <Card className="sm:col-span-2 xl:col-span-3">
-                          <CardContent className="p-0">
-                            <OperationalState title="Belum ada KPI" description="Data quality belum tersedia untuk filter region ini." />
-                          </CardContent>
-                        </Card>
-                      ) : null}
-                    </div>
-
-                    <Card>
-                      <CardHeader className="px-3 py-2">
-                        <CardTitle className="text-sm font-semibold">ODP Quality Issues</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2 px-3 pb-3 pt-0">
-                        {activeOdpIssues.length ? (
-                          activeOdpIssues.map((issue) => (
-                            <div key={issue.key} className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
-                              <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <Badge variant={issue.severity === "high" ? "destructive" : issue.severity === "medium" ? "secondary" : "outline"}>
-                                    {issue.severity}
-                                  </Badge>
-                                  <p className="text-sm font-medium">{issue.label}</p>
-                                </div>
-                                <p className="mt-1 text-xs text-muted-foreground">{issue.note}</p>
-                              </div>
-                              <Button asChild variant="outline" size="sm" className="justify-between sm:min-w-32">
-                                <Link href={issue.href}>
-                                  <span>{issue.value}</span>
-                                  <span>Open</span>
-                                </Link>
-                              </Button>
-                            </div>
-                          ))
-                        ) : (
-                          <OperationalState title="Tidak ada issue ODP" description="Belum ada issue ODP untuk filter yang sedang dipilih." />
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-              </section>
-            </TabsContent> : null}
+            {canViewQuality ? (
+              <TabsContent value="quality" className="space-y-3">
+                <DataQualityPanel
+                  regionOptions={regionOptions}
+                  qualityRegionId={qualityRegionId}
+                  qualityLoading={qualityLoading}
+                  qualityError={qualityError}
+                  kpis={activeQualityKpis}
+                  issues={activeOdpIssues}
+                  onRegionChange={setQualityRegionId}
+                  onRefresh={() => void handleRefreshQuality()}
+                />
+              </TabsContent>
+            ) : null}
             </Tabs>
           </div>
         ) : null}
       </div>
     </ScrollArea>
   );
-}
-
-function QuickCountButton({ href, label, value }: { href: string; label: string; value?: number }) {
-  return (
-    <Button asChild variant="outline" size="sm" className="h-8 justify-between px-2 text-[11px]">
-      <Link href={href}>
-        <span className="truncate font-medium">{label}</span>
-        {typeof value === "number" ? (
-          <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px]">
-            {value}
-          </Badge>
-        ) : (
-          <Skeleton className="ml-2 h-5 w-8" />
-        )}
-      </Link>
-    </Button>
-  );
-}
-
-function SummaryLoading() {
-  return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7">
-        {Array.from({ length: 7 }).map((_, index) => (
-          <Card key={index}>
-            <CardHeader className="px-3 py-2">
-              <Skeleton className="h-4 w-20" />
-            </CardHeader>
-            <CardContent className="px-3 pb-3 pt-0">
-              <Skeleton className="h-8 w-16" />
-              <Skeleton className="mt-2 h-3 w-24" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={index}>
-            <CardHeader className="px-3 py-3">
-              <Skeleton className="h-4 w-28" />
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-1.5 px-3 pb-3 pt-0">
-              {Array.from({ length: 4 }).map((__, cardIndex) => (
-                <Skeleton key={cardIndex} className="h-8 w-full" />
-              ))}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function QualityLoading() {
-  return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, index) => (
-        <Card key={index}>
-          <CardHeader className="px-3 py-2">
-            <Skeleton className="h-4 w-32" />
-          </CardHeader>
-          <CardContent className="px-3 pb-3 pt-0">
-            <Skeleton className="h-8 w-14" />
-            <Skeleton className="mt-2 h-3 w-48" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function normalizeRole(role: string) {
-  if (role === "admin") return "superadmin";
-  if (role === "user_all_region") return "adminregion";
-  if (role === "user_region") return "validator";
-  return role;
 }
 
 function categoryPath(categories: DataCategory[], slug: string) {
@@ -1087,16 +764,6 @@ async function fetchSummaryByPath(path: string, token: string): Promise<Category
     total: payload.meta?.total ?? payload.data?.length ?? 0,
     latestUpdatedAt: first?.updated_at || first?.created_at || null,
   };
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("id-ID", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
 }
 
 function latestDate(...values: Array<string | null | undefined>) {

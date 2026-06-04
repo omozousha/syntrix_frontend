@@ -28,11 +28,12 @@ import {
 } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
 import { DataBulkActions } from "@/components/features/data-management/device-list/data-bulk-actions";
+import { DataEmptyState } from "@/components/features/data-management/device-list/data-empty-state";
 import { DataListFilterBar } from "@/components/features/data-management/device-list/data-list-filter-bar";
 import { DataListHeader } from "@/components/features/data-management/device-list/data-list-header";
 import { DataListKpiStrip } from "@/components/features/data-management/device-list/data-list-kpi-strip";
-import { OperationalState } from "@/components/operational-ui";
-import { SimpleTable } from "@/components/simple-table";
+import { DataMobileList } from "@/components/features/data-management/device-list/data-mobile-list";
+import { DataTableView } from "@/components/features/data-management/device-list/data-table-view";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -60,7 +61,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { buildCategoryApiPath, getCategoryBySlug } from "@/lib/data-management-config";
@@ -1166,9 +1167,15 @@ export default function DataManagementListPage() {
             {loading ? (
               <AppLoading label="Sedang memuat data list..." />
             ) : error ? (
-              <OperationalState title="Gagal memuat data" description={error} variant="error" actionLabel="Coba lagi" onAction={() => setRefreshSeed((prev) => prev + 1)} />
+              <DataEmptyState
+                title="Gagal memuat data"
+                description={error}
+                variant="error"
+                actionLabel="Coba lagi"
+                onAction={() => setRefreshSeed((prev) => prev + 1)}
+              />
             ) : rows.length === 0 ? (
-              <OperationalState
+              <DataEmptyState
                 title="Tidak ada data"
                 description={
                   supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel
@@ -1180,150 +1187,121 @@ export default function DataManagementListPage() {
               />
             ) : (
               <>
-                <div className="space-y-2 md:hidden">
-                  {rows.map((row) => {
-                    const validationStatus = getDeviceDisplayValidationStatus(row);
-                    const validation = formatValidationStatus(validationStatus);
-                    const validationTitle = getDeviceValidationTitle(row, validation.label);
-                    const primaryName =
-                      category?.resource === "devices"
-                        ? pick(row, ["device_name", "name"])
-                        : category?.resource === "pops"
-                          ? pick(row, ["pop_name", "name"])
-                          : category?.resource === "projects"
-                            ? pick(row, ["project_name", "name"])
-                            : pick(row, ["name", "region_name", "customer_name", "route_name", "city_name"]);
-                    const primaryCode =
-                      category?.resource === "devices"
-                        ? pick(row, ["device_id"])
-                        : category?.resource === "pops"
-                          ? pick(row, ["pop_id"])
-                          : category?.resource === "projects"
-                            ? pick(row, ["project_id"])
-                            : category?.resource === "customers"
-                              ? pick(row, ["customer_number"])
-                              : pick(row, ["region_id", "city_code", "route_id", "id"]);
-
+                <DataMobileList
+                  rows={rows}
+                  showValidationBadge={category?.resource === "devices"}
+                  supportsPopFilter={supportsPopFilter}
+                  canTraceTopology={isOdpCategory && canTraceTopology}
+                  getPrimaryName={(row) =>
+                    category?.resource === "devices"
+                      ? pick(row, ["device_name", "name"])
+                      : category?.resource === "pops"
+                        ? pick(row, ["pop_name", "name"])
+                        : category?.resource === "projects"
+                          ? pick(row, ["project_name", "name"])
+                          : pick(row, ["name", "region_name", "customer_name", "route_name", "city_name"])
+                  }
+                  getPrimaryCode={(row) =>
+                    category?.resource === "devices"
+                      ? pick(row, ["device_id"])
+                      : category?.resource === "pops"
+                        ? pick(row, ["pop_id"])
+                        : category?.resource === "projects"
+                          ? pick(row, ["project_id"])
+                          : category?.resource === "customers"
+                            ? pick(row, ["customer_number"])
+                            : pick(row, ["region_id", "city_code", "route_id", "id"])
+                  }
+                  getStatus={(row) => pick(row, ["status", "status_pop", "is_active"])}
+                  getUpdatedAt={(row) => formatDateTime(pick(row, ["updated_at", "created_at"]))}
+                  getPopLabel={(row) => resolveRelationName(row.pop_id, popLabelById)}
+                  getValidationBadge={(row) => {
+                    const validation = formatValidationStatus(getDeviceDisplayValidationStatus(row));
+                    return {
+                      label: validation.label,
+                      className: validation.className,
+                      title: getDeviceValidationTitle(row, validation.label),
+                    };
+                  }}
+                  onOpenDetail={(row) => router.push(getDetailHref(row.id))}
+                  onOpenTrace={(row) => router.push(getTraceHref(row))}
+                />
+                <DataTableView
+                  headers={headers}
+                  rows={tableRows}
+                  tableLabel={`${category.label} Columns`}
+                  selectedRowIndices={selectedRowIndices}
+                  hiddenOnMobile={isOdpCategory}
+                  onRowClick={(rowIndex) => {
+                    const row = rows[rowIndex];
+                    if (!row) return;
+                    setSelectedIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(row.id)) next.delete(row.id);
+                      else next.add(row.id);
+                      return next;
+                    });
+                  }}
+                  onRowDoubleClick={(rowIndex) => {
+                    const row = rows[rowIndex];
+                    if (!row) return;
+                    if (isMasterCategory && canWrite) {
+                      openQuickEdit(row);
+                      return;
+                    }
+                    router.push(getDetailHref(row.id));
+                  }}
+                  rowContextMenu={(rowIndex) => {
+                    const rowItem = rows[rowIndex];
+                    if (!rowItem) return null;
                     return (
-                      <div key={row.id} className="rounded-md border bg-card p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 space-y-0.5">
-                            <p className="truncate text-sm font-semibold">{primaryName || "-"}</p>
-                            <p className="truncate text-xs text-muted-foreground">{primaryCode || "-"}</p>
-                          </div>
-                          {category?.resource === "devices" ? (
-                            <span title={validationTitle} className={`inline-flex rounded border px-2 py-0.5 text-[11px] ${validation.className}`}>
-                              {validation.label}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                          <span>Status: {pick(row, ["status", "status_pop", "is_active"]) || "-"}</span>
-                          <span>{formatDateTime(pick(row, ["updated_at", "created_at"]))}</span>
-                        </div>
-                        {supportsPopFilter ? (
-                          <p className="mt-1 truncate text-xs text-muted-foreground">
-                            POP: {resolveRelationName(row.pop_id, popLabelById)}
-                          </p>
-                        ) : null}
-                        <div className={`mt-3 grid gap-2 ${isOdpCategory && canTraceTopology ? "grid-cols-2" : "grid-cols-1"}`}>
-                          <Button type="button" variant="outline" size="sm" onClick={() => router.push(getDetailHref(row.id))}>
-                            <Eye className="mr-1.5 size-3.5" />
-                            Detail
-                          </Button>
-                          {isOdpCategory && canTraceTopology ? (
-                            <Button type="button" variant="outline" size="sm" onClick={() => router.push(getTraceHref(row))}>
-                              <Waypoints className="mr-1.5 size-3.5" />
-                              Trace
-                            </Button>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className={isOdpCategory ? "hidden md:block" : ""}>
-                  <TooltipProvider>
-                    <SimpleTable
-                      headers={headers}
-                      rows={tableRows}
-                      tableLabel={`${category.label} Columns`}
-                      enableColumnVisibility
-                      enableSorting
-                      disableSortColumns={[0]}
-                      selectedRowIndices={selectedRowIndices}
-                      onRowClick={(rowIndex) => {
-                        const row = rows[rowIndex];
-                        if (!row) return;
-                        setSelectedIds((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(row.id)) next.delete(row.id);
-                          else next.add(row.id);
-                          return next;
-                        });
-                      }}
-                      onRowDoubleClick={(rowIndex) => {
-                        const row = rows[rowIndex];
-                        if (!row) return;
-                        if (isMasterCategory && canWrite) {
-                          openQuickEdit(row);
-                          return;
-                        }
-                        router.push(getDetailHref(row.id));
-                      }}
-                      rowContextMenu={(rowIndex) => {
-                        const rowItem = rows[rowIndex];
-                        if (!rowItem) return null;
-                        return (
+                      <>
+                        <ContextMenuLabel>{category.label} Actions</ContextMenuLabel>
+                        <ContextMenuItem onSelect={() => router.push(getDetailHref(rowItem.id))}>
+                          <Eye className="mr-1 size-4" />
+                          Detail
+                        </ContextMenuItem>
+                        {category.resource === "devices" && canTraceTopology ? (
                           <>
-                            <ContextMenuLabel>{category.label} Actions</ContextMenuLabel>
-                            <ContextMenuItem onSelect={() => router.push(getDetailHref(rowItem.id))}>
-                              <Eye className="mr-1 size-4" />
-                              Detail
+                            <ContextMenuItem onSelect={() => router.push(getTraceHref(rowItem))}>
+                              <Waypoints className="mr-1 size-4" />
+                              Trace Device
                             </ContextMenuItem>
-                            {category.resource === "devices" && canTraceTopology ? (
-                              <>
-                                <ContextMenuItem onSelect={() => router.push(getTraceHref(rowItem))}>
-                                  <Waypoints className="mr-1 size-4" />
-                                  Trace Device
-                                </ContextMenuItem>
-                              </>
-                            ) : null}
-                            {canWrite && renameConfig ? (
-                              <ContextMenuItem onSelect={() => openRename(rowItem)}>
-                                <Pencil className="mr-1 size-4" />
-                                Rename
+                          </>
+                        ) : null}
+                        {canWrite && renameConfig ? (
+                          <ContextMenuItem onSelect={() => openRename(rowItem)}>
+                            <Pencil className="mr-1 size-4" />
+                            Rename
+                          </ContextMenuItem>
+                        ) : null}
+                        {canWrite && isMasterCategory ? (
+                          <ContextMenuItem onSelect={() => openQuickEdit(rowItem)}>
+                            <Pencil className="mr-1 size-4" />
+                            Quick Edit
+                          </ContextMenuItem>
+                        ) : null}
+                        {canWrite && isSoftDeleteResource && isArchived(rowItem) ? (
+                          <ContextMenuItem onSelect={() => void submitRestore(rowItem)}>
+                            <RotateCcw className="mr-1 size-4" />
+                            Restore
+                          </ContextMenuItem>
+                        ) : null}
+                        {canWrite ? (
+                          <>
+                            <ContextMenuSeparator />
+                            {!isSoftDeleteResource || !isArchived(rowItem) ? (
+                              <ContextMenuItem variant="destructive" onSelect={() => setDeleteTarget(rowItem)}>
+                                <Trash2 className="mr-1 size-4" />
+                                {isSoftDeleteResource ? "Archive" : "Delete"}
                               </ContextMenuItem>
-                            ) : null}
-                            {canWrite && isMasterCategory ? (
-                              <ContextMenuItem onSelect={() => openQuickEdit(rowItem)}>
-                                <Pencil className="mr-1 size-4" />
-                                Quick Edit
-                              </ContextMenuItem>
-                            ) : null}
-                            {canWrite && isSoftDeleteResource && isArchived(rowItem) ? (
-                              <ContextMenuItem onSelect={() => void submitRestore(rowItem)}>
-                                <RotateCcw className="mr-1 size-4" />
-                                Restore
-                              </ContextMenuItem>
-                            ) : null}
-                            {canWrite ? (
-                              <>
-                                <ContextMenuSeparator />
-                                {!isSoftDeleteResource || !isArchived(rowItem) ? (
-                                  <ContextMenuItem variant="destructive" onSelect={() => setDeleteTarget(rowItem)}>
-                                    <Trash2 className="mr-1 size-4" />
-                                    {isSoftDeleteResource ? "Archive" : "Delete"}
-                                  </ContextMenuItem>
-                                ) : null}
-                              </>
                             ) : null}
                           </>
-                        );
-                      }}
-                    />
-                  </TooltipProvider>
-                </div>
+                        ) : null}
+                      </>
+                    );
+                  }}
+                />
               </>
             )}
 

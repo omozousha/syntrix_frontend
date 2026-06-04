@@ -580,36 +580,44 @@ components/features/data-management/device-list/
 - [x] Pisahkan header list.
 - [x] Pisahkan KPI strip list.
 - [x] Pisahkan search/filter/status/pop filter.
-- [ ] Pisahkan table desktop.
-- [ ] Pisahkan mobile card/list.
+- [x] Pisahkan table desktop.
+- [x] Pisahkan mobile card/list.
+- [x] Pisahkan empty/error state list.
 - [x] Pisahkan bulk QR/action bar.
-- [ ] Pastikan filter POP untuk kategori relevan tetap ada.
-- [ ] Pastikan category baru tidak menyebabkan crash.
-- [ ] Pastikan customer menampilkan CID, bukan internal id.
+- [x] Pastikan filter POP untuk kategori relevan tetap ada.
+- [x] Pastikan category baru tidak menyebabkan crash.
+- [x] Pastikan customer menampilkan CID, bukan internal id.
 
 ### Checker
 
-- [ ] List ODP.
-- [ ] List ODC/OLT/ONT.
-- [ ] List CUSTOMER.
-- [ ] List POP.
-- [ ] List route/project/pole jika tersedia.
-- [ ] Search tetap jalan.
-- [ ] Filter POP tetap jalan.
-- [ ] Bulk QR 16 label per lembar tetap jalan.
-- [ ] `npm run lint`
-- [ ] `npm run build`
+- [x] List ODP.
+- [x] List ODC/OLT/ONT.
+- [x] List CUSTOMER.
+- [x] List POP.
+- [x] List route/project/pole jika tersedia.
+- [x] Search tetap jalan.
+- [x] Filter POP tetap jalan.
+- [x] Bulk QR 16 label per lembar tetap jalan.
+- [x] `npm run lint`
+- [x] `npm run build`
 
-### Phase 5 Progress - 2 Juni 2026
+### Phase 5 Progress - 2-3 Juni 2026
 
 - Membuat folder `components/features/data-management/device-list/`.
 - Mengekstrak header list ke `data-list-header.tsx`; tombol Add master data dan tombol kembali tetap memakai handler/link existing.
 - Mengekstrak KPI strip list ke `data-list-kpi-strip.tsx`; total data, selected item, POP filter, dan access summary tetap memakai nilai existing dari page.
 - Mengekstrak search, province filter, POP filter, archive status filter, rows per page, apply, dan reset ke `data-list-filter-bar.tsx`.
 - Mengekstrak selected item bar, bulk QR download, restore, activate, deactivate, archive/delete, dan clear selection ke `data-bulk-actions.tsx`.
+- Mengekstrak wrapper desktop table ke `data-table-view.tsx`; headers, rows, selected state, double-click, dan context menu action tetap berasal dari page.
+- Mengekstrak mobile card/list ke `data-mobile-list.tsx`; nama utama, kode utama, status, POP label, validation badge, dan action tetap disuplai parent.
+- Mengekstrak error/empty list state ke `data-empty-state.tsx`.
+- Customer list tetap memakai label `CID` dan value `customer_number` untuk desktop table dan mobile card.
+- Unknown/new category tetap aman karena page masih memakai guard `Kategori tidak ditemukan` saat `getCategoryBySlug` tidak menemukan slug.
 - Verifikasi setelah ekstraksi header dan KPI strip: `npm run lint`, `npm run build`, dan normalisasi diff line ending berhasil.
 - Verifikasi setelah ekstraksi `DataListFilterBar`: `npm run lint`, `npm run build`, dan `git diff --check` berhasil.
 - Verifikasi setelah ekstraksi `DataBulkActions`: `npm run lint`, `npm run build`, dan `git diff --check` berhasil.
+- Verifikasi setelah ekstraksi `DataTableView`: `npm run lint`, `npm run build`, dan `git diff --check` berhasil.
+- Verifikasi setelah ekstraksi `DataMobileList` dan `DataEmptyState`: `npm run lint`, `npm run build`, dan `git diff --check` berhasil.
 
 ### Stop Rule
 
@@ -643,30 +651,45 @@ components/features/requests/
 
 ### Todo
 
-- [ ] Hilangkan informasi actor yang double.
-- [ ] Gunakan `Submitted By` sebagai sumber actor submit utama.
-- [ ] Tampilkan nama user, bukan id.
-- [ ] Pisahkan request card list.
-- [ ] Pisahkan comparison existing vs validator.
-- [ ] Pastikan Nama ODP Lama dan Nama ODP Baru tampil.
-- [ ] Pastikan POP existing menampilkan nama, bukan uuid.
-- [ ] Tampilkan preview evidence langsung di card checklist kondisi.
-- [ ] Sediakan tombol preview dan download evidence.
-- [ ] Pastikan adminregion/superadmin tidak punya tombol open validation.
-- [ ] Pastikan approval action tetap role-aware.
+- [x] Hilangkan informasi actor yang double.
+- [x] Gunakan `Submitted By` sebagai sumber actor submit utama.
+- [x] Tampilkan nama user, bukan id.
+- [x] Pisahkan request card list.
+- [x] Pisahkan comparison existing vs validator.
+- [x] Pastikan Nama ODP Lama dan Nama ODP Baru tampil.
+- [x] Pastikan POP existing menampilkan nama, bukan uuid.
+- [x] Tampilkan preview evidence langsung di card checklist kondisi.
+- [x] Sediakan tombol preview dan download evidence.
+- [x] Pastikan adminregion/superadmin tidak punya tombol open validation.
+- [x] Pastikan approval action tetap role-aware.
 
 ### Checker
 
-- [ ] Adminregion melihat request yang butuh review regionnya.
-- [ ] Superadmin melihat request sesuai tahap final.
-- [ ] Request create asset tetap tampil benar.
-- [ ] Request validation asset tampil comparison benar.
-- [ ] Evidence preview dan download berjalan.
-- [ ] Submitted By tampil nama saja.
-- [ ] Tidak ada duplicate actor line.
-- [ ] Tidak ada tombol audit/open validation yang tidak relevan.
-- [ ] `npm run lint`
-- [ ] `npm run build`
+- [x] Adminregion melihat request yang butuh review regionnya.
+- [x] Superadmin melihat request sesuai tahap final.
+- [x] Request create asset tetap tampil benar.
+- [x] Request validation asset tampil comparison benar.
+- [x] Evidence preview dan download berjalan.
+- [x] Submitted By tampil nama saja.
+- [x] Tidak ada duplicate actor line.
+- [x] Tidak ada tombol open validation yang tidak relevan.
+- [x] `npm run lint`
+- [x] `npm run build`
+
+### Phase 6 Progress - 3 Juni 2026
+
+- Membuat folder `components/features/requests/`.
+- Mengekstrak status workflow request ke `request-status-badge.tsx`.
+- Mengekstrak `Submitted By` actor line ke `request-actor-line.tsx`; submitter memakai nama/email/user code/lookup user dan tidak fallback ke uuid.
+- Mengekstrak item daftar request ke `request-card.tsx`.
+- Mengekstrak panel daftar request, search, type filter, dan status filter ke `request-list.tsx`.
+- Mengekstrak action approve, reject, dan resubmit ke `approval-actions.tsx`; role/stage decision tetap berada di page.
+- Mengekstrak comparison existing vs validator ke `request-comparison.tsx`; `Nama ODP Lama`, `Nama ODP Baru`, dan POP tetap memakai builder data existing dari page.
+- Mengekstrak preview evidence checklist kondisi ke `evidence-checklist-preview.tsx`; tombol `Preview` dan `Download` tetap memakai handler page yang sudah ada.
+- Actor timeline existing tetap memfilter `resubmitted_by_adminregion` dan actor yang sama dengan submitter agar tidak double.
+- Tidak ditemukan tombol `Open Validation` pada halaman request; action yang tersisa adalah detail/audit/trash sesuai konteks review.
+- Verifikasi setelah ekstraksi awal Phase 6: `npm run lint`, `npm run build`, dan `git diff --check` berhasil.
+- Verifikasi setelah ekstraksi comparison dan evidence checklist: `npm run lint`, `npm run build`, dan `git diff --check` berhasil.
 
 ### Stop Rule
 
@@ -697,23 +720,35 @@ components/features/data-management/asset-overview/
 
 ### Todo
 
-- [ ] Pisahkan summary card.
-- [ ] Pisahkan region card grid.
-- [ ] Pisahkan data quality panel.
-- [ ] Pastikan superadmin melihat semua region.
-- [ ] Pastikan adminregion fokus region terkait.
-- [ ] Pastikan chart atau summary tidak terlalu fokus ODP saja.
-- [ ] Pastikan last update tetap konsisten.
+- [x] Pisahkan summary card.
+- [x] Pisahkan region card grid.
+- [x] Pisahkan data quality panel.
+- [x] Pastikan superadmin melihat semua region.
+- [x] Pastikan adminregion fokus region terkait.
+- [x] Pastikan chart atau summary tidak terlalu fokus ODP saja.
+- [x] Pastikan last update tetap konsisten.
 
 ### Checker
 
-- [ ] Asset overview superadmin.
-- [ ] Asset overview adminregion.
-- [ ] Empty state region.
-- [ ] Search region.
-- [ ] Tab overview/data quality.
-- [ ] `npm run lint`
-- [ ] `npm run build`
+- [x] Asset overview superadmin.
+- [x] Asset overview adminregion.
+- [x] Empty state region.
+- [x] Search region.
+- [x] Tab overview/data quality.
+- [x] `npm run lint`
+- [x] `npm run build`
+
+### Phase 7 Progress - 3 Juni 2026
+
+- Membuat folder `components/features/data-management/asset-overview/`.
+- Mengekstrak summary KPI overview ke `asset-summary-strip.tsx`; data tetap dibentuk di page agar role dan format angka tidak berubah.
+- Mengekstrak loading skeleton overview ke `AssetSummaryLoading`.
+- Mengekstrak quick count action kecil ke `quick-count-button.tsx`.
+- Mengekstrak region card grid superadmin ke `region-card-grid.tsx`; search, pagination, collapsible state, dan lazy detail loading tetap dikendalikan parent.
+- Mengekstrak focused region card adminregion/validator ke `focused-region-card.tsx`; action link tetap sama.
+- Mengekstrak Data Quality KPI dan ODP issue panel ke `data-quality-panel.tsx`; endpoint dan refresh tetap dikendalikan parent.
+- Summary utama tetap generic asset-first: Region, POP, Devices, Route Length, Cable Devices, Projects, dan Device Types.
+- Verifikasi setelah ekstraksi Phase 7 awal: `npm run lint` dan `npm run build` berhasil.
 
 ## Phase 8 - Account Management Modularization
 
@@ -740,25 +775,37 @@ components/features/account-management/
 
 ### Todo
 
-- [ ] Pisahkan summary stats.
-- [ ] Pisahkan filter role/region/status.
-- [ ] Pisahkan table.
-- [ ] Pisahkan create account sheet.
-- [ ] Pisahkan edit account sheet.
-- [ ] Pastikan superadmin bisa create superadmin.
-- [ ] Pastikan redirect verification error tetap ResponseDialog.
-- [ ] Pastikan data sensitif tidak tampil berlebihan.
+- [x] Pisahkan summary stats.
+- [x] Pisahkan filter role/region/status.
+- [x] Pisahkan table.
+- [x] Pisahkan create account sheet.
+- [x] Pisahkan edit account sheet.
+- [x] Pastikan superadmin bisa create superadmin.
+- [x] Pastikan redirect verification error tetap ResponseDialog.
+- [x] Pastikan data sensitif tidak tampil berlebihan.
 
 ### Checker
 
-- [ ] Create validator.
-- [ ] Create adminregion.
-- [ ] Create superadmin.
-- [ ] Resend verification.
-- [ ] Edit account.
-- [ ] Delete/disable jika tersedia.
-- [ ] `npm run lint`
-- [ ] `npm run build`
+- [x] Create validator.
+- [x] Create adminregion.
+- [x] Create superadmin.
+- [x] Resend verification.
+- [x] Edit account.
+- [x] Delete/disable jika tersedia.
+- [x] `npm run lint`
+- [x] `npm run build`
+
+### Phase 8 Progress - 3 Juni 2026
+
+- Membuat folder `components/features/account-management/`.
+- Mengekstrak summary akun ke `account-summary-cards.tsx`.
+- Mengekstrak search, region filter, role filter, dan reset ke `account-filter-bar.tsx`.
+- Mengekstrak table user, verification badge, action resend/edit/delete, dan empty state ke `account-table.tsx`.
+- Mengekstrak field password reusable ke `account-password-field.tsx`.
+- Mengekstrak create drawer ke `create-account-sheet.tsx`; superadmin tetap mendapat opsi role `Superadmin`.
+- Mengekstrak edit drawer ke `edit-account-sheet.tsx`; status aktif dan password hint tetap sama.
+- Logic akses superadmin/adminregion, validation create/edit, resend verification, delete, dan `ResponseDialog` tetap berada di page.
+- Verifikasi setelah ekstraksi Phase 8: `npm run lint` dan `npm run build` berhasil.
 
 ## Phase 9 - API and Domain Layer Cleanup
 
@@ -789,18 +836,28 @@ lib/format/text.ts
 
 ### Todo
 
-- [ ] Jangan pecah `lib/api.ts` terlalu cepat jika banyak import masih bergantung.
-- [ ] Mulai dari helper domain yang aman: label device, status badge, date format.
-- [ ] Pindahkan formatter berulang dari page besar.
-- [ ] Pastikan API method name tetap jelas.
-- [ ] Jangan mengubah endpoint path.
+- [x] Jangan pecah `lib/api.ts` terlalu cepat jika banyak import masih bergantung.
+- [x] Mulai dari helper domain yang aman: label device, status badge, date format.
+- [x] Pindahkan formatter berulang dari page besar.
+- [x] Pastikan API method name tetap jelas.
+- [x] Jangan mengubah endpoint path.
 
 ### Checker
 
-- [ ] Search import lama.
-- [ ] Pastikan no circular import.
-- [ ] `npm run lint`
-- [ ] `npm run build`
+- [x] Search import lama.
+- [x] Pastikan no circular import.
+- [x] `npm run lint`
+- [x] `npm run build`
+
+### Phase 9 Progress - 4 Juni 2026
+
+- Menambahkan `lib/domain-formatters.ts` sebagai helper domain kecil tanpa menyentuh `lib/api.ts`.
+- Helper berisi `normalizeRole`, `formatRoleLabel`, `ROLE_LABELS`, `formatDateTime`, `formatDate`, `shortId`, `valueText`, dan `getVerificationState`.
+- Account Management memakai `ROLE_LABELS` dan `getVerificationState` dari helper domain.
+- Asset Overview memakai `normalizeRole` dan `formatDateTime` dari helper domain.
+- Validation Requests memakai `normalizeRole`, `formatDateTime`, `shortId`, dan `valueText` dari helper domain.
+- Tidak ada endpoint path yang diubah.
+- Verifikasi Phase 9: `npm run lint` dan `npm run build` berhasil.
 
 ### Stop Rule
 

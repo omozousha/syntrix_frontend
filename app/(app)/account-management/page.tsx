@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, MailCheck, MailWarning, Send, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { ShieldCheck, UserPlus } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
-import { OperationalState } from "@/components/operational-ui";
+import { AccountFilterBar, AccountSummaryCards, AccountTable, CreateAccountSheet, EditAccountSheet } from "@/components/features/account-management";
 import { ResponseDialog } from "@/components/response-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -17,24 +17,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import type { ComboboxOption } from "@/components/ui/combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { SimpleTable } from "@/components/simple-table";
 import { useSession } from "@/components/session-context";
 import { apiFetch, type RegionsListResponse, type UsersListResponse } from "@/lib/api";
+import { getVerificationState, ROLE_LABELS } from "@/lib/domain-formatters";
 
 type RoleName = "admin" | "user_region" | "user_all_region";
 type UserRow = UsersListResponse["data"][number];
@@ -62,12 +51,6 @@ type ResponseDialogState = {
   title: string;
   description: string;
   variant: "success" | "error";
-};
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: "Superadmin",
-  user_all_region: "Admin Region",
-  user_region: "Validator",
 };
 
 async function fetchAllRegions(token: string) {
@@ -246,6 +229,12 @@ export default function AccountManagementPage() {
     const pending = users.filter((user) => getVerificationState(user) === "pending").length;
     return { total, verified, active, pending };
   }, [users]);
+
+  function resetFilters() {
+    setFilterRegion("__all__");
+    setFilterRole(isAdminRegion ? "user_region" : "__all__");
+    setSearchTerm("");
+  }
 
   if (!canManageAccounts) return null;
 
@@ -533,12 +522,7 @@ export default function AccountManagementPage() {
           </Alert>
         ) : null}
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard icon={<Users className="size-3.5" />} label="Total Account" value={stats.total} />
-          <MetricCard icon={<MailCheck className="size-3.5" />} label="Verified Email" value={stats.verified} />
-          <MetricCard icon={<ShieldCheck className="size-3.5" />} label="Active" value={stats.active} />
-          <MetricCard icon={<MailWarning className="size-3.5" />} label="Pending Verify" value={stats.pending} />
-        </div>
+        <AccountSummaryCards stats={stats} />
 
         <Card size="sm">
           <CardHeader className="pb-1">
@@ -546,290 +530,64 @@ export default function AccountManagementPage() {
             <CardDescription>List user aplikasi, scope region, status aktif, dan status verifikasi email.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="search_user">Search</Label>
-                <Input
-                  id="search_user"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Cari nama, email, atau user code..."
-                />
-              </div>
+            <AccountFilterBar
+              searchTerm={searchTerm}
+              filterRegion={filterRegion}
+              filterRole={filterRole}
+              regionOptions={[{ value: "__all__", label: "Semua region" }, ...regionOptions]}
+              roleOptions={filterRoleOptions}
+              roleDisabled={isAdminRegion}
+              onSearchTermChange={setSearchTerm}
+              onFilterRegionChange={setFilterRegion}
+              onFilterRoleChange={setFilterRole}
+              onReset={resetFilters}
+            />
 
-              <div className="space-y-1.5">
-                <Label>Region</Label>
-                <Combobox
-                  value={filterRegion}
-                  onValueChange={setFilterRegion}
-                  placeholder="Semua region"
-                  searchPlaceholder="Cari region..."
-                  options={[{ value: "__all__", label: "Semua region" }, ...regionOptions]}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Role</Label>
-                <Combobox
-                  value={filterRole}
-                  onValueChange={setFilterRole}
-                  placeholder="Semua role"
-                  searchPlaceholder="Cari role..."
-                  options={filterRoleOptions}
-                  disabled={isAdminRegion}
-                />
-              </div>
-
-              <div className="flex items-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setFilterRegion("__all__");
-                    setFilterRole(isAdminRegion ? "user_region" : "__all__");
-                    setSearchTerm("");
-                  }}
-                >
-                  Reset Filter
-                </Button>
-              </div>
-            </div>
-
-            {filteredUsers.length ? (
-              <SimpleTable
-                headers={["Name", "Email", "Verified", "Role", "Region", "Active", "Actions"]}
-                rows={filteredUsers.map((item) => [
-                  <div key={`${item.id}-name`}>
-                    <p className="font-medium">{item.full_name || "-"}</p>
-                    <p className="text-xs text-muted-foreground">{item.user_code || "-"}</p>
-                  </div>,
-                  item.email,
-                  <VerificationBadge key={`${item.id}-verified`} user={item} />,
-                  <Badge key={`${item.id}-role`} variant="outline">{ROLE_LABELS[item.role_name] || item.role_name}</Badge>,
-                  item.default_region_id ? regionMap.get(item.default_region_id) || item.default_region_id : "-",
-                  item.is_active ? <Badge key="active">Active</Badge> : <Badge key="inactive" variant="secondary">Inactive</Badge>,
-                  <div key={item.id} className="flex flex-wrap gap-2">
-                    {getVerificationState(item) !== "verified" ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1"
-                        onClick={() => void resendVerification(item)}
-                        disabled={!canManageUser(item) || resendLoadingId === item.id}
-                      >
-                        <Send className="size-3.5" />
-                        {resendLoadingId === item.id ? "Sending..." : "Resend"}
-                      </Button>
-                    ) : null}
-                    <Button size="sm" variant="outline" onClick={() => openEditDrawer(item)} disabled={!canManageUser(item)}>
-                      Edit
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => openDeleteDialog(item)} disabled={!canManageUser(item)}>
-                      Hapus
-                    </Button>
-                  </div>,
-                ])}
-              />
-            ) : (
-              <OperationalState
-                title="Tidak ada akun"
-                description="Tidak ada akun yang cocok dengan filter role, region, atau pencarian saat ini."
-                actionLabel="Reset Filter"
-                onAction={() => {
-                  setFilterRegion("__all__");
-                  setFilterRole(isAdminRegion ? "user_region" : "__all__");
-                  setSearchTerm("");
-                }}
-              />
-            )}
+            <AccountTable
+              users={filteredUsers}
+              regionMap={regionMap}
+              roleLabels={ROLE_LABELS}
+              resendLoadingId={resendLoadingId}
+              canManageUser={(user) => canManageUser(user as UserRow)}
+              onEdit={(user) => openEditDrawer(user as UserRow)}
+              onDelete={(user) => openDeleteDialog(user as UserRow)}
+              onResendVerification={(user) => void resendVerification(user as UserRow)}
+              onResetFilter={resetFilters}
+            />
           </CardContent>
         </Card>
 
-        <Sheet open={createOpen} onOpenChange={setCreateOpen}>
-          <SheetContent side="right" className="w-full sm:max-w-md">
-            <SheetHeader>
-              <SheetTitle>Create Account</SheetTitle>
-              <SheetDescription>Akun baru wajib verifikasi email sebelum bisa aktif digunakan.</SheetDescription>
-            </SheetHeader>
+        <CreateAccountSheet
+          open={createOpen}
+          saving={createSaving}
+          form={createForm}
+          roleOptions={assignableRoleOptions}
+          regionOptions={[...(isSuperadmin ? [{ value: "__none__", label: "None" }] : []), ...regionOptions]}
+          roleDisabled={isAdminRegion}
+          showPassword={showCreatePassword}
+          showConfirmPassword={showCreateConfirmPassword}
+          onOpenChange={setCreateOpen}
+          onFormChange={(nextForm) => setCreateForm(nextForm as CreateFormState)}
+          onShowPasswordChange={setShowCreatePassword}
+          onShowConfirmPasswordChange={setShowCreateConfirmPassword}
+          onSubmit={() => void submitCreate()}
+        />
 
-            <div className="space-y-4 p-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="create_full_name">Full Name</Label>
-                <Input
-                  id="create_full_name"
-                  value={createForm.full_name}
-                  onChange={(event) => setCreateForm((prev) => ({ ...prev, full_name: event.target.value }))}
-                  placeholder="Nama lengkap"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="create_email">Email</Label>
-                <Input
-                  id="create_email"
-                  type="email"
-                  value={createForm.email}
-                  onChange={(event) => setCreateForm((prev) => ({ ...prev, email: event.target.value }))}
-                  placeholder="user@syntrix.local"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Role</Label>
-                <Combobox
-                  value={createForm.role_name}
-                  onValueChange={(value) =>
-                    setCreateForm((prev) => ({ ...prev, role_name: value as RoleName }))
-                  }
-                  options={assignableRoleOptions}
-                  placeholder="Pilih role"
-                  searchPlaceholder="Cari role..."
-                  disabled={isAdminRegion}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Default Region</Label>
-                <Combobox
-                  value={createForm.default_region_id}
-                  onValueChange={(value) => setCreateForm((prev) => ({ ...prev, default_region_id: value }))}
-                  options={[...(isSuperadmin ? [{ value: "__none__", label: "None" }] : []), ...regionOptions]}
-                  placeholder="Pilih region"
-                  searchPlaceholder="Cari region..."
-                />
-                <p className="text-xs text-muted-foreground">
-                  Daftar region diambil dari Master Data Regions. Adminregion hanya melihat region yang menjadi scope-nya.
-                </p>
-              </div>
-
-              <PasswordField
-                id="create_password"
-                label="Password"
-                value={createForm.password}
-                visible={showCreatePassword}
-                onVisibleChange={setShowCreatePassword}
-                onChange={(value) => setCreateForm((prev) => ({ ...prev, password: value }))}
-                placeholder="Minimal 8 karakter"
-              />
-
-              <PasswordField
-                id="create_confirm_password"
-                label="Confirm Password"
-                value={createForm.confirm_password}
-                visible={showCreateConfirmPassword}
-                onVisibleChange={setShowCreateConfirmPassword}
-                onChange={(value) => setCreateForm((prev) => ({ ...prev, confirm_password: value }))}
-                placeholder="Ulangi password"
-              />
-            </div>
-
-            <SheetFooter>
-              <Button variant="outline" onClick={() => setCreateOpen(false)}>
-                Batal
-              </Button>
-              <Button onClick={() => void submitCreate()} disabled={createSaving}>
-                {createSaving ? "Membuat..." : "Create Account"}
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
-
-        <Sheet open={editOpen} onOpenChange={setEditOpen}>
-          <SheetContent side="right" className="w-full sm:max-w-md">
-            <SheetHeader>
-              <SheetTitle>Edit Account</SheetTitle>
-              <SheetDescription>Ubah profil, role, region, dan status aktif akun.</SheetDescription>
-            </SheetHeader>
-
-            <div className="space-y-4 p-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="user_full_name">Full Name</Label>
-                <Input
-                  id="user_full_name"
-                  value={editForm.full_name}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, full_name: event.target.value }))}
-                  placeholder="Nama lengkap"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Role</Label>
-                <Combobox
-                  value={editForm.role_name}
-                  onValueChange={(value) => setEditForm((prev) => ({ ...prev, role_name: value as RoleName }))}
-                  options={assignableRoleOptions}
-                  placeholder="Pilih role"
-                  searchPlaceholder="Cari role..."
-                  disabled={isAdminRegion}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Default Region</Label>
-                <Combobox
-                  value={editForm.default_region_id}
-                  onValueChange={(value) => setEditForm((prev) => ({ ...prev, default_region_id: value }))}
-                  options={[...(isSuperadmin ? [{ value: "__none__", label: "None" }] : []), ...regionOptions]}
-                  placeholder="Pilih region"
-                  searchPlaceholder="Cari region..."
-                />
-                <p className="text-xs text-muted-foreground">
-                  Daftar region diambil dari Master Data Regions. Adminregion hanya melihat region yang menjadi scope-nya.
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Status Aktif</Label>
-                <Combobox
-                  value={editForm.is_active}
-                  onValueChange={(value) =>
-                    setEditForm((prev) => ({ ...prev, is_active: value as EditFormState["is_active"] }))
-                  }
-                  options={[
-                    { value: "true", label: "Aktif" },
-                    { value: "false", label: "Nonaktif" },
-                  ]}
-                  placeholder="Pilih status"
-                  searchPlaceholder="Cari status..."
-                />
-              </div>
-
-              <PasswordField
-                id="new_password"
-                label="Password Baru"
-                value={editForm.new_password}
-                visible={showNewPassword}
-                onVisibleChange={setShowNewPassword}
-                onChange={(value) => setEditForm((prev) => ({ ...prev, new_password: value }))}
-                placeholder="Kosongkan jika tidak diganti"
-              />
-
-              <PasswordField
-                id="confirm_password"
-                label="Konfirmasi Password"
-                value={editForm.confirm_password}
-                visible={showConfirmPassword}
-                onVisibleChange={setShowConfirmPassword}
-                onChange={(value) => setEditForm((prev) => ({ ...prev, confirm_password: value }))}
-                placeholder="Ulangi password baru"
-              />
-
-              <p className="text-xs text-muted-foreground">
-                Password user lain tidak bisa ditampilkan. Ganti password hanya tersedia untuk akun yang sedang login.
-              </p>
-            </div>
-
-            <SheetFooter>
-              <Button variant="outline" onClick={() => setEditOpen(false)}>
-                Batal
-              </Button>
-              <Button onClick={() => void submitEdit()} disabled={editSaving}>
-                {editSaving ? "Menyimpan..." : "Simpan"}
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
+        <EditAccountSheet
+          open={editOpen}
+          saving={editSaving}
+          form={editForm}
+          roleOptions={assignableRoleOptions}
+          regionOptions={[...(isSuperadmin ? [{ value: "__none__", label: "None" }] : []), ...regionOptions]}
+          roleDisabled={isAdminRegion}
+          showPassword={showNewPassword}
+          showConfirmPassword={showConfirmPassword}
+          onOpenChange={setEditOpen}
+          onFormChange={(nextForm) => setEditForm(nextForm as EditFormState)}
+          onShowPasswordChange={setShowNewPassword}
+          onShowConfirmPasswordChange={setShowConfirmPassword}
+          onSubmit={() => void submitEdit()}
+        />
 
         <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <AlertDialogContent>
@@ -866,93 +624,5 @@ export default function AccountManagementPage() {
         />
       </div>
     </ScrollArea>
-  );
-}
-
-function MetricCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
-  return (
-    <Card size="sm">
-      <CardContent className="flex items-center justify-between gap-2 p-3">
-        <div>
-          <p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
-          <p className="text-xl font-semibold">{value}</p>
-        </div>
-        <div className="rounded-md border bg-muted p-1.5 text-muted-foreground">{icon}</div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function VerificationBadge({ user }: { user: UserRow }) {
-  const state = getVerificationState(user);
-  if (state === "verified") {
-    return (
-      <Badge className="gap-1">
-        <MailCheck className="size-3" />
-        Verified
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="secondary" className="gap-1">
-      <MailWarning className="size-3" />
-      {state === "unknown" ? "Unknown" : state === "pending" ? "Pending" : "Unverified"}
-    </Badge>
-  );
-}
-
-function getVerificationState(user: UserRow) {
-  if (user.email_verified === true) return "verified";
-  if (user.email_verified === false) {
-    return user.verification_status === "pending" ? "pending" : "unverified";
-  }
-  if (user.verification_status === "verified") return "verified";
-  if (user.verification_status === "pending") return "pending";
-  if (user.verification_status === "unverified") return "unverified";
-  return "unknown";
-}
-
-function PasswordField({
-  id,
-  label,
-  value,
-  visible,
-  onVisibleChange,
-  onChange,
-  placeholder,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  visible: boolean;
-  onVisibleChange: (value: boolean) => void;
-  onChange: (value: string) => void;
-  placeholder: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="relative">
-        <Input
-          id={id}
-          type={visible ? "text" : "password"}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-          autoComplete="new-password"
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="absolute top-1/2 right-2 -translate-y-1/2"
-          onClick={() => onVisibleChange(!visible)}
-        >
-          {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-          <span className="sr-only">Toggle password preview</span>
-        </Button>
-      </div>
-    </div>
   );
 }
