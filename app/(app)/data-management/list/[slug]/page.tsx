@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import Link from "next/link";
-import type { jsPDF as JsPdfDocument } from "jspdf";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -65,6 +64,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { buildCategoryApiPath, getCategoryBySlug } from "@/lib/data-management-config";
+import { buildDeviceQrHref, drawQrLabelPdf, formatQrPopLabel, loadDefaultQrLogoDataUrl } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
 
 const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() || "";
@@ -87,13 +87,6 @@ type RelationMaps = {
   manufacturers: Record<string, string>;
   brands: Record<string, string>;
   provinces: Record<string, string>;
-};
-type BulkQrLabelRow = {
-  deviceName: string;
-  deviceCode: string;
-  deviceType: string;
-  popName: string;
-  qrDataUrl: string;
 };
 type BulkActionType = "delete" | "activate" | "deactivate" | "restore";
 const DEVICE_ICON_OPTIONS = [
@@ -970,17 +963,22 @@ export default function DataManagementListPage() {
     setError("");
     setSuccess("");
     try {
+      const logoDataUrl = await loadDefaultQrLogoDataUrl().catch(() => "");
       const qrRows = await Promise.all(
         selectedRows.map(async (row) => ({
           deviceName: pick(row, ["device_name", "name"]),
           deviceCode: pick(row, ["device_id", "id"]),
           deviceType: pick(row, ["device_type_key"]),
-          popName: resolveRelationName(row.pop_id, popLabelById),
+          popName: formatQrPopLabel(
+            resolveRelationName(row.pop_id, popLabelById),
+            pick(row, ["pop_code", "pop_id"]),
+          ),
           qrDataUrl: await QRCode.toDataURL(buildDeviceDirectHref(category.slug, row), {
             width: 360,
             margin: 2,
-            errorCorrectionLevel: "M",
+            errorCorrectionLevel: "H",
           }),
+          logoDataUrl,
         })),
       );
       const { jsPDF } = await import("jspdf");
@@ -2290,54 +2288,12 @@ function resolveRelationName(value: unknown, map: Record<string, string>) {
 }
 
 function buildDeviceDirectHref(categorySlug: string, item: GenericItem) {
-  const isOdp = String(item.device_type_key || "").toUpperCase() === "ODP";
-  const path = isOdp ? `/field/odp/${item.id}` : `/data-management/list/${categorySlug}/${item.id}`;
-  const baseUrl = APP_BASE_URL.replace(/\/+$/, "");
-  if (baseUrl) return `${baseUrl}${path}`;
-  if (typeof window === "undefined") return path;
-  return `${window.location.origin}${path}`;
-}
-
-function drawQrLabelPdf(doc: JsPdfDocument, rows: BulkQrLabelRow[]) {
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 10;
-  const gap = 4;
-  const columns = 2;
-  const rowsPerPage = 8;
-  const labelWidth = (pageWidth - margin * 2 - gap * (columns - 1)) / columns;
-  const labelHeight = (pageHeight - margin * 2 - gap * (rowsPerPage - 1)) / rowsPerPage;
-
-  rows.forEach((row, index) => {
-    if (index > 0 && index % (columns * rowsPerPage) === 0) doc.addPage();
-    const pageIndex = index % (columns * rowsPerPage);
-    const column = pageIndex % columns;
-    const rowIndex = Math.floor(pageIndex / columns);
-    const x = margin + column * (labelWidth + gap);
-    const y = margin + rowIndex * (labelHeight + gap);
-
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(x, y, labelWidth, labelHeight, 3, 3);
-    doc.addImage(row.qrDataUrl, "PNG", x + 3, y + 3, 20, 20);
-    doc.setTextColor(15, 23, 42);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7);
-    doc.text(truncatePdfText(row.deviceName, 42), x + 27, y + 7);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(5.8);
-    doc.text(`ID: ${truncatePdfText(row.deviceCode, 44)}`, x + 27, y + 12);
-    doc.text(`Type: ${truncatePdfText(row.deviceType, 40)}`, x + 27, y + 16);
-    doc.text(`POP: ${truncatePdfText(row.popName, 43)}`, x + 27, y + 20);
-    doc.setTextColor(100, 116, 139);
-    doc.setFontSize(5);
-    doc.text("Scan QR untuk membuka detail/validasi device.", x + 27, y + 25);
+  return buildDeviceQrHref({
+    appBaseUrl: APP_BASE_URL,
+    categorySlug,
+    deviceId: item.id,
+    deviceTypeKey: String(item.device_type_key || ""),
   });
-}
-
-function truncatePdfText(value: string, maxLength: number) {
-  const text = value && value !== "-" ? value : "-";
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, Math.max(0, maxLength - 3))}...`;
 }
 
 function sanitizeFileName(value: string) {

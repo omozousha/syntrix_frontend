@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Clock, Inbox, RefreshCw, ShieldCheck } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
@@ -11,6 +11,7 @@ import { RequestCard } from "@/components/features/requests/request-card";
 import { RequestComparison } from "@/components/features/requests/request-comparison";
 import { RequestList } from "@/components/features/requests/request-list";
 import { RequestStatusBadge } from "@/components/features/requests/request-status-badge";
+import { RequestTypeBadge } from "@/components/features/requests/request-type-badge";
 import { OperationalKpiCard, OperationalState } from "@/components/operational-ui";
 import { ResponseDialog } from "@/components/response-dialog";
 import { useSession } from "@/components/session-context";
@@ -500,28 +501,32 @@ export default function ValidationRequestsPage() {
               onStatusFilterChange={(value) => setStatusFilter(value as RequestStatusFilter)}
             >
                 {filteredItems.length ? (
-                  filteredItems.map((item) => (
-                    <RequestCard
-                      key={item.id}
-                      selected={selected?.id === item.id}
-                      title={getOdpName(item)}
-                      typeLabel={getRequestType(item).label}
-                      status={item.current_status}
-                      summary={getRequestSummary(item, lookupLabels)}
-                      ownerLabel={getNextOwnerLabel(item.current_status)}
-                      updatedAt={formatDateTime(item.updated_at)}
-                      quickOpenHref={getQuickOpenHref(item)}
-                      onSelect={() => setSelectedId(item.id)}
-                      evidenceSlot={
-                        <EvidenceThumbStrip
-                          refs={normalizeEvidenceRefs(item.evidence_attachments)}
-                          thumbUrls={evidenceThumbUrls}
-                          label="Evidence"
-                          onPreview={previewEvidence}
-                        />
-                      }
-                    />
-                  ))
+                  filteredItems.map((item) => {
+                    const requestType = getRequestType(item);
+                    return (
+                      <RequestCard
+                        key={item.id}
+                        selected={selected?.id === item.id}
+                        title={getOdpName(item)}
+                        typeKind={requestType.kind}
+                        typeLabel={requestType.label}
+                        status={item.current_status}
+                        summary={getRequestSummary(item, lookupLabels)}
+                        ownerLabel={getNextOwnerLabel(item.current_status)}
+                        updatedAt={formatDateTime(item.updated_at)}
+                        quickOpenHref={getQuickOpenHref(item)}
+                        onSelect={() => setSelectedId(item.id)}
+                        evidenceSlot={
+                          <EvidenceThumbStrip
+                            refs={normalizeEvidenceRefs(item.evidence_attachments)}
+                            thumbUrls={evidenceThumbUrls}
+                            label="Evidence"
+                            onPreview={previewEvidence}
+                          />
+                        }
+                      />
+                    );
+                  })
                 ) : (
                   <OperationalState
                     title="Tidak ada request"
@@ -552,7 +557,9 @@ export default function ValidationRequestsPage() {
                 {selected ? (
                   <>
                     <div className="grid grid-cols-1 gap-2 md:grid-cols-3 xl:grid-cols-5">
-                      <Info title="Tipe Request" value={selectedType.label} />
+                      <InfoSlot title="Tipe Request">
+                        <RequestTypeBadge kind={selectedType.kind} label={selectedType.label} className="w-fit text-[10px]" />
+                      </InfoSlot>
                       <Info title="Device" value={getOdpName(selected)} />
                       <RequestActorLine value={getSubmitterText(selected, lookupLabels)} />
                       <Info title="Current Owner" value={getNextOwnerLabel(selected.current_status)} />
@@ -846,6 +853,15 @@ function Info({ title, value }: { title: string; value: string }) {
   );
 }
 
+function InfoSlot({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-md border bg-muted/20 px-2 py-1.5">
+      <p className="text-[10px] uppercase leading-4 text-muted-foreground">{title}</p>
+      <div className="mt-0.5 flex min-h-5 items-center">{children}</div>
+    </div>
+  );
+}
+
 function ActorTimelineCard({ item, lookupLabels }: { item: ValidationRequestItem; lookupLabels: LookupLabels }) {
   const submitterText = getSubmitterText(item, lookupLabels);
   const rows = [
@@ -1001,18 +1017,26 @@ function QueueSummaryChips({
 }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      <QueueSummaryChip label="Total" value={summary.total} />
-      <QueueSummaryChip label="Validation" value={summary.validation} />
-      <QueueSummaryChip label="Asset" value={summary.assetChanges} />
-      <QueueSummaryChip label="Rejected" value={summary.rejected} />
+      <QueueSummaryChip label="Total" value={summary.total} tone="slate" />
+      <QueueSummaryChip label="Validation" value={summary.validation} tone="emerald" />
+      <QueueSummaryChip label="Asset" value={summary.assetChanges} tone="sky" />
+      <QueueSummaryChip label="Rejected" value={summary.rejected} tone="rose" />
     </div>
   );
 }
 
-function QueueSummaryChip({ label, value }: { label: string; value: number }) {
+function QueueSummaryChip({ label, value, tone }: { label: string; value: number; tone: "slate" | "emerald" | "sky" | "rose" }) {
+  const toneClass =
+    tone === "emerald"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/35 dark:bg-emerald-500/15 dark:text-emerald-200"
+      : tone === "sky"
+        ? "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/35 dark:bg-sky-500/15 dark:text-sky-200"
+        : tone === "rose"
+          ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/35 dark:bg-rose-500/15 dark:text-rose-200"
+          : "border-border bg-muted/20 text-foreground";
   return (
-    <div className="inline-flex min-w-0 items-center gap-1 rounded-md border bg-muted/20 px-2 py-1">
-      <span className="text-[10px] uppercase leading-4 text-muted-foreground">{label}</span>
+    <div className={`inline-flex min-w-0 items-center gap-1 rounded-md border px-2 py-1 ${toneClass}`}>
+      <span className="text-[10px] uppercase leading-4 opacity-75">{label}</span>
       <span className="text-sm font-semibold leading-5">{value}</span>
     </div>
   );

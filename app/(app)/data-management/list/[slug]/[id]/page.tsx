@@ -39,6 +39,7 @@ import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-ut
 import { resolveAttachment } from "@/lib/attachment-utils";
 import { getCategoryBySlug } from "@/lib/data-management-config";
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
+import { buildDeviceQrHref, buildQrLabelPngDataUrl, formatQrPopLabel } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
 const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() || "";
 
@@ -428,10 +429,12 @@ export default function DataManagementDetailPage() {
   }, [category, item]);
   const deviceDirectHref = useMemo(() => {
     if (!category || !item) return "";
-    const path = isOdpDevice ? `/field/odp/${item.id}` : `/data-management/list/${category.slug}/${item.id}`;
-    if (APP_BASE_URL) return `${APP_BASE_URL.replace(/\/+$/, "")}${path}`;
-    if (typeof window === "undefined") return path;
-    return `${window.location.origin}${path}`;
+    return buildDeviceQrHref({
+      appBaseUrl: APP_BASE_URL,
+      categorySlug: category.slug,
+      deviceId: item.id,
+      deviceTypeKey: isOdpDevice ? "ODP" : valueOf(item.device_type_key),
+    });
   }, [category, isOdpDevice, item]);
 
   useEffect(() => {
@@ -1015,7 +1018,7 @@ export default function DataManagementDetailPage() {
     QRCode.toDataURL(deviceDirectHref, {
       width: 240,
       margin: 2,
-      errorCorrectionLevel: "M",
+      errorCorrectionLevel: "H",
     })
       .then((url) => {
         if (!cancelled) setQrDataUrl(url);
@@ -2500,77 +2503,6 @@ function getEffectiveDeviceValidationStatus(item: Record<string, unknown>, reque
 function isFinalValidationRecord(record: OdpValidationRecord) {
   const requestStatus = String(record.request_status || "").trim().toLowerCase();
   return !requestStatus || requestStatus === "validated";
-}
-
-function formatQrPopLabel(popName: string, popCode: string) {
-  const name = valueOf(popName, "-");
-  const code = valueOf(popCode);
-  if (!code || code === "-" || code === name) return name;
-  return `${name} | ${code}`;
-}
-
-async function buildQrLabelPngDataUrl({
-  deviceName,
-  deviceCode,
-  deviceType,
-  popName,
-  qrDataUrl,
-}: {
-  deviceName: string;
-  deviceCode: string;
-  deviceType: string;
-  popName: string;
-  qrDataUrl: string;
-}) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 600;
-  canvas.height = 240;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Browser tidak mendukung canvas export.");
-
-  const qrImage = await loadImage(qrDataUrl);
-  context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.imageSmoothingEnabled = false;
-  context.drawImage(qrImage, 12, 18, 175, 175);
-
-  context.fillStyle = "#0f172a";
-  context.font = "700 19px Arial, sans-serif";
-  drawTruncatedText(context, deviceName, 228, 42, 320);
-
-  context.font = "500 14px Arial, sans-serif";
-  drawTruncatedText(context, `ID: ${deviceCode}`, 228, 78, 330);
-  drawTruncatedText(context, `Type: ${deviceType}`, 228, 112, 330);
-  drawTruncatedText(context, `POP: ${popName}`, 228, 146, 330);
-
-  context.fillStyle = "#64748b";
-  context.font = "500 11px Arial, sans-serif";
-  drawTruncatedText(context, "Scan QR untuk membuka detail/validasi device.", 228, 192, 330);
-
-  return canvas.toDataURL("image/png");
-}
-
-function loadImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new window.Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Gagal memuat QR image."));
-    image.src = src;
-  });
-}
-
-function drawTruncatedText(context: CanvasRenderingContext2D, value: string, x: number, y: number, maxWidth: number) {
-  const text = value && value !== "-" ? value : "-";
-  if (context.measureText(text).width <= maxWidth) {
-    context.fillText(text, x, y);
-    return;
-  }
-
-  let candidate = text;
-  while (candidate.length > 1 && context.measureText(`${candidate}...`).width > maxWidth) {
-    candidate = candidate.slice(0, -1);
-  }
-  context.fillText(`${candidate}...`, x, y);
 }
 
 function sanitizeFileName(value: string) {

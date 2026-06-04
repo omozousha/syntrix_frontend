@@ -5,10 +5,12 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RequestStatusBadge } from "@/components/features/requests/request-status-badge";
+import { RequestTypeBadge, type RequestTypeKind } from "@/components/features/requests/request-type-badge";
 
 export function RequestCard({
   selected,
   title,
+  typeKind,
   typeLabel,
   status,
   summary,
@@ -20,6 +22,7 @@ export function RequestCard({
 }: {
   selected: boolean;
   title: string;
+  typeKind: RequestTypeKind;
   typeLabel: string;
   status?: string | null;
   summary: string;
@@ -34,7 +37,7 @@ export function RequestCard({
       <button type="button" onClick={onSelect} className="w-full text-left">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <p className="text-sm font-medium">{title || "-"}</p>
-          <Badge variant="outline" className="text-[10px]">{typeLabel}</Badge>
+          <RequestTypeBadge kind={typeKind} label={typeLabel} className="text-[10px]" />
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <RequestStatusBadge status={status} className="text-[10px]" />

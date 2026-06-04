@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import { BellRing, QrCode } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { buildQrPreviewPngDataUrl } from "@/lib/qr-label";
 
 type OdpQrActionPanelProps = {
   qrDataUrl: string;
@@ -18,6 +20,25 @@ export function OdpQrActionPanel({
   onOpenReminder,
   onDownloadQrLabel,
 }: OdpQrActionPanelProps) {
+  const [previewQrDataUrl, setPreviewQrDataUrl] = useState("");
+
+  useEffect(() => {
+    if (!qrDataUrl) return;
+
+    let cancelled = false;
+    buildQrPreviewPngDataUrl(qrDataUrl)
+      .then((url) => {
+        if (!cancelled) setPreviewQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewQrDataUrl(qrDataUrl);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [qrDataUrl]);
+
   return (
     <div className="space-y-2 rounded-md border p-3">
       <div className="flex items-center gap-2">
@@ -26,7 +47,7 @@ export function OdpQrActionPanel({
       </div>
       <div className="flex items-center justify-center rounded-md border bg-background p-3">
         {qrDataUrl ? (
-          <Image src={qrDataUrl} alt="QR ODP" width={180} height={180} unoptimized className="size-40" />
+          <Image src={previewQrDataUrl || qrDataUrl} alt="QR ODP" width={180} height={180} unoptimized className="size-40" />
         ) : (
           <div className="flex size-40 items-center justify-center text-xs text-muted-foreground">
             QR belum tersedia
