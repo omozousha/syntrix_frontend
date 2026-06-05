@@ -39,7 +39,7 @@ import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-ut
 import { resolveAttachment } from "@/lib/attachment-utils";
 import { getCategoryBySlug } from "@/lib/data-management-config";
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
-import { buildDeviceQrHref, buildQrLabelPngDataUrl, formatQrPopLabel } from "@/lib/qr-label";
+import { buildDeviceQrHref, buildQrLabelPngDataUrl, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
 const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() || "";
 
@@ -369,6 +369,8 @@ export default function DataManagementDetailPage() {
   const [updatingPortId, setUpdatingPortId] = useState("");
   const [provisioningPorts, setProvisioningPorts] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
+  const [qrLabelLogoDataUrl, setQrLabelLogoDataUrl] = useState("");
+  const [qrLabelFooterText, setQrLabelFooterText] = useState("");
   const [odpCustomers, setOdpCustomers] = useState<OdpCustomerOption[]>([]);
   const [odpOntDevices, setOdpOntDevices] = useState<OdpOntOption[]>([]);
   const [odpCableDevices, setOdpCableDevices] = useState<OdpCableOption[]>([]);
@@ -1032,6 +1034,28 @@ export default function DataManagementDetailPage() {
     };
   }, [deviceDirectHref]);
 
+  useEffect(() => {
+    if (!token || !isOdpDevice) {
+      setQrLabelLogoDataUrl("");
+      setQrLabelFooterText("");
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all([
+      loadQrLabelLogoDataUrl(token).catch(() => ""),
+      loadQrLabelSettings(token).catch(() => null),
+    ]).then(([logoDataUrl, setting]) => {
+      if (cancelled) return;
+      setQrLabelLogoDataUrl(logoDataUrl);
+      setQrLabelFooterText(setting?.footer_text || "");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, isOdpDevice]);
+
   async function handleSave() {
     if (!category || !item || !editable) return;
     setSaving(true);
@@ -1333,6 +1357,8 @@ export default function DataManagementDetailPage() {
           relationLabels.popCode || valueOf(item.pop_code || item.pop_id, ""),
         ),
         qrDataUrl,
+        logoDataUrl: qrLabelLogoDataUrl || undefined,
+        footerText: qrLabelFooterText || undefined,
       });
       const link = document.createElement("a");
       link.href = dataUrl;
@@ -1618,6 +1644,7 @@ export default function DataManagementDetailPage() {
                 loadingValidationHistory={loadingOdpValidations}
                 submittingValidation={submittingOdpValidation}
                 qrDataUrl={qrDataUrl}
+                qrLabelLogoDataUrl={qrLabelLogoDataUrl}
                 onProvisionPorts={() => void handleProvisionOdpPorts()}
                 onUpdatePort={(port, changes) => void handleUpdateOdpPort(port, changes)}
                 onValidationDraftChange={setOdpValidationDraft}
@@ -1789,6 +1816,7 @@ function OdpOperationsPanel({
   loadingValidationHistory,
   submittingValidation,
   qrDataUrl,
+  qrLabelLogoDataUrl,
   onProvisionPorts,
   onUpdatePort,
   onValidationDraftChange,
@@ -1821,6 +1849,7 @@ function OdpOperationsPanel({
   loadingValidationHistory: boolean;
   submittingValidation: boolean;
   qrDataUrl: string;
+  qrLabelLogoDataUrl: string;
   onProvisionPorts: () => void;
   onUpdatePort: (port: DevicePort, changes: Partial<DevicePort>) => void;
   onValidationDraftChange: (next: OdpValidationDraft | ((prev: OdpValidationDraft) => OdpValidationDraft)) => void;
@@ -1923,6 +1952,7 @@ function OdpOperationsPanel({
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[260px_1fr]">
             <OdpQrActionPanel
               qrDataUrl={qrDataUrl}
+              logoDataUrl={qrLabelLogoDataUrl}
               reminderDisabled={loadingValidators || validators.length === 0}
               onOpenReminder={onOpenReminder}
               onDownloadQrLabel={onDownloadQrLabel}

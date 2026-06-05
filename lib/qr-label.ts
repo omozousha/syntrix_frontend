@@ -1,4 +1,5 @@
 import type { jsPDF as JsPdfDocument } from "jspdf";
+import { API_BASE_URL, apiFetch } from "@/lib/api";
 
 export type QrLabelPayload = {
   deviceName: string;
@@ -7,11 +8,23 @@ export type QrLabelPayload = {
   popName: string;
   qrDataUrl: string;
   logoDataUrl?: string;
+  footerText?: string;
+};
+
+export type QrLabelSettings = {
+  id?: string | null;
+  qr_logo_attachment_id?: string | null;
+  qr_logo_url?: string | null;
+  qr_logo_original_name?: string | null;
+  footer_text?: string | null;
+  is_active?: boolean;
+  updated_at?: string | null;
 };
 
 const QR_LABEL_FOOTER = "Scan QR untuk membuka detail/validasi Device";
 const DEFAULT_QR_LOGO_SRC = "/syntrix-logo.png";
 let defaultLogoDataUrlPromise: Promise<string> | null = null;
+const qrLogoDataUrlCache = new Map<string, Promise<string>>();
 
 export function formatQrPopLabel(popName: string, popCode?: string | null) {
   const name = normalizeQrText(popName, "-");
@@ -45,6 +58,8 @@ export async function buildQrLabelPngDataUrl({
   deviceType,
   popName,
   qrDataUrl,
+  logoDataUrl: providedLogoDataUrl,
+  footerText,
 }: QrLabelPayload) {
   const canvas = document.createElement("canvas");
   canvas.width = 900;
@@ -53,7 +68,7 @@ export async function buildQrLabelPngDataUrl({
   if (!context) throw new Error("Browser tidak mendukung canvas export.");
 
   const qrImage = await loadImage(qrDataUrl);
-  const logoDataUrl = await loadDefaultQrLogoDataUrl().catch(() => "");
+  const logoDataUrl = providedLogoDataUrl ?? await loadDefaultQrLogoDataUrl().catch(() => "");
   const logoImage = logoDataUrl ? await loadImage(logoDataUrl).catch(() => null) : null;
   context.fillStyle = "#ffffff";
   context.fillRect(0, 0, canvas.width, canvas.height);
@@ -96,7 +111,7 @@ export async function buildQrLabelPngDataUrl({
   });
 
   context.fillStyle = "#dc2626";
-  drawAdaptiveCanvasText(context, QR_LABEL_FOOTER, textX, 414, 390, {
+  drawAdaptiveCanvasText(context, footerText || QR_LABEL_FOOTER, textX, 414, 390, {
     weight: 700,
     maxSize: 17,
     minSize: 12,
@@ -127,7 +142,7 @@ export async function drawQrLabelPdf(doc: JsPdfDocument, rows: QrLabelPayload[])
   });
 }
 
-export async function buildQrPreviewPngDataUrl(qrDataUrl: string) {
+export async function buildQrPreviewPngDataUrl(qrDataUrl: string, logoDataUrl?: string) {
   const canvas = document.createElement("canvas");
   canvas.width = 300;
   canvas.height = 300;
@@ -135,8 +150,8 @@ export async function buildQrPreviewPngDataUrl(qrDataUrl: string) {
   if (!context) throw new Error("Browser tidak mendukung canvas export.");
 
   const qrImage = await loadImage(qrDataUrl);
-  const logoDataUrl = await loadDefaultQrLogoDataUrl().catch(() => "");
-  const logoImage = logoDataUrl ? await loadImage(logoDataUrl).catch(() => null) : null;
+  const activeLogoDataUrl = logoDataUrl ?? await loadDefaultQrLogoDataUrl().catch(() => "");
+  const logoImage = activeLogoDataUrl ? await loadImage(activeLogoDataUrl).catch(() => null) : null;
 
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.fillStyle = "#ffffff";
@@ -163,6 +178,61 @@ export function loadDefaultQrLogoDataUrl() {
     });
   }
   return defaultLogoDataUrlPromise;
+}
+
+export async function loadQrLabelSettings(token?: string | null) {
+  const response = await apiFetch<{ data: QrLabelSettings }>("/qr-label-settings", { token: token || undefined });
+  return normalizeQrLabelSettings(response.data);
+}
+
+export async function loadQrLabelLogoDataUrl(token?: string | null) {
+  const cacheKey = token ? `auth:${token}` : "default";
+  if (!qrLogoDataUrlCache.has(cacheKey)) {
+    qrLogoDataUrlCache.set(cacheKey, resolveQrLabelLogoDataUrl(token).catch(() => loadDefaultQrLogoDataUrl()));
+  }
+  return qrLogoDataUrlCache.get(cacheKey) as Promise<string>;
+}
+
+export function clearQrLabelLogoCache() {
+  qrLogoDataUrlCache.clear();
+}
+
+async function resolveQrLabelLogoDataUrl(token?: string | null) {
+  const setting = await loadQrLabelSettings(token);
+  if (!setting?.is_active || !setting.qr_logo_attachment_id) {
+    return loadDefaultQrLogoDataUrl();
+  }
+
+  const previewPath = setting.qr_logo_url || `/attachments/${setting.qr_logo_attachment_id}/preview`;
+  const response = await fetch(`${API_BASE_URL}${previewPath}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!response.ok) return loadDefaultQrLogoDataUrl();
+  return blobToDataUrl(await response.blob());
+}
+
+function normalizeQrLabelSettings(setting: QrLabelSettings): QrLabelSettings {
+  return {
+    ...setting,
+    qr_logo_attachment_id: normalizeNullableSettingValue(setting?.qr_logo_attachment_id),
+    qr_logo_url: normalizeNullableSettingValue(setting?.qr_logo_url),
+    qr_logo_original_name: normalizeNullableSettingValue(setting?.qr_logo_original_name),
+  };
+}
+
+function normalizeNullableSettingValue(value?: string | null) {
+  const text = String(value || "").trim();
+  if (!text || text.toLowerCase() === "null" || text.toLowerCase() === "undefined") return null;
+  return text;
+}
+
+function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Gagal memuat logo QR."));
+    reader.readAsDataURL(blob);
+  });
 }
 
 function normalizeQrText(value?: string | null, fallback = "") {

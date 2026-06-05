@@ -9,6 +9,7 @@ import { buildQrPreviewPngDataUrl } from "@/lib/qr-label";
 
 type OdpQrActionPanelProps = {
   qrDataUrl: string;
+  logoDataUrl?: string;
   reminderDisabled: boolean;
   onOpenReminder: () => void;
   onDownloadQrLabel: () => void;
@@ -16,6 +17,7 @@ type OdpQrActionPanelProps = {
 
 export function OdpQrActionPanel({
   qrDataUrl,
+  logoDataUrl,
   reminderDisabled,
   onOpenReminder,
   onDownloadQrLabel,
@@ -26,7 +28,7 @@ export function OdpQrActionPanel({
     if (!qrDataUrl) return;
 
     let cancelled = false;
-    buildQrPreviewPngDataUrl(qrDataUrl)
+    buildQrPreviewPngDataUrl(qrDataUrl, logoDataUrl)
       .then((url) => {
         if (!cancelled) setPreviewQrDataUrl(url);
       })
@@ -37,7 +39,7 @@ export function OdpQrActionPanel({
     return () => {
       cancelled = true;
     };
-  }, [qrDataUrl]);
+  }, [logoDataUrl, qrDataUrl]);
 
   return (
     <div className="space-y-2 rounded-md border p-3">

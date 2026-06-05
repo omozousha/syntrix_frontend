@@ -64,7 +64,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { buildCategoryApiPath, getCategoryBySlug } from "@/lib/data-management-config";
-import { buildDeviceQrHref, drawQrLabelPdf, formatQrPopLabel, loadDefaultQrLogoDataUrl } from "@/lib/qr-label";
+import { buildDeviceQrHref, drawQrLabelPdf, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
 
 const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() || "";
@@ -963,7 +963,10 @@ export default function DataManagementListPage() {
     setError("");
     setSuccess("");
     try {
-      const logoDataUrl = await loadDefaultQrLogoDataUrl().catch(() => "");
+      const [logoDataUrl, qrLabelSetting] = await Promise.all([
+        loadQrLabelLogoDataUrl(token).catch(() => ""),
+        loadQrLabelSettings(token).catch(() => null),
+      ]);
       const qrRows = await Promise.all(
         selectedRows.map(async (row) => ({
           deviceName: pick(row, ["device_name", "name"]),
@@ -979,6 +982,7 @@ export default function DataManagementListPage() {
             errorCorrectionLevel: "H",
           }),
           logoDataUrl,
+          footerText: qrLabelSetting?.footer_text || undefined,
         })),
       );
       const { jsPDF } = await import("jspdf");
