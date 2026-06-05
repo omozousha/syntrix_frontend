@@ -38,6 +38,7 @@ import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-utils";
 import { resolveAttachment } from "@/lib/attachment-utils";
 import { getCategoryBySlug } from "@/lib/data-management-config";
+import { buildCustomerRelationDisplay, buildDeviceQrRelationDisplay } from "@/lib/display-adapters/device-display-adapter";
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
 import { buildDeviceQrHref, buildQrLabelPngDataUrl, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
@@ -50,6 +51,7 @@ type GenericItem = Record<string, unknown> & {
   deleted_at?: string | null;
   deleted_by_user_id?: string | null;
 };
+type RelationRecord = Record<string, unknown> & { id?: string | null };
 
 type EditableForm = Record<string, string>;
 type AttachmentRef = {
@@ -592,34 +594,49 @@ export default function DataManagementDetailPage() {
       const labels: RelationLabels = {};
       try {
         if (activeCategory.resource === "devices") {
+          const embeddedRegion = getRelationRecord(activeItem.region);
+          const embeddedPop = getRelationRecord(activeItem.pop);
+          const embeddedManufacturer = getRelationRecord(activeItem.manufacturer);
+          const embeddedBrand = getRelationRecord(activeItem.brand);
+          const embeddedModel = getRelationRecord(activeItem.model);
+          const embeddedTenant = getRelationRecord(activeItem.tenant);
+
+          labels.region = valueOf(embeddedRegion?.region_name);
+          labels.pop = valueOf(embeddedPop?.pop_name);
+          labels.popCode = valueOf(embeddedPop?.pop_code || embeddedPop?.pop_id);
+          labels.manufacturer = valueOf(embeddedManufacturer?.manufacturer_name);
+          labels.brand = valueOf(embeddedBrand?.brand_name);
+          labels.model = valueOf(embeddedModel?.model_name);
+          labels.tenant = valueOf(embeddedTenant?.tenant_name);
+
           const [region, pop, manufacturer, brand, model, tenant] = await Promise.all([
-            valueOf(activeItem.region_id)
+            !labels.region && valueOf(activeItem.region_id)
               ? apiFetch<{ data: Record<string, unknown> }>(`/regions/${valueOf(activeItem.region_id)}`, { token }).catch(() => null)
               : Promise.resolve(null),
-            valueOf(activeItem.pop_id)
+            !labels.pop && valueOf(activeItem.pop_id)
               ? apiFetch<{ data: Record<string, unknown> }>(`/pops/${valueOf(activeItem.pop_id)}`, { token }).catch(() => null)
               : Promise.resolve(null),
-            valueOf(activeItem.manufacturer_id)
+            !labels.manufacturer && valueOf(activeItem.manufacturer_id)
               ? apiFetch<{ data: Record<string, unknown> }>(`/manufacturers/${valueOf(activeItem.manufacturer_id)}`, { token }).catch(() => null)
               : Promise.resolve(null),
-            valueOf(activeItem.brand_id)
+            !labels.brand && valueOf(activeItem.brand_id)
               ? apiFetch<{ data: Record<string, unknown> }>(`/brands/${valueOf(activeItem.brand_id)}`, { token }).catch(() => null)
               : Promise.resolve(null),
-            valueOf(activeItem.model_id)
+            !labels.model && valueOf(activeItem.model_id)
               ? apiFetch<{ data: Record<string, unknown> }>(`/assetModels/${valueOf(activeItem.model_id)}`, { token }).catch(() => null)
               : Promise.resolve(null),
-            valueOf(activeItem.tenant_id)
+            !labels.tenant && valueOf(activeItem.tenant_id)
               ? apiFetch<{ data: Record<string, unknown> }>(`/tenants/${valueOf(activeItem.tenant_id)}`, { token }).catch(() => null)
               : Promise.resolve(null),
           ]);
 
-          labels.region = region ? valueOf(region.data.region_name) : "";
-          labels.pop = pop ? valueOf(pop.data.pop_name) : "";
-          labels.popCode = pop ? valueOf(pop.data.pop_code || pop.data.pop_id) : "";
-          labels.manufacturer = manufacturer ? valueOf(manufacturer.data.manufacturer_name) : "";
-          labels.brand = brand ? valueOf(brand.data.brand_name) : "";
-          labels.model = model ? valueOf(model.data.model_name) : "";
-          labels.tenant = tenant ? valueOf(tenant.data.tenant_name) : "";
+          labels.region ||= region ? valueOf(region.data.region_name) : "";
+          labels.pop ||= pop ? valueOf(pop.data.pop_name) : "";
+          labels.popCode ||= pop ? valueOf(pop.data.pop_code || pop.data.pop_id) : "";
+          labels.manufacturer ||= manufacturer ? valueOf(manufacturer.data.manufacturer_name) : "";
+          labels.brand ||= brand ? valueOf(brand.data.brand_name) : "";
+          labels.model ||= model ? valueOf(model.data.model_name) : "";
+          labels.tenant ||= tenant ? valueOf(tenant.data.tenant_name) : "";
         }
 
         if (activeCategory.resource === "pops") {
@@ -1347,15 +1364,13 @@ export default function DataManagementDetailPage() {
 
   function handleDownloadQrLabel() {
     if (!qrDataUrl || !item) return;
+    const qrRelationDisplay = buildDeviceQrRelationDisplay(item, relationLabels);
     const download = async () => {
       const dataUrl = await buildQrLabelPngDataUrl({
         deviceName: valueOf(item.device_name, "-"),
         deviceCode: valueOf(item.device_id, "-"),
         deviceType: valueOf(item.device_type_key, "-"),
-        popName: formatQrPopLabel(
-          relationLabels.pop || valueOf(item.pop_name || item.pop_id, "-"),
-          relationLabels.popCode || valueOf(item.pop_code || item.pop_id, ""),
-        ),
+        popName: formatQrPopLabel(qrRelationDisplay.popName, qrRelationDisplay.popCode),
         qrDataUrl,
         logoDataUrl: qrLabelLogoDataUrl || undefined,
         footerText: qrLabelFooterText || undefined,
@@ -2128,14 +2143,16 @@ function CustomerDetailForm({
   item: GenericItem;
   relationLabels: RelationLabels;
 }) {
+  const display = buildCustomerRelationDisplay(item, relationLabels);
+
   return (
     <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
       <DisplayField label="Customer Name" value={valueOf(item.customer_name, "-")} compact />
       <DisplayField label="CID" value={valueOf(item.customer_number, "-")} compact />
-      <DisplayField label="Service Type" value={relationLabels.serviceType || valueOf(item.service_type, "-")} compact />
-      <DisplayField label="POP" value={relationLabels.pop || valueOf(item.pop_id, "-")} compact />
-      <DisplayField label="Project" value={relationLabels.project || valueOf(item.project_id, "-")} compact />
-      <DisplayField label="Region" value={relationLabels.region || valueOf(item.region_id, "-")} compact />
+      <DisplayField label="Service Type" value={display.serviceType} compact />
+      <DisplayField label="POP" value={display.pop} compact />
+      <DisplayField label="Project" value={display.project} compact />
+      <DisplayField label="Region" value={display.region} compact />
       <DisplayField label="Status" value={valueOf(item.status, "-")} compact />
       <DisplayField label="Installation Date" value={formatDate(valueOf(item.installation_date))} compact />
       <DisplayField label="Tags" value={arrayToCsv(item.tags) || "-"} compact />
@@ -2522,6 +2539,11 @@ function valueOf(value: unknown, fallback = "") {
   if (value == null) return fallback;
   const text = String(value);
   return text === "null" || text === "undefined" ? fallback : text;
+}
+
+function getRelationRecord(value: unknown): RelationRecord | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as RelationRecord;
 }
 
 function getEffectiveDeviceValidationStatus(item: Record<string, unknown>, requestStatusOverride?: string | null) {

@@ -194,6 +194,58 @@ export type PopsListResponse = PaginatedResponse<{
     region_id: string;
   }>;
 
+export type DeviceRelationSummary = {
+    id: string;
+    [key: string]: string | number | boolean | null | undefined;
+  };
+
+export type ReferenceDataGroup =
+  | "regions"
+  | "pops"
+  | "tenants"
+  | "deviceTypes"
+  | "brands"
+  | "models"
+  | "assetModels"
+  | "manufacturers"
+  | "projects"
+  | "customers"
+  | "serviceTypes"
+  | "odpTypes"
+  | "installationTypes"
+  | "splitterProfiles";
+
+export type ReferenceDataResponse = {
+  success: boolean;
+  message: string;
+  data: Partial<Record<ReferenceDataGroup, Array<Record<string, unknown>>>>;
+  meta?: Record<string, unknown>;
+};
+
+export function getReferenceDataPath(options: {
+  groups?: ReferenceDataGroup[];
+  regionId?: string | null;
+  limit?: number;
+} = {}) {
+  const query = new URLSearchParams();
+  if (options.groups?.length) query.set("groups", options.groups.join(","));
+  if (options.regionId) query.set("region_id", options.regionId);
+  if (options.limit) query.set("limit", String(options.limit));
+  const suffix = query.toString();
+  return `/reference-data${suffix ? `?${suffix}` : ""}`;
+}
+
+export function getReferenceData(
+  token: string,
+  options: {
+    groups?: ReferenceDataGroup[];
+    regionId?: string | null;
+    limit?: number;
+  } = {},
+) {
+  return apiFetch<ReferenceDataResponse>(getReferenceDataPath(options), { token });
+}
+
 export type DevicesListResponse = PaginatedResponse<{
     id: string;
     device_id: string;
@@ -202,6 +254,15 @@ export type DevicesListResponse = PaginatedResponse<{
     status: string;
     region_id: string;
     pop_id: string | null;
+    region?: DeviceRelationSummary | null;
+    pop?: DeviceRelationSummary | null;
+    project?: DeviceRelationSummary | null;
+    customer?: DeviceRelationSummary | null;
+    tenant?: DeviceRelationSummary | null;
+    manufacturer?: DeviceRelationSummary | null;
+    brand?: DeviceRelationSummary | null;
+    model?: DeviceRelationSummary | null;
+    device_type?: DeviceRelationSummary | null;
   }>;
 
 export type UsersListResponse = PaginatedResponse<{

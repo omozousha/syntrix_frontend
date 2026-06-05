@@ -1,3 +1,5 @@
+import { getPopLabel } from "@/lib/relation-labels";
+
 type OdpFieldInspectionPayload = {
   initial_photos?: Record<string, { label?: string; attachment?: { id?: string | null; attachment_id?: string | null; name?: string | null } }>;
   condition_checks?: Record<string, { label?: string; condition?: string | null; note?: string | null; attachment?: { id?: string | null; attachment_id?: string | null; name?: string | null } }>;
@@ -98,7 +100,7 @@ export function OdpFieldValidationSummary({ validation }: { validation?: OdpFiel
     { label: "Inventory", value: valueOf(validation.inventory_id, "-") },
     { label: "Nama Lama", value: valueOf(validation.old_device_name, "-") },
     { label: "Nama Baru", value: valueOf(validation.new_device_name, "-") },
-    { label: "POP", value: valueOf(validation.pop_name || validation.pop_id, "-") },
+    { label: "POP", value: getPopLabel({ fallback: validation.pop_name, optional: true }) },
     { label: "Tipe ODP", value: valueOf(validation.odp_type, "-") },
     { label: "Instalasi", value: valueOf(validation.installation_type, "-") },
     { label: "Splitter", value: valueOf(validation.splitter_ratio, "-") },

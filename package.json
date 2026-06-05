@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check:consistency": "node scripts/check-frontend-consistency.mjs"
+    "check:consistency": "node scripts/check-frontend-consistency.mjs",
+    "audit:relation-display": "node scripts/audit-relation-display.mjs"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.101.0",
     "@tanstack/react-table": "^8.21.3",
     "@types/qrcode": "^1.5.6",
     "class-variance-authority": "^0.7.1",
