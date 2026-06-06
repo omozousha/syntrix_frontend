@@ -673,21 +673,21 @@ Tujuan: UX tetap stabil saat data relasi belum siap.
 
 ### Frontend Todo
 
-- [ ] Buat skeleton kecil untuk relation field.
+- [x] Buat skeleton kecil untuk relation field.
 - [ ] Terapkan di:
-  - [ ] Device detail identity.
-  - [ ] Relasi & Vendor.
-  - [ ] Request card.
-  - [ ] Request comparison.
-  - [ ] QR browser fallback.
-- [ ] Pastikan tinggi section stabil.
-- [ ] Hindari layout shift pada card/table.
+  - [x] Device detail identity.
+  - [x] Relasi & Vendor.
+  - [x] Request card.
+  - [x] Request comparison.
+  - [x] QR browser fallback.
+- [x] Pastikan tinggi section stabil untuk detail device relation field.
+- [x] Hindari layout shift awal pada request queue card/detail skeleton.
 
 ### Checker
 
 - [ ] Tidak ada layout flash saat membuka detail ODP.
 - [ ] Tidak ada ID berubah menjadi label setelah beberapa detik.
-- [ ] Skeleton punya ukuran stabil.
+- [x] Skeleton punya ukuran stabil.
 
 ## Phase 7 - Apply ke Semua Route Utama
 
@@ -697,15 +697,15 @@ Tujuan: pola baru berlaku di seluruh frontend.
 
 - [x] `/data-management`
 - [x] `/data-management/list/[slug]`
-- [ ] `/data-management/list/[slug]/[id]`
-- [ ] `/data-management/create`
-- [ ] `/requests`
-- [ ] `/validation-requests`
-- [ ] `/master-data`
-- [ ] `/trash`
-- [ ] `/maps`
+- [x] `/data-management/list/[slug]/[id]`
+- [x] `/data-management/create`
+- [x] `/requests`
+- [x] `/validation-requests`
+- [x] `/master-data`
+- [x] `/trash`
+- [x] `/maps`
 - [x] `/field/odp/[id]`
-- [ ] `/field/access-denied`
+- [x] `/field/access-denied`
 
 ### Checker
 
@@ -720,12 +720,12 @@ Tujuan: aplikasi mobile memakai label relasi yang sama, tanpa ID flash.
 
 ### App Todo
 
-- [ ] Update API typing device enriched.
-- [ ] Update ODP detail view.
+- [x] Update API typing device enriched.
+- [x] Update ODP detail view.
 - [ ] Update asset browser.
-- [ ] Update validation form target info.
-- [ ] Update validation history.
-- [ ] Update QR mismatch/context screen.
+- [x] Update validation form target info.
+- [x] Update validation history actor/customer CID fallback awal agar tidak fallback ke UUID teknis.
+- [x] Update QR mismatch/context screen.
 - [ ] Tambahkan mobile loading boundary jika relation data belum siap.
 
 ### Checker
@@ -766,17 +766,31 @@ Tujuan: mencegah pola lama muncul lagi.
 
 ### Todo
 
-- [ ] Buat script checker untuk raw relation ID fallback.
-- [ ] Tambahkan ke `npm run check:consistency`.
-- [ ] Tambahkan dokumentasi developer.
-- [ ] Tambahkan contoh benar/salah.
-- [ ] Tambahkan checklist review PR/manual.
+- [x] Buat script checker untuk raw relation ID fallback.
+- [x] Tambahkan mode strict untuk membedakan display issue dari form/API data-flow.
+- [x] Tambahkan ke `npm run check:consistency`.
+- [x] Tambahkan dokumentasi developer dalam plan ini.
+- [x] Tambahkan contoh benar/salah.
+- [x] Tambahkan checklist review PR/manual.
 
 ### Checker
 
-- [ ] Checker gagal jika ada user-facing fallback ke `region_id`.
-- [ ] Checker gagal jika ada user-facing fallback ke `pop_id`.
-- [ ] Checker mengecualikan field teknis yang memang labelnya `ID`.
+- [x] Checker gagal jika ada user-facing fallback ke `region_id`.
+- [x] Checker gagal jika ada user-facing fallback ke `pop_id`.
+- [x] Checker mengecualikan field teknis yang memang labelnya `ID` atau form/API data-flow.
+
+### Manual Review Checklist
+
+Gunakan checklist ini saat review PR atau UAT route baru:
+
+- [ ] Field user-facing memakai adapter/resolver, bukan `*_id` langsung.
+- [ ] Form select boleh memakai `*_id` sebagai value internal, tetapi label option harus nama/kode bisnis.
+- [ ] Jika relasi belum siap, tampilkan skeleton atau `Memuat...`, bukan UUID.
+- [ ] Jika relasi gagal ditemukan, tampilkan `Data tidak tersedia`.
+- [ ] Field bisnis seperti `Inventory ID`, `CID`, dan `Request ID` tetap boleh tampil.
+- [ ] Mutasi create/edit/delete/approval meng-invalidate query terkait jika memakai TanStack Query.
+- [ ] Jalankan `npm run audit:relation-display -- --strict`.
+- [ ] Jalankan `npm run check:consistency`.
 
 ## Acceptance Criteria Global
 
@@ -784,7 +798,7 @@ Tujuan: mencegah pola lama muncul lagi.
 - [ ] Detail ODP tidak mengalami flash dari ID ke label.
 - [ ] Request approval tidak mengalami flash dari ID ke nama.
 - [ ] List/table/mobile card tidak menampilkan ID relasi.
-- [ ] QR browser fallback menampilkan type device dan nama device/tenant/region yang aman.
+- [x] QR browser fallback menampilkan type device dan nama device/tenant/region yang aman.
 - [ ] Syntrix-One app tidak menampilkan ID region/POP saat scan/detail/history.
 - [ ] Request count saat buka detail berkurang atau minimal tidak bertambah.
 - [ ] Navigasi kembali ke list/detail memakai cache dan tidak terasa reset total.

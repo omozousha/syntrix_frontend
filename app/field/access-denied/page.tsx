@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge";
 export default function FieldAccessDeniedPage() {
   const searchParams = useSearchParams();
   const reason = String(searchParams.get("reason") || "access_denied");
-  const deviceId = String(searchParams.get("device_id") || "-");
-  const regionId = String(searchParams.get("region_id") || "-");
+  const hasDeviceContext = Boolean(String(searchParams.get("device_id") || "").trim());
+  const reasonLabel = formatReason(reason);
 
   return (
     <main className="flex min-h-screen w-full items-center justify-center p-4 md:p-6">
@@ -28,9 +28,9 @@ export default function FieldAccessDeniedPage() {
           </CardHeader>
           <CardContent className="space-y-3 px-3 pb-3 pt-0">
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">Reason: {reason}</Badge>
-              <Badge variant="outline">Device: {deviceId}</Badge>
-              <Badge variant="outline">Region: {regionId}</Badge>
+              <Badge variant="outline">Reason: {reasonLabel}</Badge>
+              <Badge variant="outline">Device: {hasDeviceContext ? "QR terdeteksi" : "Data tidak tersedia"}</Badge>
+              <Badge variant="outline">Region: Di luar scope akun</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
               Minta akses region ke admin jika device ini memang perlu divalidasi oleh akun kamu.
@@ -51,4 +51,11 @@ export default function FieldAccessDeniedPage() {
       </div>
     </main>
   );
+}
+
+function formatReason(reason: string) {
+  if (reason === "region_mismatch") return "Region tidak sesuai";
+  if (reason === "device_not_found") return "Device tidak tersedia";
+  if (reason === "role_not_allowed") return "Role tidak diizinkan";
+  return "Akses ditolak";
 }

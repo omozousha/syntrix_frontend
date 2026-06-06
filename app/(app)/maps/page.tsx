@@ -37,7 +37,7 @@ export default function MapsPage() {
                 <Badge variant="secondary" className="mx-auto w-fit">
                   Coming Soon
                 </Badge>
-                <CardTitle className="text-2xl">Maps Workspace</CardTitle>
+                <CardTitle className="text-xl">Operational Map Preview</CardTitle>
                 <CardDescription className="mx-auto max-w-2xl">
                   Halaman peta sedang disiapkan sebagai workspace visual untuk membaca sebaran asset, coverage region, dan konteks lapangan.
                 </CardDescription>

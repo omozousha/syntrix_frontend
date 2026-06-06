@@ -31,6 +31,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useSession } from "@/components/session-context";
@@ -359,6 +360,7 @@ export default function DataManagementDetailPage() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [attachmentNames, setAttachmentNames] = useState<Record<string, string>>({});
   const [relationLabels, setRelationLabels] = useState<RelationLabels>({});
+  const [relationLabelsLoading, setRelationLabelsLoading] = useState(false);
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
@@ -490,12 +492,25 @@ export default function DataManagementDetailPage() {
     [item],
   );
   const galleryImageAttachments = useMemo<AttachmentRef[]>(
-    () => infoImageAttachments,
-    [infoImageAttachments],
+    () => mergeAttachmentRefs([
+      ...infoImageAttachments,
+      ...odpValidations.flatMap(extractValidationEvidenceAttachments),
+    ]),
+    [infoImageAttachments, odpValidations],
+  );
+  const latestOdpValidation = useMemo(
+    () => (odpValidations || [])[0] || null,
+    [odpValidations],
   );
   const latestApprovedOdpValidation = useMemo(
     () => (odpValidations || []).find(isFinalValidationRecord) || null,
     [odpValidations],
+  );
+  const detailValidationStatus = useMemo(
+    () => item
+      ? getEffectiveDeviceValidationStatus(item, latestOdpValidation?.request_status, Boolean(latestApprovedOdpValidation))
+      : "unvalidated",
+    [item, latestApprovedOdpValidation, latestOdpValidation],
   );
 
   useEffect(() => {
@@ -587,6 +602,7 @@ export default function DataManagementDetailPage() {
   useEffect(() => {
     if (!item || !category || !token) {
       setRelationLabels({});
+      setRelationLabelsLoading(false);
       return;
     }
 
@@ -595,6 +611,7 @@ export default function DataManagementDetailPage() {
     let cancelled = false;
 
     async function loadRelationLabels() {
+      setRelationLabelsLoading(true);
       const labels: RelationLabels = {};
       try {
         if (activeCategory.resource === "devices") {
@@ -607,7 +624,7 @@ export default function DataManagementDetailPage() {
 
           labels.region = valueOf(embeddedRegion?.region_name);
           labels.pop = valueOf(embeddedPop?.pop_name);
-          labels.popCode = valueOf(embeddedPop?.pop_code || embeddedPop?.pop_id);
+          labels.popCode = valueOf(embeddedPop?.pop_code);
           labels.manufacturer = valueOf(embeddedManufacturer?.manufacturer_name);
           labels.brand = valueOf(embeddedBrand?.brand_name);
           labels.model = valueOf(embeddedModel?.model_name);
@@ -636,7 +653,7 @@ export default function DataManagementDetailPage() {
 
           labels.region ||= region ? valueOf(region.data.region_name) : "";
           labels.pop ||= pop ? valueOf(pop.data.pop_name) : "";
-          labels.popCode ||= pop ? valueOf(pop.data.pop_code || pop.data.pop_id) : "";
+          labels.popCode ||= pop ? valueOf(pop.data.pop_code) : "";
           labels.manufacturer ||= manufacturer ? valueOf(manufacturer.data.manufacturer_name) : "";
           labels.brand ||= brand ? valueOf(brand.data.brand_name) : "";
           labels.model ||= model ? valueOf(model.data.model_name) : "";
@@ -689,14 +706,17 @@ export default function DataManagementDetailPage() {
 
           labels.region = region ? valueOf(region.data.region_name) : "";
           labels.pop = pop ? valueOf(pop.data.pop_name) : "";
-          labels.popCode = pop ? valueOf(pop.data.pop_code || pop.data.pop_id) : "";
+          labels.popCode = pop ? valueOf(pop.data.pop_code) : "";
           labels.project = project ? valueOf(project.data.project_name) : "";
           labels.province = province ? valueOf(province.data.province_name) : valueOf(activeItem.province);
           labels.city = city ? valueOf(city.data.city_name) : valueOf(activeItem.city);
           labels.serviceType = serviceType ? valueOf(serviceType.data.service_type_name) : valueOf(activeItem.service_type);
         }
       } finally {
-        if (!cancelled) setRelationLabels(labels);
+        if (!cancelled) {
+          setRelationLabels(labels);
+          setRelationLabelsLoading(false);
+        }
       }
     }
 
@@ -1516,7 +1536,7 @@ export default function DataManagementDetailPage() {
           }
         />
 
-        {loading ? <AppLoading label="Sedang memuat detail data..." /> : null}
+        {loading ? <DeviceDetailLoadingSkeleton categoryLabel={category.label} /> : null}
         {!loading && error ? <p className="text-sm text-destructive">{error}</p> : null}
         {!loading && message ? <p className="text-sm text-emerald-600">{message}</p> : null}
 
@@ -1526,7 +1546,8 @@ export default function DataManagementDetailPage() {
               <DeviceOperationalSummary
                 item={item}
                 relationLabels={relationLabels}
-                effectiveValidationStatus={getEffectiveDeviceValidationStatus(item)}
+                relationLoading={relationLabelsLoading}
+                effectiveValidationStatus={detailValidationStatus}
               />
             ) : null}
 
@@ -1554,8 +1575,8 @@ export default function DataManagementDetailPage() {
                     {category.resource === "pops" ? <Badge variant="outline">{valueOf(item.status_pop)}</Badge> : null}
                     {category.resource === "devices" ? <Badge variant="outline">{valueOf(item.status)}</Badge> : null}
                     {category.resource !== "customers" ? (
-                      <Badge variant="outline" className={mapValidationStatus(getEffectiveDeviceValidationStatus(item)).className}>
-                        {mapValidationStatus(getEffectiveDeviceValidationStatus(item)).label}
+                      <Badge variant="outline" className={mapValidationStatus(detailValidationStatus).className}>
+                        {mapValidationStatus(detailValidationStatus).label}
                       </Badge>
                     ) : null}
                   </div>
@@ -1569,11 +1590,17 @@ export default function DataManagementDetailPage() {
               <CollapsibleContent>
                 <CardContent className="space-y-5">
                   {category.resource === "pops" ? (
-                    <PopDetailForm form={form} onChange={setForm} editing={isEditing} relationLabels={relationLabels} />
+                    <PopDetailForm
+                      form={form}
+                      onChange={setForm}
+                      editing={isEditing}
+                      relationLabels={relationLabels}
+                      relationLoading={relationLabelsLoading}
+                    />
                   ) : null}
 
               {category.resource === "customers" ? (
-                <CustomerDetailForm item={item} relationLabels={relationLabels} />
+                <CustomerDetailForm item={item} relationLabels={relationLabels} relationLoading={relationLabelsLoading} />
               ) : null}
 
               {category.resource === "devices" ? (
@@ -1582,15 +1609,16 @@ export default function DataManagementDetailPage() {
                   onChange={setForm}
                   editing={isEditing}
                   relationLabels={relationLabels}
+                  relationLoading={relationLabelsLoading}
                   isOdpDevice={isOdpDevice}
                   splitterProfiles={splitterProfiles}
                   odpTypes={odpTypes}
                   installationTypes={installationTypes}
                   tenants={tenants}
-                  popOptions={popOptions}
-                  latestFieldValidation={latestApprovedOdpValidation?.payload?.field_validation || null}
-                  effectiveValidationStatus={getEffectiveDeviceValidationStatus(item)}
-                />
+      popOptions={popOptions}
+      latestFieldValidation={latestApprovedOdpValidation?.payload?.field_validation || null}
+      effectiveValidationStatus={detailValidationStatus}
+    />
               ) : null}
 
               {category.resource !== "pops" && category.resource !== "devices" && category.resource !== "customers" ? (
@@ -1902,7 +1930,11 @@ function OdpOperationsPanel({
   const idlePorts = Math.max(0, totalPorts - usedPorts - reservedPorts - downPorts);
   const latestValidationRecord = validationHistory[0] || null;
   const latestRequestStatus = latestValidationRecord?.request_status || null;
-  const effectiveDeviceValidationStatus = getEffectiveDeviceValidationStatus(device, latestRequestStatus);
+  const effectiveDeviceValidationStatus = getEffectiveDeviceValidationStatus(
+    device,
+    latestRequestStatus,
+    latestValidationRecord ? isFinalValidationRecord(latestValidationRecord) : false,
+  );
   const currentDeviceValidationUi = mapValidationStatus(effectiveDeviceValidationStatus);
   const latestRejectNote =
     latestValidationRecord?.superadmin_review_note ||
@@ -2140,12 +2172,63 @@ function ServicePortRelationsPanel({
   );
 }
 
+function DeviceDetailLoadingSkeleton({ categoryLabel }: { categoryLabel: string }) {
+  const identityFields = ["Device Name", "Inventory ID", "Type", "Region", "POP", "Installation Date"];
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-32 rounded-md" />
+              <Skeleton className="h-4 w-48 rounded-md" />
+            </div>
+            <Skeleton className="h-8 w-24 rounded-full" />
+          </div>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          {identityFields.map((field) => (
+            <div key={field} className="min-h-[6.5rem] rounded-lg border bg-background p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{field}</p>
+              <Skeleton className="mt-4 h-5 w-3/4 rounded-md" />
+              <Skeleton className="mt-2 h-4 w-1/2 rounded-md" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-40 rounded-md" />
+              <Skeleton className="h-4 w-56 rounded-md" />
+            </div>
+            <Skeleton className="h-8 w-20 rounded-md" />
+          </div>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={`${categoryLabel}-${index}`} className="space-y-1.5">
+              <Skeleton className="h-4 w-24 rounded-md" />
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function CustomerDetailForm({
   item,
   relationLabels,
+  relationLoading = false,
 }: {
   item: GenericItem;
   relationLabels: RelationLabels;
+  relationLoading?: boolean;
 }) {
   const display = buildCustomerRelationDisplay(item, relationLabels);
 
@@ -2153,16 +2236,16 @@ function CustomerDetailForm({
     <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
       <DisplayField label="Customer Name" value={valueOf(item.customer_name, "-")} compact />
       <DisplayField label="CID" value={valueOf(item.customer_number, "-")} compact />
-      <DisplayField label="Service Type" value={display.serviceType} compact />
-      <DisplayField label="POP" value={display.pop} compact />
-      <DisplayField label="Project" value={display.project} compact />
-      <DisplayField label="Region" value={display.region} compact />
+      <DisplayField label="Service Type" value={display.serviceType} loading={relationLoading} compact />
+      <DisplayField label="POP" value={display.pop} loading={relationLoading} compact />
+      <DisplayField label="Project" value={display.project} loading={relationLoading} compact />
+      <DisplayField label="Region" value={display.region} loading={relationLoading} compact />
       <DisplayField label="Status" value={valueOf(item.status, "-")} compact />
       <DisplayField label="Installation Date" value={formatDate(valueOf(item.installation_date))} compact />
       <DisplayField label="Tags" value={arrayToCsv(item.tags) || "-"} compact />
       <DisplayField className="md:col-span-2 xl:col-span-3" label="Address" value={valueOf(item.address, "-")} compact />
-      <DisplayField label="Province" value={relationLabels.province || valueOf(item.province, "-")} compact />
-      <DisplayField label="City/Kabupaten" value={relationLabels.city || valueOf(item.city, "-")} compact />
+      <DisplayField label="Province" value={relationLabels.province || valueOf(item.province, "-")} loading={relationLoading} compact />
+      <DisplayField label="City/Kabupaten" value={relationLabels.city || valueOf(item.city, "-")} loading={relationLoading} compact />
       <DisplayField label="Longitude" value={valueOf(item.longitude, "-")} compact />
       <DisplayField label="Latitude" value={valueOf(item.latitude, "-")} compact />
     </div>
@@ -2204,11 +2287,13 @@ function PopDetailForm({
   onChange,
   editing,
   relationLabels,
+  relationLoading = false,
 }: {
   form: EditableForm;
   onChange: (next: EditableForm | ((prev: EditableForm) => EditableForm)) => void;
   editing: boolean;
   relationLabels: RelationLabels;
+  relationLoading?: boolean;
 }) {
   return (
     <div className="space-y-3">
@@ -2217,11 +2302,10 @@ function PopDetailForm({
           <CardTitle className="text-sm">Identitas POP</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
-          <Field label="POP ID" value={form.pop_id} disabled compact />
           <Field label="POP Name" value={form.pop_name} onChange={(v) => onChange((p) => ({ ...p, pop_name: v }))} disabled={!editing} compact />
           <Field label="POP Code" value={form.pop_code} onChange={(v) => onChange((p) => ({ ...p, pop_code: v.toUpperCase() }))} disabled={!editing} compact />
-          <DisplayField label="Region" value={relationLabels.region || "-"} compact />
-          <DisplayField label="POP Type" value={relationLabels.popType || form.pop_type || "-"} compact />
+          <DisplayField label="Region" value={relationLabels.region || "-"} loading={relationLoading} compact />
+          <DisplayField label="POP Type" value={relationLabels.popType || form.pop_type || "-"} loading={relationLoading} compact />
           <Field label="Tanggal POP Aktif" type="date" value={form.tanggal_pop_aktif} onChange={(v) => onChange((p) => ({ ...p, tanggal_pop_aktif: v }))} disabled={!editing} compact />
         </CardContent>
       </Card>
@@ -2262,8 +2346,8 @@ function PopDetailForm({
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
           <Field className="md:col-span-2 xl:col-span-3" label="Address" value={form.address} onChange={(v) => onChange((p) => ({ ...p, address: v }))} disabled={!editing} compact />
-          <DisplayField label="Province" value={relationLabels.province || form.province || "-"} compact />
-          <DisplayField label="City" value={relationLabels.city || form.city || "-"} compact />
+          <DisplayField label="Province" value={relationLabels.province || form.province || "-"} loading={relationLoading} compact />
+          <DisplayField label="City" value={relationLabels.city || form.city || "-"} loading={relationLoading} compact />
           <CoordinateField label="Longitude" value={form.longitude} onChange={(v) => onChange((p) => ({ ...p, longitude: v }))} disabled={!editing} compact kind="longitude" />
           <CoordinateField label="Latitude" value={form.latitude} onChange={(v) => onChange((p) => ({ ...p, latitude: v }))} disabled={!editing} compact kind="latitude" />
         </CardContent>
@@ -2286,16 +2370,22 @@ function DisplayField({
   value,
   className = "",
   compact = false,
+  loading = false,
 }: {
   label: string;
   value: string;
   className?: string;
   compact?: boolean;
+  loading?: boolean;
 }) {
   return (
     <div className={`${compact ? "space-y-1" : "space-y-1.5"} ${className}`}>
       <Label>{label}</Label>
-      <Input value={value} disabled className={compact ? "h-8 text-xs" : undefined} />
+      {loading ? (
+        <Skeleton className={compact ? "h-8 w-full rounded-md" : "h-10 w-full rounded-md"} />
+      ) : (
+        <Input value={value} disabled className={compact ? "h-8 text-xs" : undefined} />
+      )}
     </div>
   );
 }
@@ -2512,8 +2602,6 @@ function buildUpdatePayload(form: EditableForm, resource: string): Record<string
       device_name: normalizeDeviceName(form.device_name) || null,
       status: nullIfEmpty(form.status),
       installation_date: nullIfEmpty(form.installation_date),
-      validation_status: normalizedValidation.validation_status,
-      validation_date: normalizedValidation.validation_date,
       region_id: nullIfEmpty(form.region_id),
       pop_id: nullIfEmpty(form.pop_id),
       tenant_id: nullIfEmpty(form.tenant_id),
@@ -2550,10 +2638,21 @@ function getRelationRecord(value: unknown): RelationRecord | null {
   return value as RelationRecord;
 }
 
-function getEffectiveDeviceValidationStatus(item: Record<string, unknown>, requestStatusOverride?: string | null) {
+function getEffectiveDeviceValidationStatus(
+  item: Record<string, unknown>,
+  requestStatusOverride?: string | null,
+  hasFinalValidationRecord = false,
+) {
   const requestStatus = String(requestStatusOverride || item.latest_validation_request_status || "").trim().toLowerCase();
   if (requestStatus && requestStatus !== "validated") return requestStatus;
-  return valueOf(item.validation_status, "unvalidated");
+  if (requestStatus === "validated") return "valid";
+
+  const status = valueOf(item.validation_status, "unvalidated").trim().toLowerCase();
+  if (["valid", "validated"].includes(status) && !hasFinalValidationRecord && !item.validation_date && !item.last_validation_at) {
+    return "unvalidated";
+  }
+
+  return status || "unvalidated";
 }
 
 function isFinalValidationRecord(record: OdpValidationRecord) {
@@ -2761,6 +2860,54 @@ function extractImageAttachments(value: unknown, primaryId: string): AttachmentR
   }
 
   return refs;
+}
+
+function mergeAttachmentRefs(refs: AttachmentRef[]) {
+  const merged = new Map<string, AttachmentRef>();
+  refs.forEach((ref) => {
+    const id = valueOf(ref.id);
+    if (!id || merged.has(id)) return;
+    merged.set(id, { id, name: ref.name });
+  });
+  return Array.from(merged.values());
+}
+
+function extractValidationEvidenceAttachments(record: OdpValidationRecord): AttachmentRef[] {
+  const refs: AttachmentRef[] = [];
+  const seen = new Set<string>();
+
+  const pushRef = (id: unknown, name?: unknown) => {
+    const cleanId = valueOf(id);
+    if (!cleanId || seen.has(cleanId)) return;
+    seen.add(cleanId);
+    refs.push({ id: cleanId, name: valueOf(name) || undefined });
+  };
+
+  (record.evidence_attachments || []).forEach((attachment, index) => {
+    pushRef(
+      attachment.id || attachment.attachment_id,
+      attachment.name || `validation-evidence-${index + 1}`,
+    );
+  });
+  pushRef(record.evidence_attachment_id, "validation-evidence");
+
+  const inspection = record.payload?.field_inspection || {};
+  Object.values(inspection.initial_photos || {}).forEach((item) => {
+    pushInspectionAttachmentRef(item, pushRef);
+  });
+  Object.values(inspection.condition_checks || {}).forEach((item) => {
+    pushInspectionAttachmentRef(item, pushRef);
+  });
+
+  return refs;
+}
+
+function pushInspectionAttachmentRef(
+  item: { label?: string; attachment?: { id?: string | null; attachment_id?: string | null; name?: string | null } } | undefined,
+  pushRef: (id: unknown, name?: unknown) => void,
+) {
+  if (!item) return;
+  pushRef(item.attachment?.id || item.attachment?.attachment_id, item.attachment?.name || item.label);
 }
 
 async function uploadAttachment({

@@ -6,6 +6,7 @@ import { ArrowRight, Download, ExternalLink, QrCode, ShieldCheck } from "lucide-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import { buildQrFallbackDisplay } from "@/lib/display-adapters/qr-fallback-display-adapter";
 
@@ -141,9 +142,9 @@ export default function OdpQrBrowserFallbackPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                <InfoRow label="Type Device" value={display.deviceType} />
-                <InfoRow label="Nama Device" value={display.deviceName} />
-                <InfoRow label="Tenant" value={display.tenant} />
+                <InfoRow label="Type Device" value={display.deviceType} loading={loading} />
+                <InfoRow label="Nama Device" value={display.deviceName} loading={loading} />
+                <InfoRow label="Tenant" value={display.tenant} loading={loading} />
               </div>
 
               {loadMessage ? (
@@ -183,11 +184,15 @@ function SafetyPoint({ title, description }: { title: string; description: strin
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value, loading = false }: { label: string; value: string; loading?: boolean }) {
   return (
     <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <p className="mt-1 break-words text-sm font-semibold text-slate-100">{value}</p>
+      {loading ? (
+        <Skeleton className="mt-2 h-4 w-36 bg-white/15" />
+      ) : (
+        <p className="mt-1 break-words text-sm font-semibold text-slate-100">{value}</p>
+      )}
     </div>
   );
 }

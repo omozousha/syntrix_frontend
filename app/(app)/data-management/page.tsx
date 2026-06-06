@@ -1001,7 +1001,5 @@ function hasImageAttachment(item: Record<string, unknown>) {
 }
 
 function isValidated(item: Record<string, unknown>) {
-  if (hasAnyValue(item, ["validation_date", "last_validation_at"])) return true;
-  const status = String(item.validation_status || "").trim().toLowerCase();
-  return ["valid", "validated", "verified", "ok"].includes(status);
+  return hasAnyValue(item, ["validation_date", "last_validation_at"]);
 }

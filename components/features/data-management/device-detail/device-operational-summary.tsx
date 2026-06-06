@@ -12,16 +12,18 @@ type DeviceOperationalSummaryProps = {
     region?: string;
     pop?: string;
   };
+  relationLoading?: boolean;
   effectiveValidationStatus: string;
 };
 
 export function DeviceOperationalSummary({
   item,
   relationLabels,
+  relationLoading = false,
   effectiveValidationStatus,
 }: DeviceOperationalSummaryProps) {
   const validationUi = mapValidationStatus(effectiveValidationStatus);
-  const display = buildDeviceOperationalSummaryDisplay(item, relationLabels);
+  const display = buildDeviceOperationalSummaryDisplay(item, { ...relationLabels, loading: relationLoading });
 
   return (
     <Card className="border-primary/10 bg-muted/20">

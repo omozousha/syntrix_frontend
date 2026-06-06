@@ -47,15 +47,15 @@ export function DeviceGallerySection({
               <Images className="size-4" />
             </span>
             <div>
-              <h3 className="text-sm font-semibold">Galeri resmi device</h3>
+              <h3 className="text-sm font-semibold">Galeri device & evidence validasi</h3>
               <p className="max-w-2xl text-xs leading-5 text-muted-foreground">
-                Foto yang sudah menjadi attachment resmi device. Evidence validasi tetap ditampilkan di histori validasi.
+                Foto resmi device dan evidence validasi terbaru ditampilkan bersama untuk memudahkan review ODP.
               </p>
             </div>
           </div>
         </div>
         <Badge variant="outline" className="rounded-md tabular-nums">
-          {attachments.length} file resmi
+          {attachments.length} file
         </Badge>
       </div>
 
@@ -87,7 +87,7 @@ export function DeviceGallerySection({
           </div>
         ) : (
           <div className="rounded-md border border-dashed bg-background/60 p-4 text-sm text-muted-foreground">
-            Belum ada foto resmi untuk device ini.
+            Belum ada foto atau evidence validasi untuk device ini.
           </div>
         )}
       </div>

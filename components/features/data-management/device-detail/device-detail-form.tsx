@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { normalizeDeviceName } from "@/lib/name-normalization";
+import { RELATION_LABEL_FALLBACK } from "@/lib/relation-labels";
 import { mapValidationStatus } from "@/lib/validation-status";
 
 type EditableForm = Record<string, string>;
@@ -59,6 +61,7 @@ type DeviceDetailFormProps = {
   onChange: (next: EditableForm | ((prev: EditableForm) => EditableForm)) => void;
   editing: boolean;
   relationLabels: RelationLabels;
+  relationLoading?: boolean;
   isOdpDevice: boolean;
   splitterProfiles: SplitterProfileOption[];
   odpTypes: OdpTypeOption[];
@@ -70,7 +73,6 @@ type DeviceDetailFormProps = {
 };
 
 const DEVICE_STATUS_OPTIONS = ["draft", "installed", "active", "inactive", "maintenance", "retired"];
-const VALIDATION_STATUS_OPTIONS = ["unvalidated", "valid", "warning", "invalid"];
 
 export function DeviceDetailForm(props: DeviceDetailFormProps) {
   const selectedSplitterProfile =
@@ -176,24 +178,12 @@ function DeviceIdentitySection({
           disabled={!editing}
           compact
         />
-        {editing ? (
-          <SelectField
-            label="Validation Status"
-            value={form.validation_status}
-            options={VALIDATION_STATUS_OPTIONS}
-            onValueChange={(value) => onChange((prev) => ({ ...prev, validation_status: value }))}
-            disabled={!editing}
-            compact
-          />
-        ) : (
-          <DisplayField label="Validation Status" value={mapValidationStatus(effectiveValidationStatus).label} compact />
-        )}
+        <DisplayField label="Validation Status" value={mapValidationStatus(effectiveValidationStatus).label} compact />
         <Field
           label="Validation Date"
           type="date"
           value={form.validation_date}
-          onChange={(value) => onChange((prev) => ({ ...prev, validation_date: value }))}
-          disabled={!editing}
+          disabled
           compact
         />
       </CardContent>
@@ -201,14 +191,14 @@ function DeviceIdentitySection({
   );
 }
 
-function DeviceRelationSection({ form, onChange, editing, relationLabels, tenants, popOptions }: DeviceDetailFormProps) {
+function DeviceRelationSection({ form, onChange, editing, relationLabels, relationLoading = false, tenants, popOptions }: DeviceDetailFormProps) {
   return (
     <Card>
       <CardHeader className="px-3 py-2">
         <CardTitle className="text-sm">Relasi & Vendor</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
-        <DisplayField label="Region" value={relationLabels.region || "-"} compact />
+        <DisplayField label="Region" value={relationLabels.region || "-"} loading={relationLoading} compact />
         {editing ? (
           <ComboboxField
             label="POP"
@@ -219,12 +209,12 @@ function DeviceRelationSection({ form, onChange, editing, relationLabels, tenant
               { value: "__none__", label: "Tidak ada POP" },
               ...popOptions.map((pop) => ({
                 value: pop.id,
-                label: [pop.pop_name, pop.pop_code || pop.pop_id].filter(Boolean).join(" - ") || pop.id,
+                label: [pop.pop_name, pop.pop_code].filter(Boolean).join(" - ") || RELATION_LABEL_FALLBACK.missing,
               })),
             ]}
           />
         ) : (
-          <DisplayField label="POP" value={relationLabels.pop || "-"} compact />
+          <DisplayField label="POP" value={relationLabels.pop || "-"} loading={relationLoading} compact />
         )}
         {editing ? (
           <ComboboxField
@@ -241,11 +231,11 @@ function DeviceRelationSection({ form, onChange, editing, relationLabels, tenant
             ]}
           />
         ) : (
-          <DisplayField label="Tenant" value={relationLabels.tenant || "-"} compact />
+          <DisplayField label="Tenant" value={relationLabels.tenant || "-"} loading={relationLoading} compact />
         )}
-        <DisplayField label="Manufacturer" value={relationLabels.manufacturer || "-"} compact />
-        <DisplayField label="Brand" value={relationLabels.brand || "-"} compact />
-        <DisplayField label="Model" value={relationLabels.model || "-"} compact />
+        <DisplayField label="Manufacturer" value={relationLabels.manufacturer || "-"} loading={relationLoading} compact />
+        <DisplayField label="Brand" value={relationLabels.brand || "-"} loading={relationLoading} compact />
+        <DisplayField label="Model" value={relationLabels.model || "-"} loading={relationLoading} compact />
         <Field
           label="Serial Number"
           value={form.serial_number}
@@ -437,16 +427,22 @@ function DisplayField({
   value,
   className = "",
   compact = false,
+  loading = false,
 }: {
   label: string;
   value: string;
   className?: string;
   compact?: boolean;
+  loading?: boolean;
 }) {
   return (
     <div className={`${compact ? "space-y-1" : "space-y-1.5"} ${className}`}>
       <Label>{label}</Label>
-      <Input value={value} disabled className={compact ? "h-8 text-xs" : undefined} />
+      {loading ? (
+        <Skeleton className={compact ? "h-8 w-full rounded-md" : "h-10 w-full rounded-md"} />
+      ) : (
+        <Input value={value} disabled className={compact ? "h-8 text-xs" : undefined} />
+      )}
     </div>
   );
 }

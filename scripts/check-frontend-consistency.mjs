@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 const root = process.cwd();
 
@@ -73,6 +74,22 @@ const checks = [
         }
       }
       return issues;
+    },
+  },
+  {
+    name: "relation display does not fallback to raw technical ids",
+    run() {
+      try {
+        execFileSync(process.execPath, ["scripts/audit-relation-display.mjs", "--strict"], {
+          cwd: root,
+          encoding: "utf8",
+          stdio: "pipe",
+        });
+        return [];
+      } catch (error) {
+        const output = [error.stdout, error.stderr].filter(Boolean).join("\n").trim();
+        return output ? output.split(/\r?\n/).filter(Boolean) : ["relation display strict audit failed"];
+      }
     },
   },
 ];

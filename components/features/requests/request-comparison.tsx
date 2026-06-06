@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export type RequestComparisonRow = {
   label: string;
@@ -29,6 +30,23 @@ export function RequestComparison({ rows }: { rows: RequestComparisonRow[] }) {
       ) : (
         <p className="mt-2 text-xs text-muted-foreground">Tidak ada data pembanding pada snapshot request ini.</p>
       )}
+    </div>
+  );
+}
+
+export function RequestComparisonSkeleton() {
+  return (
+    <div className="rounded-md border p-2.5">
+      <RequestComparisonHeader />
+      <div className="mt-2 space-y-1.5">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="grid grid-cols-1 gap-1 rounded-md border px-2 py-1.5 md:grid-cols-[140px_1fr_1fr]">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

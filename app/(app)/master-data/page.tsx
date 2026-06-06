@@ -151,11 +151,13 @@ export default function MasterDataPage() {
         <Card className="overflow-hidden border-primary/20 bg-gradient-to-r from-primary/5 to-background">
           <CardHeader className="pb-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-2">
-                <CardTitle className="text-2xl">Tata Kelola Master Data</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary" className="w-fit gap-1">
                   <BookMarked className="size-3.5" />
                   Pusat Master Data
+                </Badge>
+                <Badge variant="outline" className="w-fit">
+                  Admin Only
                 </Badge>
               </div>
               <AddDataMenu canCreatePop={false} canCreateDevice={false} canManageMaster />

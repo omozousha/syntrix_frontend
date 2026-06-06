@@ -1976,7 +1976,11 @@ function buildOdpIssueRows(issue: OdpIssueKey, devices: GenericItem[], ports: Ge
   };
 
   if (issue === "odp-without-ports") return devices.filter((item) => !portsByOdp.has(item.id)).map((item) => toRow(issue, item, null, "ODP belum memiliki data port."));
-  if (issue === "odp-pending-validation") return devices.filter((item) => String(item.validation_status || "unvalidated") === "unvalidated").map((item) => toRow(issue, item, null, "ODP belum tervalidasi."));
+  if (issue === "odp-pending-validation") {
+    return devices
+      .filter((item) => getDeviceDisplayValidationStatus(item) === "unvalidated")
+      .map((item) => toRow(issue, item, null, "ODP belum tervalidasi."));
+  }
   if (issue === "odp-used-without-endpoint") return odpPorts.filter((port) => String(port.status || "") === "used" && !port.customer_id && !port.ont_device_id).map((port) => toRow(issue, odpMap.get(String(port.device_id)) || null, port, "Port status used tanpa customer/ONT."));
   if (issue === "odp-assigned-not-used") return odpPorts.filter((port) => (port.customer_id || port.ont_device_id) && String(port.status || "") !== "used").map((port) => toRow(issue, odpMap.get(String(port.device_id)) || null, port, "Customer/ONT terisi, tapi status port bukan used."));
   return odpPorts.filter((port) => String(port.status || "") === "down" || String(port.status || "") === "maintenance").map((port) => toRow(issue, odpMap.get(String(port.device_id)) || null, port, "Port berada pada status down/maintenance."));
@@ -2384,9 +2388,14 @@ function formatValidationStatus(value: string) {
 }
 
 function getDeviceDisplayValidationStatus(item: GenericItem) {
-  return pick(item, ["latest_validation_request_status"]) !== "-"
-    ? pick(item, ["latest_validation_request_status"])
-    : pick(item, ["validation_status"]);
+  const requestStatus = pick(item, ["latest_validation_request_status"]);
+  if (requestStatus !== "-") return requestStatus;
+
+  const status = pick(item, ["validation_status"]).trim().toLowerCase();
+  const hasFinalValidationDate = pick(item, ["validation_date"]) !== "-" || pick(item, ["last_validation_at"]) !== "-";
+  if (["valid", "validated", "verified", "ok"].includes(status) && !hasFinalValidationDate) return "unvalidated";
+
+  return status || "unvalidated";
 }
 
 function getDeviceValidationTitle(item: GenericItem, fallbackLabel: string) {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RequestStatusBadge } from "@/components/features/requests/request-status-badge";
 import { RequestTypeBadge, type RequestTypeKind } from "@/components/features/requests/request-type-badge";
 
@@ -56,6 +57,25 @@ export function RequestCard({
         </div>
       ) : null}
       {evidenceSlot}
+    </div>
+  );
+}
+
+export function RequestCardSkeleton() {
+  return (
+    <div className="rounded-md border bg-background p-2.5">
+      <div className="flex items-start justify-between gap-2">
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="h-5 w-20 rounded-full" />
+      </div>
+      <div className="mt-2 flex items-center gap-1.5">
+        <Skeleton className="h-5 w-24 rounded-full" />
+        <Skeleton className="h-3 w-40" />
+      </div>
+      <div className="mt-2 flex items-center gap-1.5">
+        <Skeleton className="h-5 w-28 rounded-full" />
+        <Skeleton className="h-3 w-24" />
+      </div>
     </div>
   );
 }

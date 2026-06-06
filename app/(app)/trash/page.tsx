@@ -447,16 +447,6 @@ export default function TrashPage() {
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 pr-3">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-normal">Trash</h1>
-            <Badge variant="outline" className="font-normal">Admin Only</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Review data terarsip, restore item yang masih dibutuhkan, atau purge permanen dengan konfirmasi.
-          </p>
-        </div>
-
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Card>
             <CardContent className="p-3">
@@ -493,7 +483,10 @@ export default function TrashPage() {
                 </CardTitle>
                 <CardDescription>Pilih kategori, cari item, lalu restore atau purge dari menu aksi.</CardDescription>
               </div>
-              {activeFilterCount ? <Badge variant="outline">{activeFilterCount} filter aktif</Badge> : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">Admin Only</Badge>
+                {activeFilterCount ? <Badge variant="outline">{activeFilterCount} filter aktif</Badge> : null}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">

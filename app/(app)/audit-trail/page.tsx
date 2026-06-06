@@ -192,7 +192,7 @@ export default function AuditTrailPage() {
           <CardHeader>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <CardTitle>Audit Trail</CardTitle>
+                <CardTitle>Activity Log</CardTitle>
                 <CardDescription>Jejak aktivitas create, update, delete, dan soft delete.</CardDescription>
               </div>
               <Badge variant="outline">Admin Only</Badge>

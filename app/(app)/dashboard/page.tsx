@@ -919,9 +919,7 @@ function getPortStats(items: DevicePortItem[]) {
 }
 
 function isValidated(item: DeviceItem) {
-  if (item.validation_date || item.last_validation_at) return true;
-  const status = String(item.validation_status || "").toLowerCase();
-  return ["valid", "validated", "verified", "ok"].includes(status);
+  return Boolean(item.validation_date || item.last_validation_at);
 }
 
 function requestItems(items: ValidationRequestItem[], kind: "pending_adminregion" | "pending_superadmin" | "rejected_adminregion" | "rejected_superadmin"): DashboardQueueItem[] {

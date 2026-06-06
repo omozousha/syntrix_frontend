@@ -8,6 +8,7 @@ export type DeviceRelationLabels = {
   popCode?: string;
   project?: string;
   serviceType?: string;
+  loading?: boolean;
 };
 
 export function buildDeviceOperationalSummaryDisplay(item: DeviceRecord, relationLabels: DeviceRelationLabels = {}) {
@@ -21,10 +22,12 @@ export function buildDeviceOperationalSummaryDisplay(item: DeviceRecord, relatio
     region: getRegionLabel({
       relation: getRelationRecord(item.region),
       fallback: relationLabels.region,
+      loading: relationLabels.loading,
     }),
     pop: getPopLabel({
       relation: getRelationRecord(item.pop),
       fallback: relationLabels.pop,
+      loading: relationLabels.loading,
       optional: true,
     }),
     installationDate: valueOf(item.installation_date),

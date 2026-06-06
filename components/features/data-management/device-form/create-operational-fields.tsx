@@ -1,6 +1,7 @@
 "use client";
 
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
+import { Input } from "@/components/ui/input";
 import {
   AutoFilledBadge,
   Field,
@@ -63,7 +64,17 @@ export function CreateOperationalFields({
         />
       ) : null}
 
-      {flags.isPop || flags.isDevice ? (
+      {flags.isDevice ? (
+        <div className="space-y-1.5">
+          <FieldLabel
+            label="Validation Status"
+            tooltip="Device baru selalu dimulai sebagai unvalidated. Status validasi berubah otomatis setelah workflow validator disetujui."
+          />
+          <Input value="unvalidated" disabled />
+        </div>
+      ) : null}
+
+      {flags.isPop ? (
         <>
           <div className="space-y-1.5">
             <FieldLabel label="Validation Status" tooltip="Status hasil validasi lapangan/meja. Jika bukan unvalidated, sebaiknya isi Validation Date." />

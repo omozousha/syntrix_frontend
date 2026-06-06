@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 
 export function DataListHeader({
   label,
-  description,
   isRegionScoped,
   canCreateMaster,
   isMasterCategory,
@@ -20,22 +19,21 @@ export function DataListHeader({
   onCreate: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="space-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight">{label} List</h2>
-        <p className="text-sm text-muted-foreground">
-          {description}
-          {isRegionScoped ? " • Filter region aktif" : ""}
-        </p>
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span className="font-medium uppercase tracking-wide text-foreground">List controls</span>
+        <span className="rounded-full border bg-background px-2 py-0.5">
+          {isRegionScoped ? "Region scoped" : "All regions"}
+        </span>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {canCreateMaster ? (
-          <Button type="button" onClick={onCreate}>
+          <Button type="button" size="sm" onClick={onCreate}>
             <Plus className="mr-2 size-4" />
             Add {label}
           </Button>
         ) : null}
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" size="sm">
           <Link href={isMasterCategory ? "/master-data" : "/data-management"}>
             <ArrowLeft className="mr-2 size-4" />
             Kembali

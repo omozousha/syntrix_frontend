@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
+const strictMode = process.argv.includes("--strict");
 const frontendRoot = process.cwd();
 const workspaceRoot = path.resolve(frontendRoot, "..");
 
@@ -27,18 +28,22 @@ const fieldPattern = relationFields.join("|");
 const suspiciousPatterns = [
   {
     name: "JSX value prop uses raw relation id",
+    strict: false,
     regex: new RegExp(`value=\\{[^}\\n]*(?:${fieldPattern})[^}\\n]*\\}`, "g"),
   },
   {
     name: "JSX text renders raw relation id",
+    strict: true,
     regex: new RegExp(`>\\s*\\{[^}\\n]*(?:${fieldPattern})[^}\\n]*\\}\\s*<`, "g"),
   },
   {
     name: "Fallback uses raw relation id",
+    strict: true,
     regex: new RegExp(`\\|\\|[^\\n]*(?:${fieldPattern})`, "g"),
   },
   {
     name: "valueOf receives raw relation id",
+    strict: false,
     regex: new RegExp(`valueOf\\([^\\n)]*(?:${fieldPattern})[^\\n)]*\\)`, "g"),
   },
 ];
@@ -82,11 +87,13 @@ for (const target of scanTargets) {
   for (const file of files) {
     const text = readFileSync(file, "utf8");
     const lines = text.split(/\r?\n/);
-    for (const [index, line] of lines.entries()) {
+  for (const [index, line] of lines.entries()) {
       if (isMostlyDataFlow(line)) continue;
       for (const pattern of suspiciousPatterns) {
+        if (strictMode && !pattern.strict) continue;
         pattern.regex.lastIndex = 0;
         if (!pattern.regex.test(line)) continue;
+        if (strictMode && isAllowedStrictLine(line)) continue;
         findings.push({
           target: target.name,
           file: relative(target.root, file),
@@ -100,10 +107,11 @@ for (const target of scanTargets) {
 }
 
 console.log("# Relation Display Audit\n");
+if (strictMode) console.log("Mode: strict guardrail\n");
 console.log(`Scanned relation fields: ${relationFields.map((field) => `\`${field}\``).join(", ")}\n`);
 
 if (!findings.length) {
-  console.log("No high-confidence raw relation display fallback found.");
+  console.log(strictMode ? "No strict raw relation display fallback found." : "No high-confidence raw relation display fallback found.");
   process.exit(0);
 }
 
@@ -118,6 +126,11 @@ for (const [target, targetFindings] of byTarget.entries()) {
     }
     console.log("");
   }
+}
+
+if (strictMode) {
+  console.error("Strict relation display guard failed. User-facing relation labels must not fallback to raw technical IDs.");
+  process.exit(1);
 }
 
 console.log("This audit is informational for Phase 1. Use it to migrate display code toward relation resolvers and display adapters.");
@@ -141,6 +154,26 @@ function isMostlyDataFlow(line) {
   const trimmed = line.trim();
   if (!trimmed) return true;
   return benignLineFragments.some((fragment) => trimmed.includes(fragment));
+}
+
+function isAllowedStrictLine(line) {
+  const trimmed = line.trim();
+  return [
+    "apiFetch(",
+    "JSON.stringify(",
+    "region_id:",
+    "pop_id:",
+    "tenant_id:",
+    "brand_id:",
+    "model_id:",
+    "manufacturer_id:",
+    "project_id:",
+    "customer_id:",
+    "service_type_id:",
+    "if (",
+    "selectedCustomer?.",
+    "traceDeviceMap[",
+  ].some((fragment) => trimmed.includes(fragment));
 }
 
 function groupBy(items, getKey) {

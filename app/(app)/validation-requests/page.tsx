@@ -3,12 +3,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Clock, Inbox, RefreshCw, ShieldCheck } from "lucide-react";
-import { AppLoading } from "@/components/app-loading-new";
 import { ApprovalActions } from "@/components/features/requests/approval-actions";
 import { EvidenceChecklistPreview } from "@/components/features/requests/evidence-checklist-preview";
 import { RequestActorLine } from "@/components/features/requests/request-actor-line";
-import { RequestCard } from "@/components/features/requests/request-card";
-import { RequestComparison } from "@/components/features/requests/request-comparison";
+import { RequestCard, RequestCardSkeleton } from "@/components/features/requests/request-card";
+import { RequestComparison, RequestComparisonSkeleton } from "@/components/features/requests/request-comparison";
 import { RequestList } from "@/components/features/requests/request-list";
 import { RequestStatusBadge } from "@/components/features/requests/request-status-badge";
 import { RequestTypeBadge } from "@/components/features/requests/request-type-badge";
@@ -20,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob, resolveAttachment } from "@/lib/attachment-utils";
 import {
@@ -29,6 +29,7 @@ import {
   buildFieldValidationReviewFields as buildFieldValidationReviewDisplayFields,
 } from "@/lib/display-adapters/request-display-adapter";
 import { formatDateTime, normalizeRole, shortId, valueText } from "@/lib/domain-formatters";
+import { RELATION_LABEL_FALLBACK } from "@/lib/relation-labels";
 
 type QueueType = "adminregion" | "superadmin";
 type RequestStatus =
@@ -486,7 +487,7 @@ export default function ValidationRequestsPage() {
         {success ? <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-700">{success}</p> : null}
         {error ? <p className="rounded-md border border-destructive/20 bg-destructive/5 p-2 text-sm text-destructive">{error}</p> : null}
 
-        {loading ? <AppLoading label="Memuat queue request..." /> : null}
+        {loading ? <RequestPageSkeleton activeQueue={activeQueue} /> : null}
 
         {!loading ? (
           <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
@@ -725,6 +726,61 @@ export default function ValidationRequestsPage() {
         </AlertDialog>
       </div>
     </ScrollArea>
+  );
+}
+
+function RequestPageSkeleton({ activeQueue }: { activeQueue: QueueType }) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+      <div className="xl:col-span-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {["Queue", "Validation", "Asset Change"].map((label) => (
+          <Card key={label}>
+            <CardContent className="p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+              <Skeleton className="mt-2 h-7 w-14" />
+              <Skeleton className="mt-2 h-3 w-28" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <RequestList
+        filteredCount={0}
+        totalCount={0}
+        searchTerm=""
+        typeFilter="all"
+        statusFilter="all"
+        summarySlot={<Badge variant="outline">{activeQueue === "adminregion" ? "Queue Admin Region" : "Queue Superadmin"}</Badge>}
+        onSearchChange={() => undefined}
+        onTypeFilterChange={() => undefined}
+        onStatusFilterChange={() => undefined}
+      >
+        <RequestCardSkeleton />
+        <RequestCardSkeleton />
+        <RequestCardSkeleton />
+      </RequestList>
+      <Card>
+        <CardHeader className="px-3 py-2">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+            <Skeleton className="h-6 w-24 rounded-full" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3 px-3 pb-3">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-3 xl:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="rounded-md border bg-muted/20 p-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="mt-2 h-4 w-24" />
+              </div>
+            ))}
+          </div>
+          <RequestComparisonSkeleton />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -1565,9 +1621,9 @@ async function fetchLookupBatch(
       try {
         const result = await apiFetch<{ data?: Record<string, unknown> }>(`/${resource}/${encodeURIComponent(id)}`, { token });
         const label = result.data ? formatter(result.data) : "";
-        return [id, label || shortId(id)] as const;
+        return [id, label || RELATION_LABEL_FALLBACK.missing] as const;
       } catch {
-        return [id, shortId(id)] as const;
+        return [id, RELATION_LABEL_FALLBACK.missing] as const;
       }
     }),
   );
@@ -1588,7 +1644,7 @@ function formatPopLabel(item: Record<string, unknown>) {
 
 function formatProjectLabel(item: Record<string, unknown>) {
   const name = valueText(item.project_name);
-  const code = valueText(item.project_code || item.project_id);
+  const code = valueText(item.project_code);
   return code !== "-" ? `${name} (${code})` : name;
 }
 
