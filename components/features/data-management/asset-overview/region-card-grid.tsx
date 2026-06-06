@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import type { DataCategory } from "@/lib/data-management-config";
+import { buildRegionCardDisplay } from "@/lib/display-adapters/asset-overview-display-adapter";
 import { QuickCountButton } from "./quick-count-button";
 
 type RegionItem = {
@@ -89,6 +90,7 @@ export function RegionCardGrid({
         <>
           <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-4">
             {regions.map((region) => {
+              const display = buildRegionCardDisplay(region);
               const summary = regionSummaryCache[region.id];
               const isLoadingCard = regionSummaryLoadingIds.has(region.id) && !summary;
               const isOpen = openRegionIds.has(region.id);
@@ -103,11 +105,13 @@ export function RegionCardGrid({
                       <Button type="button" variant="ghost" className="h-auto w-full justify-start p-0 text-left hover:bg-transparent">
                         <CardHeader className="w-full space-y-1 px-3 py-3">
                           <CardTitle className="flex items-start justify-between gap-2 text-sm">
-                            <span className="truncate">{region.region_name}</span>
+                            <span className="truncate">{display.name}</span>
                             <div className="flex items-center gap-1">
-                              <Badge variant="outline" className="text-[10px] uppercase">
-                                {region.region_id}
-                              </Badge>
+                              {display.code ? (
+                                <Badge variant="outline" className="text-[10px] uppercase">
+                                  {display.code}
+                                </Badge>
+                              ) : null}
                               <ChevronDown className={`size-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
                             </div>
                           </CardTitle>

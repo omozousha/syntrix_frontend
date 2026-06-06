@@ -24,6 +24,7 @@ import {
   type PopsListResponse,
   type RegionsListResponse,
 } from "@/lib/api";
+import { getPopLabel, getRegionLabel } from "@/lib/relation-labels";
 
 type RoleKey = "superadmin" | "adminregion" | "validator";
 
@@ -798,17 +799,17 @@ function popStatusChart(items: PopItem[]): DashboardChartDatum[] {
 }
 
 function regionDistributionChart(regions: RegionItem[], devices: DeviceItem[]): DashboardChartDatum[] {
-  const regionMap = new Map(regions.map((region) => [region.id, region.region_name || region.region_id || region.id]));
-  return countBy(devices, (item) => regionMap.get(String(item.region_id || "")) || valueText(item.region_id, "No Region"));
+  const regionMap = new Map(regions.map((region) => [region.id, getRegionLabel({ relation: region })]));
+  return countBy(devices, (item) => regionMap.get(String(item.region_id || "")) || getRegionLabel({ fallback: item.region_id, optional: true }));
 }
 
 function regionPopDistributionChart(regions: RegionItem[], pops: PopItem[]): DashboardChartDatum[] {
-  const regionMap = new Map(regions.map((region) => [region.id, region.region_name || region.region_id || region.id]));
-  return countBy(pops, (item) => regionMap.get(String(item.region_id || "")) || valueText(item.region_id, "No Region"));
+  const regionMap = new Map(regions.map((region) => [region.id, getRegionLabel({ relation: region })]));
+  return countBy(pops, (item) => regionMap.get(String(item.region_id || "")) || getRegionLabel({ fallback: item.region_id, optional: true }));
 }
 
 function popDeviceDistributionChart(pops: PopItem[], devices: DeviceItem[]): DashboardChartDatum[] {
-  const popMap = new Map(pops.map((pop) => [pop.id, pop.pop_name || pop.pop_code || pop.pop_id || pop.id]));
+  const popMap = new Map(pops.map((pop) => [pop.id, getPopLabel({ relation: pop, fallback: pop.pop_code || pop.pop_id, optional: true })]));
   return countBy(devices, (item) => popMap.get(String(item.pop_id || "")) || "No POP").slice(0, 8);
 }
 
@@ -843,7 +844,7 @@ function popWithoutDeviceItems(pops: PopItem[], devices: DeviceItem[]): Dashboar
     .slice(0, 6)
     .map((pop) => ({
       id: pop.id,
-      title: pop.pop_name || pop.pop_code || pop.pop_id || "POP",
+      title: getPopLabel({ relation: pop, fallback: pop.pop_code || pop.pop_id, optional: true }) || "POP",
       description: `${pop.pop_id || pop.id} belum memiliki device pada scope data dashboard.`,
       href: "/data-management",
       badge: "No Device",
@@ -853,10 +854,10 @@ function popWithoutDeviceItems(pops: PopItem[], devices: DeviceItem[]): Dashboar
 
 function formatRegionScope(regions: RegionItem[]) {
   if (!regions.length) return "Region mengikuti scope akun validator.";
-  if (regions.length === 1) return regions[0].region_name || regions[0].region_id || "1 region aktif";
+  if (regions.length === 1) return getRegionLabel({ relation: regions[0], fallback: "1 region aktif" });
   return regions
     .slice(0, 2)
-    .map((region) => region.region_name || region.region_id || region.id)
+    .map((region) => getRegionLabel({ relation: region }))
     .join(", ")
     .concat(regions.length > 2 ? ` +${regions.length - 2}` : "");
 }

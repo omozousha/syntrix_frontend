@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { API_BASE_URL, apiFetch } from "@/lib/api";
 import { formatRoleLabel, normalizeRole } from "@/lib/domain-formatters";
+import { getRegionLabel } from "@/lib/relation-labels";
 import { mapValidationStatus } from "@/lib/validation-status";
 import { useSession } from "@/components/session-context";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -195,7 +196,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
           .filter((row) => normalizedRole === "superadmin" || scopedRegionIds.includes(row.id))
           .map((row) => ({
             id: row.id,
-            label: row.region_name || row.region_id || row.id,
+            label: getRegionLabel({ relation: row, fallback: row.region_id }),
           }));
         setRegionOptions(options);
       } catch {

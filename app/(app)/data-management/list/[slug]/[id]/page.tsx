@@ -80,6 +80,8 @@ type DevicePort = {
   core_capacity?: number | null;
   core_used?: number | null;
   customer_id?: string | null;
+  customer_name?: string | null;
+  customer_number?: string | null;
   ont_device_id?: string | null;
   occupied_at?: string | null;
   notes?: string | null;
@@ -473,7 +475,9 @@ export default function DataManagementDetailPage() {
   const title = useMemo(() => {
     if (!item || !category) return "Detail";
     if (category.resource === "pops") {
-      return `${valueOf(item.pop_name)} (${valueOf(item.pop_id)})`;
+      const popName = valueOf(item.pop_name, "POP");
+      const popCode = valueOf(item.pop_code);
+      return popCode ? `${popName} (${popCode})` : popName;
     }
     if (category.resource === "devices") {
       return `${valueOf(item.device_name)} (${valueOf(item.device_id)})`;
@@ -2109,7 +2113,7 @@ function ServicePortRelationsPanel({
 
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <RelationInfo label="Port" value={port.port_label || `Port ${port.port_index}`} />
-                    <RelationInfo label="Customer" value={port.customer_id || "-"} />
+                    <RelationInfo label="Customer" value={port.customer_number || port.customer_name || "-"} />
                     <RelationInfo label="Occupied" value={formatDate(valueOf(port.occupied_at))} />
                     <RelationInfo label="Port ID" value={port.port_id || "-"} />
                   </div>

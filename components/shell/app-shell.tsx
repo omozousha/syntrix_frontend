@@ -10,6 +10,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import { getCategoryBySlug } from "@/lib/data-management-config";
 
 export function AppShell({
   me,
@@ -106,7 +107,7 @@ function buildPageContext(pathname: string) {
     },
     "data-management": {
       eyebrow: "Inventory",
-      title: segments.includes("list") ? buildEntityTitle(last) : "Data Management",
+      title: buildDataManagementTitle(segments),
       description: "Kelola asset, POP, route, project, customer, dan relasi jaringan.",
     },
     requests: {
@@ -156,6 +157,23 @@ function buildPageContext(pathname: string) {
     title: buildEntityTitle(last),
     description: "Synchronization & Validation Matrix.",
   };
+}
+
+function buildDataManagementTitle(segments: string[]) {
+  const listIndex = segments.indexOf("list");
+  if (listIndex >= 0) {
+    const slug = segments[listIndex + 1] || "";
+    const category = getCategoryBySlug(slug);
+    const label = category?.label || buildEntityTitle(slug);
+    return segments[listIndex + 2] ? `${label} Detail` : `${label} List`;
+  }
+
+  if (segments.includes("topology")) return "Topology";
+  if (segments.includes("as-built-documents")) return "As-Built Documents";
+  if (segments.includes("as-built")) return "As-Built";
+  if (segments.includes("odp-quality")) return "ODP Quality";
+  if (segments.includes("create")) return "Create Asset";
+  return "Data Management";
 }
 
 function buildEntityTitle(value: string) {

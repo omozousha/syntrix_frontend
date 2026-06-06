@@ -135,7 +135,7 @@ export function OdpPortSection({
                 </div>
                 <div className="mb-2 grid grid-cols-2 gap-2 text-xs">
                   <RelationInfo label="Status Aktual" value={port.status || "idle"} />
-                  <RelationInfo label="CID" value={assignedCustomer?.customer_number || assignedCustomer?.customer_id || "-"} />
+                  <RelationInfo label="CID" value={assignedCustomer?.customer_number || "-"} />
                   <RelationInfo label="Customer" value={assignedCustomer?.customer_name || "-"} />
                   <RelationInfo label="ONT" value={assignedOnt?.device_name || assignedOnt?.device_id || "-"} />
                   <RelationInfo

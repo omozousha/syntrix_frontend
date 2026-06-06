@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import type { DataCategory } from "@/lib/data-management-config";
+import { buildRegionCardDisplay } from "@/lib/display-adapters/asset-overview-display-adapter";
 import { QuickCountButton } from "./quick-count-button";
 
 type RegionItem = {
@@ -55,6 +56,8 @@ export function FocusedRegionCard({
   formatDateTime: (value?: string | null) => string;
   formatKilometers: (valueMeters: number) => string;
 }) {
+  const focusedDisplay = buildRegionCardDisplay(focusedRegion);
+
   return (
     <section className="space-y-2">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -64,10 +67,13 @@ export function FocusedRegionCard({
             <Combobox
               value={focusedRegionId}
               onValueChange={onFocusedRegionChange}
-              options={regions.map((region) => ({
-                value: region.id,
-                label: `${region.region_name} (${region.region_id})`,
-              }))}
+              options={regions.map((region) => {
+                const display = buildRegionCardDisplay(region);
+                return {
+                  value: region.id,
+                  label: display.comboboxLabel,
+                };
+              })}
             />
           </div>
         ) : null}
@@ -79,10 +85,12 @@ export function FocusedRegionCard({
         <Card>
           <CardHeader className="space-y-1 px-3 py-3">
             <CardTitle className="flex items-start justify-between gap-2 text-sm">
-              <span className="truncate">{focusedRegion.region_name}</span>
-              <Badge variant="outline" className="text-[10px] uppercase">
-                {focusedRegion.region_id}
-              </Badge>
+              <span className="truncate">{focusedDisplay.name}</span>
+              {focusedDisplay.code ? (
+                <Badge variant="outline" className="text-[10px] uppercase">
+                  {focusedDisplay.code}
+                </Badge>
+              ) : null}
             </CardTitle>
             <div className="space-y-1 text-[11px] text-muted-foreground">
               <p>

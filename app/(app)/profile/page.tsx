@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/components/session-context";
 import { API_BASE_URL, apiFetch } from "@/lib/api";
 import { formatRoleLabel } from "@/lib/domain-formatters";
+import { getRegionLabel, RELATION_LABEL_FALLBACK } from "@/lib/relation-labels";
 
 const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
 const AVATAR_CACHE_PREFIX = "syntrix_avatar_cache";
@@ -33,6 +34,7 @@ export default function ProfilePage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
+  const [defaultRegionLabel, setDefaultRegionLabel] = useState<string>(RELATION_LABEL_FALLBACK.empty);
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -44,6 +46,30 @@ export default function ProfilePage() {
     setFirstName(first);
     setLastName(last);
   }, [me.app_user.full_name]);
+
+  useEffect(() => {
+    const regionId = me.app_user.default_region_id;
+    if (!regionId) {
+      setDefaultRegionLabel(RELATION_LABEL_FALLBACK.empty);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadDefaultRegion() {
+      setDefaultRegionLabel(RELATION_LABEL_FALLBACK.loading);
+      try {
+        const payload = await apiFetch<{ data?: Record<string, unknown> }>(`/regions/${regionId}`, { token });
+        if (!cancelled) setDefaultRegionLabel(getRegionLabel({ relation: payload.data, fallback: RELATION_LABEL_FALLBACK.missing }));
+      } catch {
+        if (!cancelled) setDefaultRegionLabel(RELATION_LABEL_FALLBACK.missing);
+      }
+    }
+
+    void loadDefaultRegion();
+    return () => {
+      cancelled = true;
+    };
+  }, [me.app_user.default_region_id, token]);
 
   const initials = useMemo(() => {
     const full = `${firstName} ${lastName}`.trim() || me.app_user.full_name || "";
@@ -398,8 +424,8 @@ export default function ProfilePage() {
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <Label>Default Region ID</Label>
-                        <Input value={me.app_user.default_region_id || "-"} disabled />
+                        <Label>Default Region</Label>
+                        <Input value={defaultRegionLabel} disabled />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Region Scope Count</Label>

@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { API_BASE_URL, apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
+import { getRegionLabel } from "@/lib/relation-labels";
 
 type AsBuiltDocumentRow = {
   id: string;
@@ -313,7 +314,7 @@ export default function AsBuiltDocumentsPage() {
                           <p className="truncate text-xs text-muted-foreground">{row.document_id || row.id}</p>
                         </div>
                       </TableCell>
-                      <TableCell>{row.region_id ? regionNameMap.get(row.region_id) || row.region_id : "-"}</TableCell>
+                      <TableCell>{getRegionLabel({ fallback: row.region_id ? regionNameMap.get(row.region_id) || row.region_id : "", optional: true })}</TableCell>
                       <TableCell>{row.revision_code || "-"}</TableCell>
                       <TableCell>
                         <Badge variant={row.status === "published" ? "secondary" : "outline"}>{(row.status || "-").toUpperCase()}</Badge>

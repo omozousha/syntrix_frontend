@@ -620,31 +620,52 @@ Tujuan: setiap halaman membaca data display-ready.
 ### Frontend Todo
 
 - [x] Buat `device-display-adapter`.
-- [ ] Buat `request-display-adapter`.
-- [ ] Buat `validation-history-display-adapter`.
-- [ ] Buat `qr-fallback-display-adapter`.
+- [x] Buat `request-display-adapter`.
+- [x] Buat `validation-history-display-adapter`.
+- [x] Buat `qr-fallback-display-adapter`.
 - [x] Migrasi sebagian component detail ODP ke adapter.
-- [ ] Migrasi device list table/mobile card ke adapter.
-- [ ] Migrasi request approval card/detail ke adapter.
+- [x] Migrasi device list table/mobile card ke adapter.
+- [x] Migrasi sebagian request approval card/detail ke adapter.
 
 ### Output Phase 5 - Partial
 
 - Device adapter awal: `lib/display-adapters/device-display-adapter.ts`
+- Request adapter awal: `lib/display-adapters/request-display-adapter.ts`
+- Validation history adapter awal: `lib/display-adapters/validation-history-display-adapter.ts`
+- QR browser fallback adapter awal: `lib/display-adapters/qr-fallback-display-adapter.ts`
+- Asset overview adapter awal: `lib/display-adapters/asset-overview-display-adapter.ts`
+- Device list adapter awal: `lib/display-adapters/device-list-display-adapter.ts`
 - Adapter sudah dipakai untuk:
   - Device operational summary.
   - Customer detail relation display.
   - QR label relation display.
+  - Request summary.
+  - Create/archive request review fields.
+  - Field validation request fields dan comparison rows.
+  - ODP validation history identity fields.
+  - QR browser fallback device type, device name, dan tenant display.
+  - RegionCardGrid dan FocusedRegionCard region name/code display.
+  - Data-management list table/mobile card relation display dan bulk QR POP label.
+  - Dashboard region/POP chart label fallback.
+  - As-built documents region column.
+  - Account table region column dan NavUser region filter options.
+  - Profile default region display.
+  - Detail POP title dan service-port customer display.
+- Catatan Region Cards:
+  - RegionCardGrid sudah dinamis untuk penambahan kategori device baru karena detail count memakai `assetCategories.map(...)`.
+  - `assetCategories` dibangun dari static asset categories + master `deviceTypes` aktif.
 - Scope berikutnya:
   - Pisahkan ID internal untuk form/fetch dari label display dalam audit.
   - Tambahkan adapter request approval.
-  - Tambahkan adapter validation history.
-  - Migrasi list table/mobile card.
+  - Perluas request adapter ke update diff field jika sudah ada label map untuk foreign key lama/baru.
+  - Perluas validation history adapter ke actor timeline jika payload actor bertambah.
+  - Lanjutkan audit display pada topology dan detail device internal relation lookup.
 
 ### Checker
 
 - [ ] Detail ODP tidak membaca `item.region_id` langsung untuk display.
-- [ ] Request approval tidak membaca raw submitter/device/region ID untuk display.
-- [ ] List mobile card tidak menampilkan ID relasi.
+- [x] Request approval tidak membaca raw region/POP/project ID untuk display pada summary dan review utama.
+- [x] List mobile card tidak menampilkan ID relasi.
 
 ## Phase 6 - Skeleton dan Loading Boundary
 
@@ -674,8 +695,8 @@ Tujuan: pola baru berlaku di seluruh frontend.
 
 ### Route Todo
 
-- [ ] `/data-management`
-- [ ] `/data-management/list/[slug]`
+- [x] `/data-management`
+- [x] `/data-management/list/[slug]`
 - [ ] `/data-management/list/[slug]/[id]`
 - [ ] `/data-management/create`
 - [ ] `/requests`
@@ -683,7 +704,7 @@ Tujuan: pola baru berlaku di seluruh frontend.
 - [ ] `/master-data`
 - [ ] `/trash`
 - [ ] `/maps`
-- [ ] `/field/odp/[id]`
+- [x] `/field/odp/[id]`
 - [ ] `/field/access-denied`
 
 ### Checker

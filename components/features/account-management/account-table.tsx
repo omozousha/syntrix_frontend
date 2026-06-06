@@ -4,6 +4,7 @@ import { SimpleTable } from "@/components/simple-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getVerificationState } from "@/lib/domain-formatters";
+import { getRegionLabel } from "@/lib/relation-labels";
 
 export type AccountUserRow = {
   id: string;
@@ -63,7 +64,7 @@ export function AccountTable({
         <Badge key={`${item.id}-role`} variant="outline">
           {roleLabels[String(item.role_name || "")] || item.role_name}
         </Badge>,
-        item.default_region_id ? regionMap.get(item.default_region_id) || item.default_region_id : "-",
+        getRegionLabel({ fallback: item.default_region_id ? regionMap.get(item.default_region_id) : "", optional: true }),
         item.is_active ? <Badge key="active">Active</Badge> : <Badge key="inactive" variant="secondary">Inactive</Badge>,
         <div key={item.id} className="flex flex-wrap gap-2">
           {getVerificationState(item) !== "verified" ? (

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiFetch } from "@/lib/api";
+import { buildQrFallbackDisplay } from "@/lib/display-adapters/qr-fallback-display-adapter";
 
 type DeviceQrContext = {
   id: string;
@@ -17,6 +18,7 @@ type DeviceQrContext = {
     tenant_code?: string | null;
     tenant_name?: string | null;
   } | null;
+  old_device_name?: string | null;
 };
 
 const SYNTRIX_ONE_SCHEME = "io.syntrixone.app://field/odp";
@@ -33,6 +35,7 @@ export default function OdpQrBrowserFallbackPage() {
     () => `${SYNTRIX_ONE_SCHEME}/${encodeURIComponent(id)}`,
     [id],
   );
+  const display = useMemo(() => buildQrFallbackDisplay(device, loading), [device, loading]);
 
   useEffect(() => {
     if (!id) return;
@@ -138,16 +141,9 @@ export default function OdpQrBrowserFallbackPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                <InfoRow label="Type Device" value={device?.device_type_key || "ODP"} />
-                <InfoRow label="Nama Device" value={device?.device_name || "-"} />
-                <InfoRow
-                  label="Tenant"
-                  value={
-                    device?.tenant?.tenant_name
-                      ? [device.tenant.tenant_name, device.tenant.tenant_code].filter(Boolean).join(" | ")
-                      : "-"
-                  }
-                />
+                <InfoRow label="Type Device" value={display.deviceType} />
+                <InfoRow label="Nama Device" value={display.deviceName} />
+                <InfoRow label="Tenant" value={display.tenant} />
               </div>
 
               {loadMessage ? (

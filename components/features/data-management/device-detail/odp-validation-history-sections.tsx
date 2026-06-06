@@ -1,4 +1,4 @@
-import { getPopLabel } from "@/lib/relation-labels";
+import { buildOdpValidationIdentityFields } from "@/lib/display-adapters/validation-history-display-adapter";
 
 type OdpFieldInspectionPayload = {
   initial_photos?: Record<string, { label?: string; attachment?: { id?: string | null; attachment_id?: string | null; name?: string | null } }>;
@@ -95,19 +95,7 @@ export function OdpValidationWorkflowTimeline({
 export function OdpFieldValidationSummary({ validation }: { validation?: OdpFieldValidationPayload | null }) {
   if (!validation || !Object.keys(validation).length) return null;
 
-  const fields = [
-    { label: "Tanggal", value: formatDate(valueOf(validation.validation_date)) },
-    { label: "Inventory", value: valueOf(validation.inventory_id, "-") },
-    { label: "Nama Lama", value: valueOf(validation.old_device_name, "-") },
-    { label: "Nama Baru", value: valueOf(validation.new_device_name, "-") },
-    { label: "POP", value: getPopLabel({ fallback: validation.pop_name, optional: true }) },
-    { label: "Tipe ODP", value: valueOf(validation.odp_type, "-") },
-    { label: "Instalasi", value: valueOf(validation.installation_type, "-") },
-    { label: "Splitter", value: valueOf(validation.splitter_ratio, "-") },
-    { label: "Kapasitas", value: valueOf(validation.total_ports, "-") },
-    { label: "Longitude", value: valueOf(validation.longitude, "-") },
-    { label: "Latitude", value: valueOf(validation.latitude, "-") },
-  ];
+  const fields = buildOdpValidationIdentityFields(validation, formatDate);
 
   return (
     <div className="mt-2 rounded-md border bg-muted/10 p-2">

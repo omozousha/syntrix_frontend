@@ -64,6 +64,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { buildCategoryApiPath, getCategoryBySlug } from "@/lib/data-management-config";
+import { buildDeviceListDisplay, type DeviceListLookupMaps } from "@/lib/display-adapters/device-list-display-adapter";
 import { buildDeviceQrHref, drawQrLabelPdf, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
 
@@ -213,6 +214,14 @@ export default function DataManagementListPage() {
         return accumulator;
       }, {}),
     [popFilterOptions],
+  );
+  const listDisplayLookups = useMemo<DeviceListLookupMaps>(
+    () => ({
+      pops: popLabelById,
+      manufacturers: relationMaps.manufacturers,
+      brands: relationMaps.brands,
+    }),
+    [popLabelById, relationMaps],
   );
   const filterGridClass =
     supportsPopFilter
@@ -547,6 +556,7 @@ export default function DataManagementListPage() {
   const tableRows = useMemo(() => {
     if (!category) return [];
     return rows.map((item) => {
+      const display = buildDeviceListDisplay(item, listDisplayLookups);
       const selectCell = (
         <div className="flex items-center justify-center" onClick={(event) => event.stopPropagation()}>
           <input
@@ -586,7 +596,7 @@ export default function DataManagementListPage() {
           pick(item, ["device_id"]),
           pick(item, ["device_name", "name"]),
           pick(item, ["device_type_key"]),
-          resolveRelationName(item.pop_id, popLabelById),
+          display.pop,
           pick(item, ["status"]),
           <span key={`validation-${item.id}`} title={validationTitle} className={`inline-flex rounded border px-2 py-0.5 text-xs ${validation.className}`}>{validation.label}</span>,
           formatDateTime(pick(item, ["updated_at", "created_at"])),
@@ -597,8 +607,8 @@ export default function DataManagementListPage() {
           selectCell,
           pick(item, ["pole_id"]),
           pick(item, ["pole_number", "name"]),
-          pick(item, ["region_id"]),
-          resolveRelationName(item.pop_id, popLabelById),
+          display.region,
+          display.pop,
           pick(item, ["status"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -609,7 +619,7 @@ export default function DataManagementListPage() {
           pick(item, ["customer_number"]),
           pick(item, ["customer_name", "name"]),
           pick(item, ["service_type"]),
-          resolveRelationName(item.pop_id, popLabelById),
+          display.pop,
           pick(item, ["status"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -619,8 +629,8 @@ export default function DataManagementListPage() {
           selectCell,
           pick(item, ["route_id"]),
           pick(item, ["route_name", "name"]),
-          pick(item, ["region_id"]),
-          resolveRelationName(item.pop_id, popLabelById),
+          display.region,
+          display.pop,
           pick(item, ["status"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -722,7 +732,7 @@ export default function DataManagementListPage() {
           selectCell,
           pick(item, ["brand_code"]),
           withArchivedLabel(item, pick(item, ["brand_name"])),
-          resolveRelationName(item.manufacturer_id, relationMaps.manufacturers),
+          display.manufacturer,
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
       }
@@ -731,7 +741,7 @@ export default function DataManagementListPage() {
           selectCell,
           pick(item, ["model_code"]),
           withArchivedLabel(item, pick(item, ["model_name"])),
-          resolveRelationName(item.brand_id, relationMaps.brands),
+          display.brand,
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
       }
@@ -768,12 +778,12 @@ export default function DataManagementListPage() {
         pick(item, ["project_id"]),
         pick(item, ["project_name", "name"]),
         pick(item, ["status"]),
-        pick(item, ["region_id"]),
-        resolveRelationName(item.pop_id, popLabelById),
+        display.region,
+        display.pop,
         formatDateTime(pick(item, ["updated_at", "created_at"])),
       ];
     });
-  }, [category, rows, selectedIds, relationMaps, popLabelById]);
+  }, [category, rows, selectedIds, relationMaps, listDisplayLookups]);
 
   const selectedRowIndices = useMemo(() => {
     const set = new Set<number>();
@@ -973,7 +983,7 @@ export default function DataManagementListPage() {
           deviceCode: pick(row, ["device_id", "id"]),
           deviceType: pick(row, ["device_type_key"]),
           popName: formatQrPopLabel(
-            resolveRelationName(row.pop_id, popLabelById),
+            buildDeviceListDisplay(row, listDisplayLookups).pop,
             pick(row, ["pop_code", "pop_id"]),
           ),
           qrDataUrl: await QRCode.toDataURL(buildDeviceDirectHref(category.slug, row), {
@@ -1194,29 +1204,11 @@ export default function DataManagementListPage() {
                   showValidationBadge={category?.resource === "devices"}
                   supportsPopFilter={supportsPopFilter}
                   canTraceTopology={isOdpCategory && canTraceTopology}
-                  getPrimaryName={(row) =>
-                    category?.resource === "devices"
-                      ? pick(row, ["device_name", "name"])
-                      : category?.resource === "pops"
-                        ? pick(row, ["pop_name", "name"])
-                        : category?.resource === "projects"
-                          ? pick(row, ["project_name", "name"])
-                          : pick(row, ["name", "region_name", "customer_name", "route_name", "city_name"])
-                  }
-                  getPrimaryCode={(row) =>
-                    category?.resource === "devices"
-                      ? pick(row, ["device_id"])
-                      : category?.resource === "pops"
-                        ? pick(row, ["pop_id"])
-                        : category?.resource === "projects"
-                          ? pick(row, ["project_id"])
-                          : category?.resource === "customers"
-                            ? pick(row, ["customer_number"])
-                            : pick(row, ["region_id", "city_code", "route_id", "id"])
-                  }
+                  getPrimaryName={(row) => buildDeviceListDisplay(row, listDisplayLookups).primaryName}
+                  getPrimaryCode={(row) => buildDeviceListDisplay(row, listDisplayLookups).primaryCode}
                   getStatus={(row) => pick(row, ["status", "status_pop", "is_active"])}
                   getUpdatedAt={(row) => formatDateTime(pick(row, ["updated_at", "created_at"]))}
-                  getPopLabel={(row) => resolveRelationName(row.pop_id, popLabelById)}
+                  getPopLabel={(row) => buildDeviceListDisplay(row, listDisplayLookups).pop}
                   getValidationBadge={(row) => {
                     const validation = formatValidationStatus(getDeviceDisplayValidationStatus(row));
                     return {
