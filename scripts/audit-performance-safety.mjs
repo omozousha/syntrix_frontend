@@ -1,7 +1,22 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
+const scanDirs = ["app", "components", "hooks", "lib"];
+const scanExtensions = new Set([".ts", ".tsx"]);
+const relationFetchResources = [
+  "regions",
+  "pops",
+  "tenants",
+  "brands",
+  "assetModels",
+  "manufacturers",
+  "projects",
+  "serviceTypes",
+];
+const allowedManualRelationFetchFiles = new Set([
+  "app/(app)/profile/page.tsx",
+]);
 
 const checks = [
   {
@@ -94,6 +109,39 @@ const checks = [
       return issues;
     },
   },
+  {
+    name: "Manual relation fetch stays limited to cleanup targets",
+    run() {
+      const issues = [];
+      const allowedFindings = [];
+      const files = scanDirs.flatMap((dir) => listFiles(path.join(root, dir)));
+
+      for (const file of files) {
+        const relativePath = relative(file);
+        const text = readFileSync(file, "utf8");
+        const lines = text.split(/\r?\n/);
+
+        for (const [index, line] of lines.entries()) {
+          if (!isManualRelationFetchLine(line)) continue;
+          const finding = `${relativePath}:${index + 1} contains manual relation fetch: ${line.trim()}`;
+          if (allowedManualRelationFetchFiles.has(relativePath)) {
+            allowedFindings.push(finding);
+          } else {
+            issues.push(finding);
+          }
+        }
+      }
+
+      if (allowedFindings.length) {
+        console.log("info - existing manual relation fetch cleanup targets:");
+        for (const finding of allowedFindings) {
+          console.log(`info - ${finding}`);
+        }
+      }
+
+      return issues;
+    },
+  },
 ];
 
 const failures = [];
@@ -130,4 +178,30 @@ function readText(relativePath) {
 
 function readJson(relativePath) {
   return JSON.parse(readText(relativePath));
+}
+
+function listFiles(dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).flatMap((entry) => {
+    const fullPath = path.join(dir, entry);
+    const stats = statSync(fullPath);
+    if (stats.isDirectory()) return listFiles(fullPath);
+    if (stats.isFile() && scanExtensions.has(path.extname(fullPath))) return [fullPath];
+    return [];
+  });
+}
+
+function relative(file) {
+  return path.relative(root, file).replaceAll(path.sep, "/");
+}
+
+function isManualRelationFetchLine(line) {
+  if (!line.includes("apiFetch") && !line.includes("fetch(")) return false;
+  return relationFetchResources.some((resource) => (
+    line.includes(`\`/${resource}/\${`) ||
+    line.includes(`\`${resource}/\${`) ||
+    line.includes(`/${resource}/\${`) ||
+    line.includes(`"/${resource}/"`) ||
+    line.includes(`'/${resource}/'`)
+  ));
 }

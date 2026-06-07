@@ -40,6 +40,7 @@ import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-ut
 import { resolveAttachment } from "@/lib/attachment-utils";
 import { getCategoryBySlug } from "@/lib/data-management-config";
 import { buildCustomerRelationDisplay, buildDeviceQrRelationDisplay } from "@/lib/display-adapters/device-display-adapter";
+import { useReferenceData } from "@/hooks/use-reference-data";
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
 import { buildDeviceQrHref, buildQrLabelPngDataUrl, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
@@ -342,6 +343,12 @@ export default function DataManagementDetailPage() {
   const id = params?.id || "";
   const category = getCategoryBySlug(slug);
   const { token, me } = useSession();
+  const relationReferenceQuery = useReferenceData({
+    token,
+    groups: ["regions", "pops", "tenants", "manufacturers", "brands", "assetModels", "projects", "serviceTypes"],
+    limit: 500,
+    enabled: Boolean(token && category),
+  });
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -388,6 +395,19 @@ export default function DataManagementDetailPage() {
   const [reminderError, setReminderError] = useState("");
   const [popOptions, setPopOptions] = useState<PopLookupOption[]>([]);
   const [loadingOdpLookups, setLoadingOdpLookups] = useState(false);
+  const relationReferenceMaps = useMemo(() => {
+    const data = relationReferenceQuery.data?.data || {};
+    return {
+      regions: buildReferenceMap(data.regions),
+      pops: buildReferenceMap(data.pops),
+      tenants: buildReferenceMap(data.tenants),
+      manufacturers: buildReferenceMap(data.manufacturers),
+      brands: buildReferenceMap(data.brands),
+      models: buildReferenceMap(data.assetModels || data.models),
+      projects: buildReferenceMap(data.projects),
+      serviceTypes: buildReferenceMap(data.serviceTypes),
+    };
+  }, [relationReferenceQuery.data]);
   const [odpValidations, setOdpValidations] = useState<OdpValidationRecord[]>([]);
   const [loadingOdpValidations, setLoadingOdpValidations] = useState(false);
   const [odpCoreChainSummary, setOdpCoreChainSummary] = useState<OdpCoreChainSummary | null>(null);
@@ -621,50 +641,25 @@ export default function DataManagementDetailPage() {
           const embeddedBrand = getRelationRecord(activeItem.brand);
           const embeddedModel = getRelationRecord(activeItem.model);
           const embeddedTenant = getRelationRecord(activeItem.tenant);
+          const referenceRegion = relationReferenceMaps.regions.get(valueOf(activeItem.region_id));
+          const referencePop = relationReferenceMaps.pops.get(valueOf(activeItem.pop_id));
+          const referenceManufacturer = relationReferenceMaps.manufacturers.get(valueOf(activeItem.manufacturer_id));
+          const referenceBrand = relationReferenceMaps.brands.get(valueOf(activeItem.brand_id));
+          const referenceModel = relationReferenceMaps.models.get(valueOf(activeItem.model_id));
+          const referenceTenant = relationReferenceMaps.tenants.get(valueOf(activeItem.tenant_id));
 
-          labels.region = valueOf(embeddedRegion?.region_name);
-          labels.pop = valueOf(embeddedPop?.pop_name);
-          labels.popCode = valueOf(embeddedPop?.pop_code);
-          labels.manufacturer = valueOf(embeddedManufacturer?.manufacturer_name);
-          labels.brand = valueOf(embeddedBrand?.brand_name);
-          labels.model = valueOf(embeddedModel?.model_name);
-          labels.tenant = valueOf(embeddedTenant?.tenant_name);
-
-          const [region, pop, manufacturer, brand, model, tenant] = await Promise.all([
-            !labels.region && valueOf(activeItem.region_id)
-              ? apiFetch<{ data: Record<string, unknown> }>(`/regions/${valueOf(activeItem.region_id)}`, { token }).catch(() => null)
-              : Promise.resolve(null),
-            !labels.pop && valueOf(activeItem.pop_id)
-              ? apiFetch<{ data: Record<string, unknown> }>(`/pops/${valueOf(activeItem.pop_id)}`, { token }).catch(() => null)
-              : Promise.resolve(null),
-            !labels.manufacturer && valueOf(activeItem.manufacturer_id)
-              ? apiFetch<{ data: Record<string, unknown> }>(`/manufacturers/${valueOf(activeItem.manufacturer_id)}`, { token }).catch(() => null)
-              : Promise.resolve(null),
-            !labels.brand && valueOf(activeItem.brand_id)
-              ? apiFetch<{ data: Record<string, unknown> }>(`/brands/${valueOf(activeItem.brand_id)}`, { token }).catch(() => null)
-              : Promise.resolve(null),
-            !labels.model && valueOf(activeItem.model_id)
-              ? apiFetch<{ data: Record<string, unknown> }>(`/assetModels/${valueOf(activeItem.model_id)}`, { token }).catch(() => null)
-              : Promise.resolve(null),
-            !labels.tenant && valueOf(activeItem.tenant_id)
-              ? apiFetch<{ data: Record<string, unknown> }>(`/tenants/${valueOf(activeItem.tenant_id)}`, { token }).catch(() => null)
-              : Promise.resolve(null),
-          ]);
-
-          labels.region ||= region ? valueOf(region.data.region_name) : "";
-          labels.pop ||= pop ? valueOf(pop.data.pop_name) : "";
-          labels.popCode ||= pop ? valueOf(pop.data.pop_code) : "";
-          labels.manufacturer ||= manufacturer ? valueOf(manufacturer.data.manufacturer_name) : "";
-          labels.brand ||= brand ? valueOf(brand.data.brand_name) : "";
-          labels.model ||= model ? valueOf(model.data.model_name) : "";
-          labels.tenant ||= tenant ? valueOf(tenant.data.tenant_name) : "";
+          labels.region = valueOf(embeddedRegion?.region_name || referenceRegion?.region_name);
+          labels.pop = valueOf(embeddedPop?.pop_name || referencePop?.pop_name);
+          labels.popCode = valueOf(embeddedPop?.pop_code || referencePop?.pop_code);
+          labels.manufacturer = valueOf(embeddedManufacturer?.manufacturer_name || referenceManufacturer?.manufacturer_name);
+          labels.brand = valueOf(embeddedBrand?.brand_name || referenceBrand?.brand_name);
+          labels.model = valueOf(embeddedModel?.model_name || referenceModel?.model_name);
+          labels.tenant = valueOf(embeddedTenant?.tenant_name || referenceTenant?.tenant_name);
         }
 
         if (activeCategory.resource === "pops") {
-          const [region, popType, province, city] = await Promise.all([
-            valueOf(activeItem.region_id)
-              ? apiFetch<{ data: Record<string, unknown> }>(`/regions/${valueOf(activeItem.region_id)}`, { token }).catch(() => null)
-              : Promise.resolve(null),
+          const referenceRegion = relationReferenceMaps.regions.get(valueOf(activeItem.region_id));
+          const [popType, province, city] = await Promise.all([
             valueOf(activeItem.pop_type_id)
               ? apiFetch<{ data: Record<string, unknown> }>(`/popTypes/${valueOf(activeItem.pop_type_id)}`, { token }).catch(() => null)
               : Promise.resolve(null),
@@ -676,46 +671,38 @@ export default function DataManagementDetailPage() {
               : Promise.resolve(null),
           ]);
 
-          labels.region = region ? valueOf(region.data.region_name) : "";
+          labels.region = valueOf(referenceRegion?.region_name);
           labels.popType = popType ? valueOf(popType.data.pop_type_name) : valueOf(activeItem.pop_type);
           labels.province = province ? valueOf(province.data.province_name) : valueOf(activeItem.province);
           labels.city = city ? valueOf(city.data.city_name) : valueOf(activeItem.city);
         }
 
         if (activeCategory.resource === "customers") {
-          const [region, pop, project, province, city, serviceType] = await Promise.all([
-            valueOf(activeItem.region_id)
-              ? apiFetch<{ data: Record<string, unknown> }>(`/regions/${valueOf(activeItem.region_id)}`, { token }).catch(() => null)
-              : Promise.resolve(null),
-            valueOf(activeItem.pop_id)
-              ? apiFetch<{ data: Record<string, unknown> }>(`/pops/${valueOf(activeItem.pop_id)}`, { token }).catch(() => null)
-              : Promise.resolve(null),
-            valueOf(activeItem.project_id)
-              ? apiFetch<{ data: Record<string, unknown> }>(`/projects/${valueOf(activeItem.project_id)}`, { token }).catch(() => null)
-              : Promise.resolve(null),
+          const referenceRegion = relationReferenceMaps.regions.get(valueOf(activeItem.region_id));
+          const referencePop = relationReferenceMaps.pops.get(valueOf(activeItem.pop_id));
+          const referenceProject = relationReferenceMaps.projects.get(valueOf(activeItem.project_id));
+          const referenceServiceType = relationReferenceMaps.serviceTypes.get(valueOf(activeItem.service_type_id));
+          const [province, city] = await Promise.all([
             valueOf(activeItem.province_id)
               ? apiFetch<{ data: Record<string, unknown> }>(`/provinces/${valueOf(activeItem.province_id)}`, { token }).catch(() => null)
               : Promise.resolve(null),
             valueOf(activeItem.city_id)
               ? apiFetch<{ data: Record<string, unknown> }>(`/cities/${valueOf(activeItem.city_id)}`, { token }).catch(() => null)
               : Promise.resolve(null),
-            valueOf(activeItem.service_type_id)
-              ? apiFetch<{ data: Record<string, unknown> }>(`/serviceTypes/${valueOf(activeItem.service_type_id)}`, { token }).catch(() => null)
-              : Promise.resolve(null),
           ]);
 
-          labels.region = region ? valueOf(region.data.region_name) : "";
-          labels.pop = pop ? valueOf(pop.data.pop_name) : "";
-          labels.popCode = pop ? valueOf(pop.data.pop_code) : "";
-          labels.project = project ? valueOf(project.data.project_name) : "";
+          labels.region = valueOf(referenceRegion?.region_name);
+          labels.pop = valueOf(referencePop?.pop_name);
+          labels.popCode = valueOf(referencePop?.pop_code);
+          labels.project = valueOf(referenceProject?.project_name);
           labels.province = province ? valueOf(province.data.province_name) : valueOf(activeItem.province);
           labels.city = city ? valueOf(city.data.city_name) : valueOf(activeItem.city);
-          labels.serviceType = serviceType ? valueOf(serviceType.data.service_type_name) : valueOf(activeItem.service_type);
+          labels.serviceType = valueOf(referenceServiceType?.service_type_name || activeItem.service_type);
         }
       } finally {
         if (!cancelled) {
           setRelationLabels(labels);
-          setRelationLabelsLoading(false);
+          setRelationLabelsLoading(relationReferenceQuery.isFetching);
         }
       }
     }
@@ -724,7 +711,7 @@ export default function DataManagementDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [item, category, token]);
+  }, [item, category, token, relationReferenceMaps, relationReferenceQuery.isFetching]);
 
   useEffect(() => {
     if (!token) {
@@ -2636,6 +2623,15 @@ function valueOf(value: unknown, fallback = "") {
 function getRelationRecord(value: unknown): RelationRecord | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as RelationRecord;
+}
+
+function buildReferenceMap(rows: Array<Record<string, unknown>> | undefined) {
+  const map = new Map<string, Record<string, unknown>>();
+  (rows || []).forEach((row) => {
+    const id = valueOf(row.id).trim();
+    if (id) map.set(id, row);
+  });
+  return map;
 }
 
 function getEffectiveDeviceValidationStatus(

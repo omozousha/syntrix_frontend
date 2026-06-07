@@ -22,6 +22,15 @@ const relationFields = [
   "project_id",
   "customer_id",
 ];
+const allowedBusinessIdentifierFields = [
+  "inventory_id",
+  "device_id",
+  "customer_number",
+  "request_id",
+  "document_id",
+  "pop_code",
+  "region_code",
+];
 
 const extensions = new Set([".ts", ".tsx"]);
 const fieldPattern = relationFields.join("|");
@@ -109,6 +118,7 @@ for (const target of scanTargets) {
 console.log("# Relation Display Audit\n");
 if (strictMode) console.log("Mode: strict guardrail\n");
 console.log(`Scanned relation fields: ${relationFields.map((field) => `\`${field}\``).join(", ")}\n`);
+console.log(`Allowed business identifiers: ${allowedBusinessIdentifierFields.map((field) => `\`${field}\``).join(", ")}\n`);
 
 if (!findings.length) {
   console.log(strictMode ? "No strict raw relation display fallback found." : "No high-confidence raw relation display fallback found.");
