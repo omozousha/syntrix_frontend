@@ -444,9 +444,9 @@ Tujuan: endpoint device detail/list sudah mengembalikan relasi ringkas.
   - [x] Manufacturer.
   - [x] Brand.
   - [x] Model.
-  - [ ] ODP type.
-  - [ ] Installation type.
-  - [ ] Splitter profile.
+  - [x] ODP type.
+  - [x] Installation type.
+  - [x] Splitter profile.
 - [x] Review `GET /api/v1/devices` untuk list card/table.
 - [x] Tambahkan relation enrichment otomatis untuk list dan detail device.
 - [x] Pastikan role adminregion tetap memakai where clause region existing sebelum enrichment.
@@ -486,6 +486,9 @@ Tujuan: endpoint device detail/list sudah mengembalikan relasi ringkas.
   - `brand`
   - `model`
   - `device_type`
+  - `odp_type_ref`
+  - `installation_type_ref`
+  - `splitter_profile`
 
 ## Phase 3 - Reference Data Batch Endpoint
 
@@ -500,15 +503,15 @@ Tujuan: frontend punya cara cepat mengambil master/reference data tanpa N+1 requ
   - [x] Superadmin bisa all region.
   - [x] Adminregion sesuai scope.
   - [x] Validator sesuai scope.
-- [ ] Tambahkan cache TTL pendek per serverless instance.
+- [x] Tambahkan cache TTL pendek per serverless instance.
 - [x] Tambahkan endpoint recap docs.
 
 ### Frontend Todo
 
 - [x] Buat API client helper `getReferenceData`.
-- [ ] Buat `useReferenceData`.
-- [ ] Tambahkan cache stale time.
-- [ ] Invalidate cache setelah master data berubah.
+- [x] Buat `useReferenceData`.
+- [x] Tambahkan cache stale time.
+- [x] Invalidate cache setelah master data berubah.
 
 ### Checker
 
@@ -521,6 +524,7 @@ Tujuan: frontend punya cara cepat mengambil master/reference data tanpa N+1 requ
 - Backend endpoint: `GET /api/v1/reference-data`
 - Backend implementation: `syntrix_backend/src/modules/resource/resource.routes.js`
 - Backend docs: `syntrix_backend/docs/backend-endpoint-recap.md`
+- Backend cache: in-memory TTL 60 detik per Vercel/serverless instance, scoped by role, user, region scope, groups, limit, dan query.
 - Frontend helper: `syntrix_frontend/lib/api.ts`
 - Default groups: `regions`, `pops`, `tenants`, `deviceTypes`, `brands`, `models`, `manufacturers`
 - Supported groups: `regions`, `pops`, `tenants`, `deviceTypes`, `brands`, `models`, `assetModels`, `manufacturers`, `projects`, `customers`, `serviceTypes`, `odpTypes`, `installationTypes`, `splitterProfiles`
@@ -747,7 +751,7 @@ Tujuan: memastikan solusi tidak berat untuk hosting dan database.
 - [ ] Review Nhost query count.
 - [ ] Review TanStack Query cache hit saat navigasi route utama.
 - [ ] Review duplicate fetch di React Strict Mode/local dev.
-- [ ] Tambahkan backend TTL cache untuk reference data jika aman.
+- [x] Tambahkan backend TTL cache untuk reference data jika aman.
 - [ ] Pastikan attachment tetap lazy.
 - [ ] Pastikan no over-fetch di list besar.
 

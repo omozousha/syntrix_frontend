@@ -28,7 +28,7 @@ import {
   buildFieldValidationComparisonFields as buildFieldValidationComparisonDisplayFields,
   buildFieldValidationReviewFields as buildFieldValidationReviewDisplayFields,
 } from "@/lib/display-adapters/request-display-adapter";
-import { formatDateTime, normalizeRole, shortId, valueText } from "@/lib/domain-formatters";
+import { formatDateTime, normalizeRole, valueText } from "@/lib/domain-formatters";
 import { RELATION_LABEL_FALLBACK } from "@/lib/relation-labels";
 
 type QueueType = "adminregion" | "superadmin";

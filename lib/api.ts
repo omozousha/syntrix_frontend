@@ -263,6 +263,9 @@ export type DevicesListResponse = PaginatedResponse<{
     brand?: DeviceRelationSummary | null;
     model?: DeviceRelationSummary | null;
     device_type?: DeviceRelationSummary | null;
+    odp_type_ref?: DeviceRelationSummary | null;
+    installation_type_ref?: DeviceRelationSummary | null;
+    splitter_profile?: DeviceRelationSummary | null;
   }>;
 
 export type UsersListResponse = PaginatedResponse<{
