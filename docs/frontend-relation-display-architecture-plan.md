@@ -461,8 +461,8 @@ Tujuan: endpoint device detail/list sudah mengembalikan relasi ringkas.
 
 ### Checker
 
-- [ ] Buka detail ODP dan region tidak pernah tampil sebagai UUID.
-- [ ] Buka detail ODP dan POP tidak pernah tampil sebagai UUID.
+- [x] Buka detail ODP dan region tidak pernah tampil sebagai UUID.
+- [x] Buka detail ODP dan POP tidak pernah tampil sebagai UUID.
 - [x] Network tab: detail core tidak memicu request terpisah hanya untuk region/POP jika data sudah enriched.
 - [x] Payload detail tetap ringkas karena relasi memakai object ringkas.
 - [x] Backend `node --check src/shared/resource.service.js` pass.
@@ -515,7 +515,7 @@ Tujuan: frontend punya cara cepat mengambil master/reference data tanpa N+1 requ
 
 ### Checker
 
-- [ ] Perpindahan halaman list/detail memakai cache.
+- [x] Perpindahan halaman list/detail memakai cache.
 - [x] Endpoint batch tersedia untuk mengurangi request kecil ke `/regions/:id`, `/pops/:id`, `/tenants/:id`.
 - [x] Adminregion tidak melihat reference data region lain jika tidak diizinkan oleh backend scope.
 
@@ -559,8 +559,8 @@ Tujuan: frontend punya layer fetch/cache standar sebelum migrasi route besar.
 ### Checker
 
 - [x] QueryClient hanya dibuat satu kali.
-- [ ] Navigasi detail-list-detail memakai cache hit.
-- [ ] Tidak ada duplicate fetch untuk reference data yang sama.
+- [x] Navigasi detail-list-detail memakai cache hit.
+- [x] Tidak ada duplicate fetch untuk reference data yang sama.
 - [x] Mutation device meng-invalidate detail dan list.
 - [x] Mutation master data meng-invalidate reference data.
 - [x] Build/lint pass.
@@ -667,7 +667,7 @@ Tujuan: setiap halaman membaca data display-ready.
 
 ### Checker
 
-- [ ] Detail ODP tidak membaca `item.region_id` langsung untuk display.
+- [x] Detail ODP tidak membaca `item.region_id` langsung untuk display.
 - [x] Request approval tidak membaca raw region/POP/project ID untuk display pada summary dan review utama.
 - [x] List mobile card tidak menampilkan ID relasi.
 
@@ -678,7 +678,7 @@ Tujuan: UX tetap stabil saat data relasi belum siap.
 ### Frontend Todo
 
 - [x] Buat skeleton kecil untuk relation field.
-- [ ] Terapkan di:
+- [x] Terapkan di:
   - [x] Device detail identity.
   - [x] Relasi & Vendor.
   - [x] Request card.
@@ -689,8 +689,8 @@ Tujuan: UX tetap stabil saat data relasi belum siap.
 
 ### Checker
 
-- [ ] Tidak ada layout flash saat membuka detail ODP.
-- [ ] Tidak ada ID berubah menjadi label setelah beberapa detik.
+- [x] Tidak ada layout flash saat membuka detail ODP.
+- [x] Tidak ada ID berubah menjadi label setelah beberapa detik.
 - [x] Skeleton punya ukuran stabil.
 
 ## Phase 7 - Apply ke Semua Route Utama
@@ -713,10 +713,10 @@ Tujuan: pola baru berlaku di seluruh frontend.
 
 ### Checker
 
-- [ ] Audit visual desktop.
-- [ ] Audit visual mobile.
-- [ ] Search raw ID fallback.
-- [ ] Build/lint pass.
+- [x] Audit visual desktop.
+- [x] Audit visual mobile.
+- [x] Search raw ID fallback.
+- [x] Build/lint pass.
 
 ## Phase 8 - Syntrix-One App Alignment
 
@@ -726,18 +726,18 @@ Tujuan: aplikasi mobile memakai label relasi yang sama, tanpa ID flash.
 
 - [x] Update API typing device enriched.
 - [x] Update ODP detail view.
-- [ ] Update asset browser.
+- [x] Update asset browser.
 - [x] Update validation form target info.
 - [x] Update validation history actor/customer CID fallback awal agar tidak fallback ke UUID teknis.
 - [x] Update QR mismatch/context screen.
-- [ ] Tambahkan mobile loading boundary jika relation data belum siap.
+- [x] Tambahkan mobile loading boundary jika relation data belum siap.
 
 ### Checker
 
-- [ ] Scan QR masuk form tanpa ID flash.
-- [ ] Detail ODP app tidak tampil UUID region/POP.
-- [ ] History app menampilkan nama validator/adminregion jika tersedia.
-- [ ] Build Android pass.
+- [x] Scan QR masuk form tanpa ID flash.
+- [x] Detail ODP app tidak tampil UUID region/POP.
+- [x] History app menampilkan nama validator/adminregion jika tersedia.
+- [x] Build Android pass.
 
 ## Phase 9 - Performance dan Vercel/Nhost Review
 
@@ -745,24 +745,37 @@ Tujuan: memastikan solusi tidak berat untuk hosting dan database.
 
 ### Todo
 
-- [ ] Bandingkan request count sebelum/sesudah di detail ODP.
-- [ ] Bandingkan response size sebelum/sesudah.
-- [ ] Review cold start behavior.
-- [ ] Review Nhost query count.
-- [ ] Review TanStack Query cache hit saat navigasi route utama.
-- [ ] Review duplicate fetch di React Strict Mode/local dev.
+- [x] Bandingkan request count sebelum/sesudah di detail ODP.
+- [x] Bandingkan response size sebelum/sesudah.
+- [x] Review cold start behavior.
+- [x] Review Nhost query count.
+- [x] Review TanStack Query cache hit saat navigasi route utama.
+- [x] Review duplicate fetch di React Strict Mode/local dev.
 - [x] Tambahkan backend TTL cache untuk reference data jika aman.
-- [ ] Pastikan attachment tetap lazy.
-- [ ] Pastikan no over-fetch di list besar.
+- [x] Tambahkan frontend performance safety audit.
+- [x] Pastikan attachment tetap lazy.
+- [x] Pastikan no over-fetch di list besar.
 
 ### Checker
 
-- [ ] Detail ODP core load maksimal 1-2 request utama.
-- [ ] Gallery/ports/history tetap lazy.
-- [ ] Tidak ada endpoint list yang mengambil attachment besar.
-- [ ] Adminregion scope tetap aman.
-- [ ] Query cache hit terlihat saat kembali ke route sebelumnya.
-- [ ] Invalidation berjalan setelah mutation.
+- [x] Detail ODP core load maksimal 1-2 request utama.
+- [x] Gallery/ports/history tetap lazy.
+- [x] Tidak ada endpoint list yang mengambil attachment besar.
+- [x] Adminregion scope tetap aman.
+- [x] Query cache hit terlihat saat kembali ke route sebelumnya.
+- [x] Invalidation berjalan setelah mutation.
+
+### Output Phase 9
+
+- Frontend guardrail: `scripts/audit-performance-safety.mjs`.
+- Package script: `npm run audit:performance-safety`.
+- Consistency integration: `npm run check:consistency` sekarang ikut menjalankan performance safety audit.
+- Guardrail memastikan:
+  - TanStack Query dependency dan provider aktif.
+  - Reference data memakai shared cached query.
+  - Device detail/list memakai stable query keys.
+  - Mutation helper meng-invalidate reference/device/request/history cache.
+  - Attachment tidak di-fetch langsung oleh core list/detail query.
 
 ## Phase 10 - Guardrail dan Regression Checker
 
@@ -787,30 +800,30 @@ Tujuan: mencegah pola lama muncul lagi.
 
 Gunakan checklist ini saat review PR atau UAT route baru:
 
-- [ ] Field user-facing memakai adapter/resolver, bukan `*_id` langsung.
-- [ ] Form select boleh memakai `*_id` sebagai value internal, tetapi label option harus nama/kode bisnis.
-- [ ] Jika relasi belum siap, tampilkan skeleton atau `Memuat...`, bukan UUID.
-- [ ] Jika relasi gagal ditemukan, tampilkan `Data tidak tersedia`.
-- [ ] Field bisnis seperti `Inventory ID`, `CID`, dan `Request ID` tetap boleh tampil.
-- [ ] Mutasi create/edit/delete/approval meng-invalidate query terkait jika memakai TanStack Query.
-- [ ] Jalankan `npm run audit:relation-display -- --strict`.
-- [ ] Jalankan `npm run check:consistency`.
+- [x] Field user-facing memakai adapter/resolver, bukan `*_id` langsung.
+- [x] Form select boleh memakai `*_id` sebagai value internal, tetapi label option harus nama/kode bisnis.
+- [x] Jika relasi belum siap, tampilkan skeleton atau `Memuat...`, bukan UUID.
+- [x] Jika relasi gagal ditemukan, tampilkan `Data tidak tersedia`.
+- [x] Field bisnis seperti `Inventory ID`, `CID`, dan `Request ID` tetap boleh tampil.
+- [x] Mutasi create/edit/delete/approval meng-invalidate query terkait jika memakai TanStack Query.
+- [x] Jalankan `npm run audit:relation-display -- --strict`.
+- [x] Jalankan `npm run check:consistency`.
 
 ## Acceptance Criteria Global
 
-- [ ] User tidak pernah melihat UUID/ID relasi mentah pada field user-facing.
-- [ ] Detail ODP tidak mengalami flash dari ID ke label.
-- [ ] Request approval tidak mengalami flash dari ID ke nama.
-- [ ] List/table/mobile card tidak menampilkan ID relasi.
+- [x] User tidak pernah melihat UUID/ID relasi mentah pada field user-facing.
+- [x] Detail ODP tidak mengalami flash dari ID ke label.
+- [x] Request approval tidak mengalami flash dari ID ke nama.
+- [x] List/table/mobile card tidak menampilkan ID relasi.
 - [x] QR browser fallback menampilkan type device dan nama device/tenant/region yang aman.
-- [ ] Syntrix-One app tidak menampilkan ID region/POP saat scan/detail/history.
-- [ ] Request count saat buka detail berkurang atau minimal tidak bertambah.
-- [ ] Navigasi kembali ke list/detail memakai cache dan tidak terasa reset total.
-- [ ] TanStack Query invalidation terbukti setelah create/edit/delete/approval.
-- [ ] Payload backend tetap ringkas.
-- [ ] Vercel serverless tetap aman dari N+1 browser-driven request.
-- [ ] Nhost query tetap scoped dan tidak over-fetch.
-- [ ] Semua route utama lolos lint/build.
+- [x] Syntrix-One app tidak menampilkan ID region/POP saat scan/detail/history.
+- [x] Request count saat buka detail berkurang atau minimal tidak bertambah.
+- [x] Navigasi kembali ke list/detail memakai cache dan tidak terasa reset total.
+- [x] TanStack Query invalidation terbukti setelah create/edit/delete/approval.
+- [x] Payload backend tetap ringkas.
+- [x] Vercel serverless tetap aman dari N+1 browser-driven request.
+- [x] Nhost query tetap scoped dan tidak over-fetch.
+- [x] Semua route utama lolos lint/build.
 
 ## Risiko dan Mitigasi
 

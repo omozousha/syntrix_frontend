@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "check:consistency": "node scripts/check-frontend-consistency.mjs",
-    "audit:relation-display": "node scripts/audit-relation-display.mjs"
+    "audit:relation-display": "node scripts/audit-relation-display.mjs",
+    "audit:performance-safety": "node scripts/audit-performance-safety.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",

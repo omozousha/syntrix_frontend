@@ -92,6 +92,22 @@ const checks = [
       }
     },
   },
+  {
+    name: "performance safety guardrails pass",
+    run() {
+      try {
+        execFileSync(process.execPath, ["scripts/audit-performance-safety.mjs"], {
+          cwd: root,
+          encoding: "utf8",
+          stdio: "pipe",
+        });
+        return [];
+      } catch (error) {
+        const output = [error.stdout, error.stderr].filter(Boolean).join("\n").trim();
+        return output ? output.split(/\r?\n/).filter(Boolean) : ["performance safety audit failed"];
+      }
+    },
+  },
 ];
 
 const files = scanDirs.flatMap((dir) => listFiles(path.join(root, dir)));
