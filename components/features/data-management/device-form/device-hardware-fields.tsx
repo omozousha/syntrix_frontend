@@ -48,7 +48,7 @@ export function DeviceHardwareFields({
     { value: "__none__", label: "Pilih manufacturer" },
     ...manufacturers.map((item) => ({
       value: item.id,
-      label: item.manufacturer_name || item.manufacturer_code || item.id,
+      label: item.manufacturer_name || item.manufacturer_code || "Manufacturer tidak tersedia",
     })),
   ];
 
@@ -58,7 +58,7 @@ export function DeviceHardwareFields({
       .filter((item) => !values.manufacturer_id || !item.manufacturer_id || item.manufacturer_id === values.manufacturer_id)
       .map((item) => ({
         value: item.id,
-        label: item.brand_name || item.brand_code || item.id,
+        label: item.brand_name || item.brand_code || "Brand tidak tersedia",
       })),
   ];
 
@@ -69,7 +69,7 @@ export function DeviceHardwareFields({
       .filter((item) => !values.manufacturer_id || !item.manufacturer_id || item.manufacturer_id === values.manufacturer_id)
       .map((item) => ({
         value: item.id,
-        label: item.model_name || item.model_code || item.id,
+        label: item.model_name || item.model_code || "Model tidak tersedia",
       })),
   ];
 

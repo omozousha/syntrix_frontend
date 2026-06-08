@@ -384,6 +384,7 @@ export default function DataManagementDetailPage() {
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [qrLabelLogoDataUrl, setQrLabelLogoDataUrl] = useState("");
   const [qrLabelFooterText, setQrLabelFooterText] = useState("");
+  const [qrLabelReady, setQrLabelReady] = useState(false);
   const [odpCustomers, setOdpCustomers] = useState<OdpCustomerOption[]>([]);
   const [odpOntDevices, setOdpOntDevices] = useState<OdpOntOption[]>([]);
   const [odpCableDevices, setOdpCableDevices] = useState<OdpCableOption[]>([]);
@@ -908,7 +909,7 @@ export default function DataManagementDetailPage() {
           if (cancelled) return;
           const mappedRows: OdpValidationRecord[] = (requestResult.data || []).slice(0, 10).map((request) => ({
             id: request.id,
-            validation_id: request.request_id || request.id,
+            validation_id: request.request_id || "Validasi",
             entity_type: "device",
             entity_id: activeItem.id,
             validation_type: "field-audit",
@@ -1066,10 +1067,12 @@ export default function DataManagementDetailPage() {
     if (!token || !isOdpDevice) {
       setQrLabelLogoDataUrl("");
       setQrLabelFooterText("");
+      setQrLabelReady(false);
       return;
     }
 
     let cancelled = false;
+    setQrLabelReady(false);
     Promise.all([
       loadQrLabelLogoDataUrl(token).catch(() => ""),
       loadQrLabelSettings(token).catch(() => null),
@@ -1077,6 +1080,7 @@ export default function DataManagementDetailPage() {
       if (cancelled) return;
       setQrLabelLogoDataUrl(logoDataUrl);
       setQrLabelFooterText(setting?.footer_text || "");
+      setQrLabelReady(true);
     });
 
     return () => {
@@ -1104,7 +1108,7 @@ export default function DataManagementDetailPage() {
       const payload = buildUpdatePayload(form, category.resource) as Record<string, unknown>;
       let mergedImageAttachments = infoImageAttachments.map((attachment) => ({
         id: attachment.id,
-        original_name: attachmentNames[attachment.id] || attachment.name || attachment.id,
+        original_name: attachmentNames[attachment.id] || attachment.name || "attachment",
       }));
 
       if (newImageFiles.length > 0) {
@@ -1679,6 +1683,7 @@ export default function DataManagementDetailPage() {
                 submittingValidation={submittingOdpValidation}
                 qrDataUrl={qrDataUrl}
                 qrLabelLogoDataUrl={qrLabelLogoDataUrl}
+                qrLabelReady={qrLabelReady}
                 onProvisionPorts={() => void handleProvisionOdpPorts()}
                 onUpdatePort={(port, changes) => void handleUpdateOdpPort(port, changes)}
                 onValidationDraftChange={setOdpValidationDraft}
@@ -1734,7 +1739,7 @@ export default function DataManagementDetailPage() {
               <CarouselContent>
                 {galleryImageAttachments.map((attachment) => {
                   const src = imagePreviewUrls[attachment.id];
-                  const fileName = attachment.name || attachment.id;
+                  const fileName = attachment.name || "Attachment tidak tersedia";
                   return (
                     <CarouselItem key={attachment.id}>
                       <div className="relative overflow-hidden rounded-lg border bg-muted/30">
@@ -1851,6 +1856,7 @@ function OdpOperationsPanel({
   submittingValidation,
   qrDataUrl,
   qrLabelLogoDataUrl,
+  qrLabelReady,
   onProvisionPorts,
   onUpdatePort,
   onValidationDraftChange,
@@ -1884,6 +1890,7 @@ function OdpOperationsPanel({
   submittingValidation: boolean;
   qrDataUrl: string;
   qrLabelLogoDataUrl: string;
+  qrLabelReady: boolean;
   onProvisionPorts: () => void;
   onUpdatePort: (port: DevicePort, changes: Partial<DevicePort>) => void;
   onValidationDraftChange: (next: OdpValidationDraft | ((prev: OdpValidationDraft) => OdpValidationDraft)) => void;
@@ -1935,7 +1942,7 @@ function OdpOperationsPanel({
     { value: "__none__", label: "Tanpa cable device" },
     ...cableDevices.map((cable) => ({
       value: cable.id,
-      label: [cable.device_name, cable.device_id].filter(Boolean).join(" - ") || cable.id,
+      label: [cable.device_name, cable.device_id].filter(Boolean).join(" - ") || "Cable device tidak tersedia",
     })),
   ];
   const [draftTargetPortId, setDraftTargetPortId] = useState("");
@@ -1991,6 +1998,7 @@ function OdpOperationsPanel({
             <OdpQrActionPanel
               qrDataUrl={qrDataUrl}
               logoDataUrl={qrLabelLogoDataUrl}
+              logoReady={qrLabelReady}
               reminderDisabled={loadingValidators || validators.length === 0}
               onOpenReminder={onOpenReminder}
               onDownloadQrLabel={onDownloadQrLabel}

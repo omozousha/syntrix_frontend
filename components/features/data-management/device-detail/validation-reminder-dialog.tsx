@@ -53,7 +53,7 @@ export function ValidationReminderDialog({
               { value: "__none__", label: loadingValidators ? "Memuat validator..." : "Pilih validator" },
               ...validators.map((validator) => ({
                 value: validator.id,
-                label: [validator.full_name, validator.user_code || validator.email].filter(Boolean).join(" - ") || validator.id,
+                label: [validator.full_name, validator.user_code || validator.email].filter(Boolean).join(" - ") || "Validator tidak tersedia",
               })),
             ]}
           />

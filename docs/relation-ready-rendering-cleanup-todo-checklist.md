@@ -39,7 +39,7 @@ Status user-facing:
 
 Sisa pekerjaan:
 
-- Cleanup manual relation fallback fetch di beberapa route.
+- Cleanup manual relation fallback fetch di route frontend.
 - Standarisasi route yang masih memakai map lokal.
 - Perkuat guardrail agar halaman/komponen baru otomatis mengikuti metode ini.
 - Dokumentasikan standar review agar agent berikutnya konsisten.
@@ -134,24 +134,24 @@ Tujuan:
 
 ### Todo
 
-- [ ] Audit route yang masih fetch `/regions`, `/pops`, `/tenants`, `/projects`, atau master data hanya untuk label.
-- [ ] Ganti fetch label-only dengan `useReferenceData`.
-- [ ] Gunakan resolver:
+- [x] Audit route yang masih fetch `/regions`, `/pops`, `/tenants`, `/projects`, atau master data hanya untuk label.
+- [x] Ganti fetch label-only dengan `useReferenceData`.
+- [x] Gunakan resolver:
   - `getRegionLabel`
   - `getPopLabel`
   - `getTenantLabel`
   - `getProjectLabel`
   - resolver lain sesuai relasi.
-- [ ] Pastikan filter combobox tetap memakai ID sebagai `value`, tetapi option label memakai nama/kode bisnis.
-- [ ] Pertahankan role scope adminregion dan validator.
+- [x] Pastikan filter combobox tetap memakai ID sebagai `value`, tetapi option label memakai nama/kode bisnis.
+- [x] Pertahankan role scope adminregion dan validator.
 
 ### Checker
 
-- [ ] Navigasi dashboard -> data-management -> detail tidak refetch reference data berlebihan.
-- [ ] Region filter tetap menampilkan nama/kode region, bukan UUID.
-- [ ] Adminregion hanya melihat region scope yang diizinkan.
-- [ ] `npm run audit:relation-display -- --strict` pass.
-- [ ] `npm run audit:performance-safety` pass.
+- [x] Navigasi dashboard -> data-management -> detail tidak refetch reference data berlebihan.
+- [x] Region filter tetap menampilkan nama/kode region, bukan UUID.
+- [x] Adminregion hanya melihat region scope yang diizinkan.
+- [x] `npm run audit:relation-display -- --strict` pass.
+- [x] `npm run audit:performance-safety` pass.
 
 ## Phase 4 - Form Component Standardization
 
@@ -176,19 +176,19 @@ Catatan:
 
 ### Todo
 
-- [ ] Pastikan setiap combobox/select punya option label dari nama/kode bisnis.
-- [ ] Hindari label fallback ke UUID jika option tidak ditemukan.
-- [ ] Tambahkan helper label reusable bila ada pola berulang.
-- [ ] Pastikan customer memakai `CID` / `customer_number` jika tersedia.
-- [ ] Pastikan POP option menampilkan nama/kode POP.
-- [ ] Pastikan tenant, brand, model, manufacturer memakai label master data.
+- [x] Pastikan setiap combobox/select punya option label dari nama/kode bisnis.
+- [x] Hindari label fallback ke UUID jika option tidak ditemukan.
+- [x] Tambahkan helper label reusable bila ada pola berulang.
+- [x] Pastikan customer memakai `CID` / `customer_number` jika tersedia.
+- [x] Pastikan POP option menampilkan nama/kode POP.
+- [x] Pastikan tenant, brand, model, manufacturer memakai label master data.
 
 ### Checker
 
-- [ ] Form create/edit tetap mengirim ID sebagai payload.
-- [ ] Label option tidak menampilkan UUID.
-- [ ] Empty option memakai `Tanpa ...`, `Pilih ...`, atau `-` sesuai konteks.
-- [ ] `npm run audit:relation-display -- --strict` pass.
+- [x] Form create/edit tetap mengirim ID sebagai payload.
+- [x] Label option tidak menampilkan UUID.
+- [x] Empty option memakai `Tanpa ...`, `Pilih ...`, atau `-` sesuai konteks.
+- [x] `npm run audit:relation-display -- --strict` pass.
 
 ## Phase 5 - Request, History, Audit, dan Trash Cleanup
 
@@ -209,19 +209,19 @@ Tujuan:
 
 ### Todo
 
-- [ ] Pastikan request cards memakai request display adapter.
-- [ ] Pastikan request comparison memakai resolver untuk relasi lama/baru.
-- [ ] Pastikan Submitted By, reviewer, validator, adminregion approver memakai nama/email, bukan UUID.
-- [ ] Pastikan audit trail memilih nama bisnis sebelum `entity_id`.
-- [ ] Pastikan trash list menampilkan identifier bisnis dan display name.
-- [ ] Pastikan history evidence/attachment tetap lazy.
+- [x] Pastikan request cards memakai request display adapter.
+- [x] Pastikan request comparison memakai resolver untuk relasi lama/baru.
+- [x] Pastikan Submitted By, reviewer, validator, adminregion approver memakai nama/email, bukan UUID.
+- [x] Pastikan audit trail memilih nama bisnis sebelum `entity_id`.
+- [x] Pastikan trash list menampilkan identifier bisnis dan display name.
+- [x] Pastikan history evidence/attachment tetap lazy.
 
 ### Checker
 
-- [ ] Request approval tidak flash dari ID ke label.
-- [ ] History validasi menampilkan nama validator dan approver jika tersedia.
-- [ ] Audit/trash tidak menampilkan UUID sebagai label utama kecuali tidak ada data bisnis sama sekali.
-- [ ] `npm run audit:relation-display -- --strict` pass.
+- [x] Request approval tidak flash dari ID ke label.
+- [x] History validasi menampilkan nama validator dan approver jika tersedia.
+- [x] Audit/trash tidak menampilkan UUID sebagai label utama kecuali tidak ada data bisnis sama sekali.
+- [x] `npm run audit:relation-display -- --strict` pass.
 
 ## Phase 6 - Syntrix-One App Cleanup
 
@@ -243,36 +243,36 @@ Flow target:
 
 ### Todo
 
-- [ ] Audit `syntrix_app/src` untuk raw relation fallback.
-- [ ] Pastikan scan QR memakai loading boundary sampai device context/detail siap.
-- [ ] Pastikan detail ODP memakai enriched labels:
+- [x] Audit `syntrix_app/src` untuk raw relation fallback.
+- [x] Pastikan scan QR memakai loading boundary sampai device context/detail siap.
+- [x] Pastikan detail ODP memakai enriched labels:
   - region
   - POP
   - tenant
   - device type
   - status validasi
-- [ ] Pastikan validation form target info tidak menampilkan raw ID.
-- [ ] Pastikan region mismatch dialog/screen menampilkan region sumber dan region akun secara jelas.
-- [ ] Pastikan history menampilkan:
+- [x] Pastikan validation form target info tidak menampilkan raw ID.
+- [x] Pastikan region mismatch dialog/screen menampilkan region sumber dan region akun secara jelas.
+- [x] Pastikan history menampilkan:
   - nama validator
   - nama adminregion approver
   - nama superadmin approver jika tersedia
   - tanggal submit/approve
-- [ ] Pastikan gallery mengambil image attachment setelah approval final.
-- [ ] Pastikan app tidak melakukan fetch kecil berulang hanya untuk label yang sudah ada di device detail/reference data.
+- [x] Pastikan gallery mengambil image attachment setelah approval final.
+- [x] Pastikan app tidak melakukan fetch kecil berulang hanya untuk label yang sudah ada di device detail/reference data.
 
 ### Checker
 
-- [ ] Scan QR region sesuai -> masuk form tanpa raw ID flash.
-- [ ] Scan QR region berbeda -> dialog/screen blokir dengan informasi region yang spesifik.
-- [ ] Detail ODP tidak menampilkan UUID region/POP/tenant.
-- [ ] History tidak kosong jika backend mengirim approved validation history.
-- [ ] Mini gallery tampil jika backend mengirim approved image attachments.
-- [ ] `npm run lint` pass di `syntrix_app`.
-- [ ] `npm run build` pass di `syntrix_app`.
-- [ ] `npx cap sync android` pass.
-- [ ] Android `assembleDebug` pass.
-- [ ] Install dan UAT device fisik jika ADB tersedia.
+- [x] Scan QR region sesuai -> masuk form tanpa raw ID flash.
+- [x] Scan QR region berbeda -> dialog/screen blokir dengan informasi region yang spesifik.
+- [x] Detail ODP tidak menampilkan UUID region/POP/tenant.
+- [x] History tidak kosong jika backend mengirim approved validation history.
+- [x] Mini gallery tampil jika backend mengirim approved image attachments.
+- [x] `npm run lint` pass di `syntrix_app`.
+- [x] `npm run build` pass di `syntrix_app`.
+- [x] `npx cap sync android` pass.
+- [x] Android `assembleDebug` pass.
+- [x] Install dan UAT device fisik jika ADB tersedia.
 
 ## Phase 7 - Guardrail Upgrade
 
@@ -294,8 +294,7 @@ Tujuan: halaman/komponen baru otomatis dicegah dari pola lama.
   - form data-flow
   - query param/internal payload
 - [x] Tambahkan rule warning untuk manual relation fetch label-only.
-- [x] Tambahkan allowlist existing cleanup target:
-  - `app/(app)/profile/page.tsx`
+- [x] Bersihkan allowlist existing cleanup target sampai kosong.
 - [x] Tambahkan allowlist eksplisit untuk field bisnis:
   - `inventory_id`
   - `device_id`
@@ -326,42 +325,42 @@ syntrix_frontend/.agents/skills/redesign-existing-projects/SKILL.md
 
 ### Todo
 
-- [ ] Tambahkan section **Relation-Ready Rendering** ke skill frontend.
-- [ ] Tambahkan aturan wajib untuk halaman/komponen baru:
+- [x] Tambahkan section **Relation-Ready Rendering** ke skill frontend.
+- [x] Tambahkan aturan wajib untuk halaman/komponen baru:
   - gunakan enriched backend response
   - gunakan `useReferenceData`
   - gunakan resolver/display adapter
   - jangan fallback ke raw relation ID
   - tampilkan skeleton/loading stabil
   - attachment/gallery/history tetap lazy
-- [ ] Tambahkan checklist sebelum final:
+- [x] Tambahkan checklist sebelum final:
   - `npm run audit:relation-display -- --strict`
   - `npm run audit:performance-safety`
   - `npm run check:consistency`
   - lint/build sesuai scope
-- [ ] Tambahkan contoh benar/salah.
-- [ ] Pastikan skill tidak bertentangan dengan Karpathy Guidelines.
+- [x] Tambahkan contoh benar/salah.
+- [x] Pastikan skill tidak bertentangan dengan Karpathy Guidelines.
 
 ### Checker
 
-- [ ] Skill frontend menyebut Relation-Ready Rendering secara eksplisit.
-- [ ] Agent punya standar yang sama untuk route baru, component baru, dan app screen baru.
-- [ ] Tidak ada instruksi dobel di backend `AGENTS.md`.
+- [x] Skill frontend menyebut Relation-Ready Rendering secara eksplisit.
+- [x] Agent punya standar yang sama untuk route baru, component baru, dan app screen baru.
+- [x] Tidak ada instruksi dobel di backend `AGENTS.md`.
 
 ## Standard Wajib Untuk Halaman/Komponen Baru
 
-Gunakan checklist ini sebelum membuat atau mengubah halaman/komponen:
+Gunakan pertanyaan review ini sebelum membuat atau mengubah halaman/komponen:
 
-- [ ] Apakah halaman ini menampilkan region, POP, tenant, device type, vendor, customer, project, atau service type?
-- [ ] Apakah data relasi sudah ada di enriched response?
-- [ ] Jika belum, apakah memakai shared reference cache?
-- [ ] Apakah label tampil lewat resolver/adapter?
-- [ ] Apakah fallback bukan raw UUID/ID teknis?
-- [ ] Apakah loading state stabil dan tidak menyebabkan layout flash?
-- [ ] Apakah field ID hanya dipakai untuk form value/query/API payload?
-- [ ] Apakah attachment/gallery/history tetap lazy?
-- [ ] Apakah role scope tetap dari backend?
-- [ ] Apakah checker relation/performance/consistency sudah pass?
+- Apakah halaman ini menampilkan region, POP, tenant, device type, vendor, customer, project, atau service type?
+- Apakah data relasi sudah ada di enriched response?
+- Jika belum, apakah memakai shared reference cache?
+- Apakah label tampil lewat resolver/adapter?
+- Apakah fallback bukan raw UUID/ID teknis?
+- Apakah loading state stabil dan tidak menyebabkan layout flash?
+- Apakah field ID hanya dipakai untuk form value/query/API payload?
+- Apakah attachment/gallery/history tetap lazy?
+- Apakah role scope tetap dari backend?
+- Apakah checker relation/performance/consistency sudah pass?
 
 ## Contoh Benar dan Salah
 

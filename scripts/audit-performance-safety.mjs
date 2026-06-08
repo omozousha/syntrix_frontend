@@ -14,9 +14,7 @@ const relationFetchResources = [
   "projects",
   "serviceTypes",
 ];
-const allowedManualRelationFetchFiles = new Set([
-  "app/(app)/profile/page.tsx",
-]);
+const allowedManualRelationFetchFiles = new Set([]);
 
 const checks = [
   {

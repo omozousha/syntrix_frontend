@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/components/session-context";
+import { useReferenceData } from "@/hooks/use-reference-data";
 import { API_BASE_URL, apiFetch } from "@/lib/api";
 import { formatRoleLabel } from "@/lib/domain-formatters";
 import { getRegionLabel, RELATION_LABEL_FALLBACK } from "@/lib/relation-labels";
@@ -34,12 +35,16 @@ export default function ProfilePage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
-  const [defaultRegionLabel, setDefaultRegionLabel] = useState<string>(RELATION_LABEL_FALLBACK.empty);
-
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const referenceDataQuery = useReferenceData({
+    token,
+    groups: ["regions"],
+    limit: 200,
+    enabled: Boolean(me.app_user.default_region_id),
+  });
 
   useEffect(() => {
     const { first, last } = splitName(me.app_user.full_name || "");
@@ -47,29 +52,18 @@ export default function ProfilePage() {
     setLastName(last);
   }, [me.app_user.full_name]);
 
-  useEffect(() => {
+  const defaultRegionLabel = useMemo(() => {
     const regionId = me.app_user.default_region_id;
-    if (!regionId) {
-      setDefaultRegionLabel(RELATION_LABEL_FALLBACK.empty);
-      return;
-    }
+    if (!regionId) return RELATION_LABEL_FALLBACK.empty;
 
-    let cancelled = false;
-    async function loadDefaultRegion() {
-      setDefaultRegionLabel(RELATION_LABEL_FALLBACK.loading);
-      try {
-        const payload = await apiFetch<{ data?: Record<string, unknown> }>(`/regions/${regionId}`, { token });
-        if (!cancelled) setDefaultRegionLabel(getRegionLabel({ relation: payload.data, fallback: RELATION_LABEL_FALLBACK.missing }));
-      } catch {
-        if (!cancelled) setDefaultRegionLabel(RELATION_LABEL_FALLBACK.missing);
-      }
-    }
-
-    void loadDefaultRegion();
-    return () => {
-      cancelled = true;
-    };
-  }, [me.app_user.default_region_id, token]);
+    const regions = referenceDataQuery.data?.data.regions || [];
+    const relation = regions.find((region) => String(region.id) === String(regionId));
+    return getRegionLabel({
+      relation,
+      fallback: regionId,
+      loading: referenceDataQuery.isLoading,
+    });
+  }, [me.app_user.default_region_id, referenceDataQuery.data?.data.regions, referenceDataQuery.isLoading]);
 
   const initials = useMemo(() => {
     const full = `${firstName} ${lastName}`.trim() || me.app_user.full_name || "";

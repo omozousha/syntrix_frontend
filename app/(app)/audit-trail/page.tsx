@@ -153,7 +153,7 @@ export default function AuditTrailPage() {
         const nextMap: Record<string, string> = {};
         (payload.data || []).forEach((user) => {
           if (!user.id) return;
-          nextMap[user.id] = user.full_name?.trim() || user.email?.trim() || user.id;
+          nextMap[user.id] = user.full_name?.trim() || user.email?.trim() || "User tidak tersedia";
         });
         setUserMap(nextMap);
       } catch {

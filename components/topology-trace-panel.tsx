@@ -82,7 +82,7 @@ export function TopologyTracePanel({
             <ScrollArea className="w-full whitespace-nowrap">
               <div className="inline-flex items-center gap-2 pb-1">
                 {path.map((node, index) => {
-                  const label = node.device_name || node.device_id || node.id;
+                  const label = node.device_name || node.device_id || "Node tidak tersedia";
                   return (
                     <div key={`${node.id}-${index}`} className="inline-flex items-center gap-2">
                       <div className="rounded-md border bg-muted/30 px-2 py-1.5 text-xs">
@@ -111,7 +111,7 @@ export function TopologyTracePanel({
             <div className="space-y-2">
               {path.map((node, index) => {
                 const edge = pathEdges[index];
-                const nodeLabel = node.device_name || node.device_id || node.id;
+                const nodeLabel = node.device_name || node.device_id || "Node tidak tersedia";
                 const step = index + 1;
                 return (
                   <div key={`${node.id}-${index}`} className="rounded-md border bg-muted/20 p-2">
@@ -120,7 +120,7 @@ export function TopologyTracePanel({
                         <p className="truncate text-xs font-semibold">Step {step}: {nodeLabel}</p>
                         <p className="text-[11px] text-muted-foreground">{node.device_type_key || "-"}</p>
                       </div>
-                      <Badge variant="outline" className="text-[10px]">{node.device_id || node.id}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{node.device_id || "Tanpa Device ID"}</Badge>
                     </div>
                     {edge ? (
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
@@ -158,7 +158,7 @@ export function TopologyTracePanel({
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Level {depth}</p>
                     {column.map((nodeId) => {
                       const node = nodeMap.get(nodeId);
-                      const label = node?.device_name || node?.device_id || nodeId;
+                      const label = node?.device_name || node?.device_id || "Node tidak tersedia";
                       const type = node?.device_type_key || "-";
                       const outgoing = edges.filter((edge) => edge.from_device_id === nodeId);
                       const incoming = edges.filter((edge) => edge.to_device_id === nodeId);
@@ -175,7 +175,7 @@ export function TopologyTracePanel({
                           </div>
                           {outgoing.slice(0, 3).map((edge) => {
                             const target = nodeMap.get(edge.to_device_id);
-                            const targetLabel = target?.device_name || target?.device_id || edge.to_device_id;
+                            const targetLabel = target?.device_name || target?.device_id || "Target tidak tersedia";
                             const coreRange = edge.core_start && edge.core_end ? `${edge.core_start}-${edge.core_end}` : "-";
                             const colorSummary = summarizeCoreColors(edge.fiber_cores?.colors || {});
                             return (
@@ -218,7 +218,7 @@ export function TopologyTracePanel({
               <TableBody>
                 {nodes.slice(0, maxRows).map((node) => (
                   <TableRow key={node.id}>
-                    <TableCell>{node.device_name || node.device_id || node.id}</TableCell>
+                    <TableCell>{node.device_name || node.device_id || "Node tidak tersedia"}</TableCell>
                     <TableCell>{node.device_type_key || "-"}</TableCell>
                   </TableRow>
                 ))}

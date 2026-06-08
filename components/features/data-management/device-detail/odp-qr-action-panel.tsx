@@ -10,6 +10,7 @@ import { buildQrPreviewPngDataUrl } from "@/lib/qr-label";
 type OdpQrActionPanelProps = {
   qrDataUrl: string;
   logoDataUrl?: string;
+  logoReady: boolean;
   reminderDisabled: boolean;
   onOpenReminder: () => void;
   onDownloadQrLabel: () => void;
@@ -18,28 +19,31 @@ type OdpQrActionPanelProps = {
 export function OdpQrActionPanel({
   qrDataUrl,
   logoDataUrl,
+  logoReady,
   reminderDisabled,
   onOpenReminder,
   onDownloadQrLabel,
 }: OdpQrActionPanelProps) {
-  const [previewQrDataUrl, setPreviewQrDataUrl] = useState("");
+  const [previewQr, setPreviewQr] = useState<{ key: string; dataUrl: string }>({ key: "", dataUrl: "" });
+  const previewKey = `${qrDataUrl}::${logoDataUrl || ""}`;
+  const previewQrDataUrl = previewQr.key === previewKey ? previewQr.dataUrl : "";
 
   useEffect(() => {
-    if (!qrDataUrl) return;
+    if (!qrDataUrl || !logoReady) return;
 
     let cancelled = false;
     buildQrPreviewPngDataUrl(qrDataUrl, logoDataUrl)
       .then((url) => {
-        if (!cancelled) setPreviewQrDataUrl(url);
+        if (!cancelled) setPreviewQr({ key: previewKey, dataUrl: url });
       })
       .catch(() => {
-        if (!cancelled) setPreviewQrDataUrl(qrDataUrl);
+        if (!cancelled) setPreviewQr({ key: previewKey, dataUrl: "" });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [logoDataUrl, qrDataUrl]);
+  }, [logoDataUrl, logoReady, previewKey, qrDataUrl]);
 
   return (
     <div className="space-y-2 rounded-md border p-3">
@@ -48,8 +52,12 @@ export function OdpQrActionPanel({
         <p className="text-sm font-medium">QR Label ODP</p>
       </div>
       <div className="flex items-center justify-center rounded-md border bg-background p-3">
-        {qrDataUrl ? (
-          <Image src={previewQrDataUrl || qrDataUrl} alt="QR ODP" width={180} height={180} unoptimized className="size-40" />
+        {qrDataUrl && logoReady && previewQrDataUrl ? (
+          <Image src={previewQrDataUrl} alt="QR ODP" width={180} height={180} unoptimized className="size-40" />
+        ) : qrDataUrl ? (
+          <div className="flex size-40 items-center justify-center rounded-md bg-muted/30 text-center text-xs text-muted-foreground">
+            Memuat logo QR...
+          </div>
         ) : (
           <div className="flex size-40 items-center justify-center text-xs text-muted-foreground">
             QR belum tersedia
@@ -61,7 +69,7 @@ export function OdpQrActionPanel({
           <BellRing className="mr-1.5 size-3.5" />
           Reminder
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={onDownloadQrLabel} disabled={!qrDataUrl}>
+        <Button type="button" variant="outline" size="sm" onClick={onDownloadQrLabel} disabled={!qrDataUrl || !logoReady}>
           Download
         </Button>
       </div>

@@ -69,14 +69,14 @@ export function OdpPortSection({
     { value: "__none__", label: "Tanpa customer" },
     ...customers.map((customer) => ({
       value: customer.id,
-      label: [customer.customer_name, customer.customer_id || customer.customer_number].filter(Boolean).join(" - ") || customer.id,
+      label: [customer.customer_name, customer.customer_number].filter(Boolean).join(" - ") || "Customer tidak tersedia",
     })),
   ];
   const ontOptions = [
     { value: "__none__", label: "Tanpa ONT" },
     ...ontDevices.map((device) => ({
       value: device.id,
-      label: [device.device_name, device.device_id].filter(Boolean).join(" - ") || device.id,
+      label: [device.device_name, device.device_id].filter(Boolean).join(" - ") || "ONT tidak tersedia",
     })),
   ];
 

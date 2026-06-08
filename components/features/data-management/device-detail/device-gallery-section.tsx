@@ -64,7 +64,7 @@ export function DeviceGallerySection({
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
             {attachments.map((attachment, index) => {
               const src = imagePreviewUrls[attachment.id];
-              const fileName = attachmentNames[attachment.id] || attachment.name || attachment.id;
+              const fileName = attachmentNames[attachment.id] || attachment.name || "Attachment tidak tersedia";
               return (
                 <button
                   type="button"

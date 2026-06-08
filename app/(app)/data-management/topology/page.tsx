@@ -251,13 +251,13 @@ export default function TopologyWorkspacePage() {
         });
         const options = (payload.data || []).map((item) => ({
           value: item.id,
-          label: `${item.device_name || item.device_id || item.id} (${item.device_type_key || "-"})`,
+          label: `${item.device_name || item.device_id || "Device tidak tersedia"} (${item.device_type_key || "-"})`,
         }));
         const cables = (payload.data || [])
           .filter((item) => String(item.device_type_key || "").toUpperCase() === "CABLE")
           .map((item) => ({
             value: item.id,
-            label: `${item.device_name || item.device_id || item.id} (CABLE)`,
+            label: `${item.device_name || item.device_id || "Cable device tidak tersedia"} (CABLE)`,
           }));
         setTraceDeviceMap(nextMap);
         setTraceDeviceOptions(options);
@@ -287,7 +287,7 @@ export default function TopologyWorkspacePage() {
         if (cancelled) return;
         const options = (payload.data || []).map((item) => ({
           value: item.id,
-          label: `${item.route_name || item.route_id || item.id}`,
+          label: `${item.route_name || item.route_id || "Route tidak tersedia"}`,
         }));
         setRouteOptions(options);
       } catch {

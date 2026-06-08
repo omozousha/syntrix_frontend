@@ -317,7 +317,7 @@ function ValidatorOverviewDashboard({
     .map((item) => ({
       id: `pending:${item.id}`,
       title: item.device_name || item.device_id || "ODP",
-      description: `${item.device_id || item.id} belum memiliki validasi final.`,
+      description: `${item.device_id || "Inventory belum tersedia"} belum memiliki validasi final.`,
       href: `/data-management/list/odp/${item.id}`,
       badge: item.validation_status || "unvalidated",
       tone: "amber" as const,
@@ -603,7 +603,7 @@ function ValidatorDashboard({ data, loading, singleRegionScope }: { data: Dashbo
     .map((item) => ({
       id: item.id,
       title: item.device_name || item.device_id || "ODP",
-      description: `${item.device_id || item.id} belum memiliki validasi final.`,
+      description: `${item.device_id || "Inventory belum tersedia"} belum memiliki validasi final.`,
       href: `/data-management/list/odp/${item.id}`,
       badge: item.validation_status || "unvalidated",
       tone: "amber" as const,
@@ -845,7 +845,7 @@ function popWithoutDeviceItems(pops: PopItem[], devices: DeviceItem[]): Dashboar
     .map((pop) => ({
       id: pop.id,
       title: getPopLabel({ relation: pop, fallback: pop.pop_code || pop.pop_id, optional: true }) || "POP",
-      description: `${pop.pop_id || pop.id} belum memiliki device pada scope data dashboard.`,
+      description: `${pop.pop_id || pop.pop_code || "POP belum tersedia"} belum memiliki device pada scope data dashboard.`,
       href: "/data-management",
       badge: "No Device",
       tone: "amber" as const,
@@ -990,7 +990,7 @@ function getRequestTitle(item: ValidationRequestItem) {
 function getRequestDescription(item: ValidationRequestItem) {
   const operation = item.payload_snapshot?.operation || item.payload_snapshot?.source || "request";
   const note = item.adminregion_review_note || item.superadmin_review_note;
-  return note ? `${operation}: ${note}` : `${operation} - ${item.request_id || item.id}`;
+  return note ? `${operation}: ${note}` : `${operation} - ${item.request_id || "request terkait"}`;
 }
 
 function statusLabel(value: string) {

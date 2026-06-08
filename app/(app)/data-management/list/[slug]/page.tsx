@@ -327,7 +327,7 @@ export default function DataManagementListPage() {
         setPopFilterOptions(
           (result.data || []).map((item) => ({
             id: String(item.id),
-            label: [item.pop_name, item.pop_code || item.pop_id].filter(Boolean).join(" | ") || String(item.id),
+            label: [item.pop_name, item.pop_code || item.pop_id].filter(Boolean).join(" | ") || "POP tidak tersedia",
             regionId: String(item.region_id || ""),
           })),
         );
@@ -387,7 +387,7 @@ export default function DataManagementListPage() {
             apiFetch<PaginatedResponse<GenericItem>>("/manufacturers?page=1&limit=200", { token }).then((res) => {
               next.manufacturers = (res.data || []).map((item) => ({
                 id: String(item.id),
-                label: String(item.manufacturer_name || item.manufacturer_code || item.id),
+                label: String(item.manufacturer_name || item.manufacturer_code || "Manufacturer tidak tersedia"),
               }));
             }),
           );
@@ -397,7 +397,7 @@ export default function DataManagementListPage() {
             apiFetch<PaginatedResponse<GenericItem>>("/brands?page=1&limit=200", { token }).then((res) => {
               next.brands = (res.data || []).map((item) => ({
                 id: String(item.id),
-                label: String(item.brand_name || item.brand_code || item.id),
+                label: String(item.brand_name || item.brand_code || "Brand tidak tersedia"),
               }));
             }),
           );
@@ -405,7 +405,7 @@ export default function DataManagementListPage() {
             apiFetch<PaginatedResponse<GenericItem>>("/assetTypes?page=1&limit=200", { token }).then((res) => {
               next.assetTypes = (res.data || []).map((item) => ({
                 id: String(item.id),
-                label: String(item.type_name || item.type_code || item.id),
+                label: String(item.type_name || item.type_code || "Asset type tidak tersedia"),
               }));
             }),
           );
@@ -415,7 +415,7 @@ export default function DataManagementListPage() {
             apiFetch<PaginatedResponse<GenericItem>>("/provinces?page=1&limit=200", { token }).then((res) => {
               next.provinces = (res.data || []).map((item) => ({
                 id: String(item.id),
-                label: String(item.province_name || item.id),
+                label: String(item.province_name || "Province tidak tersedia"),
               }));
             }),
           );
@@ -457,7 +457,7 @@ export default function DataManagementListPage() {
           tasks.push(
             apiFetch<PaginatedResponse<GenericItem>>("/manufacturers?page=1&limit=300", { token }).then((res) => {
               (res.data || []).forEach((item) => {
-                next.manufacturers[String(item.id)] = String(item.manufacturer_name || item.manufacturer_code || item.id);
+                next.manufacturers[String(item.id)] = String(item.manufacturer_name || item.manufacturer_code || "Manufacturer tidak tersedia");
               });
             }),
           );
@@ -466,7 +466,7 @@ export default function DataManagementListPage() {
           tasks.push(
             apiFetch<PaginatedResponse<GenericItem>>("/brands?page=1&limit=300", { token }).then((res) => {
               (res.data || []).forEach((item) => {
-                next.brands[String(item.id)] = String(item.brand_name || item.brand_code || item.id);
+                next.brands[String(item.id)] = String(item.brand_name || item.brand_code || "Brand tidak tersedia");
               });
             }),
           );
@@ -475,7 +475,7 @@ export default function DataManagementListPage() {
           tasks.push(
             apiFetch<PaginatedResponse<GenericItem>>("/provinces?page=1&limit=300", { token }).then((res) => {
               (res.data || []).forEach((item) => {
-                next.provinces[String(item.id)] = String(item.province_name || item.id);
+                next.provinces[String(item.id)] = String(item.province_name || "Province tidak tersedia");
               });
             }),
           );

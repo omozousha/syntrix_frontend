@@ -69,7 +69,7 @@ export function RouteCreateForm({
       .filter((project) => !values.region_id || !project.region_id || project.region_id === values.region_id)
       .map((project) => ({
         value: project.id,
-        label: project.project_name || project.project_code || project.id,
+        label: project.project_name || project.project_code || "Project tidak tersedia",
       })),
   ];
 

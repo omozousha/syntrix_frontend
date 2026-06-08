@@ -140,7 +140,7 @@ function objectRecordValues(value: unknown) {
 function getInspectionAttachmentName(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return "-";
   const attachment = value as Record<string, unknown>;
-  return valueText(attachment.name || attachment.attachment_id || attachment.id);
+  return valueText(attachment.name || attachment.attachment_id || "Attachment tidak tersedia");
 }
 
 function valueText(value: unknown) {

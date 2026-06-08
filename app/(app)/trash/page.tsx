@@ -132,7 +132,7 @@ export default function TrashPage() {
         if (cancelled) return;
         const nextMap: Record<string, string> = {};
         (payload.data || []).forEach((user) => {
-          nextMap[user.id] = user.full_name?.trim() || user.email?.trim() || user.id;
+          nextMap[user.id] = user.full_name?.trim() || user.email?.trim() || "User tidak tersedia";
         });
         setUserMap(nextMap);
       } catch {

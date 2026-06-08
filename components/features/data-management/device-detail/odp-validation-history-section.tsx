@@ -174,7 +174,7 @@ function OdpValidationHistoryCard({
               </Badge>
             ) : null}
             <p className="text-xs text-muted-foreground">
-              {record.validation_id || record.id} - {formatDateTime(valueOf(record.validated_at || record.created_at))}
+              {record.validation_id || "Validasi"} - {formatDateTime(valueOf(record.validated_at || record.created_at))}
             </p>
           </div>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">

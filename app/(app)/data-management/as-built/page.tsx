@@ -558,7 +558,7 @@ export default function AsBuiltWorkspacePage() {
               <div className="space-y-1.5">
                 {revisionContext.slice(0, 5).map((doc) => (
                   <div key={doc.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-background px-3 py-2 text-xs">
-                    <span className="font-medium">{doc.title || doc.document_id || doc.id}</span>
+                    <span className="font-medium">{doc.title || doc.document_id || "Dokumen tidak tersedia"}</span>
                     <div className="flex items-center gap-1">
                       <Badge variant="outline">{doc.revision_code || "-"}</Badge>
                       <Badge variant="secondary">{doc.status || "-"}</Badge>
@@ -756,9 +756,9 @@ function buildAsBuiltSvg({
     .map((node, index) => {
       const x = padding + index * (cardWidth + gap);
       const y = titleBlockHeight + 36;
-      const name = escapeXml(node.device_name || node.device_id || node.id || "-");
+      const name = escapeXml(node.device_name || node.device_id || "Node tidak tersedia");
       const type = escapeXml(node.device_type_key || "-");
-      const idLabel = escapeXml(node.device_id || node.id || "-");
+      const idLabel = escapeXml(node.device_id || "-");
 
       const edge = index < path.length - 1 ? `<line x1="${x + cardWidth}" y1="${y + cardHeight / 2}" x2="${x + cardWidth + gap}" y2="${y + cardHeight / 2}" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" />` : "";
 

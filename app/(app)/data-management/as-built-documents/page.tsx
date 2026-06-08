@@ -311,7 +311,7 @@ export default function AsBuiltDocumentsPage() {
                       <TableCell>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium">{row.title || "-"}</p>
-                          <p className="truncate text-xs text-muted-foreground">{row.document_id || row.id}</p>
+                          <p className="truncate text-xs text-muted-foreground">{row.document_id || "Document ID tidak tersedia"}</p>
                         </div>
                       </TableCell>
                       <TableCell>{getRegionLabel({ fallback: row.region_id ? regionNameMap.get(row.region_id) || row.region_id : "", optional: true })}</TableCell>

@@ -1060,7 +1060,7 @@ export default function CreateDataManagementPage() {
                             label: [
                               customer.customer_name,
                               customer.customer_number ? `CID ${customer.customer_number}` : customer.customer_id,
-                            ].filter(Boolean).join(" - ") || customer.id,
+                            ].filter(Boolean).join(" - ") || "Customer tidak tersedia",
                           })),
                       ])}
                       placeholder={form.pop_id ? "Pilih customer" : "Pilih POP terlebih dahulu"}

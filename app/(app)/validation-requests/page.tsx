@@ -338,7 +338,7 @@ export default function ValidationRequestsPage() {
           ? `/validation-requests/${selected.id}/adminregion/approve`
           : `/validation-requests/${selected.id}/superadmin/approve`;
       await apiFetch(path, { method: "POST", token });
-      const message = `Request ${selected.request_id || selected.id} berhasil di-approve.`;
+      const message = `Request ${selected.request_id || "terkait"} berhasil di-approve.`;
       setSuccess(message);
       setResultDialogTitle("Approve Berhasil");
       setResultDialogDescription(message);
@@ -374,7 +374,7 @@ export default function ValidationRequestsPage() {
       await apiFetch(path, { method: "POST", token, body: { note } });
       setRejectDialogOpen(false);
       setRejectNote("");
-      const message = `Request ${selected.request_id || selected.id} berhasil di-reject.`;
+      const message = `Request ${selected.request_id || "terkait"} berhasil di-reject.`;
       setSuccess(message);
       setResultDialogTitle("Reject Berhasil");
       setResultDialogDescription(message);
@@ -396,7 +396,7 @@ export default function ValidationRequestsPage() {
     setSuccess("");
     try {
       await apiFetch(`/validation-requests/${selected.id}/adminregion/resubmit`, { method: "POST", token });
-      const message = `Request ${selected.request_id || selected.id} berhasil di-resubmit ke superadmin.`;
+      const message = `Request ${selected.request_id || "terkait"} berhasil di-resubmit ke superadmin.`;
       setSuccess(message);
       setResultDialogTitle("Resubmit Berhasil");
       setResultDialogDescription(message);
