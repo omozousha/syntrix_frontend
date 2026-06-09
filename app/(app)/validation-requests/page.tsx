@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob, resolveAttachment } from "@/lib/attachment-utils";
@@ -144,6 +145,7 @@ export default function ValidationRequestsPage() {
   const [evidencePreviewOpen, setEvidencePreviewOpen] = useState(false);
   const [evidencePreviewUrl, setEvidencePreviewUrl] = useState("");
   const [evidencePreviewLabel, setEvidencePreviewLabel] = useState("");
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
   const [evidenceThumbUrls, setEvidenceThumbUrls] = useState<Record<string, string>>({});
   const [lookupLabels, setLookupLabels] = useState<LookupLabels>({ regions: {}, pops: {}, projects: {}, users: {} });
   const [selectedDeviceSnapshot, setSelectedDeviceSnapshot] = useState<Record<string, unknown> | null>(null);
@@ -340,6 +342,7 @@ export default function ValidationRequestsPage() {
       await apiFetch(path, { method: "POST", token });
       const message = `Request ${selected.request_id || "terkait"} berhasil di-approve.`;
       setSuccess(message);
+      setDetailDrawerOpen(false);
       setResultDialogTitle("Approve Berhasil");
       setResultDialogDescription(message);
       setResultDialogOpen(true);
@@ -373,6 +376,7 @@ export default function ValidationRequestsPage() {
           : `/validation-requests/${selected.id}/superadmin/reject`;
       await apiFetch(path, { method: "POST", token, body: { note } });
       setRejectDialogOpen(false);
+      setDetailDrawerOpen(false);
       setRejectNote("");
       const message = `Request ${selected.request_id || "terkait"} berhasil di-reject.`;
       setSuccess(message);
@@ -398,6 +402,7 @@ export default function ValidationRequestsPage() {
       await apiFetch(`/validation-requests/${selected.id}/adminregion/resubmit`, { method: "POST", token });
       const message = `Request ${selected.request_id || "terkait"} berhasil di-resubmit ke superadmin.`;
       setSuccess(message);
+      setDetailDrawerOpen(false);
       setResultDialogTitle("Resubmit Berhasil");
       setResultDialogDescription(message);
       setResultDialogOpen(true);
@@ -453,6 +458,95 @@ export default function ValidationRequestsPage() {
     }
   }
 
+  function selectRequestForReview(id: string) {
+    setSelectedId(id);
+    if (typeof window === "undefined" || !window.matchMedia("(min-width: 1536px)").matches) {
+      setDetailDrawerOpen(true);
+    }
+  }
+
+  function renderSelectedDetail() {
+    if (!selected) {
+      return <OperationalState title="Pilih request" description="Pilih salah satu request di panel kiri untuk melihat detail review." />;
+    }
+
+    return (
+      <>
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 min-[1800px]:grid-cols-5">
+          <InfoSlot title="Tipe Request">
+            <RequestTypeBadge kind={selectedType.kind} label={selectedType.label} className="max-w-full whitespace-normal break-words text-left text-[10px]" />
+          </InfoSlot>
+          <Info title="Device" value={getOdpName(selected)} />
+          <RequestActorLine value={getSubmitterText(selected, lookupLabels)} />
+          <Info title="Current Owner" value={getNextOwnerLabel(selected.current_status)} />
+          <Info title="Updated" value={formatDateTime(selected.updated_at)} />
+        </div>
+        <ActorTimelineCard item={selected} lookupLabels={lookupLabels} />
+
+        <RequestStageBanner context={reviewContext} />
+
+        <RequestReviewTemplate
+          item={selected}
+          requestType={selectedType}
+          lookupLabels={lookupLabels}
+          reviewContext={reviewContext}
+          currentDeviceSnapshot={selectedDeviceSnapshot}
+          onPreviewEvidence={previewEvidence}
+          onDownloadEvidence={openEvidence}
+        />
+        {selectedType.kind !== "field_validation" ? (
+          <EvidenceReviewCard
+            title={attachmentLabel}
+            refs={evidenceRefs}
+            thumbUrls={evidenceThumbUrls}
+            isFieldValidation={false}
+            onPreview={previewEvidence}
+            onDownload={openEvidence}
+          />
+        ) : null}
+
+        {!isAdminRegionView ? (
+          <div className="flex flex-wrap gap-2">
+            <Button asChild type="button" size="sm" variant="outline">
+              <Link href={`/audit-trail?request_id=${encodeURIComponent(selected.request_id || "")}`}>Lihat Audit Trail</Link>
+            </Button>
+            {selectedType.kind === "archive_asset" && selected.entity_id ? (
+              <Button asChild type="button" size="sm" variant="outline">
+                <Link
+                  href={`/trash?entity_type=${encodeURIComponent("devices")}&entity_id=${encodeURIComponent(selected.entity_id || "")}`}
+                >
+                  Buka Trash Device
+                </Link>
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {selectedType.kind === "field_validation" || (selected.payload_snapshot?.device_ports || []).length ? (
+          <PortSummaryCard ports={selected.payload_snapshot?.device_ports || []} />
+        ) : null}
+        <TechnicalSnapshotDetails item={selected} />
+
+        {selected.adminregion_review_note ? (
+          <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">Catatan Admin Region: {selected.adminregion_review_note}</p>
+        ) : null}
+        {selected.superadmin_review_note ? (
+          <p className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">Catatan Superadmin: {selected.superadmin_review_note}</p>
+        ) : null}
+
+        <ApprovalActions
+          acting={acting}
+          showResubmit={isRejectedBySuperadmin && isAdminRegionView}
+          approveLabel={reviewContext.approveLabel}
+          rejectLabel={reviewContext.rejectLabel}
+          onApprove={() => void approveSelected()}
+          onReject={() => setRejectDialogOpen(true)}
+          onResubmit={() => void resubmitSelected()}
+        />
+      </>
+    );
+  }
+
   if (!canAdminRegionQueue && !canSuperAdminQueue) {
     return (
       <ScrollArea className="h-full min-h-0 w-full">
@@ -467,21 +561,25 @@ export default function ValidationRequestsPage() {
 
   return (
     <ScrollArea className="h-full min-h-0 w-full">
-      <div className="space-y-4 px-3 pb-3 md:px-4 md:pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Requests</h2>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <p className="text-sm text-muted-foreground">Queue review perubahan aset sebelum masuk data utama.</p>
-              <Badge variant="outline" className="text-[10px] uppercase tracking-normal">
-                {activeQueue === "adminregion" ? "Queue Admin Region" : "Queue Superadmin"}
+      <div className="space-y-2 px-3 pb-3 md:px-4 md:pb-4">
+        <div className="rounded-md border bg-background/70 px-2 py-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <Badge variant="secondary" className="h-6 max-w-[46vw] truncate px-2 text-[10px]">
+                Approval Center
               </Badge>
+              <Badge variant="outline" className="h-6 max-w-[34vw] truncate px-2 text-[10px] uppercase tracking-normal">
+                {activeQueue === "adminregion" ? "Admin Region" : "Superadmin"}
+              </Badge>
+              <span className="hidden min-w-0 text-[11px] text-muted-foreground md:inline">
+                Review asset, evidence, dan approval.
+              </span>
             </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => void loadQueue()} disabled={loading || acting} className="h-7 min-h-7 shrink-0 px-2 text-xs">
+              <RefreshCw className={`size-3.5 sm:mr-1.5 ${loading ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={() => void loadQueue()} disabled={loading || acting}>
-            <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
         </div>
 
         {success ? <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-700">{success}</p> : null}
@@ -490,8 +588,8 @@ export default function ValidationRequestsPage() {
         {loading ? <RequestPageSkeleton activeQueue={activeQueue} /> : null}
 
         {!loading ? (
-          <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
-            <div className="xl:col-span-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="grid min-w-0 gap-4 2xl:grid-cols-[380px_minmax(0,1fr)]">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 2xl:col-span-2">
               <OperationalKpiCard label="Queue" value={items.length} caption={activeQueue === "adminregion" ? "Review Admin Region" : "Approval Superadmin"} icon={Inbox} tone="blue" />
               <OperationalKpiCard label="Validation" value={queueSummary.validation} caption="Field validation request" icon={ShieldCheck} tone="emerald" />
               <OperationalKpiCard label="Asset Change" value={queueSummary.assetChanges} caption="Create, update, archive" icon={Clock} tone="amber" />
@@ -522,7 +620,7 @@ export default function ValidationRequestsPage() {
                         ownerLabel={getNextOwnerLabel(item.current_status)}
                         updatedAt={formatDateTime(item.updated_at)}
                         quickOpenHref={getQuickOpenHref(item)}
-                        onSelect={() => setSelectedId(item.id)}
+                        onSelect={() => selectRequestForReview(item.id)}
                         evidenceSlot={
                           <EvidenceThumbStrip
                             refs={normalizeEvidenceRefs(item.evidence_attachments)}
@@ -548,10 +646,10 @@ export default function ValidationRequestsPage() {
                 )}
             </RequestList>
 
-            <Card>
-              <CardHeader className="px-3 py-2">
+            <Card className="hidden min-w-0 overflow-hidden 2xl:block">
+              <CardHeader className="border-b bg-muted/20 px-3 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
+                  <div className="min-w-0">
                     <CardTitle className="text-base">{getOdpName(selected) || "Pilih Request"}</CardTitle>
                     <CardDescription>{selectedType.description}</CardDescription>
                   </div>
@@ -560,88 +658,34 @@ export default function ValidationRequestsPage() {
                   ) : null}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3 px-3 pb-3">
-                {selected ? (
-                  <>
-                    <div className="grid grid-cols-1 gap-2 md:grid-cols-3 xl:grid-cols-5">
-                      <InfoSlot title="Tipe Request">
-                        <RequestTypeBadge kind={selectedType.kind} label={selectedType.label} className="w-fit text-[10px]" />
-                      </InfoSlot>
-                      <Info title="Device" value={getOdpName(selected)} />
-                      <RequestActorLine value={getSubmitterText(selected, lookupLabels)} />
-                      <Info title="Current Owner" value={getNextOwnerLabel(selected.current_status)} />
-                      <Info title="Updated" value={formatDateTime(selected.updated_at)} />
-                    </div>
-                    <ActorTimelineCard item={selected} lookupLabels={lookupLabels} />
-
-                    <RequestStageBanner context={reviewContext} />
-
-                    <RequestReviewTemplate
-                      item={selected}
-                      requestType={selectedType}
-                      lookupLabels={lookupLabels}
-                      reviewContext={reviewContext}
-                      currentDeviceSnapshot={selectedDeviceSnapshot}
-                      onPreviewEvidence={previewEvidence}
-                      onDownloadEvidence={openEvidence}
-                    />
-                    {selectedType.kind !== "field_validation" ? (
-                      <EvidenceReviewCard
-                        title={attachmentLabel}
-                        refs={evidenceRefs}
-                        thumbUrls={evidenceThumbUrls}
-                        isFieldValidation={false}
-                        onPreview={previewEvidence}
-                        onDownload={openEvidence}
-                      />
-                    ) : null}
-
-                    {!isAdminRegionView ? (
-                      <div className="flex flex-wrap gap-2">
-                        <Button asChild type="button" size="sm" variant="outline">
-                          <Link href={`/audit-trail?request_id=${encodeURIComponent(selected.request_id || "")}`}>Lihat Audit Trail</Link>
-                        </Button>
-                        {selectedType.kind === "archive_asset" && selected.entity_id ? (
-                          <Button asChild type="button" size="sm" variant="outline">
-                            <Link
-                              href={`/trash?entity_type=${encodeURIComponent("devices")}&entity_id=${encodeURIComponent(selected.entity_id || "")}`}
-                            >
-                              Buka Trash Device
-                            </Link>
-                          </Button>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {selectedType.kind === "field_validation" || (selected.payload_snapshot?.device_ports || []).length ? (
-                      <PortSummaryCard ports={selected.payload_snapshot?.device_ports || []} />
-                    ) : null}
-                    <TechnicalSnapshotDetails item={selected} />
-
-                    {selected.adminregion_review_note ? (
-                      <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">Catatan Admin Region: {selected.adminregion_review_note}</p>
-                    ) : null}
-                    {selected.superadmin_review_note ? (
-                      <p className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">Catatan Superadmin: {selected.superadmin_review_note}</p>
-                    ) : null}
-
-                    <ApprovalActions
-                      acting={acting}
-                      showResubmit={isRejectedBySuperadmin && isAdminRegionView}
-                      approveLabel={reviewContext.approveLabel}
-                      rejectLabel={reviewContext.rejectLabel}
-                      onApprove={() => void approveSelected()}
-                      onReject={() => setRejectDialogOpen(true)}
-                      onResubmit={() => void resubmitSelected()}
-                    />
-                  </>
-                ) : (
-                  <OperationalState title="Pilih request" description="Pilih salah satu request di panel kiri untuk melihat detail review." />
-                )}
+              <CardContent className="space-y-3 px-3 py-3">
+                {renderSelectedDetail()}
               </CardContent>
             </Card>
           </div>
         ) : null}
+
+        <Sheet open={detailDrawerOpen} onOpenChange={setDetailDrawerOpen}>
+          <SheetContent side="bottom" className="max-h-[88vh] gap-0 rounded-t-lg p-0 2xl:hidden">
+            <SheetHeader className="border-b px-4 py-3 text-left">
+              <SheetTitle>{getOdpName(selected) || "Detail Request"}</SheetTitle>
+              <SheetDescription>{selectedType.description}</SheetDescription>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+              {selected ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <RequestStatusBadge status={selected.current_status} />
+                    <RequestTypeBadge kind={selectedType.kind} label={selectedType.label} className="max-w-full whitespace-normal break-words text-left text-[10px]" />
+                  </div>
+                  {renderSelectedDetail()}
+                </>
+              ) : (
+                <OperationalState title="Pilih request" description="Pilih salah satu request untuk melihat detail review." />
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
 
         <AlertDialog
           open={rejectDialogOpen}
@@ -731,8 +775,8 @@ export default function ValidationRequestsPage() {
 
 function RequestPageSkeleton({ activeQueue }: { activeQueue: QueueType }) {
   return (
-    <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
-      <div className="xl:col-span-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+    <div className="grid min-w-0 gap-4 2xl:grid-cols-[380px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 2xl:col-span-2">
         {["Queue", "Validation", "Asset Change"].map((label) => (
           <Card key={label}>
             <CardContent className="p-3">
@@ -758,8 +802,8 @@ function RequestPageSkeleton({ activeQueue }: { activeQueue: QueueType }) {
         <RequestCardSkeleton />
         <RequestCardSkeleton />
       </RequestList>
-      <Card>
-        <CardHeader className="px-3 py-2">
+      <Card className="min-w-0 overflow-hidden">
+        <CardHeader className="border-b bg-muted/20 px-3 py-3">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="space-y-2">
               <Skeleton className="h-5 w-40" />
@@ -768,8 +812,8 @@ function RequestPageSkeleton({ activeQueue }: { activeQueue: QueueType }) {
             <Skeleton className="h-6 w-24 rounded-full" />
           </div>
         </CardHeader>
-        <CardContent className="space-y-3 px-3 pb-3">
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-3 xl:grid-cols-5">
+        <CardContent className="space-y-3 px-3 py-3">
+          <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 min-[1800px]:grid-cols-5">
             {Array.from({ length: 5 }).map((_, index) => (
               <div key={index} className="rounded-md border bg-muted/20 p-2">
                 <Skeleton className="h-3 w-20" />
@@ -908,18 +952,18 @@ async function resolveAttachmentCandidates(candidates: string[], token: string):
 
 function Info({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-md border bg-muted/20 px-2 py-1.5">
+    <div className="min-w-0 rounded-md border bg-background px-2.5 py-2 shadow-sm">
       <p className="text-[10px] uppercase leading-4 text-muted-foreground">{title}</p>
-      <p className="break-all text-sm leading-5">{value}</p>
+      <p className="min-w-0 break-words text-sm font-medium leading-5">{value}</p>
     </div>
   );
 }
 
 function InfoSlot({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="rounded-md border bg-muted/20 px-2 py-1.5">
+    <div className="min-w-0 rounded-md border bg-background px-2.5 py-2 shadow-sm">
       <p className="text-[10px] uppercase leading-4 text-muted-foreground">{title}</p>
-      <div className="mt-0.5 flex min-h-5 items-center">{children}</div>
+      <div className="mt-0.5 flex min-h-5 min-w-0 items-center">{children}</div>
     </div>
   );
 }
@@ -948,14 +992,14 @@ function ActorTimelineCard({ item, lookupLabels }: { item: ValidationRequestItem
   if (!rows.length) return null;
 
   return (
-    <div className="rounded-md border bg-muted/20 px-2.5 py-2">
+    <div className="min-w-0 rounded-md border bg-muted/20 px-2.5 py-2">
       <p className="text-[10px] uppercase leading-4 text-muted-foreground">Actor Timeline</p>
-      <div className="mt-1 grid gap-1 md:grid-cols-3">
+      <div className="mt-1 grid min-w-0 gap-1 sm:grid-cols-2 xl:grid-cols-3">
         {rows.map((row) => (
-          <div key={row.label} className="rounded-md border bg-background/70 px-2 py-1.5">
+          <div key={row.label} className="min-w-0 rounded-md border bg-background/70 px-2 py-1.5">
             <p className="text-[10px] font-medium uppercase text-muted-foreground">{row.label}</p>
-            <p className="truncate text-sm font-medium">{row.name}</p>
-            <p className="text-[11px] text-muted-foreground">{formatDateTime(row.at)}</p>
+            <p className="break-words text-sm font-medium">{row.name}</p>
+            <p className="break-words text-[11px] text-muted-foreground">{formatDateTime(row.at)}</p>
           </div>
         ))}
       </div>
@@ -1077,7 +1121,7 @@ function QueueSummaryChips({
   summary: ReturnType<typeof buildQueueSummary>;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-1">
       <QueueSummaryChip label="Total" value={summary.total} tone="slate" />
       <QueueSummaryChip label="Validation" value={summary.validation} tone="emerald" />
       <QueueSummaryChip label="Asset" value={summary.assetChanges} tone="sky" />
@@ -1096,9 +1140,9 @@ function QueueSummaryChip({ label, value, tone }: { label: string; value: number
           ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/35 dark:bg-rose-500/15 dark:text-rose-200"
           : "border-border bg-muted/20 text-foreground";
   return (
-    <div className={`inline-flex min-w-0 items-center gap-1 rounded-md border px-2 py-1 ${toneClass}`}>
-      <span className="text-[10px] uppercase leading-4 opacity-75">{label}</span>
-      <span className="text-sm font-semibold leading-5">{value}</span>
+    <div className={`inline-flex min-w-0 items-center gap-1 rounded-md border px-1.5 py-0.5 ${toneClass}`}>
+      <span className="text-[9px] uppercase leading-4 opacity-75">{label}</span>
+      <span className="text-xs font-semibold leading-4">{value}</span>
     </div>
   );
 }

@@ -34,23 +34,27 @@ export function RequestCard({
   onSelect: () => void;
 }) {
   return (
-    <div className={`rounded-md border p-2.5 transition ${selected ? "border-primary bg-primary/5" : "bg-background hover:bg-muted/40"}`}>
+    <div
+      className={`min-w-0 border-b px-2 py-2 transition last:border-b-0 ${
+        selected ? "bg-primary/5 ring-1 ring-inset ring-primary/20" : "bg-background hover:bg-muted/40"
+      }`}
+    >
       <button type="button" onClick={onSelect} className="w-full text-left">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <p className="text-sm font-medium">{title || "-"}</p>
-          <RequestTypeBadge kind={typeKind} label={typeLabel} className="text-[10px]" />
+        <div className="grid min-w-0 gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+          <p className="min-w-0 break-words text-[13px] font-semibold leading-4">{title || "-"}</p>
+          <RequestTypeBadge kind={typeKind} label={typeLabel} className="max-w-full whitespace-normal break-words text-left text-[10px]" />
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
           <RequestStatusBadge status={status} className="text-[10px]" />
-          <span className="text-xs text-muted-foreground">{summary}</span>
+          <span className="min-w-0 break-words text-[11px] leading-4 text-muted-foreground">{summary}</span>
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          <Badge variant="outline" className="text-[10px]">{ownerLabel}</Badge>
-          <span className="text-[11px] text-muted-foreground">Updated: {updatedAt}</span>
+        <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1">
+          <Badge variant="outline" className="max-w-full whitespace-normal break-words text-left text-[10px]">{ownerLabel}</Badge>
+          <span className="min-w-0 break-words text-[11px] text-muted-foreground">Updated: {updatedAt}</span>
         </div>
       </button>
       {quickOpenHref ? (
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Button asChild type="button" size="sm" variant="outline" className="h-6 px-2 text-[11px]">
             <Link href={quickOpenHref}>Open Detail</Link>
           </Button>
@@ -63,7 +67,7 @@ export function RequestCard({
 
 export function RequestCardSkeleton() {
   return (
-    <div className="rounded-md border bg-background p-2.5">
+    <div className="border-b bg-background p-2 last:border-b-0">
       <div className="flex items-start justify-between gap-2">
         <Skeleton className="h-4 w-36" />
         <Skeleton className="h-5 w-20 rounded-full" />

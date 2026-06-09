@@ -22,8 +22,8 @@ export function ApprovalActions({
 }) {
   if (showResubmit) {
     return (
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={onResubmit} disabled={acting}>
+      <div className="flex flex-col gap-2 rounded-md border bg-muted/20 p-2 sm:flex-row sm:justify-end">
+        <Button type="button" onClick={onResubmit} disabled={acting} className="min-h-10 w-full sm:w-auto">
           <RefreshCw className="mr-2 size-4" />
           Resubmit ke Superadmin
         </Button>
@@ -32,12 +32,12 @@ export function ApprovalActions({
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button type="button" onClick={onApprove} disabled={acting}>
+    <div className="flex flex-col gap-2 rounded-md border bg-muted/20 p-2 sm:flex-row sm:justify-end">
+      <Button type="button" onClick={onApprove} disabled={acting} className="min-h-10 w-full sm:w-auto">
         <Check className="mr-2 size-4" />
         {approveLabel}
       </Button>
-      <Button type="button" variant="destructive" onClick={onReject} disabled={acting}>
+      <Button type="button" variant="destructive" onClick={onReject} disabled={acting} className="min-h-10 w-full sm:w-auto">
         <X className="mr-2 size-4" />
         {rejectLabel}
       </Button>
