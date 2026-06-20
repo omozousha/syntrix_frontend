@@ -1,4 +1,4 @@
-import { getBrandLabel, getManufacturerLabel, getPopLabel, getProjectLabel, getRegionLabel } from "@/lib/relation-labels";
+import { getBrandLabel, getManufacturerLabel, getPopLabel, getProjectLabel, getRegionLabel, getTenantLabel } from "@/lib/relation-labels";
 
 type ListRecord = Record<string, unknown>;
 
@@ -15,6 +15,7 @@ export function buildDeviceListDisplay(item: ListRecord, lookups: DeviceListLook
     pop: getPopDisplay(item.pop_id, lookups, item),
     region: getRegionDisplay(item.region_id, lookups, item),
     project: getProjectDisplay(item.project_id, lookups, item),
+    tenant: getTenantDisplay(item.tenant_id, item),
     manufacturer: getManufacturerDisplay(item.manufacturer_id, lookups, item),
     brand: getBrandDisplay(item.brand_id, lookups, item),
     primaryName: getPrimaryName(item),
@@ -35,6 +36,10 @@ export function getRegionDisplay(value: unknown, lookups: DeviceListLookupMaps =
 export function getProjectDisplay(value: unknown, lookups: DeviceListLookupMaps = {}, relation?: ListRecord) {
   const id = valueOf(value);
   return getProjectLabel({ relation, fallback: id ? lookups.projects?.[id] || value : value, optional: true });
+}
+
+export function getTenantDisplay(value: unknown, relation?: ListRecord) {
+  return getTenantLabel({ relation, fallback: relation?.tenant_name || relation?.tenant_code || value, optional: true });
 }
 
 export function getManufacturerDisplay(value: unknown, lookups: DeviceListLookupMaps = {}, relation?: ListRecord) {

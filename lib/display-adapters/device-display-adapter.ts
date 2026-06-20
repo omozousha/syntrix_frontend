@@ -7,6 +7,7 @@ export type DeviceRelationLabels = {
   pop?: string;
   popCode?: string;
   project?: string;
+  tenant?: string;
   serviceType?: string;
   loading?: boolean;
 };
@@ -48,6 +49,12 @@ export function buildDeviceQrRelationDisplay(item: DeviceRecord, relationLabels:
   return {
     popName: getPopLabel({ fallback: relationLabels.pop || item.pop_name, optional: true }),
     popCode: valueOf(relationLabels.popCode || item.pop_code, ""),
+    projectName: getProjectLabel({
+      relation: getRelationRecord(item.project),
+      fallback: relationLabels.project || item.project_name,
+      optional: true,
+    }),
+    tenantName: valueOf(relationLabels.tenant || item.tenant_name || item.tenant_code, ""),
   };
 }
 

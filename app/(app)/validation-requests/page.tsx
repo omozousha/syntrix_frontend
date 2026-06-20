@@ -28,6 +28,9 @@ import {
   buildCreateAssetReviewFields as buildCreateAssetReviewDisplayFields,
   buildFieldValidationComparisonFields as buildFieldValidationComparisonDisplayFields,
   buildFieldValidationReviewFields as buildFieldValidationReviewDisplayFields,
+  getPopDisplay,
+  getProjectDisplay,
+  getRegionDisplay,
 } from "@/lib/display-adapters/request-display-adapter";
 import { formatDateTime, normalizeRole, valueText } from "@/lib/domain-formatters";
 import { RELATION_LABEL_FALLBACK } from "@/lib/relation-labels";
@@ -86,7 +89,14 @@ type ValidationRequestItem = {
     pop?: Record<string, unknown>;
     route?: Record<string, unknown>;
     project?: Record<string, unknown>;
+    portConnection?: Record<string, unknown>;
+    context?: Record<string, unknown>;
     device_ports?: Array<Record<string, unknown>>;
+    port_objects?: Array<Record<string, unknown>>;
+    template?: Record<string, unknown>;
+    profile_name?: string | null;
+    existing_port_count?: number | string | null;
+    missing_port_indexes?: Array<number | string>;
   } | null;
   evidence_attachments?: Array<{ id?: string; attachment_id?: string; name?: string } | string> | null;
   checklist?: Record<string, boolean> | null;
@@ -107,7 +117,14 @@ type LookupLabels = {
   users: Record<string, string>;
 };
 type ReviewViewerRole = "adminregion" | "superadmin";
-type RequestTypeFilter = "all" | "create_asset" | "update_asset" | "archive_asset" | "field_validation";
+type RequestTypeFilter =
+  | "all"
+  | "create_asset"
+  | "update_asset"
+  | "archive_asset"
+  | "provision_asset"
+  | "topology_connection"
+  | "field_validation";
 type RequestStatusFilter = "all" | RequestStatus;
 type ReviewContext = {
   viewerRole: ReviewViewerRole;
@@ -181,12 +198,12 @@ export default function ValidationRequestsPage() {
   );
   const queueSummary = useMemo(() => buildQueueSummary(items), [items]);
   const selectedType = getRequestType(selected);
-  const evidenceRefs = useMemo(() => normalizeEvidenceRefs(selected?.evidence_attachments), [selected]);
+  const evidenceRefs = useMemo(() => getRequestAttachmentRefs(selected), [selected]);
   const visibleEvidenceRefs = useMemo(() => {
     const byKey = new Map<string, EvidenceRef>();
     [
       ...filteredItems.slice(0, 20).flatMap((item) => [
-        ...normalizeEvidenceRefs(item.evidence_attachments),
+        ...getRequestAttachmentRefs(item),
         ...normalizeInspectionEvidenceRefs(item.payload_snapshot?.field_inspection),
       ]),
       ...evidenceRefs,
@@ -623,9 +640,9 @@ export default function ValidationRequestsPage() {
                         onSelect={() => selectRequestForReview(item.id)}
                         evidenceSlot={
                           <EvidenceThumbStrip
-                            refs={normalizeEvidenceRefs(item.evidence_attachments)}
+                            refs={getRequestAttachmentRefs(item)}
                             thumbUrls={evidenceThumbUrls}
-                            label="Evidence"
+                            label={requestType.kind === "field_validation" ? "Evidence" : "Attachment"}
                             onPreview={previewEvidence}
                           />
                         }
@@ -871,9 +888,13 @@ function getReviewContext(
         ? "Approve Create"
         : requestType.kind === "update_asset"
           ? "Approve Update"
-          : requestType.kind === "archive_asset"
-            ? "Approve Archive"
-            : "Approve Final",
+          : requestType.kind === "provision_asset"
+            ? "Approve Provision"
+            : requestType.kind === "topology_connection"
+              ? "Approve Connection"
+              : requestType.kind === "archive_asset"
+                ? "Approve Archive"
+                : "Approve Final",
     rejectLabel: "Reject ke Admin Region",
     rejectDialogTitle: "Reject ke Admin Region",
     rejectDialogDescription: "Catatan reject wajib minimal 10 karakter dan akan menjadi tindak lanjut admin region.",
@@ -904,6 +925,41 @@ function normalizeEvidenceRefs(value: ValidationRequestItem["evidence_attachment
       return null;
     })
     .filter((row): row is EvidenceRef => Boolean(row));
+}
+
+function getRequestAttachmentRefs(item?: ValidationRequestItem | null): EvidenceRef[] {
+  if (!item) return [];
+  const refs = [
+    ...normalizeEvidenceRefs(item.evidence_attachments),
+    ...normalizeDeviceSnapshotAttachmentRefs(item.payload_snapshot?.device),
+    ...normalizeDeviceSnapshotAttachmentRefs(item.payload_snapshot?.resource_payload),
+  ];
+  const byKey = new Map<string, EvidenceRef>();
+  refs.forEach((ref) => {
+    const stableKey = ref.candidates[0] || ref.key;
+    if (!byKey.has(stableKey)) byKey.set(stableKey, ref);
+  });
+  return Array.from(byKey.values());
+}
+
+function normalizeDeviceSnapshotAttachmentRefs(value?: Record<string, unknown> | null): EvidenceRef[] {
+  if (!value) return [];
+  const refs: EvidenceRef[] = [];
+  const singleAttachmentId = String(value.image_attachment_id || "").trim();
+  if (singleAttachmentId) {
+    refs.push({ key: `image-${singleAttachmentId}`, candidates: [singleAttachmentId], available: true });
+  }
+
+  const attachments = Array.isArray(value.image_attachments) ? value.image_attachments : [];
+  attachments.forEach((attachment, index) => {
+    const ref = getInspectionAttachmentRef(attachment, `image-${index}`);
+    if (ref) refs.push(ref);
+    if (!ref && typeof attachment === "string") {
+      const id = attachment.trim();
+      if (id) refs.push({ key: `image-${id}-${index}`, candidates: [id], available: true });
+    }
+  });
+  return refs;
 }
 
 function normalizeInspectionEvidenceRefs(inspection?: Record<string, unknown> | null): EvidenceRef[] {
@@ -1023,6 +1079,22 @@ function getOdpName(item: ValidationRequestItem | null) {
 
 function getRequestType(item: ValidationRequestItem | null) {
   const source = String(item?.payload_snapshot?.source || "").trim();
+  if (isTopologyConnectionRequest(item)) {
+    const operationLabel =
+      source === "adminregion-update-resource"
+        ? "Update"
+        : source === "adminregion-archive-resource"
+          ? "Archive"
+          : "Create";
+    return {
+      kind: "topology_connection" as const,
+      resourceLabel: "Topology Connection",
+      operationLabel,
+      label: `${operationLabel} Topology Connection Request`,
+      description: "Review relasi port-to-port, route, cable, dan core sebelum topology final berubah.",
+    };
+  }
+
   if (source === "adminregion-create-device" || source === "adminregion-create-resource") {
     const resourceLabel = valueText(item?.payload_snapshot?.resource_label || "Device");
     return {
@@ -1056,6 +1128,16 @@ function getRequestType(item: ValidationRequestItem | null) {
     };
   }
 
+  if (source === "adminregion-provision-device-ports") {
+    return {
+      kind: "provision_asset" as const,
+      resourceLabel: "Device Port",
+      operationLabel: "Provision",
+      label: "Provision Port Device Request",
+      description: "Review port yang akan dibuat sebelum masuk inventory final.",
+    };
+  }
+
   return {
     kind: "field_validation" as const,
     resourceLabel: "Device",
@@ -1065,9 +1147,24 @@ function getRequestType(item: ValidationRequestItem | null) {
   };
 }
 
+function isTopologyConnectionRequest(item: ValidationRequestItem | null) {
+  const resourceName = String(item?.payload_snapshot?.resource_name || "").trim();
+  const entityType = String((item as { entity_type?: string | null } | null)?.entity_type || "").trim();
+  return resourceName === "portConnections" || entityType === "portConnection" || Boolean(item?.payload_snapshot?.portConnection);
+}
+
 function getRequestSummary(item: ValidationRequestItem, lookupLabels: LookupLabels) {
   const requestType = getRequestType(item);
   if (requestType.kind !== "field_validation") {
+    if (requestType.kind === "topology_connection") {
+      const context = item.payload_snapshot?.context || {};
+      return `${requestType.operationLabel} ${formatTopologyEndpoint(context)} | Core ${formatCoreRange(getCreateAssetPayload(item))}`;
+    }
+    if (requestType.kind === "provision_asset") {
+      const device = item.payload_snapshot?.device || {};
+      const createCount = Array.isArray(item.payload_snapshot?.port_objects) ? item.payload_snapshot.port_objects.length : 0;
+      return `Provision ${createCount} port | Device ${valueText(device.device_name || device.device_id || item.entity_id)}`;
+    }
     return buildAssetRequestSummary(item, requestType, lookupLabels);
   }
 
@@ -1087,6 +1184,17 @@ function getQuickOpenHref(item: ValidationRequestItem) {
   const requestType = getRequestType(item);
   if (requestType.kind === "field_validation") {
     return `/data-management/list/odp/${encodeURIComponent(item.entity_id)}`;
+  }
+  if (requestType.kind === "provision_asset") {
+    return `/data-management/list/odp/${encodeURIComponent(item.entity_id)}`;
+  }
+  if (requestType.kind === "topology_connection") {
+    const payload = getCreateAssetPayload(item);
+    const fromDeviceId = String(item.payload_snapshot?.context?.upstream_device_id || payload.from_device_id || "").trim();
+    if (fromDeviceId) {
+      return `/data-management/topology?tool=connection&start_device_id=${encodeURIComponent(fromDeviceId)}`;
+    }
+    return "/data-management/topology";
   }
   const resourceName = String(item.payload_snapshot?.resource_name || "").trim();
   if (resourceName === "devices") {
@@ -1191,10 +1299,16 @@ function RequestReviewTemplate({
     return <CreateAssetRequestReview item={item} requestType={requestType} lookupLabels={lookupLabels} />;
   }
   if (requestType.kind === "update_asset") {
-    return <UpdateAssetRequestReview item={item} requestType={requestType} />;
+    return <UpdateAssetRequestReview item={item} requestType={requestType} lookupLabels={lookupLabels} />;
   }
   if (requestType.kind === "archive_asset") {
     return <ArchiveAssetRequestReview item={item} requestType={requestType} lookupLabels={lookupLabels} />;
+  }
+  if (requestType.kind === "provision_asset") {
+    return <ProvisionPortsRequestReview item={item} />;
+  }
+  if (requestType.kind === "topology_connection") {
+    return <TopologyConnectionRequestReview item={item} requestType={requestType} lookupLabels={lookupLabels} />;
   }
   return (
       <ValidationRequestReview
@@ -1255,11 +1369,13 @@ function CreateAssetRequestReview({
 function UpdateAssetRequestReview({
   item,
   requestType,
+  lookupLabels,
 }: {
   item: ValidationRequestItem;
   requestType: RequestType;
+  lookupLabels: LookupLabels;
 }) {
-  const diffFields = getUpdateDiffFields(item);
+  const diffFields = getUpdateDiffFields(item, lookupLabels);
   return (
     <div className="space-y-2 rounded-md border p-2.5">
       <ReviewSectionHeader
@@ -1322,6 +1438,113 @@ function ArchiveAssetRequestReview({
       <div className="rounded-md border border-rose-200 bg-rose-100/40 p-2 text-xs text-rose-900">
         Request ini akan mengeluarkan asset dari data aktif setelah disetujui.
       </div>
+    </div>
+  );
+}
+
+function ProvisionPortsRequestReview({ item }: { item: ValidationRequestItem }) {
+  const payload = item.payload_snapshot || {};
+  const device = payload.device || {};
+  const template = payload.template || {};
+  const ports = Array.isArray(payload.port_objects) ? payload.port_objects : [];
+  return (
+    <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-2.5">
+      <ReviewSectionHeader
+        eyebrow="Provision"
+        title="Port Device Akan Dibuat"
+        description="Port baru diterapkan ke inventory hanya setelah approval final superadmin."
+      />
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-[180px_minmax(0,1fr)]">
+        <div className="rounded-md border border-amber-200 bg-background/80 p-2">
+          <p className="text-xs font-medium text-muted-foreground">Port Dibuat</p>
+          <p className="mt-1 text-3xl font-semibold tracking-tight">{ports.length}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Existing: {valueText(payload.existing_port_count)}
+          </p>
+        </div>
+        <div className="rounded-md border border-amber-200 bg-background/80 p-2">
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Konteks Provisioning</p>
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+            <Info title="Device" value={valueText(device.device_name || device.device_id || item.entity_id)} />
+            <Info title="Type" value={valueText(device.device_type_key)} />
+            <Info title="Profile" value={valueText(payload.profile_name || template.profile_name)} />
+            <Info title="Template Port" value={valueText(template.total_ports)} />
+            <Info title="Start Index" value={valueText(template.start_port_index)} />
+            <Info title="Missing Index" value={Array.isArray(payload.missing_port_indexes) ? payload.missing_port_indexes.join(", ") : "-"} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TopologyConnectionRequestReview({
+  item,
+  requestType,
+  lookupLabels,
+}: {
+  item: ValidationRequestItem;
+  requestType: RequestType;
+  lookupLabels: LookupLabels;
+}) {
+  const payload = getCreateAssetPayload(item);
+  const before = item.payload_snapshot?.before || {};
+  const context = item.payload_snapshot?.context || {};
+  const diffFields = getTopologyConnectionDiffFields(item, lookupLabels);
+  const isCreate = requestType.operationLabel === "Create";
+  const title = isCreate ? "Connection Baru" : `${requestType.operationLabel} Connection`;
+  return (
+    <div className="space-y-2 rounded-md border border-cyan-200 bg-cyan-50/40 p-2.5">
+      <ReviewSectionHeader
+        eyebrow="Topology"
+        title={title}
+        description="Review endpoint, route, cable, dan core range sebelum relasi topology diterapkan ke inventory final."
+      />
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="rounded-md border border-cyan-200 bg-background/80 p-2">
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Endpoint Connection</p>
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            <Info title="From Device" value={valueText(context.upstream_device_name || context.from_device_name || payload.from_device_name)} />
+            <Info title="From Port" value={valueText(context.upstream_port_label || context.from_port_label || payload.from_port_label)} />
+            <Info title="To Device" value={valueText(context.odp_device_name || context.to_device_name || payload.to_device_name)} />
+            <Info title="To Port" value={valueText(context.odp_port_label || context.to_port_label || payload.to_port_label)} />
+          </div>
+        </div>
+        <div className="rounded-md border border-cyan-200 bg-background/80 p-2">
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Status</p>
+          <div className="space-y-1.5">
+            <Info title="Operation" value={requestType.operationLabel} />
+            <Info title="Connection Status" value={valueText(payload.status || before.status)} />
+          </div>
+        </div>
+      </div>
+      <div className="rounded-md border border-cyan-200 bg-background/80 p-2">
+        <p className="mb-1.5 text-xs font-medium text-muted-foreground">Route, Cable, dan Core</p>
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+          <Info title="Route" value={formatTopologyRelationValue("route_id", payload.route_id || before.route_id, lookupLabels)} />
+          <Info title="Cable" value={valueText(context.cable_device_name || payload.cable_device_name || (payload.cable_device_id ? "Cable selected" : before.cable_device_id ? "Existing cable" : "-"))} />
+          <Info title="Core Range" value={formatCoreRange(payload)} />
+          <Info title="Fiber Count" value={valueText(payload.fiber_count || before.fiber_count)} />
+        </div>
+      </div>
+      {!isCreate ? (
+        <div className="rounded-md border border-cyan-200 bg-background/80 p-2">
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Before/After Topology</p>
+          {diffFields.length ? (
+            <div className="space-y-1">
+              {diffFields.map((field) => (
+                <div key={field.key} className="grid grid-cols-1 gap-1 rounded border bg-background px-2 py-1.5 text-xs sm:grid-cols-[150px_1fr_1fr]">
+                  <span className="font-medium">{field.key}</span>
+                  <span className="break-words text-muted-foreground">Sebelum: {field.before}</span>
+                  <span className="break-words">Sesudah: {field.after}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Tidak ada perubahan teknis yang terdeteksi pada snapshot request ini.</p>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1597,16 +1820,102 @@ function getCreateAssetPayload(item: ValidationRequestItem) {
   );
 }
 
-function getUpdateDiffFields(item: ValidationRequestItem) {
+function getUpdateDiffFields(item: ValidationRequestItem, lookupLabels: LookupLabels) {
   const changes = item.payload_snapshot?.resource_payload || {};
   const before = item.payload_snapshot?.before || {};
   return Object.entries(changes)
     .filter(([key, after]) => !areValuesEquivalent(before[key], after))
     .map(([key, after]) => ({
-      key,
-      before: valueText(before[key]),
-      after: valueText(after),
+      key: getUpdateFieldLabel(key),
+      before: formatUpdateFieldValue(key, before[key], lookupLabels),
+      after: formatUpdateFieldValue(key, after, lookupLabels),
     }));
+}
+
+function getTopologyConnectionDiffFields(item: ValidationRequestItem, lookupLabels: LookupLabels) {
+  const changes = item.payload_snapshot?.resource_payload || {};
+  const before = item.payload_snapshot?.before || {};
+  return Object.entries(changes)
+    .filter(([key, after]) => !areValuesEquivalent(before[key], after))
+    .map(([key, after]) => ({
+      key: getTopologyConnectionFieldLabel(key),
+      before: formatTopologyRelationValue(key, before[key], lookupLabels),
+      after: formatTopologyRelationValue(key, after, lookupLabels),
+    }));
+}
+
+function getTopologyConnectionFieldLabel(key: string) {
+  const labels: Record<string, string> = {
+    from_port_id: "From Port",
+    to_port_id: "To Port",
+    connection_type: "Connection Type",
+    status: "Status",
+    route_id: "Route",
+    cable_device_id: "Cable",
+    core_start: "Core Start",
+    core_end: "Core End",
+    fiber_count: "Fiber Count",
+    notes: "Notes",
+  };
+  return labels[key] || getUpdateFieldLabel(key);
+}
+
+function formatTopologyRelationValue(key: string, value: unknown, lookupLabels: LookupLabels) {
+  if (key === "route_id") return valueText(value);
+  if (key === "region_id") return getRegionDisplay(value, lookupLabels);
+  if (key === "pop_id") return getPopDisplay(value, lookupLabels);
+  if (key === "project_id") return getProjectDisplay(value, lookupLabels);
+  if (key.endsWith("_port_id")) return value ? "Port selected" : "-";
+  if (key === "cable_device_id") return value ? "Cable selected" : "-";
+  return valueText(value);
+}
+
+function formatTopologyEndpoint(context: Record<string, unknown>) {
+  const fromDevice = valueText(context.upstream_device_name || context.from_device_name);
+  const fromPort = valueText(context.upstream_port_label || context.from_port_label);
+  const toDevice = valueText(context.odp_device_name || context.to_device_name);
+  const toPort = valueText(context.odp_port_label || context.to_port_label);
+  return `${fromDevice} ${fromPort !== "-" ? fromPort : ""} -> ${toDevice} ${toPort !== "-" ? toPort : ""}`.replace(/\s+/g, " ").trim();
+}
+
+function formatCoreRange(payload: Record<string, unknown>) {
+  const start = valueText(payload.core_start);
+  const end = valueText(payload.core_end);
+  if (start === "-" && end === "-") return "-";
+  if (start !== "-" && end !== "-") return `${start}-${end}`;
+  return start !== "-" ? start : end;
+}
+
+function getUpdateFieldLabel(key: string) {
+  const labels: Record<string, string> = {
+    region_id: "Region",
+    pop_id: "POP",
+    project_id: "Project",
+    tenant_id: "Tenant",
+    device_name: "Nama Device",
+    status: "Status",
+    installation_date: "Installation Date",
+    validation_status: "Validation Status",
+    validation_date: "Validation Date",
+    serial_number: "Serial Number",
+    management_ip: "Management IP",
+    total_ports: "Total Ports",
+    used_ports: "Used Ports",
+    splitter_ratio: "Splitter Ratio",
+    odp_type: "Tipe ODP",
+    installation_type: "Jenis Instalasi",
+    longitude: "Longitude",
+    latitude: "Latitude",
+    address: "Address",
+  };
+  return labels[key] || key;
+}
+
+function formatUpdateFieldValue(key: string, value: unknown, lookupLabels: LookupLabels) {
+  if (key === "region_id") return getRegionDisplay(value, lookupLabels);
+  if (key === "pop_id") return getPopDisplay(value, lookupLabels);
+  if (key === "project_id") return getProjectDisplay(value, lookupLabels);
+  return valueText(value);
 }
 
 function areValuesEquivalent(before: unknown, after: unknown) {
@@ -1636,10 +1945,11 @@ function stableStringify(value: unknown): string {
 
 function collectLookupIds(item: ValidationRequestItem) {
   const payload = getCreateAssetPayload(item);
+  const before = item.payload_snapshot?.before || {};
   return {
-    regionIds: uniqueIds([payload.region_id, item.region_id]),
-    popIds: uniqueIds([payload.pop_id]),
-    projectIds: uniqueIds([payload.project_id]),
+    regionIds: uniqueIds([payload.region_id, before.region_id, item.region_id]),
+    popIds: uniqueIds([payload.pop_id, before.pop_id]),
+    projectIds: uniqueIds([payload.project_id, before.project_id]),
     userIds: uniqueIds([item.submitted_by_user_id]),
   };
 }

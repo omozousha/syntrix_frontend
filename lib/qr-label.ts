@@ -6,6 +6,8 @@ export type QrLabelPayload = {
   deviceCode: string;
   deviceType: string;
   popName: string;
+  projectName?: string;
+  tenantName?: string;
   qrDataUrl: string;
   logoDataUrl?: string;
   footerText?: string;
@@ -57,6 +59,8 @@ export async function buildQrLabelPngDataUrl({
   deviceCode,
   deviceType,
   popName,
+  projectName,
+  tenantName,
   qrDataUrl,
   logoDataUrl: providedLogoDataUrl,
   footerText,
@@ -94,20 +98,32 @@ export async function buildQrLabelPngDataUrl({
     minSize: 24,
   });
 
-  drawAdaptiveCanvasText(context, `ID: ${deviceCode}`, textX, 119, 380, {
+  drawAdaptiveCanvasText(context, `ID: ${deviceCode}`, textX, 112, 380, {
     weight: 800,
     maxSize: 26,
     minSize: 18,
   });
-  drawAdaptiveCanvasText(context, `TYPE: ${deviceType}`, textX, 164, 380, {
+  drawAdaptiveCanvasText(context, `TYPE: ${deviceType}`, textX, 153, 380, {
     weight: 800,
     maxSize: 26,
     minSize: 18,
   });
-  drawAdaptiveCanvasText(context, `POP: ${popName}`, textX, 209, 380, {
+  drawAdaptiveCanvasText(context, `POP: ${popName}`, textX, 194, 380, {
     weight: 800,
     maxSize: 26,
     minSize: 17,
+  });
+
+  const optionalLines = [
+    { label: "PROJECT", value: projectName },
+    { label: "TENANT", value: tenantName },
+  ].filter((line) => isQrLabelOptionalTextVisible(line.value));
+  optionalLines.slice(0, 2).forEach((line, index) => {
+    drawAdaptiveCanvasText(context, `${line.label}: ${line.value}`, textX, 238 + index * 36, 380, {
+      weight: 700,
+      maxSize: 20,
+      minSize: 14,
+    });
   });
 
   context.fillStyle = "#dc2626";
@@ -244,6 +260,11 @@ function normalizeQrText(value?: string | null, fallback = "") {
 
 function isLikelyUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim());
+}
+
+function isQrLabelOptionalTextVisible(value?: string | null) {
+  const text = normalizeQrText(value);
+  return Boolean(text && text !== "-" && !isLikelyUuid(text));
 }
 
 function loadImage(src: string) {

@@ -32,6 +32,7 @@ export function AppShell({
     { href: "/data-management", label: "Data Management" },
     ...(isAdminRegion ? [{ href: "/data-management/list/odp", label: "ODP List" }] : []),
     ...(canReviewValidation ? [{ href: "/requests", label: "Requests" }] : []),
+    ...(!isValidator ? [{ href: "/data-management/topology", label: "Topology Management" }] : []),
     ...(!isValidator ? [{ href: "/data-management/as-built-documents", label: "As-Built Documents" }] : []),
     ...(isSuperAdmin ? [{ href: "/master-data", label: "Master Data" }] : []),
     ...(isSuperAdmin ? [{ href: "/audit-trail", label: "Audit Trail" }] : []),
@@ -165,10 +166,10 @@ function buildDataManagementTitle(segments: string[]) {
     const slug = segments[listIndex + 1] || "";
     const category = getCategoryBySlug(slug);
     const label = category?.label || buildEntityTitle(slug);
-    return segments[listIndex + 2] ? `${label} Detail` : `${label} List`;
+    return segments[listIndex + 2] ? `Detail ${label}` : `${label} List`;
   }
 
-  if (segments.includes("topology")) return "Topology";
+  if (segments.includes("topology")) return "Topology Management";
   if (segments.includes("as-built-documents")) return "As-Built Documents";
   if (segments.includes("as-built")) return "As-Built";
   if (segments.includes("odp-quality")) return "ODP Quality";

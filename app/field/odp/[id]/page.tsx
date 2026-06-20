@@ -14,6 +14,12 @@ type DeviceQrContext = {
   id: string;
   device_name?: string | null;
   device_type_key?: string | null;
+  pop?: {
+    id?: string | null;
+    pop_id?: string | null;
+    pop_code?: string | null;
+    pop_name?: string | null;
+  } | null;
   tenant?: {
     id?: string | null;
     tenant_code?: string | null;
@@ -144,6 +150,7 @@ export default function OdpQrBrowserFallbackPage() {
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                 <InfoRow label="Type Device" value={display.deviceType} loading={loading} />
                 <InfoRow label="Nama Device" value={display.deviceName} loading={loading} />
+                <InfoRow label="POP" value={display.pop} loading={loading} />
                 <InfoRow label="Tenant" value={display.tenant} loading={loading} />
               </div>
 

@@ -66,10 +66,11 @@ export function DeviceGallerySection({
               const src = imagePreviewUrls[attachment.id];
               const fileName = attachmentNames[attachment.id] || attachment.name || "Attachment tidak tersedia";
               return (
-                <button
+                <Button
                   type="button"
                   key={attachment.id}
-                  className="overflow-hidden rounded-md border bg-muted/30 text-left transition hover:ring-2 hover:ring-primary/40"
+                  variant="ghost"
+                  className="h-auto flex-col items-stretch justify-start overflow-hidden rounded-md border bg-muted/30 p-0 text-left transition hover:ring-2 hover:ring-primary/40"
                   title={fileName}
                   onClick={() => onOpenGallery(index)}
                 >
@@ -81,7 +82,7 @@ export function DeviceGallerySection({
                     </div>
                   )}
                   <p className="truncate px-1.5 py-1 text-[10px] text-muted-foreground">{fileName}</p>
-                </button>
+                </Button>
               );
             })}
           </div>

@@ -41,6 +41,24 @@ type TopologyTraceResponse = {
         core_start?: number | null;
         core_end?: number | null;
         fiber_count?: number | null;
+        route_id?: string | null;
+        cable_device_id?: string | null;
+        route?: {
+          route_id?: string | null;
+          route_code?: string | null;
+          route_name?: string | null;
+        } | null;
+        cable_device?: {
+          device_id?: string | null;
+          device_name?: string | null;
+          device_type_key?: string | null;
+        } | null;
+        labels?: {
+          title?: string | null;
+          route?: string | null;
+          cable?: string | null;
+          core_range?: string | null;
+        } | null;
         fiber_cores?: {
           total?: number;
           used?: number;
@@ -94,6 +112,7 @@ export default function AsBuiltWorkspacePage() {
   const projectId = searchParams.get("project_id") || "";
   const maxDepth = searchParams.get("max_depth") || "12";
   const isPersonalDeviceMode = Boolean(startDeviceId.trim());
+  const hasProjectRouteContext = Boolean(projectId.trim() || routeId.trim());
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -106,6 +125,8 @@ export default function AsBuiltWorkspacePage() {
   const [exportingSvg, setExportingSvg] = useState(false);
   const [exportingPng, setExportingPng] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingJson, setExportingJson] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
   const [drawingTitle, setDrawingTitle] = useState("As-Built Network Trace");
   const [revisionCode, setRevisionCode] = useState("v1");
   const [preparedBy, setPreparedBy] = useState(me.app_user.full_name || me.app_user.email || "");
@@ -166,10 +187,12 @@ export default function AsBuiltWorkspacePage() {
     if (startDeviceId.trim()) params.set("start_device_id", startDeviceId.trim());
     if (endDeviceId.trim()) params.set("end_device_id", endDeviceId.trim());
     if (regionId.trim()) params.set("region_id", regionId.trim());
+    if (projectId.trim()) params.set("project_id", projectId.trim());
+    if (routeId.trim()) params.set("route_id", routeId.trim());
     if (maxDepth.trim()) params.set("max_depth", maxDepth.trim());
     const query = params.toString();
     return `/data-management/topology${query ? `?${query}` : ""}`;
-  }, [startDeviceId, endDeviceId, regionId, maxDepth]);
+  }, [endDeviceId, maxDepth, projectId, regionId, routeId, startDeviceId]);
 
   const generatedAtLabel = useMemo(() => formatDateTime(generatedAt), [generatedAt]);
   const startNode = useMemo(() => {
@@ -180,6 +203,23 @@ export default function AsBuiltWorkspacePage() {
       null
     );
   }, [traceResult, startDeviceId]);
+  const endNode = useMemo(() => {
+    if (!traceResult || !endDeviceId.trim()) return null;
+    return (
+      traceResult.graph.nodes.find((node) => node.device_id === endDeviceId.trim()) ||
+      traceResult.graph.nodes.find((node) => node.id === endDeviceId.trim()) ||
+      null
+    );
+  }, [traceResult, endDeviceId]);
+  const startDeviceLabel = startNode?.device_name || startNode?.device_id || startDeviceId || "-";
+  const endDeviceLabel = endNode?.device_name || endNode?.device_id || endDeviceId || "-";
+  const traceNodeLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (traceResult?.graph?.nodes || []).forEach((node) => {
+      map.set(node.id, node.device_name || node.device_id || node.id);
+    });
+    return map;
+  }, [traceResult]);
   const traceFiberSummary = useMemo(() => {
     const edges = traceResult?.graph?.edges || [];
     let totalFiber = 0;
@@ -198,12 +238,18 @@ export default function AsBuiltWorkspacePage() {
 
     return { totalFiber, usedFiber, edgesWithCoreRange, colorDist };
   }, [traceResult]);
+  const relevantTopologySummary = useMemo(() => buildRelevantTopologySummary(traceResult), [traceResult]);
+  const canExportAsBuilt = Boolean(traceResult?.trace.found);
   const asBuiltDocumentsHref = useMemo(() => {
     const params = new URLSearchParams();
     if (resolvedRegionId) params.set("region_id", resolvedRegionId);
+    if (projectId.trim()) params.set("project_id", projectId.trim());
+    if (routeId.trim()) params.set("route_id", routeId.trim());
+    if (startDeviceId.trim()) params.set("start_device_id", startDeviceId.trim());
+    if (endDeviceId.trim()) params.set("end_device_id", endDeviceId.trim());
     const query = params.toString();
     return `/data-management/as-built-documents${query ? `?${query}` : ""}`;
-  }, [resolvedRegionId]);
+  }, [endDeviceId, projectId, resolvedRegionId, routeId, startDeviceId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -245,6 +291,10 @@ export default function AsBuiltWorkspacePage() {
 
   async function handlePublishRevision() {
     if (!traceResult || !startDeviceId.trim()) return;
+    if (!canExportAsBuilt) {
+      setPublishError("Trace belum menemukan approved path. Jalankan trace topology yang valid sebelum publish As-Built.");
+      return;
+    }
     setPublishing(true);
     setPublishMessage("");
     setPublishError("");
@@ -259,9 +309,9 @@ export default function AsBuiltWorkspacePage() {
           status: "valid",
           validated_at: new Date().toISOString(),
           validator_user_id: me.app_user.id,
-          findings: "As-built revision v1 published from topology trace context.",
+          findings: `As-built revision ${revisionCode || "v1"} published from topology trace context.`,
           payload: {
-            revision: "v1",
+            revision: revisionCode || "v1",
             request: traceResult.request,
             graph: {
               node_count: traceResult.graph.nodes.length,
@@ -269,10 +319,10 @@ export default function AsBuiltWorkspacePage() {
             },
             trace: traceResult.trace,
           },
-          tags: ["as-built", "revision-v1"],
+          tags: ["as-built", `revision-${revisionCode || "v1"}`],
         }),
       });
-      setPublishMessage("As-Built Revision v1 berhasil dipublish.");
+      setPublishMessage(`As-Built Revision ${revisionCode || "v1"} berhasil dipublish.`);
     } catch (err) {
       setPublishError((err as Error).message || "Gagal publish revision.");
     } finally {
@@ -281,11 +331,15 @@ export default function AsBuiltWorkspacePage() {
   }
 
   async function saveAsBuiltDocument(options: {
-    format: "svg" | "png" | "pdf";
+    format: "svg" | "png" | "pdf" | "json";
     fileBlob: Blob;
     fileName: string;
   }) {
     if (!traceResult || !startDeviceId.trim()) return;
+    if (!canExportAsBuilt) {
+      setSaveError("Dokumen belum bisa disimpan karena trace tidak menemukan approved path.");
+      return;
+    }
 
     setSaveMessage("");
     setSaveError("");
@@ -356,15 +410,15 @@ export default function AsBuiltWorkspacePage() {
   }
 
   async function handleExportSvg() {
-    if (!traceResult) return;
+    if (!traceResult || !canExportAsBuilt) return;
     setExportingSvg(true);
     try {
       const svgDoc = buildAsBuiltSvg({
         data: traceResult,
         generatedAtLabel,
         context: {
-          startDeviceId: startDeviceId || "-",
-          endDeviceId: endDeviceId || "-",
+          startDeviceId: startDeviceLabel,
+          endDeviceId: endDeviceLabel,
           regionId: regionId || "all",
           maxDepth: maxDepth || "12",
         },
@@ -395,15 +449,15 @@ export default function AsBuiltWorkspacePage() {
   }
 
   async function handleExportPng() {
-    if (!traceResult) return;
+    if (!traceResult || !canExportAsBuilt) return;
     setExportingPng(true);
     try {
       const svgDoc = buildAsBuiltSvg({
         data: traceResult,
         generatedAtLabel,
         context: {
-          startDeviceId: startDeviceId || "-",
-          endDeviceId: endDeviceId || "-",
+          startDeviceId: startDeviceLabel,
+          endDeviceId: endDeviceLabel,
           regionId: regionId || "all",
           maxDepth: maxDepth || "12",
         },
@@ -433,15 +487,15 @@ export default function AsBuiltWorkspacePage() {
   }
 
   async function handleExportPdf() {
-    if (!traceResult) return;
+    if (!traceResult || !canExportAsBuilt) return;
     setExportingPdf(true);
     try {
       const svgDoc = buildAsBuiltSvg({
         data: traceResult,
         generatedAtLabel,
         context: {
-          startDeviceId: startDeviceId || "-",
-          endDeviceId: endDeviceId || "-",
+          startDeviceId: startDeviceLabel,
+          endDeviceId: endDeviceLabel,
           regionId: regionId || "all",
           maxDepth: maxDepth || "12",
         },
@@ -475,6 +529,52 @@ export default function AsBuiltWorkspacePage() {
     }
   }
 
+  async function handleExportJson() {
+    if (!traceResult || !canExportAsBuilt) return;
+    setExportingJson(true);
+    try {
+      const snapshot = buildAsBuiltJsonSnapshot({
+        data: traceResult,
+        generatedAtLabel,
+        context: {
+          startDeviceId: startDeviceLabel,
+          endDeviceId: endDeviceLabel,
+          regionId: regionId || "all",
+          maxDepth: maxDepth || "12",
+          projectId: projectId || null,
+          routeId: routeId || null,
+        },
+        document: {
+          drawingTitle,
+          revisionCode,
+          preparedBy,
+          checkedBy,
+          approvedBy,
+        },
+      });
+      const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json;charset=utf-8" });
+      const ts = new Date().toISOString().replace(/[:.]/g, "-");
+      const filename = `as-built-${regionId || "all"}-${ts}.json`;
+      downloadBlob(blob, filename);
+      await saveAsBuiltDocument({ format: "json", fileBlob: blob, fileName: filename });
+    } finally {
+      setExportingJson(false);
+    }
+  }
+
+  function handleExportCsv() {
+    if (!traceResult || !canExportAsBuilt) return;
+    setExportingCsv(true);
+    try {
+      const csv = buildAsBuiltCorePathCsv(traceResult, traceNodeLabelMap);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const ts = new Date().toISOString().replace(/[:.]/g, "-");
+      downloadBlob(blob, `as-built-core-path-${regionId || "all"}-${ts}.csv`);
+    } finally {
+      setExportingCsv(false);
+    }
+  }
+
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 pr-3">
@@ -494,7 +594,7 @@ export default function AsBuiltWorkspacePage() {
           <CardContent className="space-y-3 px-4 pb-4 pt-0">
             {isPersonalDeviceMode ? (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                <InfoTile label="Start Device" value={startNode?.device_name || startNode?.device_id || startDeviceId} />
+                <InfoTile label="Start Device" value={startDeviceLabel} />
                 <InfoTile label="Device Type" value={startNode?.device_type_key || "-"} />
                 <InfoTile label="Region" value={resolvedRegionId || regionId || "all"} />
                 <InfoTile label="Path Found" value={traceResult?.trace.found ? "Yes" : traceResult ? "No" : "-"} />
@@ -509,6 +609,30 @@ export default function AsBuiltWorkspacePage() {
           </CardContent>
         </Card>
 
+        {hasProjectRouteContext ? (
+          <Card>
+            <CardHeader className="px-4 py-3">
+              <CardTitle className="text-base">Project / Route Context</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 px-4 pb-4 pt-0">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <InfoTile label="Project Context" value={projectId || "-"} />
+                <InfoTile label="Route Context" value={routeId || "-"} />
+                <InfoTile label="Region Context" value={resolvedRegionId || regionId || "all"} />
+              </div>
+              {!isPersonalDeviceMode ? (
+                <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                  Pilih start/end device di Topology Workspace untuk menghasilkan path As-Built dari konteks project atau route ini.
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {traceResult && hasProjectRouteContext ? (
+          <AsBuiltRelevantTopologySummary summary={relevantTopologySummary} />
+        ) : null}
+
         {!isPersonalDeviceMode ? (
           <Card>
             <CardHeader className="px-4 py-3">
@@ -516,9 +640,12 @@ export default function AsBuiltWorkspacePage() {
             </CardHeader>
             <CardContent className="space-y-2 px-4 pb-4 pt-0">
               <p className="text-sm text-muted-foreground">
-                Workspace as-built dipersonalisasi per-device. Jalankan Trace Device dari list/detail device lalu lanjutkan dokumentasi di sini.
+                Workspace as-built membutuhkan start device. Gunakan Topology Workspace untuk memilih path dari device, project, atau route context.
               </p>
               <div className="flex flex-wrap items-center gap-2">
+                <Button asChild type="button" variant="outline" size="sm">
+                  <Link href={topologyHref}>Open Topology Workspace</Link>
+                </Button>
                 <Button asChild type="button" variant="outline" size="sm">
                   <Link href="/data-management">Open Data Management</Link>
                 </Button>
@@ -583,7 +710,7 @@ export default function AsBuiltWorkspacePage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={!traceResult || exportingSvg}
+                  disabled={!canExportAsBuilt || exportingSvg}
                   onClick={() => void handleExportSvg()}
                 >
                   <Download className="mr-1 size-4" />
@@ -593,7 +720,7 @@ export default function AsBuiltWorkspacePage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={!traceResult || exportingPng}
+                  disabled={!canExportAsBuilt || exportingPng}
                   onClick={() => void handleExportPng()}
                 >
                   <Download className="mr-1 size-4" />
@@ -603,11 +730,31 @@ export default function AsBuiltWorkspacePage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={!traceResult || exportingPdf}
+                  disabled={!canExportAsBuilt || exportingPdf}
                   onClick={() => void handleExportPdf()}
                 >
                   <Download className="mr-1 size-4" />
                   {exportingPdf ? "Exporting..." : "Export PDF"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!canExportAsBuilt || exportingJson}
+                  onClick={() => void handleExportJson()}
+                >
+                  <Download className="mr-1 size-4" />
+                  {exportingJson ? "Exporting..." : "Export JSON"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!canExportAsBuilt || exportingCsv}
+                  onClick={handleExportCsv}
+                >
+                  <Download className="mr-1 size-4" />
+                  {exportingCsv ? "Exporting..." : "Export CSV"}
                 </Button>
                 <Button type="button" variant="secondary" size="sm" onClick={() => window.print()}>
                   <Printer className="mr-1 size-4" />
@@ -617,10 +764,10 @@ export default function AsBuiltWorkspacePage() {
                   type="button"
                   variant="default"
                   size="sm"
-                  disabled={!traceResult || publishing}
+                  disabled={!canExportAsBuilt || publishing}
                   onClick={() => void handlePublishRevision()}
                 >
-                  {publishing ? "Publishing..." : "Publish Revision v1"}
+                  {publishing ? "Publishing..." : `Publish Revision ${revisionCode || "v1"}`}
                 </Button>
                 <Button asChild variant="outline" size="sm">
                   <Link href={topologyHref}>Back to Trace</Link>
@@ -630,15 +777,22 @@ export default function AsBuiltWorkspacePage() {
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4 pt-0">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="outline">Start: {startDeviceId || "-"}</Badge>
-              <Badge variant="outline">End: {endDeviceId || "-"}</Badge>
+              <Badge variant="outline">Start: {startDeviceLabel}</Badge>
+              <Badge variant="outline">End: {endDeviceLabel}</Badge>
               <Badge variant="outline">Region: {regionId || "all"}</Badge>
+              {projectId ? <Badge variant="outline">Project Context</Badge> : null}
+              {routeId ? <Badge variant="outline">Route Context</Badge> : null}
               {!regionId && resolvedRegionId ? <Badge variant="outline">Resolved Region: {resolvedRegionId}</Badge> : null}
               <Badge variant="outline">Depth: {maxDepth || "12"}</Badge>
               <Badge variant="outline">Generated: {generatedAtLabel}</Badge>
               <Badge variant="outline">Fiber: {traceFiberSummary.totalFiber}</Badge>
               <Badge variant="outline">Used Fiber: {traceFiberSummary.usedFiber}</Badge>
             </div>
+            {traceResult && !canExportAsBuilt ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                Trace belum menemukan approved path. Export, save, dan publish As-Built dikunci sampai topology trace valid.
+              </div>
+            ) : null}
 
             {!startDeviceId.trim() ? (
               <AppLoading label="Belum ada start device. Buka dari list device lalu jalankan Trace Device agar konteks terbawa otomatis." />
@@ -651,8 +805,9 @@ export default function AsBuiltWorkspacePage() {
             {saveError ? <p className="text-sm text-destructive">{saveError}</p> : null}
 
             {!loading && !error && traceResult ? (
-              <div className="space-y-2 rounded-md border bg-muted/30 px-3 py-2">
+              <div className="space-y-3 rounded-md border bg-muted/30 px-3 py-2">
                 <TopologyTracePanel data={traceResult} schematicTitle="As-Built Diagram (Lite)" />
+                <AsBuiltCorePathSummary data={traceResult} nodeLabelMap={traceNodeLabelMap} />
               </div>
             ) : null}
           </CardContent>
@@ -708,6 +863,270 @@ function InfoTile({ label, value }: { label: string; value: string }) {
       <p className="truncate text-sm font-medium">{value || "-"}</p>
     </div>
   );
+}
+
+type RelevantTopologySummary = {
+  deviceTotal: number;
+  deviceTypeEntries: Array<[string, number]>;
+  routeEntries: Array<{ id: string; label: string }>;
+  cableEntries: Array<{ id: string; label: string }>;
+  connectionEntries: Array<{
+    id: string;
+    label: string;
+    route: string;
+    cable: string;
+    coreRange: string;
+    status: string;
+  }>;
+};
+
+function buildRelevantTopologySummary(data: TopologyTraceResponse["data"] | null): RelevantTopologySummary {
+  if (!data) {
+    return {
+      deviceTotal: 0,
+      deviceTypeEntries: [],
+      routeEntries: [],
+      cableEntries: [],
+      connectionEntries: [],
+    };
+  }
+
+  const deviceTypeMap = new Map<string, number>();
+  data.graph.nodes.forEach((node) => {
+    const key = node.device_type_key || "Unknown";
+    deviceTypeMap.set(key, (deviceTypeMap.get(key) || 0) + 1);
+  });
+
+  const routeMap = new Map<string, string>();
+  const cableMap = new Map<string, string>();
+  const connectionEntries = data.graph.edges.map((edge) => {
+    const routeId = edge.route?.route_id || edge.route_id || "";
+    const routeLabel = edge.labels?.route || edge.route?.route_name || edge.route?.route_code || edge.route?.route_id || routeId || "-";
+    if (routeId) routeMap.set(routeId, routeLabel);
+
+    const cableId = edge.cable_device?.device_id || edge.cable_device_id || "";
+    const cableLabel = edge.labels?.cable || edge.cable_device?.device_name || edge.cable_device?.device_id || cableId || "-";
+    if (cableId) cableMap.set(cableId, cableLabel);
+
+    return {
+      id: edge.id,
+      label: edge.labels?.title || `${edge.from_port_label || "From port"} -> ${edge.to_port_label || "To port"}`,
+      route: routeLabel,
+      cable: cableLabel,
+      coreRange: edge.labels?.core_range || formatCoreRange(edge.core_start, edge.core_end),
+      status: edge.status || "active",
+    };
+  });
+
+  return {
+    deviceTotal: data.graph.nodes.length,
+    deviceTypeEntries: Array.from(deviceTypeMap.entries()).sort(([a], [b]) => a.localeCompare(b)),
+    routeEntries: Array.from(routeMap.entries()).map(([id, label]) => ({ id, label })),
+    cableEntries: Array.from(cableMap.entries()).map(([id, label]) => ({ id, label })),
+    connectionEntries,
+  };
+}
+
+function AsBuiltRelevantTopologySummary({ summary }: { summary: RelevantTopologySummary }) {
+  return (
+    <Card>
+      <CardHeader className="px-4 py-3">
+        <CardTitle className="text-base">Relevant Topology</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 px-4 pb-4 pt-0">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <InfoTile label="Relevant Devices" value={String(summary.deviceTotal)} />
+          <InfoTile label="Relevant Connections" value={String(summary.connectionEntries.length)} />
+          <InfoTile label="Relevant Routes" value={String(summary.routeEntries.length)} />
+          <InfoTile label="Relevant Cables" value={String(summary.cableEntries.length)} />
+        </div>
+
+        {summary.deviceTypeEntries.length ? (
+          <div className="flex flex-wrap gap-1.5">
+            {summary.deviceTypeEntries.map(([type, count]) => (
+              <Badge key={type} variant="outline">
+                {type}: {count}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
+
+        {!summary.connectionEntries.length ? (
+          <p className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+            Belum ada connection relevan pada context ini. Pilih start/end device di Topology Workspace untuk membentuk path approved.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 xl:grid-cols-2">
+            {summary.connectionEntries.slice(0, 6).map((connection) => (
+              <div key={connection.id} className="rounded-md border bg-muted/10 px-3 py-2">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                  <p className="min-w-0 truncate text-sm font-semibold">{connection.label}</p>
+                  <Badge variant="secondary">{connection.status}</Badge>
+                </div>
+                <div className="mt-2 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
+                  <SummaryField label="Route" value={connection.route} />
+                  <SummaryField label="Cable" value={connection.cable} />
+                  <SummaryField label="Core" value={connection.coreRange} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {summary.connectionEntries.length > 6 ? (
+          <p className="text-xs text-muted-foreground">
+            Menampilkan 6 dari {summary.connectionEntries.length} connection relevan. Export JSON menyimpan seluruh graph trace.
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AsBuiltCorePathSummary({
+  data,
+  nodeLabelMap,
+}: {
+  data: TopologyTraceResponse["data"];
+  nodeLabelMap: Map<string, string>;
+}) {
+  const edges = data.graph.edges || [];
+  const edgesWithCore = edges.filter((edge) => edge.core_start != null || edge.core_end != null || edge.fiber_cores?.total);
+  const colorEntries = Object.entries(
+    edges.reduce<Record<string, number>>((acc, edge) => {
+      Object.entries(edge.fiber_cores?.colors || {}).forEach(([name, count]) => {
+        acc[name] = (acc[name] || 0) + Number(count || 0);
+      });
+      return acc;
+    }, {}),
+  ).sort(([a], [b]) => a.localeCompare(b));
+
+  return (
+    <div className="rounded-md border bg-background p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold">Core Path & Splice Summary</p>
+          <p className="text-xs text-muted-foreground">
+            Read-only path dari topology approved untuk referensi As-Built. Edit relasi tetap dilakukan di Topology Workspace.
+          </p>
+        </div>
+        <Badge variant="outline">{edgesWithCore.length} core segment</Badge>
+      </div>
+
+      {colorEntries.length ? (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {colorEntries.map(([name, count]) => (
+            <Badge key={name} variant="outline" className="gap-1.5">
+              <ColorDot color={getFiberColorHex(name)} />
+              {name}: {count}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
+
+      {!edgesWithCore.length ? (
+        <p className="mt-3 rounded-md border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+          Belum ada core range atau color distribution pada trace ini.
+        </p>
+      ) : (
+        <div className="mt-3 grid grid-cols-1 gap-2 xl:grid-cols-2">
+          {edgesWithCore.map((edge) => {
+            const fromLabel = nodeLabelMap.get(edge.from_device_id) || edge.from_device_id;
+            const toLabel = nodeLabelMap.get(edge.to_device_id) || edge.to_device_id;
+            const coreRange = formatCoreRange(edge.core_start, edge.core_end);
+            const colorNames = Object.keys(edge.fiber_cores?.colors || {});
+
+            return (
+              <div key={edge.id} className="rounded-md border bg-muted/10 px-3 py-2">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">
+                      {fromLabel} &rarr; {toLabel}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {edge.from_port_label || "From port -"} &rarr; {edge.to_port_label || "To port -"}
+                    </p>
+                  </div>
+                  <Badge variant="secondary">{edge.status || "active"}</Badge>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                  <SummaryField label="Type" value={edge.connection_type || "-"} />
+                  <SummaryField label="Core" value={coreRange} />
+                  <SummaryField label="Fiber" value={String(edge.fiber_count || edge.fiber_cores?.total || 0)} />
+                  <SummaryField label="Used" value={String(edge.fiber_cores?.used || 0)} />
+                </div>
+                {colorNames.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {colorNames.map((name) => (
+                      <Badge key={name} variant="outline" className="gap-1">
+                        <ColorDot color={getFiberColorHex(name)} />
+                        {name}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SummaryField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border bg-background px-2 py-1.5">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="truncate font-medium">{value || "-"}</p>
+    </div>
+  );
+}
+
+function ColorDot({ color }: { color: string }) {
+  return <span className="size-2.5 shrink-0 rounded-full border" style={{ backgroundColor: color }} />;
+}
+
+function formatCoreRange(start?: number | null, end?: number | null) {
+  if (start == null && end == null) return "-";
+  if (start == null) return `-${end}`;
+  if (end == null || start === end) return String(start);
+  return `${start}-${end}`;
+}
+
+function getFiberColorHex(name: string) {
+  const normalized = name.toLowerCase();
+  const colorMap: Record<string, string> = {
+    biru: "#2563eb",
+    blue: "#2563eb",
+    orange: "#f97316",
+    oranye: "#f97316",
+    hijau: "#16a34a",
+    green: "#16a34a",
+    cokelat: "#92400e",
+    brown: "#92400e",
+    abu: "#94a3b8",
+    grey: "#94a3b8",
+    gray: "#94a3b8",
+    putih: "#f8fafc",
+    white: "#f8fafc",
+    merah: "#dc2626",
+    red: "#dc2626",
+    hitam: "#111827",
+    black: "#111827",
+    kuning: "#facc15",
+    yellow: "#facc15",
+    ungu: "#7c3aed",
+    violet: "#7c3aed",
+    purple: "#7c3aed",
+    pink: "#ec4899",
+    rose: "#ec4899",
+    toska: "#14b8a6",
+    aqua: "#14b8a6",
+    cyan: "#14b8a6",
+  };
+  const match = Object.entries(colorMap).find(([key]) => normalized.includes(key));
+  return match?.[1] || "#64748b";
 }
 
 function escapeXml(value: string) {
@@ -805,6 +1224,89 @@ function buildAsBuiltSvg({
   return { content, width, height };
 }
 
+function buildAsBuiltJsonSnapshot({
+  data,
+  generatedAtLabel,
+  context,
+  document,
+}: {
+  data: TopologyTraceResponse["data"];
+  generatedAtLabel: string;
+  context: {
+    startDeviceId: string;
+    endDeviceId: string;
+    regionId: string;
+    maxDepth: string;
+    projectId: string | null;
+    routeId: string | null;
+  };
+  document: {
+    drawingTitle: string;
+    revisionCode: string;
+    preparedBy: string;
+    checkedBy: string;
+    approvedBy: string;
+  };
+}) {
+  return {
+    document: {
+      title: document.drawingTitle || "As-Built Network Trace",
+      revision_code: document.revisionCode || "v1",
+      prepared_by_name: document.preparedBy || null,
+      checked_by_name: document.checkedBy || null,
+      approved_by_name: document.approvedBy || null,
+      generated_at_label: generatedAtLabel,
+      exported_at: new Date().toISOString(),
+    },
+    context,
+    trace_request: data.request,
+    trace_summary: {
+      path_found: data.trace.found,
+      hop_count: data.trace.hop_count,
+      node_count: data.graph.nodes.length,
+      edge_count: data.graph.edges.length,
+    },
+    path: data.trace.path,
+    nodes: data.graph.nodes,
+    connections: data.graph.edges,
+  };
+}
+
+function buildAsBuiltCorePathCsv(data: TopologyTraceResponse["data"], nodeLabelMap: Map<string, string>) {
+  const rows = [
+    [
+      "from_device",
+      "to_device",
+      "from_port",
+      "to_port",
+      "connection_type",
+      "status",
+      "core_range",
+      "fiber_count",
+      "used_core",
+      "core_colors",
+    ],
+    ...data.graph.edges.map((edge) => [
+      nodeLabelMap.get(edge.from_device_id) || edge.from_device_id,
+      nodeLabelMap.get(edge.to_device_id) || edge.to_device_id,
+      edge.from_port_label || "",
+      edge.to_port_label || "",
+      edge.connection_type || "",
+      edge.status || "",
+      formatCoreRange(edge.core_start, edge.core_end),
+      String(edge.fiber_count || edge.fiber_cores?.total || 0),
+      String(edge.fiber_cores?.used || 0),
+      Object.keys(edge.fiber_cores?.colors || {}).join("; "),
+    ]),
+  ];
+
+  return rows.map((row) => row.map(escapeCsvCell).join(",")).join("\r\n");
+}
+
+function escapeCsvCell(value: string) {
+  return `"${String(value).replaceAll('"', '""')}"`;
+}
+
 async function renderSvgToPngDataUrl(svgContent: string, width: number, height: number) {
   const svgBlob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
   const url = URL.createObjectURL(svgBlob);
@@ -842,4 +1344,15 @@ function dataUrlToBlob(dataUrl: string) {
     array[i] = binary.charCodeAt(i);
   }
   return new Blob([array], { type: mimeType });
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }

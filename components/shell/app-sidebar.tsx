@@ -77,6 +77,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Network",
     items: [
       { title: "Maps", url: "/maps", icon: Map },
+      { title: "Topology Management", url: "/data-management/topology", icon: Network },
       { title: "As-Built Documents", url: "/data-management/as-built-documents", icon: BookMarked },
     ],
   },

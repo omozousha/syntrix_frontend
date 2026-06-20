@@ -78,9 +78,36 @@ type DataQualityIssue = {
   href: string;
 };
 
+type DataQualityIssueGroup = {
+  key: string;
+  title: string;
+  description: string;
+  issues: DataQualityIssue[];
+};
+
+type DataQualityIntegrityIssue = {
+  key: string;
+  type: string;
+  severity: "critical" | "warning" | "info";
+  title: string;
+  message: string;
+  actionHint: string;
+  entityType: string;
+  entityId: string;
+};
+
 type DataQualityReport = {
   kpis: DataQualityKpi[];
   odpIssues: DataQualityIssue[];
+  issueGroups: DataQualityIssueGroup[];
+  integrityIssues: DataQualityIntegrityIssue[];
+  health: {
+    totalIssues: number;
+    criticalIssues: number;
+    warningIssues: number;
+    topologyIssues: number;
+    coreIssues: number;
+  };
 };
 
 type RouteItem = GenericItem & {
@@ -113,10 +140,36 @@ type TopologyIntegrityResponse = {
       overlap_core_conflicts: number;
       orphan_port_connections: number;
       same_device_connections: number;
+      cross_region_connections?: number;
       orphan_fiber_cores: number;
       over_capacity_ports: number;
+      customer_assigned_to_not_used_ports?: number;
+      duplicate_ont_assignments?: number;
+      routes_missing_endpoint_assets?: number;
+      odp_invalid_splitter_ratios?: number;
+      odp_splitter_total_port_mismatches?: number;
+      device_actual_port_count_mismatches?: number;
+      cable_fiber_core_count_mismatches?: number;
+      fiber_cores_missing_tube_color?: number;
+      fiber_cores_missing_core_color?: number;
+      fiber_core_color_mismatches?: number;
+      fiber_cores_loss_warnings?: number;
+      damaged_active_fiber_cores?: number;
+      active_connection_missing_fiber_cores?: number;
+      active_connection_fiber_core_status_mismatches?: number;
+      used_fiber_cores_without_active_connection?: number;
+      fiber_cores_out_of_cable_capacity?: number;
       pending_legacy_device_links: number;
     };
+    issues?: Array<{
+      type?: string;
+      severity?: string;
+      entity_type?: string;
+      entity_id?: string;
+      title?: string;
+      message?: string;
+      action_hint?: string;
+    }>;
   };
 };
 
@@ -461,7 +514,7 @@ export default function DataManagementPage() {
         if (cancelled) return;
         setQualityCache((prev) => ({
           ...prev,
-          [qualityKey]: buildDataQualityReport(pops, devices, devicePorts, topologyIntegrity.data.metrics, qualityRegionId),
+          [qualityKey]: buildDataQualityReport(pops, devices, devicePorts, topologyIntegrity.data, qualityRegionId),
         }));
       } catch (err) {
         if (cancelled) return;
@@ -627,6 +680,9 @@ export default function DataManagementPage() {
   const activeQualityReport = qualityCache[qualityKey];
   const activeQualityKpis = activeQualityReport?.kpis || [];
   const activeOdpIssues = activeQualityReport?.odpIssues || [];
+  const activeQualityIssueGroups = activeQualityReport?.issueGroups || [];
+  const activeQualityHealth = activeQualityReport?.health || null;
+  const activeIntegrityIssues = activeQualityReport?.integrityIssues || [];
 
   async function handleRefreshQuality() {
     const nextCache = { ...qualityCache };
@@ -642,7 +698,7 @@ export default function DataManagementPage() {
         fetchAllPaginated<DevicePortQualityItem>(`/devicePorts?page=1&limit=100${suffix}`, token, 100),
         apiFetch<TopologyIntegrityResponse>(`/topology/integrity${qualityRegionId === "all" ? "" : `?region_id=${encodeURIComponent(qualityRegionId)}`}`, { token }),
       ]);
-      setQualityCache((prev) => ({ ...prev, [qualityKey]: buildDataQualityReport(pops, devices, devicePorts, topologyIntegrity.data.metrics, qualityRegionId) }));
+      setQualityCache((prev) => ({ ...prev, [qualityKey]: buildDataQualityReport(pops, devices, devicePorts, topologyIntegrity.data, qualityRegionId) }));
     } catch (err) {
       setQualityError((err as Error).message || "Gagal memuat Data Quality KPI.");
     } finally {
@@ -738,6 +794,9 @@ export default function DataManagementPage() {
                   qualityError={qualityError}
                   kpis={activeQualityKpis}
                   issues={activeOdpIssues}
+                  issueGroups={activeQualityIssueGroups}
+                  health={activeQualityHealth}
+                  integrityIssues={activeIntegrityIssues}
                   onRegionChange={setQualityRegionId}
                   onRefresh={() => void handleRefreshQuality()}
                 />
@@ -871,9 +930,10 @@ function buildDataQualityReport(
   pops: GenericItem[],
   devices: DeviceQualityItem[],
   devicePorts: DevicePortQualityItem[],
-  topologyMetrics?: TopologyIntegrityResponse["data"]["metrics"],
+  topologyIntegrity?: TopologyIntegrityResponse["data"],
   regionId = "all",
 ): DataQualityReport {
+  const topologyMetrics = topologyIntegrity?.metrics;
   const popMissingGeo = pops.filter((item) => !hasAnyValue(item, ["latitude", "longitude"])).length;
   const deviceMissingPop = devices.filter((item) => !hasAnyValue(item, ["pop_id", "pop_uuid", "pop_ref_id"])).length;
   const deviceMissingImage = devices.filter((item) => !hasImageAttachment(item)).length;
@@ -896,6 +956,8 @@ function buildDataQualityReport(
   const issueBaseHref = `/data-management/odp-quality${regionId === "all" ? "" : `?region_id=${encodeURIComponent(regionId)}`}`;
   const withIssueHref = (issueKey: string) =>
     `${issueBaseHref}${issueBaseHref.includes("?") ? "&" : "?"}issue=${encodeURIComponent(issueKey)}`;
+  const topologyHref = `/data-management/topology${regionId === "all" ? "" : `?region_id=${encodeURIComponent(regionId)}`}`;
+  const metric = (key: keyof NonNullable<TopologyIntegrityResponse["data"]["metrics"]>) => topologyMetrics?.[key] ?? 0;
 
   const kpis: DataQualityKpi[] = [
     { key: "pop-missing-geo", label: "POP Missing Geo", value: popMissingGeo, note: "POP belum punya latitude/longitude." },
@@ -912,6 +974,24 @@ function buildDataQualityReport(
       label: "Topology Core Overlap",
       value: topologyMetrics?.overlap_core_conflicts ?? 0,
       note: "Konflik rentang core pada cable yang sama.",
+    },
+    {
+      key: "fiber-core-occupancy-drift",
+      label: "Core Occupancy Drift",
+      value:
+        metric("active_connection_missing_fiber_cores")
+        + metric("active_connection_fiber_core_status_mismatches")
+        + metric("used_fiber_cores_without_active_connection"),
+      note: "Status core belum sinkron dengan connection approved.",
+    },
+    {
+      key: "fiber-core-color-health",
+      label: "Core Color Health",
+      value:
+        metric("fiber_cores_missing_tube_color")
+        + metric("fiber_cores_missing_core_color")
+        + metric("fiber_core_color_mismatches"),
+      note: "Tray/tube/core color perlu dilengkapi atau disesuaikan.",
     },
     {
       key: "topology-orphan-connections",
@@ -970,10 +1050,188 @@ function buildDataQualityReport(
     },
   ];
 
+  const topologyIssues: DataQualityIssue[] = [
+    {
+      key: "overlap-core-conflicts",
+      label: "Core range overlap",
+      value: metric("overlap_core_conflicts"),
+      severity: metric("overlap_core_conflicts") ? "high" : "low",
+      note: "Dua connection atau lebih memakai rentang core yang saling bertabrakan pada cable yang sama.",
+      href: topologyHref,
+    },
+    {
+      key: "orphan-port-connections",
+      label: "Connection endpoint invalid",
+      value: metric("orphan_port_connections"),
+      severity: metric("orphan_port_connections") ? "high" : "low",
+      note: "Connection mengarah ke port yang tidak ditemukan atau tidak valid.",
+      href: topologyHref,
+    },
+    {
+      key: "cross-region-connections",
+      label: "Cross-region connection",
+      value: metric("cross_region_connections"),
+      severity: metric("cross_region_connections") ? "high" : "low",
+      note: "Connection punya region yang tidak konsisten dengan endpoint port.",
+      href: topologyHref,
+    },
+    {
+      key: "same-device-connections",
+      label: "Same-device connection",
+      value: metric("same_device_connections"),
+      severity: metric("same_device_connections") ? "medium" : "low",
+      note: "Connection memakai dua port di device yang sama dan perlu dicek apakah valid secara operasional.",
+      href: topologyHref,
+    },
+    {
+      key: "pending-legacy-links",
+      label: "Legacy links pending",
+      value: metric("pending_legacy_device_links"),
+      severity: metric("pending_legacy_device_links") ? "medium" : "low",
+      note: "Device links lama belum ditransisikan ke port connection source of truth.",
+      href: topologyHref,
+    },
+  ];
+
+  const coreIssues: DataQualityIssue[] = [
+    {
+      key: "active-connection-missing-fiber-cores",
+      label: "Connection core belum tersedia",
+      value: metric("active_connection_missing_fiber_cores"),
+      severity: metric("active_connection_missing_fiber_cores") ? "high" : "low",
+      note: "Active/cutover connection memakai cable/core range, tetapi row fiber core belum tersedia.",
+      href: topologyHref,
+    },
+    {
+      key: "active-connection-fiber-core-status-mismatches",
+      label: "Status core tidak sinkron",
+      value: metric("active_connection_fiber_core_status_mismatches"),
+      severity: metric("active_connection_fiber_core_status_mismatches") ? "medium" : "low",
+      note: "Core yang dipakai connection aktif belum tercatat sebagai used atau mapping endpoint-nya belum cocok.",
+      href: topologyHref,
+    },
+    {
+      key: "used-fiber-cores-without-active-connection",
+      label: "Core used tanpa connection",
+      value: metric("used_fiber_cores_without_active_connection"),
+      severity: metric("used_fiber_cores_without_active_connection") ? "medium" : "low",
+      note: "Core masih berstatus used padahal tidak terikat ke active/cutover connection.",
+      href: topologyHref,
+    },
+    {
+      key: "fiber-core-color-mismatches",
+      label: "Tube/core color mismatch",
+      value: metric("fiber_core_color_mismatches"),
+      severity: metric("fiber_core_color_mismatches") ? "medium" : "low",
+      note: "Warna tube atau core berbeda dari standar 12-color cycle yang dipakai.",
+      href: topologyHref,
+    },
+    {
+      key: "fiber-cores-loss-warnings",
+      label: "Attenuation warning",
+      value: metric("fiber_cores_loss_warnings"),
+      severity: metric("fiber_cores_loss_warnings") ? "medium" : "low",
+      note: "Core punya nilai loss di atas threshold operasional.",
+      href: topologyHref,
+    },
+    {
+      key: "damaged-active-fiber-cores",
+      label: "Damaged core masih aktif",
+      value: metric("damaged_active_fiber_cores"),
+      severity: metric("damaged_active_fiber_cores") ? "high" : "low",
+      note: "Core damaged masih memiliki connection atau endpoint mapping aktif.",
+      href: topologyHref,
+    },
+  ];
+
+  const inventoryIssues: DataQualityIssue[] = [
+    {
+      key: "device-actual-port-count-mismatches",
+      label: "Port count mismatch",
+      value: metric("device_actual_port_count_mismatches"),
+      severity: metric("device_actual_port_count_mismatches") ? "medium" : "low",
+      note: "Jumlah device_ports aktif berbeda dari total_ports pada device.",
+      href: topologyHref,
+    },
+    {
+      key: "cable-fiber-core-count-mismatches",
+      label: "Cable core count mismatch",
+      value: metric("cable_fiber_core_count_mismatches"),
+      severity: metric("cable_fiber_core_count_mismatches") ? "medium" : "low",
+      note: "Jumlah fiber_cores berbeda dari capacity_core pada cable device.",
+      href: topologyHref,
+    },
+    {
+      key: "routes-missing-endpoint-assets",
+      label: "Route endpoint belum lengkap",
+      value: metric("routes_missing_endpoint_assets"),
+      severity: metric("routes_missing_endpoint_assets") ? "medium" : "low",
+      note: "Route belum punya start/end asset lengkap untuk topology dan maps.",
+      href: topologyHref,
+    },
+  ];
+
+  const issueGroups: DataQualityIssueGroup[] = [
+    {
+      key: "topology",
+      title: "Topology Integrity",
+      description: "Kesehatan connection, route, dan transisi source of truth.",
+      issues: topologyIssues,
+    },
+    {
+      key: "core",
+      title: "Core Management",
+      description: "Occupancy, warna tube/core, damaged core, dan attenuation inventory.",
+      issues: coreIssues,
+    },
+    {
+      key: "odp",
+      title: "ODP Operations",
+      description: "Kesiapan ODP, port, assignment, dan status validasi lapangan.",
+      issues: odpIssues,
+    },
+    {
+      key: "inventory",
+      title: "Inventory Completeness",
+      description: "Kelengkapan port/core/route agar trace dan As-Built siap dipakai.",
+      issues: inventoryIssues,
+    },
+  ];
+  const allIssues = issueGroups.flatMap((group) => group.issues);
+  const totalIssues = allIssues.reduce((sum, issue) => sum + issue.value, 0);
+  const criticalIssues = allIssues.filter((issue) => issue.severity === "high").reduce((sum, issue) => sum + issue.value, 0);
+  const warningIssues = allIssues.filter((issue) => issue.severity === "medium").reduce((sum, issue) => sum + issue.value, 0);
+  const integrityIssues = (topologyIntegrity?.issues || []).slice(0, 50).map((issue, index) => ({
+    key: `${issue.type || "issue"}-${issue.entity_id || index}`,
+    type: issue.type || "unknown",
+    severity: normalizeIntegritySeverity(issue.severity),
+    title: issue.title || "Integrity issue",
+    message: issue.message || "-",
+    actionHint: issue.action_hint || "-",
+    entityType: issue.entity_type || "-",
+    entityId: issue.entity_id || "-",
+  }));
+
   return {
     kpis,
     odpIssues,
+    issueGroups,
+    integrityIssues,
+    health: {
+      totalIssues,
+      criticalIssues,
+      warningIssues,
+      topologyIssues: topologyIssues.reduce((sum, issue) => sum + issue.value, 0),
+      coreIssues: coreIssues.reduce((sum, issue) => sum + issue.value, 0),
+    },
   };
+}
+
+function normalizeIntegritySeverity(value?: string): "critical" | "warning" | "info" {
+  const normalized = String(value || "").toLowerCase();
+  if (normalized === "critical") return "critical";
+  if (normalized === "warning") return "warning";
+  return "info";
 }
 
 function hasAnyValue(item: Record<string, unknown>, keys: string[]) {

@@ -60,6 +60,8 @@ export function RequestList({
               <SelectItem value="all">Semua Jenis Request</SelectItem>
               <SelectItem value="create_asset">Create</SelectItem>
               <SelectItem value="update_asset">Update</SelectItem>
+              <SelectItem value="provision_asset">Provision Port</SelectItem>
+              <SelectItem value="topology_connection">Topology Connection</SelectItem>
               <SelectItem value="archive_asset">Archive</SelectItem>
               <SelectItem value="field_validation">Field Validation</SelectItem>
             </SelectContent>

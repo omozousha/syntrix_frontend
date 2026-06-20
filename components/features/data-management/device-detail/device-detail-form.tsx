@@ -1,5 +1,6 @@
 import { CheckCircle2, CircleHelp, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ type EditableForm = Record<string, string>;
 type RelationLabels = {
   region?: string;
   pop?: string;
+  project?: string;
   manufacturer?: string;
   brand?: string;
   model?: string;
@@ -50,6 +52,16 @@ type PopLookupOption = {
   pop_id?: string | null;
   pop_code?: string | null;
   pop_name?: string | null;
+  region_id?: string | null;
+};
+
+type ProjectLookupOption = {
+  id: string;
+  project_id?: string | null;
+  project_code?: string | null;
+  project_name?: string | null;
+  region_id?: string | null;
+  pop_id?: string | null;
 };
 
 type OdpFieldValidationPayload = {
@@ -68,6 +80,7 @@ type DeviceDetailFormProps = {
   installationTypes: InstallationTypeOption[];
   tenants: TenantOption[];
   popOptions: PopLookupOption[];
+  projectOptions: ProjectLookupOption[];
   latestFieldValidation?: OdpFieldValidationPayload | null;
   effectiveValidationStatus: string;
 };
@@ -191,7 +204,20 @@ function DeviceIdentitySection({
   );
 }
 
-function DeviceRelationSection({ form, onChange, editing, relationLabels, relationLoading = false, tenants, popOptions }: DeviceDetailFormProps) {
+function DeviceRelationSection({
+  form,
+  onChange,
+  editing,
+  relationLabels,
+  relationLoading = false,
+  tenants,
+  popOptions,
+  projectOptions,
+}: DeviceDetailFormProps) {
+  const filteredProjectOptions = projectOptions
+    .filter((project) => !form.region_id || !project.region_id || project.region_id === form.region_id)
+    .filter((project) => !form.pop_id || !project.pop_id || project.pop_id === form.pop_id);
+
   return (
     <Card>
       <CardHeader className="px-3 py-2">
@@ -215,6 +241,23 @@ function DeviceRelationSection({ form, onChange, editing, relationLabels, relati
           />
         ) : (
           <DisplayField label="POP" value={relationLabels.pop || "-"} loading={relationLoading} compact />
+        )}
+        {editing ? (
+          <ComboboxField
+            label="Project"
+            value={form.project_id || "__none__"}
+            onValueChange={(value) => onChange((prev) => ({ ...prev, project_id: value === "__none__" ? "" : value }))}
+            searchPlaceholder="Cari project..."
+            options={[
+              { value: "__none__", label: "Tidak ada project" },
+              ...filteredProjectOptions.map((project) => ({
+                value: project.id,
+                label: [project.project_name, project.project_code || project.project_id].filter(Boolean).join(" | ") || RELATION_LABEL_FALLBACK.missing,
+              })),
+            ]}
+          />
+        ) : (
+          <DisplayField label="Project" value={relationLabels.project || "-"} loading={relationLoading} compact />
         )}
         {editing ? (
           <ComboboxField
@@ -503,9 +546,9 @@ function CoordinateField({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button type="button" className="text-muted-foreground hover:text-foreground" aria-label={`Info ${label}`}>
+              <Button type="button" variant="ghost" size="icon-xs" className="text-muted-foreground" aria-label={`Info ${label}`}>
                 <CircleHelp className="size-3.5" />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={6}>
               {kind === "latitude"

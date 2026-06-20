@@ -78,6 +78,7 @@ type GenericItem = Record<string, unknown> & {
 
 type LookupOption = { id: string; label: string };
 type PopFilterOption = LookupOption & { regionId: string };
+type ProjectFilterOption = LookupOption & { regionId: string; popId: string };
 type ApprovalResponse = {
   approval_request?: {
     request_id?: string | null;
@@ -88,6 +89,7 @@ type RelationMaps = {
   manufacturers: Record<string, string>;
   brands: Record<string, string>;
   provinces: Record<string, string>;
+  projects: Record<string, string>;
 };
 type BulkActionType = "delete" | "activate" | "deactivate" | "restore";
 const DEVICE_ICON_OPTIONS = [
@@ -127,6 +129,7 @@ export default function DataManagementListPage() {
   const searchParams = useSearchParams();
   const queryString = searchParams.toString();
   const popQueryParam = searchParams.get("pop_id") || "__all";
+  const projectQueryParam = searchParams.get("project_id") || "__all";
   const slug = (params?.slug || "").toLowerCase();
   const category = useMemo(() => getCategoryBySlug(slug), [slug]);
   const { token, me } = useSession();
@@ -139,6 +142,8 @@ export default function DataManagementListPage() {
   const [provinceFilter, setProvinceFilter] = useState(searchParams.get("province_id") || "__all");
   const [popFilterOptions, setPopFilterOptions] = useState<PopFilterOption[]>([]);
   const [popFilterLoading, setPopFilterLoading] = useState(true);
+  const [projectFilterOptions, setProjectFilterOptions] = useState<ProjectFilterOption[]>([]);
+  const [projectFilterLoading, setProjectFilterLoading] = useState(true);
   const [archiveView, setArchiveView] = useState<"active" | "archived" | "all">("active");
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -172,6 +177,7 @@ export default function DataManagementListPage() {
     manufacturers: {},
     brands: {},
     provinces: {},
+    projects: {},
   });
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -198,6 +204,7 @@ export default function DataManagementListPage() {
   const canBulkToggleStatus = supportsIsActiveResource(category?.resource || "");
   const isSoftDeleteResource = supportsSoftDeleteResource(category?.resource || "");
   const supportsPopFilter = supportsPopFilterResource(category?.resource || "");
+  const supportsProjectFilter = supportsProjectFilterResource(category?.resource || "");
   const supportsQrBulkDownload = category?.resource === "devices";
   const isOdpCategory = category?.resource === "devices" && String(category?.deviceTypeKey || "").toUpperCase() === "ODP";
   const renameConfig = getRenameConfig(category?.resource || "");
@@ -206,6 +213,10 @@ export default function DataManagementListPage() {
   const selectedPopLabel = useMemo(
     () => popFilterOptions.find((option) => option.id === popQueryParam)?.label || "",
     [popQueryParam, popFilterOptions],
+  );
+  const selectedProjectLabel = useMemo(
+    () => projectFilterOptions.find((option) => option.id === projectQueryParam)?.label || "",
+    [projectQueryParam, projectFilterOptions],
   );
   const popLabelById = useMemo(
     () =>
@@ -218,14 +229,15 @@ export default function DataManagementListPage() {
   const listDisplayLookups = useMemo<DeviceListLookupMaps>(
     () => ({
       pops: popLabelById,
+      projects: relationMaps.projects,
       manufacturers: relationMaps.manufacturers,
       brands: relationMaps.brands,
     }),
     [popLabelById, relationMaps],
   );
   const filterGridClass =
-    supportsPopFilter
-      ? "sm:grid-cols-2 lg:grid-cols-5"
+    supportsPopFilter || supportsProjectFilter
+      ? "sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6"
       : category?.resource === "cities" || isSoftDeleteResource
       ? "sm:grid-cols-4"
       : "sm:grid-cols-3";
@@ -237,6 +249,22 @@ export default function DataManagementListPage() {
       const nextParams = new URLSearchParams(queryString);
       if (nextValue && nextValue !== "__all") nextParams.set("pop_id", nextValue);
       else nextParams.delete("pop_id");
+      nextParams.delete("project_id");
+
+      const nextQuery = nextParams.toString();
+      if (nextQuery === queryString) return;
+      router.replace(`/data-management/list/${slug}${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
+    },
+    [queryString, router, slug],
+  );
+  const applyProjectFilter = useCallback(
+    (nextValue: string) => {
+      setSelectedIds(new Set());
+      setPage(1);
+
+      const nextParams = new URLSearchParams(queryString);
+      if (nextValue && nextValue !== "__all") nextParams.set("project_id", nextValue);
+      else nextParams.delete("project_id");
 
       const nextQuery = nextParams.toString();
       if (nextQuery === queryString) return;
@@ -254,6 +282,7 @@ export default function DataManagementListPage() {
 
     const nextParams = new URLSearchParams(queryString);
     nextParams.delete("pop_id");
+    nextParams.delete("project_id");
     nextParams.delete("province_id");
     const nextQuery = nextParams.toString();
     if (nextQuery === queryString) return;
@@ -275,6 +304,7 @@ export default function DataManagementListPage() {
           q: search,
           regionScopeId: effectiveRegionScopeId,
           popId: supportsPopFilter && popQueryParam !== "__all" ? popQueryParam : undefined,
+          projectId: supportsProjectFilter && projectQueryParam !== "__all" ? projectQueryParam : undefined,
         });
         let path =
           activeCategory.resource === "cities" && provinceFilter !== "__all"
@@ -307,7 +337,7 @@ export default function DataManagementListPage() {
     return () => {
       cancelled = true;
     };
-  }, [category, token, page, limit, search, effectiveRegionScopeId, provinceFilter, refreshSeed, archiveView, isSoftDeleteResource, supportsPopFilter, popQueryParam]);
+  }, [category, token, page, limit, search, effectiveRegionScopeId, provinceFilter, refreshSeed, archiveView, isSoftDeleteResource, supportsPopFilter, popQueryParam, supportsProjectFilter, projectQueryParam]);
 
   useEffect(() => {
     if (!supportsPopFilter) {
@@ -355,6 +385,65 @@ export default function DataManagementListPage() {
       applyPopFilter("__all");
     }
   }, [applyPopFilter, effectiveRegionScopeId, supportsPopFilter, popQueryParam, popFilterLoading, popFilterOptions]);
+
+  useEffect(() => {
+    if (!supportsProjectFilter) {
+      setProjectFilterOptions([]);
+      setProjectFilterLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadProjectFilterOptions() {
+      setProjectFilterLoading(true);
+      try {
+        const query = new URLSearchParams({ page: "1", limit: "500" });
+        if (effectiveRegionScopeId) query.set("region_id", effectiveRegionScopeId);
+        if (supportsPopFilter && popQueryParam !== "__all") query.set("pop_id", popQueryParam);
+        const result = await apiFetch<PaginatedResponse<GenericItem>>(`/projects?${query.toString()}`, { token });
+        if (cancelled) return;
+        const options = (result.data || []).map((item) => ({
+          id: String(item.id),
+          label: [item.project_name, item.project_code || item.project_id].filter(Boolean).join(" | ") || "Project tidak tersedia",
+          regionId: String(item.region_id || ""),
+          popId: String(item.pop_id || ""),
+        }));
+        setProjectFilterOptions(options);
+        setRelationMaps((previous) => ({
+          ...previous,
+          projects: options.reduce<Record<string, string>>((accumulator, option) => {
+            accumulator[option.id] = option.label;
+            return accumulator;
+          }, {}),
+        }));
+      } catch {
+        if (!cancelled) setProjectFilterOptions([]);
+      } finally {
+        if (!cancelled) setProjectFilterLoading(false);
+      }
+    }
+
+    void loadProjectFilterOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveRegionScopeId, supportsProjectFilter, supportsPopFilter, popQueryParam, token]);
+
+  useEffect(() => {
+    if (!supportsProjectFilter || projectQueryParam === "__all" || projectFilterLoading) return;
+    const selectedProject = projectFilterOptions.find((option) => option.id === projectQueryParam);
+    if (!selectedProject) {
+      applyProjectFilter("__all");
+      return;
+    }
+    if (effectiveRegionScopeId && selectedProject.regionId && selectedProject.regionId !== effectiveRegionScopeId) {
+      applyProjectFilter("__all");
+      return;
+    }
+    if (supportsPopFilter && popQueryParam !== "__all" && selectedProject.popId && selectedProject.popId !== popQueryParam) {
+      applyProjectFilter("__all");
+    }
+  }, [applyProjectFilter, effectiveRegionScopeId, supportsProjectFilter, supportsPopFilter, projectQueryParam, projectFilterLoading, projectFilterOptions, popQueryParam]);
 
   useEffect(() => {
     if (!createOpen) return;
@@ -443,14 +532,14 @@ export default function DataManagementListPage() {
     const needsBrand = category.resource === "assetModels";
     const needsProvince = category.resource === "cities";
     if (!needsManufacturer && !needsBrand && !needsProvince) {
-      setRelationMaps({ manufacturers: {}, brands: {}, provinces: {} });
+      setRelationMaps((previous) => ({ ...previous, manufacturers: {}, brands: {}, provinces: {} }));
       return;
     }
 
     let cancelled = false;
     async function loadRelationMaps() {
       try {
-        const next: RelationMaps = { manufacturers: {}, brands: {}, provinces: {} };
+        const next = { manufacturers: {}, brands: {}, provinces: {} } as Omit<RelationMaps, "projects">;
         const tasks: Array<Promise<void>> = [];
 
         if (needsManufacturer) {
@@ -482,9 +571,9 @@ export default function DataManagementListPage() {
         }
 
         await Promise.all(tasks);
-        if (!cancelled) setRelationMaps(next);
+        if (!cancelled) setRelationMaps((previous) => ({ ...previous, ...next }));
       } catch {
-        if (!cancelled) setRelationMaps({ manufacturers: {}, brands: {}, provinces: {} });
+        if (!cancelled) setRelationMaps((previous) => ({ ...previous, manufacturers: {}, brands: {}, provinces: {} }));
       }
     }
 
@@ -978,22 +1067,24 @@ export default function DataManagementListPage() {
         loadQrLabelSettings(token).catch(() => null),
       ]);
       const qrRows = await Promise.all(
-        selectedRows.map(async (row) => ({
-          deviceName: pick(row, ["device_name", "name"]),
-          deviceCode: pick(row, ["device_id", "id"]),
-          deviceType: pick(row, ["device_type_key"]),
-          popName: formatQrPopLabel(
-            buildDeviceListDisplay(row, listDisplayLookups).pop,
-            pick(row, ["pop_code", "pop_id"]),
-          ),
-          qrDataUrl: await QRCode.toDataURL(buildDeviceDirectHref(category.slug, row), {
-            width: 360,
-            margin: 2,
-            errorCorrectionLevel: "H",
-          }),
-          logoDataUrl,
-          footerText: qrLabelSetting?.footer_text || undefined,
-        })),
+        selectedRows.map(async (row) => {
+          const display = buildDeviceListDisplay(row, listDisplayLookups);
+          return {
+            deviceName: pick(row, ["device_name", "name"]),
+            deviceCode: pick(row, ["device_id", "id"]),
+            deviceType: pick(row, ["device_type_key"]),
+            popName: formatQrPopLabel(display.pop, pick(row, ["pop_code", "pop_id"])),
+            projectName: display.project,
+            tenantName: display.tenant,
+            qrDataUrl: await QRCode.toDataURL(buildDeviceDirectHref(category.slug, row), {
+              width: 360,
+              margin: 2,
+              errorCorrectionLevel: "H",
+            }),
+            logoDataUrl,
+            footerText: qrLabelSetting?.footer_text || undefined,
+          };
+        }),
       );
       const { jsPDF } = await import("jspdf");
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -1137,6 +1228,10 @@ export default function DataManagementListPage() {
               popFilterValue={popQueryParam}
               popFilterLoading={popFilterLoading}
               popFilterOptions={popFilterOptions}
+              supportsProjectFilter={supportsProjectFilter}
+              projectFilterValue={projectQueryParam}
+              projectFilterLoading={projectFilterLoading}
+              projectFilterOptions={projectFilterOptions}
               hasRegionScope={Boolean(effectiveRegionScopeId)}
               isSoftDeleteResource={isSoftDeleteResource}
               archiveView={archiveView}
@@ -1149,6 +1244,7 @@ export default function DataManagementListPage() {
                 setSearchInput("");
               }}
               onPopFilterChange={applyPopFilter}
+              onProjectFilterChange={applyProjectFilter}
               onArchiveViewChange={(value) => {
                 setArchiveView(value);
                 setSelectedIds(new Set());
@@ -1175,6 +1271,13 @@ export default function DataManagementListPage() {
                 </Badge>
               </div>
             ) : null}
+            {supportsProjectFilter && projectQueryParam !== "__all" && selectedProjectLabel ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="font-normal">
+                  Project: {selectedProjectLabel}
+                </Badge>
+              </div>
+            ) : null}
 
             {loading ? (
               <AppLoading label="Sedang memuat data list..." />
@@ -1190,9 +1293,11 @@ export default function DataManagementListPage() {
               <DataEmptyState
                 title="Tidak ada data"
                 description={
-                  supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel
-                    ? `Tidak ada ${category.label} pada POP ${selectedPopLabel}.`
-                    : "Tidak ada data pada filter saat ini."
+                supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel
+                  ? `Tidak ada ${category.label} pada POP ${selectedPopLabel}.`
+                  : supportsProjectFilter && projectQueryParam !== "__all" && selectedProjectLabel
+                    ? `Tidak ada ${category.label} pada Project ${selectedProjectLabel}.`
+                  : "Tidak ada data pada filter saat ini."
                 }
                 actionLabel="Reset Filter"
                 onAction={resetListFilters}
@@ -2461,6 +2566,10 @@ function supportsSoftDeleteResource(resource: string) {
 
 function supportsPopFilterResource(resource: string) {
   return ["devices", "poles", "customers", "routes", "projects"].includes(resource);
+}
+
+function supportsProjectFilterResource(resource: string) {
+  return ["devices", "poles", "customers", "routes"].includes(resource);
 }
 
 function isArchived(item: Record<string, unknown>) {

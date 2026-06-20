@@ -55,6 +55,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
 import { deviceTypeKeyToSlug } from "@/lib/data-management-config";
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
@@ -79,6 +80,7 @@ type CustomerOption = {
   customer_number?: string | null;
   region_id?: string | null;
   pop_id?: string | null;
+  project_id?: string | null;
   address?: string | null;
   province?: string | null;
   province_id?: string | null;
@@ -249,6 +251,7 @@ export default function CreateDataManagementPage() {
     asset_group: PASSIVE_TYPES.has(deviceType) ? "passive" : "active",
     installation_date: "",
     pop_id: "",
+    project_id: "",
     customer_id: "",
     tenant_id: "",
     manufacturer_id: "",
@@ -303,7 +306,7 @@ export default function CreateDataManagementPage() {
     async function bootstrap() {
       try {
         const needsPops = isDevice || isRoute || isProject || isCustomer;
-        const needsProjects = isRoute || isCustomer;
+        const needsProjects = isDevice || isRoute || isCustomer;
         const needsDeviceMasterData = isDevice;
         const needsCustomerMasterData = isCustomer;
         const needsTenantMasterData = isDevice || isPop;
@@ -406,6 +409,17 @@ export default function CreateDataManagementPage() {
       cancelled = true;
     };
   }, [isOntDevice, form.pop_id, form.region_id, token]);
+
+  useEffect(() => {
+    if (!isDevice || !form.project_id) return;
+    const selectedProject = projects.find((project) => project.id === form.project_id);
+    if (!selectedProject) return;
+    const regionMismatch = form.region_id && selectedProject.region_id && selectedProject.region_id !== form.region_id;
+    const popMismatch = form.pop_id && selectedProject.pop_id && selectedProject.pop_id !== form.pop_id;
+    if (regionMismatch || popMismatch) {
+      setForm((previous) => ({ ...previous, project_id: "" }));
+    }
+  }, [isDevice, form.project_id, form.region_id, form.pop_id, projects]);
 
   useEffect(() => {
     let cancelled = false;
@@ -858,6 +872,7 @@ export default function CreateDataManagementPage() {
         asset_group: PASSIVE_TYPES.has(form.device_type_key) ? "passive" : "active",
         region_id: form.region_id,
         pop_id: nullIfEmpty(form.pop_id),
+        project_id: nullIfEmpty(form.project_id),
         customer_id: isOntDevice ? nullIfEmpty(form.customer_id) : null,
         tenant_id: nullIfEmpty(form.tenant_id),
         manufacturer_id: nullIfEmpty(form.manufacturer_id),
@@ -1039,6 +1054,7 @@ export default function CreateDataManagementPage() {
                           customer_id: value,
                           region_id: selectedCustomer?.region_id || p.region_id,
                           pop_id: selectedCustomer?.pop_id || p.pop_id,
+                          project_id: selectedCustomer?.project_id || p.project_id,
                           address: selectedCustomer?.address || p.address,
                           province: selectedCustomer?.province || p.province,
                           province_id: selectedCustomer?.province_id || p.province_id,
@@ -1082,6 +1098,32 @@ export default function CreateDataManagementPage() {
                   </div>
                 ) : null}
               </>
+            ) : null}
+
+            {isDevice ? (
+              <div className="space-y-1.5">
+                <FieldLabel
+                  label="Project"
+                  tooltip="Project delivery atau pekerjaan yang menjadi konteks utama device ini. Bisa dikosongkan untuk asset legacy atau device umum."
+                />
+                <Combobox
+                  value={form.project_id || "__none__"}
+                  onValueChange={(value) => setForm((previous) => ({ ...previous, project_id: value === "__none__" ? "" : value }))}
+                  options={toOptions([
+                    { value: "__none__", label: "Tanpa project" },
+                    ...projects
+                      .filter((project) => !form.region_id || !project.region_id || project.region_id === form.region_id)
+                      .filter((project) => !form.pop_id || !project.pop_id || project.pop_id === form.pop_id)
+                      .map((project) => ({
+                        value: project.id,
+                        label: [project.project_name, project.project_code].filter(Boolean).join(" | ") || "Project tidak tersedia",
+                      })),
+                  ])}
+                  placeholder="Pilih project"
+                  searchPlaceholder="Cari project..."
+                  emptyText="Tidak ada project sesuai filter region/POP."
+                />
+              </div>
             ) : null}
 
             {isRoute ? (
@@ -1853,8 +1895,7 @@ function renderCustomFieldInput({
 }) {
   if (field.field_type === "textarea" || field.field_type === "json") {
     return (
-      <textarea
-        className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+      <Textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={field.field_type === "json" ? '{"key":"value"}' : ""}

@@ -21,6 +21,10 @@ export function DataListFilterBar({
   popFilterValue,
   popFilterLoading,
   popFilterOptions,
+  supportsProjectFilter,
+  projectFilterValue,
+  projectFilterLoading,
+  projectFilterOptions,
   hasRegionScope,
   isSoftDeleteResource,
   archiveView,
@@ -28,6 +32,7 @@ export function DataListFilterBar({
   onSearchInputChange,
   onProvinceFilterChange,
   onPopFilterChange,
+  onProjectFilterChange,
   onArchiveViewChange,
   onLimitChange,
   onApplyFilter,
@@ -42,6 +47,10 @@ export function DataListFilterBar({
   popFilterValue: string;
   popFilterLoading: boolean;
   popFilterOptions: FilterOption[];
+  supportsProjectFilter: boolean;
+  projectFilterValue: string;
+  projectFilterLoading: boolean;
+  projectFilterOptions: FilterOption[];
   hasRegionScope: boolean;
   isSoftDeleteResource: boolean;
   archiveView: ArchiveView;
@@ -49,6 +58,7 @@ export function DataListFilterBar({
   onSearchInputChange: (value: string) => void;
   onProvinceFilterChange: (value: string) => void;
   onPopFilterChange: (value: string) => void;
+  onProjectFilterChange: (value: string) => void;
   onArchiveViewChange: (value: ArchiveView) => void;
   onLimitChange: (value: number) => void;
   onApplyFilter: () => void;
@@ -84,6 +94,23 @@ export function DataListFilterBar({
           options={[
             { value: "__all", label: hasRegionScope ? "Semua POP di region ini" : "Semua POP" },
             ...popFilterOptions
+              .slice()
+              .sort((a, b) => a.label.localeCompare(b.label, "id"))
+              .map((option) => ({ value: option.id, label: option.label })),
+          ]}
+        />
+      ) : null}
+      {supportsProjectFilter ? (
+        <Combobox
+          value={projectFilterValue}
+          onValueChange={onProjectFilterChange}
+          placeholder={projectFilterLoading ? "Memuat project..." : "Filter Project"}
+          searchPlaceholder="Cari project..."
+          emptyText={hasRegionScope ? "Tidak ada project pada region ini." : "Tidak ada project."}
+          disabled={projectFilterLoading}
+          options={[
+            { value: "__all", label: hasRegionScope ? "Semua project di region ini" : "Semua project" },
+            ...projectFilterOptions
               .slice()
               .sort((a, b) => a.label.localeCompare(b.label, "id"))
               .map((option) => ({ value: option.id, label: option.label })),

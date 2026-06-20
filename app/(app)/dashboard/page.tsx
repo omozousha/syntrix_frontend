@@ -725,7 +725,7 @@ async function loadDashboardData(token: string, role: RoleKey, regionId: string)
     fetchAllPaginated<DeviceItem>(`/devices?page=1&limit=100${suffix}`, token),
     fetchAllPaginated<DeviceItem>(`/devices?page=1&limit=100&device_type_key=ODP${suffix}`, token),
     fetchAllPaginated<DevicePortItem>(`/devicePorts?page=1&limit=100${suffix}`, token),
-    role === "superadmin" || role === "adminregion" || role === "validator" ? safeFetch<{ data: ValidationRequestItem[] }>("/validation-requests?queue=adminregion", token) : Promise.resolve(null),
+    role === "adminregion" || role === "validator" ? safeFetch<{ data: ValidationRequestItem[] }>("/validation-requests?queue=adminregion", token) : Promise.resolve(null),
     role === "superadmin" || role === "adminregion" ? safeFetch<{ data: ValidationRequestItem[] }>("/validation-requests?queue=superadmin", token) : Promise.resolve(null),
     safeFetch<{ data: ValidationRequestItem[] }>(`/validation-requests/quality-queue?queue=rejected_adminregion${suffix}`, token),
     safeFetch<{ data: ValidationRequestItem[] }>(`/validation-requests/quality-queue?queue=rejected_superadmin${suffix}`, token),

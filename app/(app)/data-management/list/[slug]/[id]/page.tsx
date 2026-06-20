@@ -13,6 +13,8 @@ import {
   DeviceDetailHeader,
   DeviceGallerySection,
   DeviceOperationalSummary,
+  DevicePortSummarySection,
+  DeviceQrActionPanel,
   GenericDeviceRawSection,
   OdpCoreChainSummarySection,
   OdpOperationsShell,
@@ -91,6 +93,60 @@ type DevicePort = {
   deleted_at?: string | null;
   deleted_by_user_id?: string | null;
 };
+type DevicePortConnection = {
+  id: string;
+  connection_id?: string | null;
+  region_id?: string | null;
+  from_port_id?: string | null;
+  to_port_id?: string | null;
+  connection_type?: string | null;
+  status?: string | null;
+  route_id?: string | null;
+  cable_device_id?: string | null;
+  core_start?: number | null;
+  core_end?: number | null;
+  fiber_count?: number | null;
+  installed_at?: string | null;
+  notes?: string | null;
+  updated_at?: string | null;
+};
+type DeviceTopologySummary = {
+  device?: GenericItem | null;
+  ports?: {
+    summary?: Record<string, unknown>;
+    items?: DevicePort[];
+  };
+  connections?: {
+    summary?: Record<string, unknown>;
+    items?: DevicePortConnection[];
+  };
+  core_management?: {
+    summary?: {
+      total?: number;
+      by_status?: Record<string, number>;
+      core_count?: number;
+      used_count?: number;
+      reserved_count?: number;
+    };
+    items?: Array<Record<string, unknown>>;
+  };
+  fiber_cores?: {
+    summary?: {
+      total?: number;
+      by_status?: Record<string, number>;
+      loss_warnings?: number;
+      damaged?: number;
+    };
+    items?: Array<Record<string, unknown>>;
+  };
+  readiness?: {
+    has_ports?: boolean;
+    has_connections?: boolean;
+    has_core_summary?: boolean;
+    has_fiber_core_inventory?: boolean;
+    trace_endpoint?: string;
+  };
+};
 type OdpCustomerOption = {
   id: string;
   customer_id?: string | null;
@@ -127,6 +183,14 @@ type PopLookupOption = {
   pop_code?: string | null;
   pop_name?: string | null;
   region_id?: string | null;
+};
+type ProjectLookupOption = {
+  id: string;
+  project_id?: string | null;
+  project_code?: string | null;
+  project_name?: string | null;
+  region_id?: string | null;
+  pop_id?: string | null;
 };
 type SplitterProfileOption = {
   id: string;
@@ -328,6 +392,8 @@ type RelationLabels = {
   popType?: string;
   province?: string;
   city?: string;
+  startAsset?: string;
+  endAsset?: string;
 };
 
 const POP_STATUS_OPTIONS = ["planning", "active", "inactive", "maintenance"];
@@ -378,6 +444,8 @@ export default function DataManagementDetailPage() {
   const [renameDraft, setRenameDraft] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [odpPorts, setOdpPorts] = useState<DevicePort[]>([]);
+  const [devicePortConnections, setDevicePortConnections] = useState<DevicePortConnection[]>([]);
+  const [deviceTopologySummary, setDeviceTopologySummary] = useState<DeviceTopologySummary | null>(null);
   const [loadingOdpPorts, setLoadingOdpPorts] = useState(false);
   const [updatingPortId, setUpdatingPortId] = useState("");
   const [provisioningPorts, setProvisioningPorts] = useState(false);
@@ -409,6 +477,22 @@ export default function DataManagementDetailPage() {
       serviceTypes: buildReferenceMap(data.serviceTypes),
     };
   }, [relationReferenceQuery.data]);
+  const projectOptions = useMemo(
+    () => Array.from(relationReferenceMaps.projects.values()) as ProjectLookupOption[],
+    [relationReferenceMaps.projects],
+  );
+
+  useEffect(() => {
+    if (category?.resource !== "devices" || !form.project_id) return;
+    const selectedProject = projectOptions.find((project) => project.id === form.project_id);
+    if (!selectedProject) return;
+    const regionMismatch = form.region_id && selectedProject.region_id && selectedProject.region_id !== form.region_id;
+    const popMismatch = form.pop_id && selectedProject.pop_id && selectedProject.pop_id !== form.pop_id;
+    if (regionMismatch || popMismatch) {
+      setForm((previous) => ({ ...previous, project_id: "" }));
+    }
+  }, [category?.resource, form.project_id, form.region_id, form.pop_id, projectOptions]);
+
   const [odpValidations, setOdpValidations] = useState<OdpValidationRecord[]>([]);
   const [loadingOdpValidations, setLoadingOdpValidations] = useState(false);
   const [odpCoreChainSummary, setOdpCoreChainSummary] = useState<OdpCoreChainSummary | null>(null);
@@ -444,6 +528,16 @@ export default function DataManagementDetailPage() {
     const regionId = valueOf(item.region_id);
     if (regionId) params.set("region_id", regionId);
     if (category.resource === "devices") params.set("start_device_id", item.id);
+    const query = params.toString();
+    return `/data-management/topology${query ? `?${query}` : ""}`;
+  }, [category, item]);
+  const topologyConnectionHref = useMemo(() => {
+    if (!category || !item) return "/data-management/topology?tool=connection";
+    const params = new URLSearchParams();
+    const regionId = valueOf(item.region_id);
+    if (regionId) params.set("region_id", regionId);
+    if (category.resource === "devices") params.set("start_device_id", item.id);
+    params.set("tool", "connection");
     const query = params.toString();
     return `/data-management/topology${query ? `?${query}` : ""}`;
   }, [category, item]);
@@ -505,7 +599,7 @@ export default function DataManagementDetailPage() {
     if (category.resource === "devices") {
       return `${valueOf(item.device_name)} (${valueOf(item.device_id)})`;
     }
-    return `${category.label} Detail`;
+    return `Detail ${category.label}`;
   }, [item, category]);
 
   const infoImageAttachments = useMemo(
@@ -700,6 +794,34 @@ export default function DataManagementDetailPage() {
           labels.city = city ? valueOf(city.data.city_name) : valueOf(activeItem.city);
           labels.serviceType = valueOf(referenceServiceType?.service_type_name || activeItem.service_type);
         }
+
+        if (activeCategory.resource === "projects") {
+          const referenceRegion = relationReferenceMaps.regions.get(valueOf(activeItem.region_id));
+          const referencePop = relationReferenceMaps.pops.get(valueOf(activeItem.pop_id));
+          labels.region = valueOf(referenceRegion?.region_name || referenceRegion?.region_code);
+          labels.pop = valueOf(referencePop?.pop_name || referencePop?.pop_code);
+          labels.popCode = valueOf(referencePop?.pop_code);
+        }
+
+        if (activeCategory.resource === "routes") {
+          const referenceRegion = relationReferenceMaps.regions.get(valueOf(activeItem.region_id));
+          const referencePop = relationReferenceMaps.pops.get(valueOf(activeItem.pop_id));
+          const referenceProject = relationReferenceMaps.projects.get(valueOf(activeItem.project_id));
+          const startDevice = valueOf(activeItem.start_asset_id)
+            ? apiFetch<{ data: Record<string, unknown> }>(`/devices/${valueOf(activeItem.start_asset_id)}`, { token }).catch(() => null)
+            : Promise.resolve(null);
+          const endDevice = valueOf(activeItem.end_asset_id)
+            ? apiFetch<{ data: Record<string, unknown> }>(`/devices/${valueOf(activeItem.end_asset_id)}`, { token }).catch(() => null)
+            : Promise.resolve(null);
+          const [start, end] = await Promise.all([startDevice, endDevice]);
+
+          labels.region = valueOf(referenceRegion?.region_name || referenceRegion?.region_code);
+          labels.pop = valueOf(referencePop?.pop_name || referencePop?.pop_code);
+          labels.popCode = valueOf(referencePop?.pop_code);
+          labels.project = valueOf(referenceProject?.project_name || referenceProject?.project_code);
+          labels.startAsset = start ? formatDeviceRelationLabel(start.data) : "";
+          labels.endAsset = end ? formatDeviceRelationLabel(end.data) : "";
+        }
       } finally {
         if (!cancelled) {
           setRelationLabels(labels);
@@ -751,8 +873,10 @@ export default function DataManagementDetailPage() {
   }, [token]);
 
   useEffect(() => {
-    if (!isOdpDevice || !item || !token) {
+    if (category?.resource !== "devices" || !item || !token) {
       setOdpPorts([]);
+      setDevicePortConnections([]);
+      setDeviceTopologySummary(null);
       setLoadingOdpPorts(false);
       return;
     }
@@ -763,14 +887,23 @@ export default function DataManagementDetailPage() {
     async function loadPorts() {
       setLoadingOdpPorts(true);
       try {
-        const result = await apiFetch<{ data: DevicePort[] }>(
-          `/devicePorts?page=1&limit=200&device_id=${encodeURIComponent(activeItem.id)}`,
+        const result = await apiFetch<{ data: DeviceTopologySummary }>(
+          `/topology/devices/${encodeURIComponent(activeItem.id)}/summary?limit=200`,
           { token },
         );
         if (cancelled) return;
-        setOdpPorts((result.data || []).sort((a, b) => Number(a.port_index) - Number(b.port_index)));
+        const summary = result.data || {};
+        const sortedPorts = (summary.ports?.items || []).sort((a, b) => Number(a.port_index) - Number(b.port_index));
+        setOdpPorts(sortedPorts);
+        setDevicePortConnections(summary.connections?.items || []);
+        setDeviceTopologySummary(summary);
       } catch (err) {
-        if (!cancelled) setError((err as Error).message || "Gagal memuat port ODP.");
+        if (!cancelled) {
+          setOdpPorts([]);
+          setDevicePortConnections([]);
+          setDeviceTopologySummary(null);
+          setError((err as Error).message || "Gagal memuat topology summary device.");
+        }
       } finally {
         if (!cancelled) setLoadingOdpPorts(false);
       }
@@ -780,7 +913,7 @@ export default function DataManagementDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [isOdpDevice, item, token]);
+  }, [category?.resource, item, token]);
 
   useEffect(() => {
     if (category?.resource !== "devices" || !item || !token) {
@@ -907,37 +1040,40 @@ export default function DataManagementDetailPage() {
             { token },
           );
           if (cancelled) return;
-          const mappedRows: OdpValidationRecord[] = (requestResult.data || []).slice(0, 10).map((request) => ({
-            id: request.id,
-            validation_id: request.request_id || "Validasi",
-            entity_type: "device",
-            entity_id: activeItem.id,
-            validation_type: "field-audit",
-            status: mapValidationRequestStatusToFieldStatus(request.current_status),
-            request_status: request.current_status || null,
-            validated_at: request.updated_at || request.created_at || null,
-            findings: request.finding_note || null,
-            adminregion_review_note: request.adminregion_review_note || null,
-            superadmin_review_note: request.superadmin_review_note || null,
-            payload: {
-              checklist: request.checklist || {},
-              field_inspection: request.payload_snapshot?.field_inspection || {},
-              field_validation: request.payload_snapshot?.field_validation || {},
-              port_summary: request.payload_snapshot?.port_summary || {},
-              device_ports: request.payload_snapshot?.device_ports || [],
-            },
-            evidence_attachment_id:
-              request.evidence_attachments?.[0]?.id ||
-              request.evidence_attachments?.[0]?.attachment_id ||
-              null,
-            evidence_attachments: request.evidence_attachments || [],
-            validator_user_id: request.submitted_by_user_id || null,
-            validator_name: request.submitted_by_name || null,
-            validator_email: request.submitted_by_email || null,
-            validator_user_code: request.submitted_by_user_code || null,
-            created_at: request.created_at || null,
-            updated_at: request.updated_at || null,
-          }));
+          const mappedRows: OdpValidationRecord[] = (requestResult.data || [])
+            .filter(isFieldValidationRequestRecord)
+            .slice(0, 10)
+            .map((request) => ({
+              id: request.id,
+              validation_id: request.request_id || "Validasi",
+              entity_type: "device",
+              entity_id: activeItem.id,
+              validation_type: "field-audit",
+              status: mapValidationRequestStatusToFieldStatus(request.current_status),
+              request_status: request.current_status || null,
+              validated_at: request.updated_at || request.created_at || null,
+              findings: request.finding_note || null,
+              adminregion_review_note: request.adminregion_review_note || null,
+              superadmin_review_note: request.superadmin_review_note || null,
+              payload: {
+                checklist: request.checklist || {},
+                field_inspection: request.payload_snapshot?.field_inspection || {},
+                field_validation: request.payload_snapshot?.field_validation || {},
+                port_summary: request.payload_snapshot?.port_summary || {},
+                device_ports: request.payload_snapshot?.device_ports || [],
+              },
+              evidence_attachment_id:
+                request.evidence_attachments?.[0]?.id ||
+                request.evidence_attachments?.[0]?.attachment_id ||
+                null,
+              evidence_attachments: request.evidence_attachments || [],
+              validator_user_id: request.submitted_by_user_id || null,
+              validator_name: request.submitted_by_name || null,
+              validator_email: request.submitted_by_email || null,
+              validator_user_code: request.submitted_by_user_code || null,
+              created_at: request.created_at || null,
+              updated_at: request.updated_at || null,
+            }));
           setOdpValidations(mappedRows);
           return;
         } catch {
@@ -1063,8 +1199,10 @@ export default function DataManagementDetailPage() {
     };
   }, [deviceDirectHref]);
 
+  const isDeviceResource = category?.resource === "devices";
+
   useEffect(() => {
-    if (!token || !isOdpDevice) {
+    if (!token || !isDeviceResource) {
       setQrLabelLogoDataUrl("");
       setQrLabelFooterText("");
       setQrLabelReady(false);
@@ -1086,7 +1224,7 @@ export default function DataManagementDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, isOdpDevice]);
+  }, [token, isDeviceResource]);
 
   async function handleSave() {
     if (!category || !item || !editable) return;
@@ -1247,11 +1385,14 @@ export default function DataManagementDetailPage() {
       });
       const created = Number(result.data?.created_count || 0);
       setMessage(created ? `${created} port ODP berhasil dibuat.` : "Semua port ODP sudah tersedia.");
-      const refreshed = await apiFetch<{ data: DevicePort[] }>(
-        `/devicePorts?page=1&limit=200&device_id=${encodeURIComponent(item.id)}`,
+      const refreshed = await apiFetch<{ data: DeviceTopologySummary }>(
+        `/topology/devices/${encodeURIComponent(item.id)}/summary?limit=200`,
         { token },
       );
-      setOdpPorts((refreshed.data || []).sort((a, b) => Number(a.port_index) - Number(b.port_index)));
+      const summary = refreshed.data || {};
+      setOdpPorts((summary.ports?.items || []).sort((a, b) => Number(a.port_index) - Number(b.port_index)));
+      setDevicePortConnections(summary.connections?.items || []);
+      setDeviceTopologySummary(summary);
     } catch (err) {
       setError((err as Error).message || "Gagal generate port ODP.");
     } finally {
@@ -1386,13 +1527,15 @@ export default function DataManagementDetailPage() {
         deviceCode: valueOf(item.device_id, "-"),
         deviceType: valueOf(item.device_type_key, "-"),
         popName: formatQrPopLabel(qrRelationDisplay.popName, qrRelationDisplay.popCode),
+        projectName: qrRelationDisplay.projectName,
+        tenantName: qrRelationDisplay.tenantName,
         qrDataUrl,
         logoDataUrl: qrLabelLogoDataUrl || undefined,
         footerText: qrLabelFooterText || undefined,
       });
       const link = document.createElement("a");
       link.href = dataUrl;
-      link.download = `${sanitizeFileName(valueOf(item.device_id, "odp"))}-qr-label.png`;
+      link.download = `${sanitizeFileName(valueOf(item.device_id, "device"))}-qr-label.png`;
       link.click();
     };
 
@@ -1518,6 +1661,11 @@ export default function DataManagementDetailPage() {
                   <Link href={topologyHref}>{category.resource === "devices" ? "Trace Topology" : "Open Topology"}</Link>
                 </Button>
               ) : null}
+              {canOpenTopology && category.resource === "devices" && item ? (
+                <Button asChild variant="outline">
+                  <Link href={topologyConnectionHref}>Create Connection</Link>
+                </Button>
+              ) : null}
               {canOpenAsBuilt && category?.resource === "devices" && item ? (
                 <Button asChild variant="outline">
                   <Link href={asBuiltHref}>Open As-Built</Link>
@@ -1607,12 +1755,47 @@ export default function DataManagementDetailPage() {
                   installationTypes={installationTypes}
                   tenants={tenants}
       popOptions={popOptions}
+      projectOptions={projectOptions}
       latestFieldValidation={latestApprovedOdpValidation?.payload?.field_validation || null}
       effectiveValidationStatus={detailValidationStatus}
     />
               ) : null}
 
-              {category.resource !== "pops" && category.resource !== "devices" && category.resource !== "customers" ? (
+              {category.resource === "projects" ? (
+                <ProjectDetailForm item={item} relationLabels={relationLabels} relationLoading={relationLabelsLoading} />
+              ) : null}
+
+              {category.resource === "routes" ? (
+                <RouteDetailForm item={item} relationLabels={relationLabels} relationLoading={relationLabelsLoading} />
+              ) : null}
+
+              {category.resource === "devices" && !isOdpDevice ? (
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
+                  <div className="lg:max-w-[280px]">
+                    <DeviceQrActionPanel
+                      qrDataUrl={qrDataUrl}
+                      logoDataUrl={qrLabelLogoDataUrl}
+                      logoReady={qrLabelReady}
+                      deviceTypeLabel={valueOf(item.device_type_key, "Device")}
+                      showReminder={false}
+                      reminderDisabled
+                      onOpenReminder={() => undefined}
+                      onDownloadQrLabel={handleDownloadQrLabel}
+                    />
+                  </div>
+                  <DevicePortSummarySection
+                    deviceTypeLabel={valueOf(item.device_type_key, "Device")}
+                    ports={odpPorts}
+                    connections={devicePortConnections}
+                    coreSummary={deviceTopologySummary?.core_management?.summary || null}
+                    fiberSummary={deviceTopologySummary?.fiber_cores?.summary || null}
+                    readiness={deviceTopologySummary?.readiness || null}
+                    loading={loadingOdpPorts}
+                  />
+                </div>
+              ) : null}
+
+              {category.resource !== "pops" && category.resource !== "devices" && category.resource !== "customers" && category.resource !== "projects" && category.resource !== "routes" ? (
                 <GenericDeviceRawSection item={item} />
               ) : null}
 
@@ -1696,6 +1879,7 @@ export default function DataManagementDetailPage() {
                 onArchiveDevice={() => void handleArchiveOdpDevice()}
                 onArchivePort={(port) => void handleArchiveOdpPort(port)}
                 coreChainSummary={odpCoreChainSummary}
+                topologySummary={deviceTopologySummary}
                 loadingCoreChainSummary={loadingOdpCoreChainSummary}
                 creatingDraftLink={creatingDraftLink}
                 cableDevices={odpCableDevices}
@@ -1841,6 +2025,88 @@ export default function DataManagementDetailPage() {
   );
 }
 
+function OdpTopologyReadinessSummary({
+  summary,
+  loading,
+}: {
+  summary: DeviceTopologySummary | null;
+  loading: boolean;
+}) {
+  if (loading && !summary) {
+    return (
+      <div className="rounded-lg border bg-muted/20 p-3">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="h-5 w-24 rounded-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-16 rounded-md" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const portTotal = Number(summary?.ports?.summary?.total ?? summary?.ports?.items?.length ?? 0);
+  const connectionTotal = Number(summary?.connections?.summary?.total ?? summary?.connections?.items?.length ?? 0);
+  const coreCount = Number(summary?.core_management?.summary?.core_count ?? 0);
+  const usedCoreCount = Number(summary?.core_management?.summary?.used_count ?? 0);
+  const reservedCoreCount = Number(summary?.core_management?.summary?.reserved_count ?? 0);
+  const fiberCoreTotal = Number(summary?.fiber_cores?.summary?.total ?? 0);
+  const fiberLossWarnings = Number(summary?.fiber_cores?.summary?.loss_warnings ?? 0);
+  const fiberDamaged = Number(summary?.fiber_cores?.summary?.damaged ?? 0);
+  const readiness = summary?.readiness || {};
+  const readinessItems = [
+    { label: "Port", ready: Boolean(readiness.has_ports) },
+    { label: "Connection", ready: Boolean(readiness.has_connections) },
+    { label: "Core summary", ready: Boolean(readiness.has_core_summary) },
+    { label: "Fiber core", ready: Boolean(readiness.has_fiber_core_inventory) },
+  ];
+
+  return (
+    <div className="rounded-lg border bg-background p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold">Topology Readiness</p>
+          <p className="text-xs text-muted-foreground">Ringkasan port, connection, core, dan fiber dari inventory.</p>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {readinessItems.map((item) => (
+            <Badge key={item.label} variant="outline" className={item.ready ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-600"}>
+              {item.label}: {item.ready ? "ready" : "pending"}
+            </Badge>
+          ))}
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+        <OdpTopologyMetric label="Port" value={portTotal} description="Provisioned endpoint" />
+        <OdpTopologyMetric label="Connection" value={connectionTotal} description="Relasi port aktif/planned" />
+        <OdpTopologyMetric label="Core" value={coreCount} description={`${usedCoreCount} used, ${reservedCoreCount} reserved`} />
+        <OdpTopologyMetric label="Fiber Core" value={fiberCoreTotal} description={`${fiberLossWarnings} warning, ${fiberDamaged} damaged`} />
+      </div>
+    </div>
+  );
+}
+
+function OdpTopologyMetric({
+  label,
+  value,
+  description,
+}: {
+  label: string;
+  value: number;
+  description: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-md border bg-muted/20 px-3 py-2">
+      <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 text-lg font-semibold leading-none">{Number.isFinite(value) ? value : 0}</p>
+      <p className="mt-1 truncate text-[11px] text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
 function OdpOperationsPanel({
   device,
   ports,
@@ -1869,6 +2135,7 @@ function OdpOperationsPanel({
   onArchiveDevice,
   onArchivePort,
   coreChainSummary,
+  topologySummary,
   loadingCoreChainSummary,
   creatingDraftLink,
   cableDevices,
@@ -1903,6 +2170,7 @@ function OdpOperationsPanel({
   onArchiveDevice: () => void;
   onArchivePort: (port: DevicePort) => void;
   coreChainSummary: OdpCoreChainSummary | null;
+  topologySummary: DeviceTopologySummary | null;
   loadingCoreChainSummary: boolean;
   creatingDraftLink: boolean;
   cableDevices: OdpCableOption[];
@@ -1994,11 +2262,14 @@ function OdpOperationsPanel({
             onCreateDraftLink={onCreateDraftLink}
           />
 
+          <OdpTopologyReadinessSummary summary={topologySummary} loading={loadingPorts} />
+
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[260px_1fr]">
             <OdpQrActionPanel
               qrDataUrl={qrDataUrl}
               logoDataUrl={qrLabelLogoDataUrl}
               logoReady={qrLabelReady}
+              deviceTypeLabel={valueOf(device.device_type_key, "ODP")}
               reminderDisabled={loadingValidators || validators.length === 0}
               onOpenReminder={onOpenReminder}
               onDownloadQrLabel={onDownloadQrLabel}
@@ -2247,6 +2518,70 @@ function CustomerDetailForm({
   );
 }
 
+function ProjectDetailForm({
+  item,
+  relationLabels,
+  relationLoading = false,
+}: {
+  item: GenericItem;
+  relationLabels: RelationLabels;
+  relationLoading?: boolean;
+}) {
+  const attachmentCount = countAttachmentRefs(item.image_attachments, item.image_attachment_id);
+  return (
+    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+      <DisplayField label="Project Name" value={valueOf(item.project_name, "-")} compact />
+      <DisplayField label="Project ID" value={valueOf(item.project_id, "-")} compact />
+      <DisplayField label="Project Code" value={valueOf(item.project_code, "-")} compact />
+      <DisplayField label="Region" value={relationLabels.region || "-"} loading={relationLoading} compact />
+      <DisplayField label="POP" value={formatPopDisplay(relationLabels.pop, relationLabels.popCode)} loading={relationLoading} compact />
+      <DisplayField label="Status" value={valueOf(item.status, "-")} compact />
+      <DisplayField className="md:col-span-2 xl:col-span-3" label="Description" value={valueOf(item.description, "-")} compact />
+      <DisplayField label="BAST Number" value={valueOf(item.bast_number, "-")} compact />
+      <DisplayField label="SPK Number" value={valueOf(item.spk_number, "-")} compact />
+      <DisplayField label="Vendor" value={valueOf(item.vendor_name, "-")} compact />
+      <DisplayField label="Start Date" value={formatDate(valueOf(item.start_date))} compact />
+      <DisplayField label="End Date" value={formatDate(valueOf(item.end_date))} compact />
+      <DisplayField label="Budget" value={valueOf(item.budget_value, "-")} compact />
+      <DisplayField label="Tags" value={arrayToCsv(item.tags) || "-"} compact />
+      <DisplayField label="Attachments" value={attachmentCount ? `${attachmentCount} file` : "-"} compact />
+      <DisplayField label="Created" value={formatDateTime(valueOf(item.created_at))} compact />
+      <DisplayField label="Updated" value={formatDateTime(valueOf(item.updated_at))} compact />
+    </div>
+  );
+}
+
+function RouteDetailForm({
+  item,
+  relationLabels,
+  relationLoading = false,
+}: {
+  item: GenericItem;
+  relationLabels: RelationLabels;
+  relationLoading?: boolean;
+}) {
+  const geometryStatus = hasRouteGeometry(item.path_geojson) ? "Geometry tersedia" : "Geometry belum tersedia";
+  return (
+    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+      <DisplayField label="Route Name" value={valueOf(item.route_name, "-")} compact />
+      <DisplayField label="Route ID" value={valueOf(item.route_id, "-")} compact />
+      <DisplayField label="Route Code" value={valueOf(item.route_code, "-")} compact />
+      <DisplayField label="Region" value={relationLabels.region || "-"} loading={relationLoading} compact />
+      <DisplayField label="POP" value={formatPopDisplay(relationLabels.pop, relationLabels.popCode)} loading={relationLoading} compact />
+      <DisplayField label="Project" value={relationLabels.project || "-"} loading={relationLoading} compact />
+      <DisplayField label="Route Type" value={valueOf(item.route_type, "-")} compact />
+      <DisplayField label="Status" value={valueOf(item.status, "-")} compact />
+      <DisplayField label="Distance" value={formatDistanceMeters(item.distance_meters)} compact />
+      <DisplayField label="Start Asset" value={relationLabels.startAsset || "-"} loading={relationLoading} compact />
+      <DisplayField label="End Asset" value={relationLabels.endAsset || "-"} loading={relationLoading} compact />
+      <DisplayField label="Map Geometry" value={geometryStatus} compact />
+      <DisplayField label="Tags" value={arrayToCsv(item.tags) || "-"} compact />
+      <DisplayField label="Created" value={formatDateTime(valueOf(item.created_at))} compact />
+      <DisplayField label="Updated" value={formatDateTime(valueOf(item.updated_at))} compact />
+    </div>
+  );
+}
+
 function RelationInfo({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md border bg-muted/20 p-2">
@@ -2441,9 +2776,9 @@ function CoordinateField({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button type="button" className="text-muted-foreground hover:text-foreground" aria-label={`Info ${label}`}>
+              <Button type="button" variant="ghost" size="icon-xs" className="text-muted-foreground" aria-label={`Info ${label}`}>
                 <CircleHelp className="size-3.5" />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={6}>
               {kind === "latitude"
@@ -2538,6 +2873,7 @@ function buildEditableForm(item: GenericItem, resource: string): EditableForm {
       validation_date: valueOf(item.validation_date),
       region_id: valueOf(item.region_id),
       pop_id: valueOf(item.pop_id),
+      project_id: valueOf(item.project_id),
       tenant_id: valueOf(item.tenant_id),
       manufacturer_id: valueOf(item.manufacturer_id),
       brand_id: valueOf(item.brand_id),
@@ -2599,6 +2935,7 @@ function buildUpdatePayload(form: EditableForm, resource: string): Record<string
       installation_date: nullIfEmpty(form.installation_date),
       region_id: nullIfEmpty(form.region_id),
       pop_id: nullIfEmpty(form.pop_id),
+      project_id: nullIfEmpty(form.project_id),
       tenant_id: nullIfEmpty(form.tenant_id),
       manufacturer_id: nullIfEmpty(form.manufacturer_id),
       brand_id: nullIfEmpty(form.brand_id),
@@ -2657,6 +2994,11 @@ function getEffectiveDeviceValidationStatus(
   }
 
   return status || "unvalidated";
+}
+
+function isFieldValidationRequestRecord(request: ValidationRequestRecord) {
+  const snapshot = request.payload_snapshot || {};
+  return Boolean(snapshot.field_validation || snapshot.field_inspection || snapshot.port_summary);
 }
 
 function isFinalValidationRecord(record: OdpValidationRecord) {
@@ -2778,6 +3120,61 @@ function csvToArray(value: string) {
 function arrayToCsv(value: unknown) {
   if (!Array.isArray(value)) return "";
   return value.map((item) => String(item)).join(", ");
+}
+
+function formatPopDisplay(popName?: string, popCode?: string) {
+  const name = valueOf(popName, "-");
+  const code = valueOf(popCode);
+  if (name === "-" || !code || name.includes(code)) return name;
+  return `${name} (${code})`;
+}
+
+function formatDeviceRelationLabel(item?: Record<string, unknown> | null) {
+  if (!item) return "";
+  const name = valueOf(item.device_name);
+  const inventory = valueOf(item.device_id);
+  const type = valueOf(item.device_type_key);
+  const primary = name || inventory;
+  if (!primary) return "";
+  const suffix = [type, inventory && inventory !== primary ? inventory : ""].filter(Boolean).join(" | ");
+  return suffix ? `${primary} (${suffix})` : primary;
+}
+
+function hasRouteGeometry(value: unknown) {
+  if (!value) return false;
+  if (typeof value === "string") return value.trim().length > 0 && value.trim() !== "{}";
+  if (typeof value === "object") return Object.keys(value as Record<string, unknown>).length > 0;
+  return false;
+}
+
+function formatDistanceMeters(value: unknown) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return "-";
+  if (number >= 1000) return `${(number / 1000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} km`;
+  return `${number.toLocaleString("id-ID", { maximumFractionDigits: 0 })} m`;
+}
+
+function countAttachmentRefs(attachments: unknown, primaryAttachmentId: unknown) {
+  const ids = new Set<string>();
+  const primary = valueOf(primaryAttachmentId).trim();
+  if (primary) ids.add(primary);
+
+  if (Array.isArray(attachments)) {
+    attachments.forEach((attachment) => {
+      if (typeof attachment === "string") {
+        const id = attachment.trim();
+        if (id) ids.add(id);
+        return;
+      }
+      if (attachment && typeof attachment === "object") {
+        const row = attachment as Record<string, unknown>;
+        const id = valueOf(row.id || row.attachment_id || row.storage_file_id).trim();
+        if (id) ids.add(id);
+      }
+    });
+  }
+
+  return ids.size;
 }
 
 function formatDateTime(value: string) {

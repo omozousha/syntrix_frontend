@@ -27,6 +27,8 @@ type RequestRecord = Record<string, unknown> & {
     pop?: Record<string, unknown>;
     route?: Record<string, unknown>;
     project?: Record<string, unknown>;
+    portConnection?: Record<string, unknown>;
+    context?: Record<string, unknown>;
     device_ports?: Array<Record<string, unknown>>;
   } | null;
 };
@@ -84,6 +86,22 @@ export function buildCreateAssetReviewFields(
       { title: "Start Date", value: valueText(payload.start_date) },
       { title: "End Date", value: valueText(payload.end_date) },
       { title: "Budget", value: valueText(payload.budget_value) },
+    ];
+  }
+
+  if (resourceName === "portConnections" || item.payload_snapshot?.portConnection) {
+    const context = item.payload_snapshot?.context || {};
+    return [
+      { title: "From Device", value: valueText(context.upstream_device_name) },
+      { title: "From Port", value: valueText(context.upstream_port_label) },
+      { title: "To Device", value: valueText(context.odp_device_name) },
+      { title: "To Port", value: valueText(context.odp_port_label) },
+      ...common,
+      { title: "Connection Type", value: valueText(payload.connection_type) },
+      { title: "Cable", value: valueText(context.cable_device_id ? "Cable selected" : "-") },
+      { title: "Core Start", value: valueText(payload.core_start) },
+      { title: "Core End", value: valueText(payload.core_end) },
+      { title: "Fiber Count", value: valueText(payload.fiber_count) },
     ];
   }
 
@@ -176,6 +194,7 @@ function getCreateAssetPayload(item: RequestRecord) {
     item.payload_snapshot?.pop ||
     item.payload_snapshot?.route ||
     item.payload_snapshot?.project ||
+    item.payload_snapshot?.portConnection ||
     item.payload_snapshot?.before ||
     {}
   );

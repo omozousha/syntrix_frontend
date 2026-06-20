@@ -7,26 +7,31 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { buildQrPreviewPngDataUrl } from "@/lib/qr-label";
 
-type OdpQrActionPanelProps = {
+type DeviceQrActionPanelProps = {
   qrDataUrl: string;
   logoDataUrl?: string;
   logoReady: boolean;
+  deviceTypeLabel?: string;
+  showReminder?: boolean;
   reminderDisabled: boolean;
   onOpenReminder: () => void;
   onDownloadQrLabel: () => void;
 };
 
-export function OdpQrActionPanel({
+export function DeviceQrActionPanel({
   qrDataUrl,
   logoDataUrl,
   logoReady,
+  deviceTypeLabel,
+  showReminder = true,
   reminderDisabled,
   onOpenReminder,
   onDownloadQrLabel,
-}: OdpQrActionPanelProps) {
+}: DeviceQrActionPanelProps) {
   const [previewQr, setPreviewQr] = useState<{ key: string; dataUrl: string }>({ key: "", dataUrl: "" });
   const previewKey = `${qrDataUrl}::${logoDataUrl || ""}`;
   const previewQrDataUrl = previewQr.key === previewKey ? previewQr.dataUrl : "";
+  const label = deviceTypeLabel ? `QR Label ${deviceTypeLabel}` : "QR Label Device";
 
   useEffect(() => {
     if (!qrDataUrl || !logoReady) return;
@@ -49,11 +54,11 @@ export function OdpQrActionPanel({
     <div className="space-y-2 rounded-md border p-3">
       <div className="flex items-center gap-2">
         <QrCode className="size-4 text-muted-foreground" />
-        <p className="text-sm font-medium">QR Label ODP</p>
+        <p className="text-sm font-medium">{label}</p>
       </div>
       <div className="flex items-center justify-center rounded-md border bg-background p-3">
         {qrDataUrl && logoReady && previewQrDataUrl ? (
-          <Image src={previewQrDataUrl} alt="QR ODP" width={180} height={180} unoptimized className="size-40" />
+          <Image src={previewQrDataUrl} alt={label} width={180} height={180} unoptimized className="size-40" />
         ) : qrDataUrl ? (
           <div className="flex size-40 items-center justify-center rounded-md bg-muted/30 text-center text-xs text-muted-foreground">
             Memuat logo QR...
@@ -64,11 +69,13 @@ export function OdpQrActionPanel({
           </div>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={onOpenReminder} disabled={reminderDisabled}>
-          <BellRing className="mr-1.5 size-3.5" />
-          Reminder
-        </Button>
+      <div className={showReminder ? "grid grid-cols-2 gap-2" : "grid grid-cols-1"}>
+        {showReminder ? (
+          <Button type="button" variant="outline" size="sm" onClick={onOpenReminder} disabled={reminderDisabled}>
+            <BellRing className="mr-1.5 size-3.5" />
+            Reminder
+          </Button>
+        ) : null}
         <Button type="button" variant="outline" size="sm" onClick={onDownloadQrLabel} disabled={!qrDataUrl || !logoReady}>
           Download
         </Button>
@@ -76,3 +83,5 @@ export function OdpQrActionPanel({
     </div>
   );
 }
+
+export const OdpQrActionPanel = DeviceQrActionPanel;

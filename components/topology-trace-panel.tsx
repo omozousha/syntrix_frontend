@@ -120,17 +120,17 @@ export function TopologyTracePanel({
                         <p className="truncate text-xs font-semibold">Step {step}: {nodeLabel}</p>
                         <p className="text-[11px] text-muted-foreground">{node.device_type_key || "-"}</p>
                       </div>
-                      <Badge variant="outline" className="text-[10px]">{node.device_id || "Tanpa Device ID"}</Badge>
+                      <Badge variant="outline" className="max-w-full truncate text-[10px]">{node.device_id || "Tanpa Device ID"}</Badge>
                     </div>
                     {edge ? (
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                      <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                         <span>Next Link:</span>
                         <Badge variant="secondary" className="text-[10px]">
                           {edge.connection_type || edge.status || "link"}
                         </Badge>
-                        <span>{edge.from_device_id}</span>
+                        <span className="max-w-full break-all">{edge.from_device_id}</span>
                         <ChevronRight className="size-3" />
-                        <span>{edge.to_device_id}</span>
+                        <span className="max-w-full break-all">{edge.to_device_id}</span>
                       </div>
                     ) : null}
                   </div>
@@ -208,29 +208,41 @@ export function TopologyTracePanel({
             <CardTitle className="text-sm">Node Detail</CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3 pt-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Device</TableHead>
-                  <TableHead>Type</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {nodes.slice(0, maxRows).map((node) => (
-                  <TableRow key={node.id}>
-                    <TableCell>{node.device_name || node.device_id || "Node tidak tersedia"}</TableCell>
-                    <TableCell>{node.device_type_key || "-"}</TableCell>
-                  </TableRow>
-                ))}
-                {!nodes.length ? (
+            <div className="space-y-2 lg:hidden">
+              {nodes.slice(0, maxRows).map((node) => (
+                <TraceDetailCard
+                  key={node.id}
+                  title={formatTraceNodeLabel(node)}
+                  meta={node.device_type_key || "-"}
+                />
+              ))}
+              {!nodes.length ? <p className="text-sm text-muted-foreground">Tidak ada node.</p> : null}
+            </div>
+            <div className="hidden overflow-x-auto lg:block">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={2} className="text-muted-foreground">
-                      Tidak ada node.
-                    </TableCell>
+                    <TableHead>Device</TableHead>
+                    <TableHead>Type</TableHead>
                   </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {nodes.slice(0, maxRows).map((node) => (
+                    <TableRow key={node.id}>
+                      <TableCell>{formatTraceNodeLabel(node)}</TableCell>
+                      <TableCell>{node.device_type_key || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                  {!nodes.length ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-muted-foreground">
+                        Tidak ada node.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
@@ -239,31 +251,43 @@ export function TopologyTracePanel({
             <CardTitle className="text-sm">Edge Detail</CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3 pt-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>From</TableHead>
-                  <TableHead>To</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {edges.slice(0, maxRows).map((edge) => (
-                  <TableRow key={edge.id}>
-                    <TableCell>{edge.from_device_id}</TableCell>
-                    <TableCell>{edge.to_device_id}</TableCell>
-                    <TableCell>{edge.status || edge.connection_type || "-"}</TableCell>
-                  </TableRow>
-                ))}
-                {!edges.length ? (
+            <div className="space-y-2 lg:hidden">
+              {edges.slice(0, maxRows).map((edge) => (
+                <TraceDetailCard
+                  key={edge.id}
+                  title={`${formatTraceEndpointLabel(edge.from_device_id, nodeMap)} to ${formatTraceEndpointLabel(edge.to_device_id, nodeMap)}`}
+                  meta={edge.status || edge.connection_type || "-"}
+                />
+              ))}
+              {!edges.length ? <p className="text-sm text-muted-foreground">Tidak ada edge.</p> : null}
+            </div>
+            <div className="hidden overflow-x-auto lg:block">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={3} className="text-muted-foreground">
-                      Tidak ada edge.
-                    </TableCell>
+                    <TableHead>From</TableHead>
+                    <TableHead>To</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {edges.slice(0, maxRows).map((edge) => (
+                    <TableRow key={edge.id}>
+                      <TableCell>{formatTraceEndpointLabel(edge.from_device_id, nodeMap)}</TableCell>
+                      <TableCell>{formatTraceEndpointLabel(edge.to_device_id, nodeMap)}</TableCell>
+                      <TableCell>{edge.status || edge.connection_type || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                  {!edges.length ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-muted-foreground">
+                        Tidak ada edge.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -338,4 +362,32 @@ function summarizeCoreColors(colors: Record<string, number>) {
     .slice(0, 3)
     .map(([name, count]) => `${name}:${count}`)
     .join(", ");
+}
+
+function TraceDetailCard({ title, meta }: { title: string; meta: string }) {
+  return (
+    <div className="rounded-md border bg-background p-2">
+      <p className="truncate text-xs font-medium">{title}</p>
+      <p className="mt-1 text-[11px] text-muted-foreground">{meta}</p>
+    </div>
+  );
+}
+
+function formatTraceNodeLabel(node?: TraceNode) {
+  if (!node) return "Node tidak tersedia";
+  return node.device_name || node.device_id || "Node tidak tersedia";
+}
+
+function formatTraceEndpointLabel(deviceId: string, nodeMap: Map<string, TraceNode>) {
+  const direct = nodeMap.get(deviceId);
+  if (direct) return formatTraceNodeLabel(direct);
+  const byInventoryId = Array.from(nodeMap.values()).find((node) => node.device_id === deviceId);
+  if (byInventoryId) return formatTraceNodeLabel(byInventoryId);
+  return `Device ${shortTraceId(deviceId)}`;
+}
+
+function shortTraceId(value: string) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "-";
+  return normalized.length > 8 ? normalized.slice(0, 8) : normalized;
 }

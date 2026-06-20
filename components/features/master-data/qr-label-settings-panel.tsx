@@ -95,6 +95,8 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
           deviceCode: "INV-2019/07/010/0003",
           deviceType: "ODP",
           popName: "DIPATIUKUR | DPU",
+          projectName: "FTTH Bandung 2026",
+          tenantName: "Retail",
           qrDataUrl,
           logoDataUrl: logoPreviewDataUrl || undefined,
           footerText: setting?.footer_text || undefined,
