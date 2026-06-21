@@ -83,5 +83,3 @@ export function DeviceQrActionPanel({
     </div>
   );
 }
-
-export const OdpQrActionPanel = DeviceQrActionPanel;

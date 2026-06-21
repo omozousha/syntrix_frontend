@@ -59,6 +59,14 @@ type OdpValidationRecord = {
   validator_name?: string | null;
   validator_email?: string | null;
   validator_user_code?: string | null;
+  adminregion_actor_name?: string | null;
+  adminregion_actor_email?: string | null;
+  adminregion_actor_user_code?: string | null;
+  adminregion_action_at?: string | null;
+  superadmin_actor_name?: string | null;
+  superadmin_actor_email?: string | null;
+  superadmin_actor_user_code?: string | null;
+  superadmin_action_at?: string | null;
   findings?: string | null;
   payload?: {
     checklist?: Partial<Record<OdpValidationChecklistKey, boolean>>;
@@ -180,7 +188,13 @@ function OdpValidationHistoryCard({
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span>Nama: {valueOf(validation?.new_device_name || validation?.old_device_name, "-")}</span>
             <span>Validator: {getValidatorLabel(record, validators)}</span>
+            <span>Adminregion: {getWorkflowActorLabel(record, "adminregion")}</span>
+            <span>Superadmin: {getWorkflowActorLabel(record, "superadmin")}</span>
             <span>Tanggal validasi: {formatDate(valueOf(validation?.validation_date))}</span>
+          </div>
+          <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+            {record.adminregion_action_at ? <span>Adminregion action: {formatDateTime(record.adminregion_action_at)}</span> : null}
+            {record.superadmin_action_at ? <span>Superadmin action: {formatDateTime(record.superadmin_action_at)}</span> : null}
           </div>
           {record.findings ? <p className="mt-2 text-sm">{record.findings}</p> : null}
         </div>
@@ -241,6 +255,16 @@ function getValidatorLabel(record: OdpValidationRecord, validators: ValidatorOpt
   return validator
     ? [validator.full_name, validator.user_code || validator.email].filter(Boolean).join(" - ")
     : "-";
+}
+
+function getWorkflowActorLabel(record: OdpValidationRecord, role: "adminregion" | "superadmin") {
+  const values = role === "adminregion"
+    ? [record.adminregion_actor_name, record.adminregion_actor_user_code || record.adminregion_actor_email]
+    : [record.superadmin_actor_name, record.superadmin_actor_user_code || record.superadmin_actor_email];
+  return values
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join(" - ") || "-";
 }
 
 function valueOf(value: unknown, fallback = "") {

@@ -78,11 +78,14 @@ type ValidationRequestItem = {
   payload_snapshot?: {
     source?: string;
     operation?: string;
+    field_validation_type?: string | null;
     resource_name?: string;
     resource_label?: string;
     resource_payload?: Record<string, unknown>;
     before?: Record<string, unknown>;
     device?: Record<string, unknown>;
+    general_validation?: Record<string, unknown>;
+    technical_validation?: Record<string, unknown>;
     field_validation?: Record<string, unknown>;
     field_inspection?: Record<string, unknown>;
     port_summary?: Record<string, unknown>;
@@ -1264,12 +1267,12 @@ function getFieldValidationReviewFields(item: ValidationRequestItem) {
 }
 
 function buildFieldValidationComparisonFields(
-  field: Record<string, unknown>,
+  item: ValidationRequestItem,
   currentDevice: Record<string, unknown>,
   lookupLabels: LookupLabels,
 ) {
   return buildFieldValidationComparisonDisplayFields(
-    field,
+    item,
     currentDevice,
     lookupLabels,
     (before, after) => normalizeComparableValue(before) !== normalizeComparableValue(after),
@@ -1566,7 +1569,7 @@ function ValidationRequestReview({
 }) {
   const fieldRows = getFieldValidationReviewFields(item);
   const comparisonRows = buildFieldValidationComparisonFields(
-    item.payload_snapshot?.field_validation || {},
+    item,
     currentDeviceSnapshot || item.payload_snapshot?.before || item.payload_snapshot?.device || {},
     lookupLabels,
   );

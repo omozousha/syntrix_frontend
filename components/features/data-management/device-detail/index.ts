@@ -3,6 +3,8 @@ export { DeviceDetailForm } from "@/components/features/data-management/device-d
 export { DeviceGallerySection } from "@/components/features/data-management/device-detail/device-gallery-section";
 export { DeviceOperationalSummary } from "@/components/features/data-management/device-detail/device-operational-summary";
 export { DevicePortSummarySection } from "@/components/features/data-management/device-detail/device-port-summary-section";
+export { DeviceTechnicalSummarySection } from "@/components/features/data-management/device-detail/device-technical-summary-section";
+export { DeviceValidationHistorySection } from "@/components/features/data-management/device-detail/device-validation-history-section";
 export { GenericDeviceRawSection } from "@/components/features/data-management/device-detail/generic-device-raw-section";
 export {
   OdpCoreChainSummarySection,
@@ -12,7 +14,6 @@ export { OdpOperationsShell } from "@/components/features/data-management/device
 export { OdpPortSection } from "@/components/features/data-management/device-detail/odp-port-section";
 export {
   DeviceQrActionPanel,
-  OdpQrActionPanel,
 } from "@/components/features/data-management/device-detail/odp-qr-action-panel";
 export {
   OdpFieldValidationSummary,

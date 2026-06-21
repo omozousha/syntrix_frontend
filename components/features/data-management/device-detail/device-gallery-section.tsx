@@ -10,6 +10,7 @@ type AttachmentRef = {
 };
 
 type DeviceGallerySectionProps = {
+  deviceTypeLabel: string;
   attachments: AttachmentRef[];
   imagePreviewUrls: Record<string, string>;
   attachmentNames: Record<string, string>;
@@ -25,6 +26,7 @@ type DeviceGallerySectionProps = {
 };
 
 export function DeviceGallerySection({
+  deviceTypeLabel,
   attachments,
   imagePreviewUrls,
   attachmentNames,
@@ -49,7 +51,7 @@ export function DeviceGallerySection({
             <div>
               <h3 className="text-sm font-semibold">Galeri device & evidence validasi</h3>
               <p className="max-w-2xl text-xs leading-5 text-muted-foreground">
-                Foto resmi device dan evidence validasi terbaru ditampilkan bersama untuk memudahkan review ODP.
+                Foto resmi {deviceTypeLabel || "device"} dan evidence validasi approved ditampilkan bersama untuk memudahkan review.
               </p>
             </div>
           </div>

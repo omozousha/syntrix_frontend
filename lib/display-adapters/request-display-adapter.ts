@@ -17,10 +17,13 @@ type RequestTypeDisplay = {
 type RequestRecord = Record<string, unknown> & {
   region_id?: string | null;
   payload_snapshot?: {
+    field_validation_type?: string | null;
     resource_name?: string | null;
     resource_payload?: Record<string, unknown>;
     before?: Record<string, unknown>;
     device?: Record<string, unknown>;
+    general_validation?: Record<string, unknown>;
+    technical_validation?: Record<string, unknown>;
     field_validation?: Record<string, unknown>;
     field_inspection?: Record<string, unknown>;
     port_summary?: Record<string, unknown>;
@@ -31,6 +34,95 @@ type RequestRecord = Record<string, unknown> & {
     context?: Record<string, unknown>;
     device_ports?: Array<Record<string, unknown>>;
   } | null;
+};
+
+type ReviewField = { title: string; value: string };
+type FieldValidationRenderer = {
+  reviewFields: (context: FieldValidationContext) => ReviewField[];
+  comparisonPairs: (context: FieldValidationContext) => Array<[string, unknown, unknown]>;
+};
+type FieldValidationContext = {
+  item: RequestRecord;
+  field: Record<string, unknown>;
+  technical: Record<string, unknown>;
+  summary: Record<string, unknown>;
+  currentDevice: Record<string, unknown>;
+  lookupLabels: RequestLookupLabels;
+};
+
+const FIELD_VALIDATION_RENDERERS: Record<string, FieldValidationRenderer> = {
+  ODP: {
+    reviewFields: ({ field, summary }) => [
+      { title: "Tanggal Validasi", value: valueText(field.validation_date) },
+      { title: "ID Inventory", value: valueText(field.inventory_id) },
+      { title: "Nama ODP Lama", value: valueText(field.old_device_name) },
+      { title: "Nama ODP Baru", value: valueText(field.new_device_name) },
+      { title: "POP", value: getPopLabel({ fallback: field.pop_name, optional: true }) },
+      { title: "Longitude", value: valueText(field.longitude) },
+      { title: "Latitude", value: valueText(field.latitude) },
+      { title: "Tipe ODP", value: valueText(field.odp_type) },
+      { title: "Jenis Instalasi", value: valueText(field.installation_type) },
+      { title: "Splitter", value: valueText(field.splitter_ratio) },
+      { title: "Kapasitas", value: valueText(field.total_ports) },
+      { title: "Port Aktif", value: valueText(summary.used) },
+      { title: "Port Kosong", value: valueText(summary.empty ?? summary.idle) },
+      { title: "Port Rusak", value: valueText(summary.broken ?? summary.down) },
+    ],
+    comparisonPairs: ({ field, currentDevice, lookupLabels }) => {
+      const currentPop = currentDevice.pop_name || getPopDisplay(currentDevice.pop_id, lookupLabels);
+      return [
+        ["Nama ODP Lama", currentDevice.device_name || field.old_device_name, field.old_device_name],
+        ["Nama ODP Baru", null, field.new_device_name],
+        ["POP", currentPop, field.pop_name || getPopDisplay(field.pop_id, lookupLabels)],
+        ["Longitude", currentDevice.longitude, field.longitude],
+        ["Latitude", currentDevice.latitude, field.latitude],
+        ["Tipe ODP", currentDevice.odp_type, field.odp_type],
+        ["Jenis Instalasi", currentDevice.installation_type, field.installation_type],
+        ["Splitter", currentDevice.splitter_ratio, field.splitter_ratio],
+        ["Kapasitas", currentDevice.total_ports, field.total_ports],
+      ];
+    },
+  },
+  ODC: {
+    reviewFields: ({ field, technical }) => [
+      ...buildGenericDeviceReviewFields("ODC", field),
+      { title: "Splitter", value: valueText(technical.splitter_ratio ?? field.splitter_ratio) },
+      { title: "Total Port", value: valueText(technical.total_ports ?? field.total_ports) },
+      { title: "Used Port", value: valueText(technical.used_ports ?? field.used_ports) },
+      { title: "Kapasitas Core", value: valueText(technical.capacity_core ?? field.capacity_core) },
+      { title: "Core Terpakai", value: valueText(technical.used_core ?? field.used_core) },
+    ],
+    comparisonPairs: ({ field, technical, currentDevice, lookupLabels }) => [
+      ...buildGenericDeviceComparisonPairs("ODC", field, currentDevice, lookupLabels),
+      ["Splitter", currentDevice.splitter_ratio, technical.splitter_ratio ?? field.splitter_ratio],
+      ["Total Port", currentDevice.total_ports, technical.total_ports ?? field.total_ports],
+      ["Used Port", currentDevice.used_ports, technical.used_ports ?? field.used_ports],
+      ["Kapasitas Core", currentDevice.capacity_core, technical.capacity_core ?? field.capacity_core],
+      ["Core Terpakai", currentDevice.used_core, technical.used_core ?? field.used_core],
+    ],
+  },
+  CABLE: {
+    reviewFields: ({ field, technical }) => [
+      ...buildGenericDeviceReviewFields("Cable", field),
+      { title: "Kapasitas Core", value: valueText(technical.capacity_core ?? field.capacity_core) },
+      { title: "Core Terpakai", value: valueText(technical.used_core ?? field.used_core) },
+    ],
+    comparisonPairs: ({ field, technical, currentDevice, lookupLabels }) => [
+      ...buildGenericDeviceComparisonPairs("Cable", field, currentDevice, lookupLabels),
+      ["Kapasitas Core", currentDevice.capacity_core, technical.capacity_core ?? field.capacity_core],
+      ["Core Terpakai", currentDevice.used_core, technical.used_core ?? field.used_core],
+    ],
+  },
+  GENERIC: {
+    reviewFields: ({ item, field, technical }) => [
+      ...buildGenericDeviceReviewFields(getFieldValidationType(item), field),
+      ...buildTechnicalReviewFields(technical),
+    ],
+    comparisonPairs: ({ item, field, technical, currentDevice, lookupLabels }) => [
+      ...buildGenericDeviceComparisonPairs(getFieldValidationType(item), field, currentDevice, lookupLabels),
+      ...buildTechnicalComparisonPairs(technical, currentDevice),
+    ],
+  },
 };
 
 export function buildAssetRequestSummary(
@@ -123,53 +215,130 @@ export function buildCreateAssetReviewFields(
 }
 
 export function buildFieldValidationReviewFields(item: RequestRecord) {
-  const field = item.payload_snapshot?.field_validation || {};
-  const summary = item.payload_snapshot?.port_summary || {};
-  return [
-    { title: "Tanggal Validasi", value: valueText(field.validation_date) },
-    { title: "ID Inventory", value: valueText(field.inventory_id) },
-    { title: "Nama ODP Lama", value: valueText(field.old_device_name) },
-    { title: "Nama ODP Baru", value: valueText(field.new_device_name) },
-    { title: "POP", value: getPopLabel({ fallback: field.pop_name, optional: true }) },
-    { title: "Longitude", value: valueText(field.longitude) },
-    { title: "Latitude", value: valueText(field.latitude) },
-    { title: "Tipe ODP", value: valueText(field.odp_type) },
-    { title: "Jenis Instalasi", value: valueText(field.installation_type) },
-    { title: "Splitter", value: valueText(field.splitter_ratio) },
-    { title: "Kapasitas", value: valueText(field.total_ports) },
-    { title: "Port Aktif", value: valueText(summary.used) },
-    { title: "Port Kosong", value: valueText(summary.empty ?? summary.idle) },
-    { title: "Port Rusak", value: valueText(summary.broken ?? summary.down) },
-  ];
+  const context = buildFieldValidationContext(item, {}, {
+    regions: {},
+    pops: {},
+    projects: {},
+    users: {},
+  });
+  return getFieldValidationRenderer(item).reviewFields(context);
 }
 
 export function buildFieldValidationComparisonFields(
-  field: Record<string, unknown>,
+  item: RequestRecord,
   currentDevice: Record<string, unknown>,
   lookupLabels: RequestLookupLabels,
   isChanged: (before: unknown, after: unknown) => boolean,
 ) {
-  const currentPop = currentDevice.pop_name || getPopDisplay(currentDevice.pop_id, lookupLabels);
-  const pairs = [
-    ["Nama ODP Lama", currentDevice.device_name || field.old_device_name, field.old_device_name],
-    ["Nama ODP Baru", null, field.new_device_name],
-    ["POP", currentPop, field.pop_name || getPopDisplay(field.pop_id, lookupLabels)],
-    ["Longitude", currentDevice.longitude, field.longitude],
-    ["Latitude", currentDevice.latitude, field.latitude],
-    ["Tipe ODP", currentDevice.odp_type, field.odp_type],
-    ["Jenis Instalasi", currentDevice.installation_type, field.installation_type],
-    ["Splitter", currentDevice.splitter_ratio, field.splitter_ratio],
-    ["Kapasitas", currentDevice.total_ports, field.total_ports],
-  ];
-
-  return pairs
+  const context = buildFieldValidationContext(item, currentDevice, lookupLabels);
+  const isOdp = getFieldValidationType(item) === "ODP";
+  return getFieldValidationRenderer(item)
+    .comparisonPairs(context)
     .map(([label, before, after]) => ({
       label: String(label),
       before: valueText(before),
       after: valueText(after),
       changed: isChanged(before, after),
     }))
-    .filter((field) => field.label === "Nama ODP Lama" || field.label === "Nama ODP Baru" || field.before !== "-" || field.after !== "-");
+    .filter((field) => {
+      if (isOdp && (field.label === "Nama ODP Lama" || field.label === "Nama ODP Baru")) {
+        return true;
+      }
+      return field.before !== "-" || field.after !== "-";
+    });
+}
+
+function buildFieldValidationContext(
+  item: RequestRecord,
+  currentDevice: Record<string, unknown>,
+  lookupLabels: RequestLookupLabels,
+): FieldValidationContext {
+  const field = item.payload_snapshot?.field_validation || {};
+  const summary = item.payload_snapshot?.port_summary || {};
+  const technical = item.payload_snapshot?.technical_validation || {};
+  return {
+    item,
+    field,
+    technical,
+    summary,
+    currentDevice,
+    lookupLabels,
+  };
+}
+
+function getFieldValidationRenderer(item: RequestRecord) {
+  const type = getFieldValidationType(item);
+  return FIELD_VALIDATION_RENDERERS[type] || FIELD_VALIDATION_RENDERERS.GENERIC;
+}
+
+function getFieldValidationType(item: RequestRecord) {
+  const payload = item.payload_snapshot || {};
+  const field = payload.field_validation || {};
+  const device = payload.device || {};
+  const rawType = payload.field_validation_type || device.device_type_key || field.device_type_key;
+  const normalized = String(rawType || "").trim().toUpperCase();
+  if (normalized) return normalized;
+  return field.odp_type || field.installation_type || field.splitter_ratio ? "ODP" : "DEVICE";
+}
+
+function buildGenericDeviceReviewFields(deviceTypeLabel: string, field: Record<string, unknown>) {
+  return [
+    { title: "Device Type", value: valueText(deviceTypeLabel) },
+    { title: "Tanggal Validasi", value: valueText(field.validation_date) },
+    { title: "ID Inventory", value: valueText(field.inventory_id) },
+    { title: "Nama Device", value: valueText(field.new_device_name || field.old_device_name) },
+    { title: "Status Device", value: valueText(field.device_status) },
+    { title: "POP", value: getPopLabel({ fallback: field.pop_name, optional: true }) },
+    { title: "Longitude", value: valueText(field.longitude) },
+    { title: "Latitude", value: valueText(field.latitude) },
+  ];
+}
+
+function buildGenericDeviceComparisonPairs(
+  deviceTypeLabel: string,
+  field: Record<string, unknown>,
+  currentDevice: Record<string, unknown>,
+  lookupLabels: RequestLookupLabels,
+): Array<[string, unknown, unknown]> {
+  const currentPop = currentDevice.pop_name || getPopDisplay(currentDevice.pop_id, lookupLabels);
+  return [
+    ["Device Type", currentDevice.device_type_key, deviceTypeLabel],
+    ["Nama Device", currentDevice.device_name || field.old_device_name, field.new_device_name || field.old_device_name],
+    ["Status Device", currentDevice.status, field.device_status],
+    ["POP", currentPop, field.pop_name || getPopDisplay(field.pop_id, lookupLabels)],
+    ["Longitude", currentDevice.longitude, field.longitude],
+    ["Latitude", currentDevice.latitude, field.latitude],
+    ["Address", currentDevice.address, field.address],
+  ];
+}
+
+function buildTechnicalReviewFields(technical: Record<string, unknown>) {
+  return Object.entries(technical)
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([key, value]) => ({ title: getTechnicalFieldLabel(key), value: valueText(value) }));
+}
+
+function buildTechnicalComparisonPairs(
+  technical: Record<string, unknown>,
+  currentDevice: Record<string, unknown>,
+): Array<[string, unknown, unknown]> {
+  return Object.entries(technical)
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([key, value]) => [getTechnicalFieldLabel(key), currentDevice[key], value]);
+}
+
+function getTechnicalFieldLabel(key: string) {
+  const labels: Record<string, string> = {
+    splitter_ratio: "Splitter",
+    total_ports: "Total Port",
+    used_ports: "Used Port",
+    capacity_core: "Kapasitas Core",
+    used_core: "Core Terpakai",
+    management_ip: "Management IP",
+    serial_number: "Serial Number",
+    address: "Address",
+  };
+  return labels[key] || key.replace(/_/g, " ");
 }
 
 export function getRegionDisplay(value: unknown, lookupLabels: RequestLookupLabels) {

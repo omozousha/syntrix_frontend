@@ -87,6 +87,58 @@ type DeviceDetailFormProps = {
 
 const DEVICE_STATUS_OPTIONS = ["draft", "installed", "active", "inactive", "maintenance", "retired"];
 
+const DEVICE_TECHNICAL_COPY: Record<string, {
+  title: string;
+  totalPortsLabel: string;
+  usedPortsLabel: string;
+  splitterLabel: string;
+  corePlaceholder?: string;
+}> = {
+  ODP: {
+    title: "Technical ODP",
+    totalPortsLabel: "Kapasitas ODP",
+    usedPortsLabel: "Port Aktif",
+    splitterLabel: "Kapasitas Splitter",
+    corePlaceholder: "Auto from core chain",
+  },
+  ODC: {
+    title: "Technical ODC",
+    totalPortsLabel: "Total Port Cabinet",
+    usedPortsLabel: "Port Terpakai",
+    splitterLabel: "Splitter Profile",
+  },
+  OLT: {
+    title: "Technical OLT",
+    totalPortsLabel: "Total PON/Uplink Ports",
+    usedPortsLabel: "Used Ports",
+    splitterLabel: "Splitter Ratio",
+  },
+  ONT: {
+    title: "Technical ONT",
+    totalPortsLabel: "Total Service Ports",
+    usedPortsLabel: "Used Service Ports",
+    splitterLabel: "Splitter Ratio",
+  },
+  CABLE: {
+    title: "Technical Cable",
+    totalPortsLabel: "Endpoint Ports",
+    usedPortsLabel: "Used Endpoint Ports",
+    splitterLabel: "Splitter Ratio",
+  },
+  SWITCH: {
+    title: "Technical Switch",
+    totalPortsLabel: "Interface Count",
+    usedPortsLabel: "Used Interfaces",
+    splitterLabel: "Splitter Ratio",
+  },
+  ROUTER: {
+    title: "Technical Router",
+    totalPortsLabel: "Interface Count",
+    usedPortsLabel: "Used Interfaces",
+    splitterLabel: "Splitter Ratio",
+  },
+};
+
 export function DeviceDetailForm(props: DeviceDetailFormProps) {
   const selectedSplitterProfile =
     props.splitterProfiles.find((item) => item.ratio_label === props.form.splitter_ratio) || null;
@@ -105,7 +157,7 @@ export function DeviceDetailForm(props: DeviceDetailFormProps) {
     <div className="space-y-3">
       <DeviceIdentitySection {...props} />
       <DeviceRelationSection {...props} />
-      <DeviceCapacitySection
+      <DeviceTechnicalSection
         {...props}
         needsPortPresetSelector={needsPortPresetSelector}
         splitterPortPresetOptions={splitterPortPresetOptions}
@@ -291,7 +343,7 @@ function DeviceRelationSection({
   );
 }
 
-function DeviceCapacitySection({
+function DeviceTechnicalSection({
   form,
   onChange,
   editing,
@@ -303,10 +355,18 @@ function DeviceCapacitySection({
   needsPortPresetSelector: boolean;
   splitterPortPresetOptions: number[];
 }) {
+  const deviceTypeKey = valueOf(form.device_type_key, "DEVICE").toUpperCase();
+  const technicalCopy = DEVICE_TECHNICAL_COPY[deviceTypeKey] || {
+    title: `Technical ${deviceTypeKey}`,
+    totalPortsLabel: "Total Ports",
+    usedPortsLabel: "Used Ports",
+    splitterLabel: "Splitter Ratio",
+  };
+
   return (
     <Card>
       <CardHeader className="px-3 py-2">
-        <CardTitle className="text-sm">Kapasitas & Jaringan</CardTitle>
+        <CardTitle className="text-sm">{technicalCopy.title}</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
         {!isOdpDevice ? (
@@ -318,11 +378,11 @@ function DeviceCapacitySection({
             <Field label="Used Core" type="number" value={form.used_core} onChange={(value) => onChange((prev) => ({ ...prev, used_core: value }))} disabled={!editing} compact />
           </>
         ) : (
-          <DisplayField label="Capacity Core" value="Auto from core chain" compact />
+          <DisplayField label="Capacity Core" value={technicalCopy.corePlaceholder || "-"} compact />
         )}
         {needsPortPresetSelector ? (
           <ComboboxField
-            label={isOdpDevice ? "Kapasitas ODP" : "Total Ports"}
+            label={technicalCopy.totalPortsLabel}
             value={form.total_ports || "__none__"}
             onValueChange={(value) => onChange((prev) => ({ ...prev, total_ports: value === "__none__" ? "" : value }))}
             disabled={!editing}
@@ -336,12 +396,12 @@ function DeviceCapacitySection({
             ]}
           />
         ) : (
-          <Field label={isOdpDevice ? "Kapasitas ODP" : "Total Ports"} type="number" value={form.total_ports} onChange={(value) => onChange((prev) => ({ ...prev, total_ports: value }))} disabled={!editing} compact />
+          <Field label={technicalCopy.totalPortsLabel} type="number" value={form.total_ports} onChange={(value) => onChange((prev) => ({ ...prev, total_ports: value }))} disabled={!editing} compact />
         )}
-        <Field label={isOdpDevice ? "Port Aktif" : "Used Ports"} type="number" value={form.used_ports} onChange={(value) => onChange((prev) => ({ ...prev, used_ports: value }))} disabled={!editing} compact />
+        <Field label={technicalCopy.usedPortsLabel} type="number" value={form.used_ports} onChange={(value) => onChange((prev) => ({ ...prev, used_ports: value }))} disabled={!editing} compact />
         <SplitterRatioField
           value={form.splitter_ratio || "__none__"}
-          isOdpDevice={isOdpDevice}
+          label={technicalCopy.splitterLabel}
           editing={editing}
           splitterProfiles={splitterProfiles}
           onValueChange={(value) => {
@@ -395,13 +455,13 @@ function DeviceTagsSection({ form, onChange, editing }: Pick<DeviceDetailFormPro
 
 function SplitterRatioField({
   value,
-  isOdpDevice,
+  label,
   editing,
   splitterProfiles,
   onValueChange,
 }: {
   value: string;
-  isOdpDevice: boolean;
+  label: string;
   editing: boolean;
   splitterProfiles: SplitterProfileOption[];
   onValueChange: (value: string) => void;
@@ -409,7 +469,7 @@ function SplitterRatioField({
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1.5">
-        <Label>{isOdpDevice ? "Kapasitas Splitter" : "Splitter Ratio"}</Label>
+        <Label>{label}</Label>
         <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal text-blue-700 dark:text-blue-300">
           Auto-fill
         </Badge>

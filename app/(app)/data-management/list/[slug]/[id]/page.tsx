@@ -15,12 +15,13 @@ import {
   DeviceOperationalSummary,
   DevicePortSummarySection,
   DeviceQrActionPanel,
+  DeviceTechnicalSummarySection,
+  DeviceValidationHistorySection,
   GenericDeviceRawSection,
   OdpCoreChainSummarySection,
   OdpOperationsShell,
   OdpPortMetrics,
   OdpPortSection,
-  OdpQrActionPanel,
   OdpValidationHistorySection,
   ValidationReminderDialog,
 } from "@/components/features/data-management/device-detail";
@@ -313,10 +314,23 @@ type OdpValidationRecord = {
   findings?: string | null;
   adminregion_review_note?: string | null;
   superadmin_review_note?: string | null;
+  adminregion_actor_name?: string | null;
+  adminregion_actor_email?: string | null;
+  adminregion_actor_user_code?: string | null;
+  adminregion_action_at?: string | null;
+  superadmin_actor_name?: string | null;
+  superadmin_actor_email?: string | null;
+  superadmin_actor_user_code?: string | null;
+  superadmin_action_at?: string | null;
   payload?: {
     checklist?: Partial<Record<OdpValidationChecklistKey, boolean>>;
+    field_validation_type?: string | null;
+    general_validation?: Record<string, unknown>;
+    technical_validation?: Record<string, unknown>;
     field_inspection?: OdpFieldInspectionPayload;
     field_validation?: OdpFieldValidationPayload;
+    relation_summary?: Record<string, unknown>;
+    core_summary?: Record<string, unknown>;
     port_summary?: {
       total?: number;
       used?: number;
@@ -357,8 +371,13 @@ type ValidationRequestRecord = {
   superadmin_review_note?: string | null;
   checklist?: Partial<Record<OdpValidationChecklistKey, boolean>> | null;
   payload_snapshot?: {
+    field_validation_type?: string | null;
+    general_validation?: Record<string, unknown>;
+    technical_validation?: Record<string, unknown>;
     field_inspection?: OdpFieldInspectionPayload;
     field_validation?: OdpFieldValidationPayload;
+    relation_summary?: Record<string, unknown>;
+    core_summary?: Record<string, unknown>;
     port_summary?: {
       total?: number;
       used?: number;
@@ -609,7 +628,7 @@ export default function DataManagementDetailPage() {
   const galleryImageAttachments = useMemo<AttachmentRef[]>(
     () => mergeAttachmentRefs([
       ...infoImageAttachments,
-      ...odpValidations.flatMap(extractValidationEvidenceAttachments),
+      ...odpValidations.filter(isFinalValidationRecord).flatMap(extractValidationEvidenceAttachments),
     ]),
     [infoImageAttachments, odpValidations],
   );
@@ -1022,7 +1041,7 @@ export default function DataManagementDetailPage() {
   }, [isOdpDevice, item, token]);
 
   useEffect(() => {
-    if (!isOdpDevice || !item || !token) {
+    if (category?.resource !== "devices" || !item || !token) {
       setOdpValidations([]);
       setLoadingOdpValidations(false);
       return;
@@ -1057,8 +1076,13 @@ export default function DataManagementDetailPage() {
               superadmin_review_note: request.superadmin_review_note || null,
               payload: {
                 checklist: request.checklist || {},
+                field_validation_type: request.payload_snapshot?.field_validation_type || null,
+                general_validation: request.payload_snapshot?.general_validation || {},
+                technical_validation: request.payload_snapshot?.technical_validation || {},
                 field_inspection: request.payload_snapshot?.field_inspection || {},
                 field_validation: request.payload_snapshot?.field_validation || {},
+                relation_summary: request.payload_snapshot?.relation_summary || {},
+                core_summary: request.payload_snapshot?.core_summary || {},
                 port_summary: request.payload_snapshot?.port_summary || {},
                 device_ports: request.payload_snapshot?.device_ports || [],
               },
@@ -1071,6 +1095,14 @@ export default function DataManagementDetailPage() {
               validator_name: request.submitted_by_name || null,
               validator_email: request.submitted_by_email || null,
               validator_user_code: request.submitted_by_user_code || null,
+              adminregion_actor_name: request.adminregion_actor_name || null,
+              adminregion_actor_email: request.adminregion_actor_email || null,
+              adminregion_actor_user_code: request.adminregion_actor_user_code || null,
+              adminregion_action_at: request.adminregion_action_at || null,
+              superadmin_actor_name: request.superadmin_actor_name || null,
+              superadmin_actor_email: request.superadmin_actor_email || null,
+              superadmin_actor_user_code: request.superadmin_actor_user_code || null,
+              superadmin_action_at: request.superadmin_action_at || null,
               created_at: request.created_at || null,
               updated_at: request.updated_at || null,
             }));
@@ -1087,7 +1119,7 @@ export default function DataManagementDetailPage() {
         if (cancelled) return;
         setOdpValidations(legacyResult.data || []);
       } catch (err) {
-        if (!cancelled) setError((err as Error).message || "Gagal memuat histori validasi ODP.");
+        if (!cancelled) setError((err as Error).message || "Gagal memuat histori validasi device.");
       } finally {
         if (!cancelled) setLoadingOdpValidations(false);
       }
@@ -1097,7 +1129,7 @@ export default function DataManagementDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [isOdpDevice, item, token]);
+  }, [category?.resource, item, token]);
 
   useEffect(() => {
     if (!isOdpDevice || !item || !token) {
@@ -1754,11 +1786,11 @@ export default function DataManagementDetailPage() {
                   odpTypes={odpTypes}
                   installationTypes={installationTypes}
                   tenants={tenants}
-      popOptions={popOptions}
-      projectOptions={projectOptions}
-      latestFieldValidation={latestApprovedOdpValidation?.payload?.field_validation || null}
-      effectiveValidationStatus={detailValidationStatus}
-    />
+                  popOptions={popOptions}
+                  projectOptions={projectOptions}
+                  latestFieldValidation={latestApprovedOdpValidation?.payload?.field_validation || null}
+                  effectiveValidationStatus={detailValidationStatus}
+                />
               ) : null}
 
               {category.resource === "projects" ? (
@@ -1770,29 +1802,45 @@ export default function DataManagementDetailPage() {
               ) : null}
 
               {category.resource === "devices" && !isOdpDevice ? (
-                <div className="grid grid-cols-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
-                  <div className="lg:max-w-[280px]">
-                    <DeviceQrActionPanel
-                      qrDataUrl={qrDataUrl}
-                      logoDataUrl={qrLabelLogoDataUrl}
-                      logoReady={qrLabelReady}
-                      deviceTypeLabel={valueOf(item.device_type_key, "Device")}
-                      showReminder={false}
-                      reminderDisabled
-                      onOpenReminder={() => undefined}
-                      onDownloadQrLabel={handleDownloadQrLabel}
-                    />
-                  </div>
-                  <DevicePortSummarySection
-                    deviceTypeLabel={valueOf(item.device_type_key, "Device")}
-                    ports={odpPorts}
-                    connections={devicePortConnections}
-                    coreSummary={deviceTopologySummary?.core_management?.summary || null}
-                    fiberSummary={deviceTopologySummary?.fiber_cores?.summary || null}
-                    readiness={deviceTopologySummary?.readiness || null}
+                <div className="space-y-3">
+                  <DeviceTechnicalSummarySection
+                    item={item}
+                    topologySummary={deviceTopologySummary}
                     loading={loadingOdpPorts}
                   />
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
+                    <div className="lg:max-w-[280px]">
+                      <DeviceQrActionPanel
+                        qrDataUrl={qrDataUrl}
+                        logoDataUrl={qrLabelLogoDataUrl}
+                        logoReady={qrLabelReady}
+                        deviceTypeLabel={valueOf(item.device_type_key, "Device")}
+                        showReminder={false}
+                        reminderDisabled
+                        onOpenReminder={() => undefined}
+                        onDownloadQrLabel={handleDownloadQrLabel}
+                      />
+                    </div>
+                    <DevicePortSummarySection
+                      deviceTypeLabel={valueOf(item.device_type_key, "Device")}
+                      ports={odpPorts}
+                      connections={devicePortConnections}
+                      coreSummary={deviceTopologySummary?.core_management?.summary || null}
+                      fiberSummary={deviceTopologySummary?.fiber_cores?.summary || null}
+                      readiness={deviceTopologySummary?.readiness || null}
+                      loading={loadingOdpPorts}
+                    />
+                  </div>
                 </div>
+              ) : null}
+
+              {category.resource === "devices" && !isOdpDevice ? (
+                <DeviceValidationHistorySection
+                  deviceTypeLabel={valueOf(item.device_type_key, "Device")}
+                  records={odpValidations}
+                  loading={loadingOdpValidations}
+                  onDownloadEvidence={(record) => void handleDownloadValidationEvidence(record as OdpValidationRecord)}
+                />
               ) : null}
 
               {category.resource !== "pops" && category.resource !== "devices" && category.resource !== "customers" && category.resource !== "projects" && category.resource !== "routes" ? (
@@ -1813,6 +1861,7 @@ export default function DataManagementDetailPage() {
               ) : null}
 
               <DeviceGallerySection
+                deviceTypeLabel={category.resource === "devices" ? valueOf(item.device_type_key, "device") : category.label}
                 attachments={galleryImageAttachments}
                 imagePreviewUrls={imagePreviewUrls}
                 attachmentNames={attachmentNames}
@@ -2265,7 +2314,7 @@ function OdpOperationsPanel({
           <OdpTopologyReadinessSummary summary={topologySummary} loading={loadingPorts} />
 
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[260px_1fr]">
-            <OdpQrActionPanel
+            <DeviceQrActionPanel
               qrDataUrl={qrDataUrl}
               logoDataUrl={qrLabelLogoDataUrl}
               logoReady={qrLabelReady}
