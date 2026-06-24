@@ -41,7 +41,7 @@ import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-utils";
 import { resolveAttachment } from "@/lib/attachment-utils";
-import { getCategoryBySlug } from "@/lib/data-management-config";
+import { deviceTypeKeyToSlug, getCategoryBySlug } from "@/lib/data-management-config";
 import { buildCustomerRelationDisplay, buildDeviceQrRelationDisplay } from "@/lib/display-adapters/device-display-adapter";
 import { useReferenceData } from "@/hooks/use-reference-data";
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
@@ -193,10 +193,63 @@ type ProjectLookupOption = {
   region_id?: string | null;
   pop_id?: string | null;
 };
+type ProjectAssetItem = GenericItem & {
+  device_id?: string | null;
+  device_name?: string | null;
+  device_type_key?: string | null;
+  status?: string | null;
+  validation_status?: string | null;
+  region_id?: string | null;
+  pop_id?: string | null;
+  project_id?: string | null;
+  capacity_core?: number | string | null;
+  used_core?: number | string | null;
+  total_ports?: number | string | null;
+  used_ports?: number | string | null;
+};
+type ProjectRouteItem = GenericItem & {
+  route_id?: string | null;
+  route_code?: string | null;
+  route_name?: string | null;
+  route_type?: string | null;
+  status?: string | null;
+  region_id?: string | null;
+  pop_id?: string | null;
+  project_id?: string | null;
+};
+type ProjectAsBuiltDocumentItem = GenericItem & {
+  document_id?: string | null;
+  title?: string | null;
+  revision_code?: string | null;
+  status?: string | null;
+  primary_format?: string | null;
+  generated_at?: string | null;
+  project_id?: string | null;
+  route_id?: string | null;
+  attachment_id?: string | null;
+};
+type ProjectCoreRelationItem = GenericItem & {
+  core_id?: string | null;
+  core_code?: string | null;
+  cable_device_id?: string | null;
+  route_id?: string | null;
+  project_id?: string | null;
+  region_id?: string | null;
+  pop_id?: string | null;
+  from_device_id?: string | null;
+  to_device_id?: string | null;
+  core_no_start?: number | string | null;
+  core_no_end?: number | string | null;
+  core_count?: number | string | null;
+  used_count?: number | string | null;
+  reserved_count?: number | string | null;
+  status?: string | null;
+};
 type SplitterProfileOption = {
   id: string;
   ratio_label: string;
   output_port_count?: number | null;
+  allowed_device_type_keys?: string[] | null;
   is_active?: boolean | null;
 };
 type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
@@ -453,6 +506,12 @@ export default function DataManagementDetailPage() {
   const [attachmentNames, setAttachmentNames] = useState<Record<string, string>>({});
   const [relationLabels, setRelationLabels] = useState<RelationLabels>({});
   const [relationLabelsLoading, setRelationLabelsLoading] = useState(false);
+  const [projectAssets, setProjectAssets] = useState<ProjectAssetItem[]>([]);
+  const [projectRoutes, setProjectRoutes] = useState<ProjectRouteItem[]>([]);
+  const [projectAsBuiltDocuments, setProjectAsBuiltDocuments] = useState<ProjectAsBuiltDocumentItem[]>([]);
+  const [projectCoreRelations, setProjectCoreRelations] = useState<ProjectCoreRelationItem[]>([]);
+  const [projectRelationDevices, setProjectRelationDevices] = useState<ProjectAssetItem[]>([]);
+  const [loadingProjectAssets, setLoadingProjectAssets] = useState(false);
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
@@ -607,6 +666,76 @@ export default function DataManagementDetailPage() {
       cancelled = true;
     };
   }, [category, id, token]);
+
+  useEffect(() => {
+    if (!token || category?.resource !== "projects" || !item?.id) {
+      setProjectAssets([]);
+      setProjectRoutes([]);
+      setProjectAsBuiltDocuments([]);
+      setProjectCoreRelations([]);
+      setProjectRelationDevices([]);
+      setLoadingProjectAssets(false);
+      return;
+    }
+
+    const projectId = item.id;
+    const regionId = valueOf(item.region_id);
+    const popId = valueOf(item.pop_id);
+    const deviceParams = new URLSearchParams({ page: "1", limit: "500", project_id: projectId });
+    const routeParams = new URLSearchParams({ page: "1", limit: "100", project_id: projectId });
+    const documentParams = new URLSearchParams({ page: "1", limit: "100", project_id: projectId });
+    const coreRelationParams = new URLSearchParams({ page: "1", limit: "200", project_id: projectId });
+    const relationDeviceParams = new URLSearchParams({ page: "1", limit: "500" });
+    if (regionId) {
+      deviceParams.set("region_id", regionId);
+      routeParams.set("region_id", regionId);
+      documentParams.set("region_id", regionId);
+      coreRelationParams.set("region_id", regionId);
+      relationDeviceParams.set("region_id", regionId);
+    }
+    if (popId) {
+      deviceParams.set("pop_id", popId);
+      routeParams.set("pop_id", popId);
+      coreRelationParams.set("pop_id", popId);
+      relationDeviceParams.set("pop_id", popId);
+    }
+    let cancelled = false;
+
+    async function loadProjectAssets() {
+      setLoadingProjectAssets(true);
+      try {
+        const [assetResult, routeResult, documentResult, coreRelationResult, relationDeviceResult] = await Promise.all([
+          apiFetch<PaginatedResponse<ProjectAssetItem>>(`/devices?${deviceParams.toString()}`, { token }),
+          apiFetch<PaginatedResponse<ProjectRouteItem>>(`/routes?${routeParams.toString()}`, { token }),
+          apiFetch<PaginatedResponse<ProjectAsBuiltDocumentItem>>(`/asBuiltDocuments?${documentParams.toString()}`, { token }),
+          apiFetch<PaginatedResponse<ProjectCoreRelationItem>>(`/coreManagement?${coreRelationParams.toString()}`, { token }),
+          apiFetch<PaginatedResponse<ProjectAssetItem>>(`/devices?${relationDeviceParams.toString()}`, { token }),
+        ]);
+        if (!cancelled) {
+          setProjectAssets(assetResult.data || []);
+          setProjectRoutes(routeResult.data || []);
+          setProjectAsBuiltDocuments(documentResult.data || []);
+          setProjectCoreRelations(coreRelationResult.data || []);
+          setProjectRelationDevices(relationDeviceResult.data || []);
+        }
+      } catch {
+        if (!cancelled) {
+          setProjectAssets([]);
+          setProjectRoutes([]);
+          setProjectAsBuiltDocuments([]);
+          setProjectCoreRelations([]);
+          setProjectRelationDevices([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingProjectAssets(false);
+      }
+    }
+
+    void loadProjectAssets();
+    return () => {
+      cancelled = true;
+    };
+  }, [category?.resource, item?.id, item?.pop_id, item?.region_id, token]);
 
   const title = useMemo(() => {
     if (!item || !category) return "Detail";
@@ -1788,13 +1917,24 @@ export default function DataManagementDetailPage() {
                   tenants={tenants}
                   popOptions={popOptions}
                   projectOptions={projectOptions}
+                  projectHref={buildProjectDetailHref(valueOf(item.project_id), valueOf(item.region_id))}
                   latestFieldValidation={latestApprovedOdpValidation?.payload?.field_validation || null}
                   effectiveValidationStatus={detailValidationStatus}
                 />
               ) : null}
 
               {category.resource === "projects" ? (
-                <ProjectDetailForm item={item} relationLabels={relationLabels} relationLoading={relationLabelsLoading} />
+                <ProjectDetailForm
+                  item={item}
+                  relationLabels={relationLabels}
+                  relationLoading={relationLabelsLoading}
+                  projectAssets={projectAssets}
+                  projectRoutes={projectRoutes}
+                  projectAsBuiltDocuments={projectAsBuiltDocuments}
+                  projectCoreRelations={projectCoreRelations}
+                  projectRelationDevices={projectRelationDevices}
+                  loadingProjectAssets={loadingProjectAssets}
+                />
               ) : null}
 
               {category.resource === "routes" ? (
@@ -2571,33 +2711,334 @@ function ProjectDetailForm({
   item,
   relationLabels,
   relationLoading = false,
+  projectAssets,
+  projectRoutes,
+  projectAsBuiltDocuments,
+  projectCoreRelations,
+  projectRelationDevices,
+  loadingProjectAssets = false,
 }: {
   item: GenericItem;
   relationLabels: RelationLabels;
   relationLoading?: boolean;
+  projectAssets: ProjectAssetItem[];
+  projectRoutes: ProjectRouteItem[];
+  projectAsBuiltDocuments: ProjectAsBuiltDocumentItem[];
+  projectCoreRelations: ProjectCoreRelationItem[];
+  projectRelationDevices: ProjectAssetItem[];
+  loadingProjectAssets?: boolean;
 }) {
   const attachmentCount = countAttachmentRefs(item.image_attachments, item.image_attachment_id);
   return (
-    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-      <DisplayField label="Project Name" value={valueOf(item.project_name, "-")} compact />
-      <DisplayField label="Project ID" value={valueOf(item.project_id, "-")} compact />
-      <DisplayField label="Project Code" value={valueOf(item.project_code, "-")} compact />
-      <DisplayField label="Region" value={relationLabels.region || "-"} loading={relationLoading} compact />
-      <DisplayField label="POP" value={formatPopDisplay(relationLabels.pop, relationLabels.popCode)} loading={relationLoading} compact />
-      <DisplayField label="Status" value={valueOf(item.status, "-")} compact />
-      <DisplayField className="md:col-span-2 xl:col-span-3" label="Description" value={valueOf(item.description, "-")} compact />
-      <DisplayField label="BAST Number" value={valueOf(item.bast_number, "-")} compact />
-      <DisplayField label="SPK Number" value={valueOf(item.spk_number, "-")} compact />
-      <DisplayField label="Vendor" value={valueOf(item.vendor_name, "-")} compact />
-      <DisplayField label="Start Date" value={formatDate(valueOf(item.start_date))} compact />
-      <DisplayField label="End Date" value={formatDate(valueOf(item.end_date))} compact />
-      <DisplayField label="Budget" value={valueOf(item.budget_value, "-")} compact />
-      <DisplayField label="Tags" value={arrayToCsv(item.tags) || "-"} compact />
-      <DisplayField label="Attachments" value={attachmentCount ? `${attachmentCount} file` : "-"} compact />
-      <DisplayField label="Created" value={formatDateTime(valueOf(item.created_at))} compact />
-      <DisplayField label="Updated" value={formatDateTime(valueOf(item.updated_at))} compact />
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+        <DisplayField label="Project Name" value={valueOf(item.project_name, "-")} compact />
+        <DisplayField label="Project ID" value={valueOf(item.project_id, "-")} compact />
+        <DisplayField label="Project Code" value={valueOf(item.project_code, "-")} compact />
+        <DisplayField label="Region" value={relationLabels.region || "-"} loading={relationLoading} compact />
+        <DisplayField label="POP" value={formatPopDisplay(relationLabels.pop, relationLabels.popCode)} loading={relationLoading} compact />
+        <DisplayField label="Status" value={valueOf(item.status, "-")} compact />
+        <DisplayField className="md:col-span-2 xl:col-span-3" label="Description" value={valueOf(item.description, "-")} compact />
+        <DisplayField label="BAST Number" value={valueOf(item.bast_number, "-")} compact />
+        <DisplayField label="SPK Number" value={valueOf(item.spk_number, "-")} compact />
+        <DisplayField label="Vendor" value={valueOf(item.vendor_name, "-")} compact />
+        <DisplayField label="Start Date" value={formatDate(valueOf(item.start_date))} compact />
+        <DisplayField label="End Date" value={formatDate(valueOf(item.end_date))} compact />
+        <DisplayField label="Budget" value={valueOf(item.budget_value, "-")} compact />
+        <DisplayField label="Tags" value={arrayToCsv(item.tags) || "-"} compact />
+        <DisplayField label="Attachments" value={attachmentCount ? `${attachmentCount} file` : "-"} compact />
+        <DisplayField label="Created" value={formatDateTime(valueOf(item.created_at))} compact />
+        <DisplayField label="Updated" value={formatDateTime(valueOf(item.updated_at))} compact />
+      </div>
+      <ProjectAssetRollupSection
+        projectId={item.id}
+        assets={projectAssets}
+        coreRelations={projectCoreRelations}
+        relationDevices={projectRelationDevices}
+        loading={loadingProjectAssets}
+      />
+      <ProjectEvidenceHubSection
+        projectId={item.id}
+        regionId={valueOf(item.region_id)}
+        routes={projectRoutes}
+        asBuiltDocuments={projectAsBuiltDocuments}
+        attachmentCount={attachmentCount}
+        loading={loadingProjectAssets}
+      />
     </div>
   );
+}
+
+function ProjectEvidenceHubSection({
+  projectId,
+  regionId,
+  routes,
+  asBuiltDocuments,
+  attachmentCount,
+  loading,
+}: {
+  projectId: string;
+  regionId: string;
+  routes: ProjectRouteItem[];
+  asBuiltDocuments: ProjectAsBuiltDocumentItem[];
+  attachmentCount: number;
+  loading: boolean;
+}) {
+  const projectQuery = new URLSearchParams();
+  projectQuery.set("project_id", projectId);
+  if (regionId) projectQuery.set("region_id", regionId);
+  const query = projectQuery.toString();
+  const asBuiltWorkspaceHref = `/data-management/as-built${query ? `?${query}` : ""}`;
+  const asBuiltDocumentsHref = `/data-management/as-built-documents${query ? `?${query}` : ""}`;
+
+  return (
+    <section className="space-y-3 rounded-md border bg-muted/20 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Project Evidence Hub</h3>
+          <p className="text-xs text-muted-foreground">Route, as-built document, dan evidence project dari resource existing.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href={asBuiltWorkspaceHref}>Open As-Built</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href={asBuiltDocumentsHref}>Documents</Link>
+          </Button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="grid gap-2 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-16 w-full" />
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-2 md:grid-cols-3">
+            <ProjectAssetMetric label="Routes" value={`${routes.length}`} />
+            <ProjectAssetMetric label="As-Built Docs" value={`${asBuiltDocuments.length}`} />
+            <ProjectAssetMetric label="Evidence Files" value={attachmentCount ? `${attachmentCount}` : "-"} />
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <ProjectLinkedList
+              title="Project Routes"
+              emptyText="Belum ada route yang terhubung ke project ini."
+              items={routes.slice(0, 5).map((route) => ({
+                id: route.id,
+                href: `/data-management/list/route/${route.id}${regionId ? `?region_id=${encodeURIComponent(regionId)}` : ""}`,
+                title: valueOf(route.route_name, valueOf(route.route_id, route.id)),
+                subtitle: [valueOf(route.route_code), valueOf(route.route_type), valueOf(route.status)].filter(Boolean).join(" | "),
+              }))}
+            />
+            <ProjectLinkedList
+              title="As-Built Documents"
+              emptyText="Belum ada as-built document yang terhubung ke project ini."
+              items={asBuiltDocuments.slice(0, 5).map((doc) => ({
+                id: doc.id,
+                href: asBuiltDocumentsHref,
+                title: valueOf(doc.title, valueOf(doc.document_id, doc.id)),
+                subtitle: [valueOf(doc.revision_code), valueOf(doc.primary_format), valueOf(doc.status)].filter(Boolean).join(" | "),
+              }))}
+            />
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function ProjectLinkedList({
+  title,
+  emptyText,
+  items,
+}: {
+  title: string;
+  emptyText: string;
+  items: Array<{ id: string; href: string; title: string; subtitle: string }>;
+}) {
+  return (
+    <div className="rounded-md border bg-background">
+      <div className="border-b px-3 py-2 text-sm font-semibold text-foreground">{title}</div>
+      {items.length ? (
+        <div className="divide-y">
+          {items.map((item) => (
+            <div key={item.id} className="px-3 py-2 text-sm">
+              <Link href={item.href} className="font-medium text-foreground hover:underline">
+                {item.title}
+              </Link>
+              <p className="text-xs text-muted-foreground">{item.subtitle || "-"}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="px-3 py-2 text-sm text-muted-foreground">{emptyText}</p>
+      )}
+    </div>
+  );
+}
+
+function ProjectAssetRollupSection({
+  projectId,
+  assets,
+  coreRelations,
+  relationDevices,
+  loading,
+}: {
+  projectId: string;
+  assets: ProjectAssetItem[];
+  coreRelations: ProjectCoreRelationItem[];
+  relationDevices: ProjectAssetItem[];
+  loading: boolean;
+}) {
+  const passiveAssets = assets.filter((asset) => {
+    const type = valueOf(asset.device_type_key).toUpperCase();
+    return ["OTB", "ODC", "ODP", "CABLE", "JC", "HH", "MH"].includes(type);
+  });
+  const assetsForSummary = passiveAssets;
+  const typeCounts = assetsForSummary.reduce<Record<string, number>>((acc, asset) => {
+    const type = valueOf(asset.device_type_key, "UNKNOWN").toUpperCase();
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
+  const validationCounts = assetsForSummary.reduce<Record<string, number>>((acc, asset) => {
+    const status = valueOf(asset.validation_status, "unvalidated").toLowerCase();
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+  const cableAssets = assetsForSummary.filter((asset) => valueOf(asset.device_type_key).toUpperCase() === "CABLE");
+  const totalCableCore = cableAssets.reduce((sum, asset) => sum + numberValue(asset.capacity_core), 0);
+  const usedCableCore = cableAssets.reduce((sum, asset) => sum + numberValue(asset.used_core), 0);
+  const assetById = new Map([...relationDevices, ...assets].map((asset) => [asset.id, asset]));
+  const relationStatusCounts = coreRelations.reduce<Record<string, number>>((acc, relation) => {
+    const status = valueOf(relation.status, "unknown").toLowerCase();
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+  const relationsWithCable = coreRelations.filter((relation) => relation.cable_device_id).length;
+  const relationsWithRoute = coreRelations.filter((relation) => relation.route_id).length;
+  const crossProjectWarnings = coreRelations
+    .map((relation) => {
+      const relatedAssets = [relation.from_device_id, relation.to_device_id, relation.cable_device_id]
+        .map((assetId) => (assetId ? assetById.get(assetId) || null : null))
+        .filter((asset): asset is ProjectAssetItem => Boolean(asset));
+      const mismatchedAssets = relatedAssets.filter((asset) => {
+        const assetProjectId = valueOf(asset.project_id);
+        return assetProjectId && assetProjectId !== projectId;
+      });
+      return mismatchedAssets.length ? { relation, mismatchedAssets } : null;
+    })
+    .filter((item): item is { relation: ProjectCoreRelationItem; mismatchedAssets: ProjectAssetItem[] } => Boolean(item));
+  const visibleAssets = assetsForSummary.slice(0, 8);
+
+  return (
+    <section className="space-y-3 rounded-md border bg-muted/20 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Project Assets</h3>
+          <p className="text-xs text-muted-foreground">Aset pasif yang terhubung melalui project_id.</p>
+        </div>
+        {loading ? <Skeleton className="h-6 w-20" /> : <Badge variant="outline">{assetsForSummary.length} assets</Badge>}
+      </div>
+
+      {loading ? (
+        <div className="grid gap-2 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-16 w-full" />
+          ))}
+        </div>
+      ) : assetsForSummary.length ? (
+        <>
+          <div className="grid gap-2 md:grid-cols-4">
+            <ProjectAssetMetric label="By Type" value={formatCounts(typeCounts)} />
+            <ProjectAssetMetric label="Validation" value={formatCounts(validationCounts)} />
+            <ProjectAssetMetric label="Cable Core" value={totalCableCore ? `${usedCableCore}/${totalCableCore} used` : "-"} />
+            <ProjectAssetMetric label="Passive Assets" value={`${passiveAssets.length}/${assets.length}`} />
+            <ProjectAssetMetric label="Topology Relations" value={`${coreRelations.length}`} />
+            <ProjectAssetMetric label="Relation Status" value={formatCounts(relationStatusCounts)} />
+            <ProjectAssetMetric label="Route/Cable Linked" value={`${relationsWithRoute}/${relationsWithCable}`} />
+            <ProjectAssetMetric label="Project Warnings" value={`${crossProjectWarnings.length}`} />
+          </div>
+          <div className="rounded-md border bg-background p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Topology Relation Consistency</p>
+                <p className="text-xs text-muted-foreground">Cross-project relation bersifat warning-first, bukan hard-block.</p>
+              </div>
+              <Badge variant={crossProjectWarnings.length ? "destructive" : "outline"}>
+                {crossProjectWarnings.length ? `${crossProjectWarnings.length} warning` : "clear"}
+              </Badge>
+            </div>
+            {crossProjectWarnings.length ? (
+              <div className="mt-3 divide-y rounded-md border">
+                {crossProjectWarnings.slice(0, 5).map(({ relation, mismatchedAssets }) => (
+                  <div key={relation.id} className="px-3 py-2 text-sm">
+                    <p className="font-medium text-foreground">{valueOf(relation.core_code, valueOf(relation.core_id, relation.id))}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Asset berbeda project: {mismatchedAssets.map(formatProjectAssetName).join(", ")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">Tidak ada cross-project relation yang terdeteksi dari data project ini.</p>
+            )}
+          </div>
+          <div className="divide-y rounded-md border bg-background">
+            {visibleAssets.map((asset) => {
+              const typeKey = valueOf(asset.device_type_key, "device");
+              const slug = deviceTypeKeyToSlug(typeKey);
+              const regionQuery = valueOf(asset.region_id) ? `?region_id=${encodeURIComponent(valueOf(asset.region_id))}` : "";
+              const href = `/data-management/list/${slug}/${asset.id}${regionQuery}`;
+              const topologyHref = `/data-management/topology?from_device_id=${encodeURIComponent(asset.id)}${valueOf(asset.region_id) ? `&region_id=${encodeURIComponent(valueOf(asset.region_id))}` : ""}`;
+              const assetName = valueOf(asset.device_name, valueOf(asset.device_id, asset.id));
+
+              return (
+                <div key={asset.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <Link href={href} className="font-medium text-foreground hover:underline">
+                      {assetName}
+                    </Link>
+                    <p className="truncate text-xs text-muted-foreground">{valueOf(asset.device_id, "-")}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">{typeKey.toUpperCase()}</Badge>
+                    <Badge variant="outline">{valueOf(asset.status, "-")}</Badge>
+                    <Badge variant="outline">{valueOf(asset.validation_status, "unvalidated")}</Badge>
+                    <Button asChild size="sm" variant="ghost" className="h-7 px-2">
+                      <Link href={topologyHref}>Trace</Link>
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {assetsForSummary.length > visibleAssets.length ? (
+            <p className="text-xs text-muted-foreground">Menampilkan {visibleAssets.length} dari {assetsForSummary.length} aset terkait.</p>
+          ) : null}
+        </>
+      ) : (
+        <div className="rounded-md border border-dashed bg-background p-3 text-sm text-muted-foreground">
+          Belum ada OTB, ODC, ODP, JC, HH/MH, atau kabel yang terhubung ke project ini. Isi Project pada form asset agar material, BAST/SPK, dan evidence project bisa dilacak.
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ProjectAssetMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border bg-background p-3">
+      <p className="text-xs uppercase text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-foreground">{value || "-"}</p>
+    </div>
+  );
+}
+
+function formatProjectAssetName(asset: ProjectAssetItem) {
+  return valueOf(asset.device_name, valueOf(asset.device_id, asset.id));
 }
 
 function RouteDetailForm({
@@ -3012,6 +3453,27 @@ function valueOf(value: unknown, fallback = "") {
   if (value == null) return fallback;
   const text = String(value);
   return text === "null" || text === "undefined" ? fallback : text;
+}
+
+function numberValue(value: unknown) {
+  if (value == null || value === "") return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatCounts(counts: Record<string, number>) {
+  const entries = Object.entries(counts).filter(([, count]) => count > 0);
+  if (!entries.length) return "-";
+  return entries
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, count]) => `${key}: ${count}`)
+    .join(", ");
+}
+
+function buildProjectDetailHref(projectId: string, regionId = "") {
+  if (!projectId) return "";
+  const query = regionId ? `?region_id=${encodeURIComponent(regionId)}` : "";
+  return `/data-management/list/projects/${projectId}${query}`;
 }
 
 function getRelationRecord(value: unknown): RelationRecord | null {

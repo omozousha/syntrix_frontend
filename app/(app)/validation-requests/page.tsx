@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Clock, Inbox, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowRight, Clock, Inbox, RefreshCw, ShieldCheck } from "lucide-react";
 import { ApprovalActions } from "@/components/features/requests/approval-actions";
 import { EvidenceChecklistPreview } from "@/components/features/requests/evidence-checklist-preview";
 import { RequestActorLine } from "@/components/features/requests/request-actor-line";
@@ -1496,6 +1496,13 @@ function TopologyConnectionRequestReview({
   const diffFields = getTopologyConnectionDiffFields(item, lookupLabels);
   const isCreate = requestType.operationLabel === "Create";
   const title = isCreate ? "Connection Baru" : `${requestType.operationLabel} Connection`;
+
+  const fromDeviceType = String(context.upstream_device_type_key || "").trim().toUpperCase();
+  const toDeviceType = String(context.odp_device_type_key || "").trim().toUpperCase();
+  const hasRelationContext = fromDeviceType || toDeviceType;
+  const fromDirection = String(context.upstream_port_direction || "").trim().toLowerCase();
+  const toDirection = String(context.odp_port_direction || "").trim().toLowerCase();
+
   return (
     <div className="space-y-2 rounded-md border border-cyan-200 bg-cyan-50/40 p-2.5">
       <ReviewSectionHeader
@@ -1503,14 +1510,41 @@ function TopologyConnectionRequestReview({
         title={title}
         description="Review endpoint, route, cable, dan core range sebelum relasi topology diterapkan ke inventory final."
       />
+
+      {/* Device Type Relation Badge */}
+      {hasRelationContext ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-cyan-200 bg-cyan-100/40 px-3 py-2">
+          <RelationTypeBadge typeKey={fromDeviceType} label={fromDeviceType || "Device"} />
+          <ArrowRight className="size-4 text-muted-foreground" />
+          <RelationTypeBadge typeKey={toDeviceType} label={toDeviceType || "Device"} />
+          <span className="text-[11px] text-muted-foreground">
+            — {fromDirection === "out" ? "Feeder Out" : fromDirection === "in" ? "Input" : ""}
+            {fromDirection && toDirection ? " → " : ""}
+            {toDirection === "in" ? "Distribution In" : toDirection === "out" ? "Output" : ""}
+          </span>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_220px]">
         <div className="rounded-md border border-cyan-200 bg-background/80 p-2">
           <p className="mb-1.5 text-xs font-medium text-muted-foreground">Endpoint Connection</p>
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-            <Info title="From Device" value={valueText(context.upstream_device_name || context.from_device_name || payload.from_device_name)} />
-            <Info title="From Port" value={valueText(context.upstream_port_label || context.from_port_label || payload.from_port_label)} />
-            <Info title="To Device" value={valueText(context.odp_device_name || context.to_device_name || payload.to_device_name)} />
-            <Info title="To Port" value={valueText(context.odp_port_label || context.to_port_label || payload.to_port_label)} />
+            <Info
+              title="From Device"
+              value={valueText(context.upstream_device_name || context.from_device_name || payload.from_device_name)}
+            />
+            <Info
+              title="From Port"
+              value={valueText(context.upstream_port_label || context.from_port_label || payload.from_port_label)}
+            />
+            <Info
+              title="To Device"
+              value={valueText(context.odp_device_name || context.to_device_name || payload.to_device_name)}
+            />
+            <Info
+              title="To Port"
+              value={valueText(context.odp_port_label || context.to_port_label || payload.to_port_label)}
+            />
           </div>
         </div>
         <div className="rounded-md border border-cyan-200 bg-background/80 p-2">
@@ -1521,6 +1555,7 @@ function TopologyConnectionRequestReview({
           </div>
         </div>
       </div>
+
       <div className="rounded-md border border-cyan-200 bg-background/80 p-2">
         <p className="mb-1.5 text-xs font-medium text-muted-foreground">Route, Cable, dan Core</p>
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
@@ -1530,6 +1565,23 @@ function TopologyConnectionRequestReview({
           <Info title="Fiber Count" value={valueText(payload.fiber_count || before.fiber_count)} />
         </div>
       </div>
+
+      {/* Fiber Core Overlap Warning */}
+      {hasCoreRangeConflict(payload) ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50/60 p-2.5">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
+            <div className="space-y-0.5">
+              <p className="text-xs font-medium text-amber-900">Potensi Konflik Core Range</p>
+              <p className="text-[11px] text-amber-800">
+                Core range <span className="font-medium">{formatCoreRange(payload)}</span> pada kabel ini mungkin
+                bertumpuk dengan koneksi aktif lain. Verifikasi occupancy core sebelum approve.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {!isCreate ? (
         <div className="rounded-md border border-cyan-200 bg-background/80 p-2">
           <p className="mb-1.5 text-xs font-medium text-muted-foreground">Before/After Topology</p>
@@ -1550,6 +1602,32 @@ function TopologyConnectionRequestReview({
       ) : null}
     </div>
   );
+}
+
+function RelationTypeBadge({ typeKey, label }: { typeKey: string; label: string }) {
+  const colorMap: Record<string, string> = {
+    OTB: "border-purple-200 bg-purple-100 text-purple-800 dark:border-purple-500/40 dark:bg-purple-500/20 dark:text-purple-200",
+    ODC: "border-cyan-200 bg-cyan-100 text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/20 dark:text-cyan-200",
+    ODP: "border-emerald-200 bg-emerald-100 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-200",
+    CABLE: "border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-200",
+    POP: "border-blue-200 bg-blue-100 text-blue-800 dark:border-blue-500/40 dark:bg-blue-500/20 dark:text-blue-200",
+  };
+  const colorClass = colorMap[typeKey] || "border-slate-200 bg-slate-100 text-slate-800 dark:border-slate-500/40 dark:bg-slate-500/20 dark:text-slate-200";
+  return (
+    <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold ${colorClass}`}>
+      {label}
+    </span>
+  );
+}
+
+function hasCoreRangeConflict(payload: Record<string, unknown>): boolean {
+  const coreStart = payload.core_start;
+  const coreEnd = payload.core_end;
+  if (coreStart == null || coreEnd == null) return false;
+  const start = Number(coreStart);
+  const end = Number(coreEnd);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
+  return start <= end;
 }
 
 function ValidationRequestReview({

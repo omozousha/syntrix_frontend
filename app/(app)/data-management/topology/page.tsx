@@ -110,6 +110,8 @@ type DeviceLookupItem = {
   device_name?: string | null;
   device_type_key?: string | null;
   region_id?: string | null;
+  pop_id?: string | null;
+  project_id?: string | null;
 };
 
 type RouteLookupItem = {
@@ -126,6 +128,7 @@ type DevicePortItem = {
   port_type?: string | null;
   status?: string | null;
   direction?: string | null;
+  splitter_role?: string | null;
   core_capacity?: number | null;
   core_used?: number | null;
   customer_id?: string | null;
@@ -205,11 +208,14 @@ export default function TopologyWorkspacePage() {
     : requestedRegionId;
   const initialStartDeviceId = searchParams.get("start_device_id") || "";
   const initialEndDeviceId = searchParams.get("end_device_id") || "";
+  const initialLinkFromDeviceId = searchParams.get("from_device_id") || initialStartDeviceId;
+  const initialLinkToDeviceId = searchParams.get("to_device_id") || initialEndDeviceId;
   const initialMaxDepth = searchParams.get("max_depth") || "12";
   const initialDirection = ["upstream", "downstream", "both"].includes(String(searchParams.get("direction") || "").toLowerCase())
     ? String(searchParams.get("direction")).toLowerCase()
     : "both";
   const initialTool = String(searchParams.get("tool") || "").toLowerCase();
+  const initialRelationMode = normalizeRelationMode(searchParams.get("relation_mode"));
   const isPersonalDeviceMode = Boolean(initialStartDeviceId.trim());
   const autoTraceTriggeredRef = useRef(false);
   const [regions, setRegions] = useState<RegionsListResponse["data"]>([]);
@@ -232,8 +238,8 @@ export default function TopologyWorkspacePage() {
   const [loadingTraceDeviceOptions, setLoadingTraceDeviceOptions] = useState(false);
   const [routeOptions, setRouteOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [cableOptions, setCableOptions] = useState<Array<{ value: string; label: string }>>([]);
-  const [linkFromDeviceId, setLinkFromDeviceId] = useState(initialStartDeviceId);
-  const [linkToDeviceId, setLinkToDeviceId] = useState(initialEndDeviceId);
+  const [linkFromDeviceId, setLinkFromDeviceId] = useState(initialLinkFromDeviceId);
+  const [linkToDeviceId, setLinkToDeviceId] = useState(initialLinkToDeviceId);
   const [linkType, setLinkType] = useState("fiber");
   const [linkStatus, setLinkStatus] = useState("active");
   const [linkRouteId, setLinkRouteId] = useState("__none__");
@@ -293,6 +299,24 @@ export default function TopologyWorkspacePage() {
   );
   const selectedFromDevice = traceDeviceMap[linkFromDeviceId.trim()] || null;
   const selectedToDevice = traceDeviceMap[linkToDeviceId.trim()] || null;
+  const linkFromDeviceOptions = useMemo(
+    () => filterDeviceOptionsForRelationMode(traceDeviceOptions, traceDeviceMap, {
+      mode: initialRelationMode,
+      side: "from",
+      fromDevice: selectedFromDevice,
+      toDevice: selectedToDevice,
+    }),
+    [initialRelationMode, selectedFromDevice, selectedToDevice, traceDeviceMap, traceDeviceOptions],
+  );
+  const linkToDeviceOptions = useMemo(
+    () => filterDeviceOptionsForRelationMode(traceDeviceOptions, traceDeviceMap, {
+      mode: initialRelationMode,
+      side: "to",
+      fromDevice: selectedFromDevice,
+      toDevice: selectedToDevice,
+    }),
+    [initialRelationMode, selectedFromDevice, selectedToDevice, traceDeviceMap, traceDeviceOptions],
+  );
   const selectedFromPort = useMemo(
     () => fromPortRows.find((port) => port.id === linkFromPortId) || null,
     [fromPortRows, linkFromPortId],
@@ -547,13 +571,18 @@ export default function TopologyWorkspacePage() {
         const rows = await loadDevicePorts(linkFromDeviceId);
         if (cancelled) return;
         setFromPortRows(rows);
+        const filteredRows = filterPortsForRelationMode(rows, {
+          mode: initialRelationMode,
+          side: "from",
+          device: traceDeviceMap[linkFromDeviceId.trim()] || null,
+        });
         setFromPortOptions(
-          rows.map((row) => ({
+          filteredRows.map((row) => ({
             value: row.id,
             label: `${row.port_label || `Port ${row.port_index || "-"}`} (${row.port_type || "-"} | ${row.status || "-"})`,
           })),
         );
-        setLinkFromPortId((prev) => (rows.some((row) => row.id === prev) ? prev : ""));
+        setLinkFromPortId((prev) => (filteredRows.some((row) => row.id === prev) ? prev : ""));
       } catch {
         if (!cancelled) {
           setFromPortRows([]);
@@ -568,7 +597,7 @@ export default function TopologyWorkspacePage() {
     return () => {
       cancelled = true;
     };
-  }, [linkFromDeviceId, loadDevicePorts]);
+  }, [initialRelationMode, linkFromDeviceId, loadDevicePorts, traceDeviceMap]);
 
   useEffect(() => {
     let cancelled = false;
@@ -584,13 +613,18 @@ export default function TopologyWorkspacePage() {
         const rows = await loadDevicePorts(linkToDeviceId);
         if (cancelled) return;
         setToPortRows(rows);
+        const filteredRows = filterPortsForRelationMode(rows, {
+          mode: initialRelationMode,
+          side: "to",
+          device: traceDeviceMap[linkToDeviceId.trim()] || null,
+        });
         setToPortOptions(
-          rows.map((row) => ({
+          filteredRows.map((row) => ({
             value: row.id,
             label: `${row.port_label || `Port ${row.port_index || "-"}`} (${row.port_type || "-"} | ${row.status || "-"})`,
           })),
         );
-        setLinkToPortId((prev) => (rows.some((row) => row.id === prev) ? prev : ""));
+        setLinkToPortId((prev) => (filteredRows.some((row) => row.id === prev) ? prev : ""));
       } catch {
         if (!cancelled) {
           setToPortRows([]);
@@ -605,7 +639,7 @@ export default function TopologyWorkspacePage() {
     return () => {
       cancelled = true;
     };
-  }, [linkToDeviceId, loadDevicePorts]);
+  }, [initialRelationMode, linkToDeviceId, loadDevicePorts, traceDeviceMap]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1020,7 +1054,10 @@ export default function TopologyWorkspacePage() {
           <CardHeader className="px-4 py-3">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-base">Connection Wizard (Actual Topology)</CardTitle>
-              {initialTool === "connection" ? <Badge variant="secondary">Opened from device detail</Badge> : null}
+              <div className="flex flex-wrap gap-1.5">
+                {initialTool === "connection" ? <Badge variant="secondary">Opened from device detail</Badge> : null}
+                {initialRelationMode ? <Badge variant="outline">{formatRelationModeLabel(initialRelationMode)}</Badge> : null}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4 pt-0">
@@ -1036,7 +1073,7 @@ export default function TopologyWorkspacePage() {
                   setLinkFromDeviceId(value);
                   setTraceStartDeviceId(value);
                 }}
-                options={traceDeviceOptions}
+                options={linkFromDeviceOptions}
                 placeholder={loadingTraceDeviceOptions ? "Memuat device..." : "From Device"}
                 searchPlaceholder="Cari from device..."
               />
@@ -1047,7 +1084,7 @@ export default function TopologyWorkspacePage() {
                   setLinkToDeviceId(value);
                   setTraceEndDeviceId(value);
                 }}
-                options={traceDeviceOptions}
+                options={linkToDeviceOptions}
                 placeholder={loadingTraceDeviceOptions ? "Memuat device..." : "To Device"}
                 searchPlaceholder="Cari to device..."
               />
@@ -2224,6 +2261,102 @@ function countByStatus<T extends { status?: string | null }>(items: T[]) {
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
+}
+
+type RelationMode = "feeder" | "distribution" | null;
+
+function normalizeRelationMode(value: unknown): RelationMode {
+  const mode = String(value || "").toLowerCase();
+  return mode === "feeder" || mode === "distribution" ? mode : null;
+}
+
+function formatRelationModeLabel(mode: RelationMode) {
+  if (mode === "feeder") return "Feeder: OTB/POP -> ODC";
+  if (mode === "distribution") return "Distribution: ODC -> ODP";
+  return "Connection";
+}
+
+function filterDeviceOptionsForRelationMode(
+  options: Array<{ value: string; label: string }>,
+  deviceMap: Record<string, DeviceLookupItem>,
+  context: {
+    mode: RelationMode;
+    side: "from" | "to";
+    fromDevice: DeviceLookupItem | null;
+    toDevice: DeviceLookupItem | null;
+  },
+) {
+  if (!context.mode) return options;
+
+  const filtered = options.filter((option) => {
+    const device = deviceMap[option.value];
+    if (!device) return true;
+    const type = String(device.device_type_key || "").toUpperCase();
+
+    if (context.mode === "distribution") {
+      if (context.side === "from") return type === "ODC" || option.value === context.fromDevice?.id;
+      if (type !== "ODP" && option.value !== context.toDevice?.id) return false;
+      return isSameScopeDevice(device, context.fromDevice);
+    }
+
+    if (context.side === "to") return type === "ODC" || option.value === context.toDevice?.id;
+    if (!["OTB", "OLT", "POP"].includes(type) && option.value !== context.fromDevice?.id) return false;
+    return isSameScopeDevice(device, context.toDevice);
+  });
+
+  return filtered.length ? filtered : options;
+}
+
+function isSameScopeDevice(candidate: DeviceLookupItem, anchor: DeviceLookupItem | null) {
+  if (!anchor) return true;
+  if (anchor.region_id && candidate.region_id && anchor.region_id !== candidate.region_id) return false;
+  if (anchor.pop_id && candidate.pop_id && anchor.pop_id !== candidate.pop_id) return false;
+  if (anchor.project_id && candidate.project_id && anchor.project_id !== candidate.project_id) return false;
+  return true;
+}
+
+function filterPortsForRelationMode(
+  ports: DevicePortItem[],
+  context: {
+    mode: RelationMode;
+    side: "from" | "to";
+    device: DeviceLookupItem | null;
+  },
+) {
+  if (!context.mode) return ports;
+
+  const filtered = ports.filter((port) => {
+    const status = String(port.status || "idle").toLowerCase();
+    if (!["idle", "reserved", "planned"].includes(status)) return false;
+
+    const type = String(context.device?.device_type_key || "").toUpperCase();
+    const wantsOutput =
+      (context.mode === "distribution" && context.side === "from" && type === "ODC") ||
+      (context.mode === "feeder" && context.side === "from");
+    const wantsInput =
+      (context.mode === "distribution" && context.side === "to" && type === "ODP") ||
+      (context.mode === "feeder" && context.side === "to" && type === "ODC");
+
+    if (wantsOutput) return isOutputPort(port);
+    if (wantsInput) return isInputPort(port);
+    return true;
+  });
+
+  return filtered.length ? filtered : ports;
+}
+
+function isOutputPort(port: DevicePortItem) {
+  const direction = String(port.direction || "").toLowerCase();
+  const role = String(port.splitter_role || "").toLowerCase();
+  if (!direction && !role) return true;
+  return ["out", "bidirectional"].includes(direction) || ["output", "bidirectional"].includes(role);
+}
+
+function isInputPort(port: DevicePortItem) {
+  const direction = String(port.direction || "").toLowerCase();
+  const role = String(port.splitter_role || "").toLowerCase();
+  if (!direction && !role) return true;
+  return ["in", "bidirectional"].includes(direction) || ["input", "bidirectional"].includes(role);
 }
 
 function buildConnectionValidation({

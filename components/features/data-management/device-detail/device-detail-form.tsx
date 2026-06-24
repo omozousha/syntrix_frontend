@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CheckCircle2, CircleHelp, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ type SplitterProfileOption = {
   id: string;
   ratio_label: string;
   output_port_count?: number | null;
+  allowed_device_type_keys?: string[] | null;
 };
 
 type OdpTypeOption = {
@@ -81,6 +83,7 @@ type DeviceDetailFormProps = {
   tenants: TenantOption[];
   popOptions: PopLookupOption[];
   projectOptions: ProjectLookupOption[];
+  projectHref?: string;
   latestFieldValidation?: OdpFieldValidationPayload | null;
   effectiveValidationStatus: string;
 };
@@ -89,6 +92,8 @@ const DEVICE_STATUS_OPTIONS = ["draft", "installed", "active", "inactive", "main
 
 const DEVICE_TECHNICAL_COPY: Record<string, {
   title: string;
+  coreCapacityLabel?: string;
+  usedCoreLabel?: string;
   totalPortsLabel: string;
   usedPortsLabel: string;
   splitterLabel: string;
@@ -103,6 +108,8 @@ const DEVICE_TECHNICAL_COPY: Record<string, {
   },
   ODC: {
     title: "Technical ODC",
+    coreCapacityLabel: "Total Core Capacity",
+    usedCoreLabel: "Used Core",
     totalPortsLabel: "Total Port Cabinet",
     usedPortsLabel: "Port Terpakai",
     splitterLabel: "Splitter Profile",
@@ -178,15 +185,21 @@ function DeviceIdentitySection({
   latestFieldValidation,
   effectiveValidationStatus,
 }: DeviceDetailFormProps) {
+  const deviceTypeKey = valueOf(form.device_type_key, "DEVICE").toUpperCase();
+  const isOdcDevice = deviceTypeKey === "ODC";
+  const identityTitle = isOdpDevice ? "Identitas ODP" : isOdcDevice ? "Identitas ODC" : "Identitas Device";
+  const nameLabel = isOdpDevice ? "Nama ODP" : isOdcDevice ? "Nama ODC" : "Device Name";
+  const typeLabel = isOdpDevice ? "Kategori Device" : isOdcDevice ? "Kategori ODC" : "Device Type";
+
   return (
     <Card>
       <CardHeader className="px-3 py-2">
-        <CardTitle className="text-sm">{isOdpDevice ? "Identitas ODP" : "Identitas Device"}</CardTitle>
+        <CardTitle className="text-sm">{identityTitle}</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
         <Field label={isOdpDevice ? "ID Inventory" : "Device ID"} value={form.device_id} disabled compact />
         <Field
-          label={isOdpDevice ? "Nama ODP" : "Device Name"}
+          label={nameLabel}
           value={form.device_name}
           onChange={(value) => onChange((prev) => ({ ...prev, device_name: normalizeDeviceName(value) }))}
           disabled={!editing}
@@ -225,7 +238,7 @@ function DeviceIdentitySection({
             ]}
           />
         ) : null}
-        <Field label={isOdpDevice ? "Kategori Device" : "Device Type"} value={form.device_type_key} disabled compact />
+        <Field label={typeLabel} value={form.device_type_key} disabled compact />
         <Field label="Asset Group" value={form.asset_group} disabled compact />
         <SelectField
           label="Status"
@@ -265,6 +278,7 @@ function DeviceRelationSection({
   tenants,
   popOptions,
   projectOptions,
+  projectHref,
 }: DeviceDetailFormProps) {
   const filteredProjectOptions = projectOptions
     .filter((project) => !form.region_id || !project.region_id || project.region_id === form.region_id)
@@ -309,7 +323,7 @@ function DeviceRelationSection({
             ]}
           />
         ) : (
-          <DisplayField label="Project" value={relationLabels.project || "-"} loading={relationLoading} compact />
+          <LinkedDisplayField label="Project" value={relationLabels.project || "-"} href={projectHref} loading={relationLoading} compact />
         )}
         {editing ? (
           <ComboboxField
@@ -362,6 +376,7 @@ function DeviceTechnicalSection({
     usedPortsLabel: "Used Ports",
     splitterLabel: "Splitter Ratio",
   };
+  const showManagementIp = !isOdpDevice && !["ODC", "OTB", "CABLE", "JC", "HH", "MH"].includes(deviceTypeKey);
 
   return (
     <Card>
@@ -369,13 +384,13 @@ function DeviceTechnicalSection({
         <CardTitle className="text-sm">{technicalCopy.title}</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
-        {!isOdpDevice ? (
+        {showManagementIp ? (
           <Field label="Management IP" value={form.management_ip} onChange={(value) => onChange((prev) => ({ ...prev, management_ip: value }))} disabled={!editing} compact />
         ) : null}
         {!isOdpDevice ? (
           <>
-            <Field label="Capacity Core" type="number" value={form.capacity_core} onChange={(value) => onChange((prev) => ({ ...prev, capacity_core: value }))} disabled={!editing} compact />
-            <Field label="Used Core" type="number" value={form.used_core} onChange={(value) => onChange((prev) => ({ ...prev, used_core: value }))} disabled={!editing} compact />
+            <Field label={technicalCopy.coreCapacityLabel || "Capacity Core"} type="number" value={form.capacity_core} onChange={(value) => onChange((prev) => ({ ...prev, capacity_core: value }))} disabled={!editing} compact />
+            <Field label={technicalCopy.usedCoreLabel || "Used Core"} type="number" value={form.used_core} onChange={(value) => onChange((prev) => ({ ...prev, used_core: value }))} disabled={!editing} compact />
           </>
         ) : (
           <DisplayField label="Capacity Core" value={technicalCopy.corePlaceholder || "-"} compact />
@@ -403,6 +418,7 @@ function DeviceTechnicalSection({
           value={form.splitter_ratio || "__none__"}
           label={technicalCopy.splitterLabel}
           editing={editing}
+          deviceTypeKey={deviceTypeKey}
           splitterProfiles={splitterProfiles}
           onValueChange={(value) => {
             const ratioValue = value === "__none__" ? "" : value;
@@ -433,6 +449,8 @@ function DeviceLocationSection({
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
         <Field className="md:col-span-2 xl:col-span-3" label="Address" value={form.address} onChange={(value) => onChange((prev) => ({ ...prev, address: value }))} disabled={!editing} compact />
+        <DisplayField label="Province" value={valueOf(form.province, "-")} compact />
+        <DisplayField label="City/Kabupaten" value={valueOf(form.city, "-")} compact />
         <CoordinateField label="Longitude" value={form.longitude} onChange={(value) => onChange((prev) => ({ ...prev, longitude: value }))} disabled={!editing} compact kind="longitude" />
         <CoordinateField label="Latitude" value={form.latitude} onChange={(value) => onChange((prev) => ({ ...prev, latitude: value }))} disabled={!editing} compact kind="latitude" />
       </CardContent>
@@ -457,15 +475,23 @@ function SplitterRatioField({
   value,
   label,
   editing,
+  deviceTypeKey,
   splitterProfiles,
   onValueChange,
 }: {
   value: string;
   label: string;
   editing: boolean;
+  deviceTypeKey: string;
   splitterProfiles: SplitterProfileOption[];
   onValueChange: (value: string) => void;
 }) {
+  const filteredSplitterProfiles = splitterProfiles.filter((profile) => {
+    const allowedKeys = profile.allowed_device_type_keys || [];
+    if (!allowedKeys.length) return false; // no device type assigned = inactive, hide
+    return allowedKeys.includes(deviceTypeKey);
+  });
+
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -484,7 +510,7 @@ function SplitterRatioField({
         triggerClassName="h-8 text-xs"
         options={[
           { value: "__none__", label: "Pilih splitter ratio" },
-          ...splitterProfiles.map((item) => ({
+          ...filteredSplitterProfiles.map((item) => ({
             value: item.ratio_label,
             label: item.output_port_count ? `${item.ratio_label} (${item.output_port_count} port)` : item.ratio_label,
           })),
@@ -546,6 +572,37 @@ function DisplayField({
       ) : (
         <Input value={value} disabled className={compact ? "h-8 text-xs" : undefined} />
       )}
+    </div>
+  );
+}
+
+function LinkedDisplayField({
+  label,
+  value,
+  href,
+  className = "",
+  compact = false,
+  loading = false,
+}: {
+  label: string;
+  value: string;
+  href?: string;
+  className?: string;
+  compact?: boolean;
+  loading?: boolean;
+}) {
+  if (loading) return <DisplayField label={label} value={value} className={className} compact={compact} loading />;
+  if (!href || !value || value === "-") return <DisplayField label={label} value={value || "-"} className={className} compact={compact} />;
+
+  return (
+    <div className={`${compact ? "space-y-1" : "space-y-1.5"} ${className}`}>
+      <Label>{label}</Label>
+      <Link
+        href={href}
+        className={`flex items-center rounded-md border bg-muted px-3 text-xs font-medium text-foreground hover:underline ${compact ? "h-8" : "h-10"}`}
+      >
+        {value}
+      </Link>
     </div>
   );
 }

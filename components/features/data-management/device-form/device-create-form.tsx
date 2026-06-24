@@ -29,6 +29,14 @@ type TenantOption = {
   tenant_code?: string | null;
 };
 
+type ProjectOption = {
+  id: string;
+  project_name?: string | null;
+  project_code?: string | null;
+  region_id?: string | null;
+  pop_id?: string | null;
+};
+
 export type DeviceCreateFormValues = {
   device_type_key: string;
   device_name: string;
@@ -37,6 +45,7 @@ export type DeviceCreateFormValues = {
   pop_id: string;
   region_id: string;
   tenant_id: string;
+  project_id: string;
 };
 
 export function DeviceCreateForm({
@@ -45,6 +54,7 @@ export function DeviceCreateForm({
   odpTypes,
   installationTypes,
   tenants,
+  projects,
   onChange,
   onPopChange,
 }: {
@@ -53,6 +63,7 @@ export function DeviceCreateForm({
   odpTypes: OdpTypeOption[];
   installationTypes: InstallationTypeOption[];
   tenants: TenantOption[];
+  projects: ProjectOption[];
   onChange: (patch: Partial<DeviceCreateFormValues>) => void;
   onPopChange: (popId: string) => void;
 }) {
@@ -131,6 +142,24 @@ export function DeviceCreateForm({
           options={popOptions}
           placeholder="Pilih POP"
           searchPlaceholder="Cari POP..."
+        />
+      </div>
+      <div className="space-y-1.5">
+        <FieldLabel label="Project (opsional)" tooltip="Hubungkan device ke project untuk konteks asset capitalization." />
+        <Combobox
+          value={values.project_id || "__none__"}
+          onValueChange={(value) => onChange({ project_id: value === "__none__" ? "" : value })}
+          options={[
+            { value: "__none__", label: "Tidak ada project" },
+            ...projects
+              .filter((project) => !values.region_id || !project.region_id || project.region_id === values.region_id)
+              .map((project) => ({
+                value: project.id,
+                label: [project.project_name, project.project_code].filter(Boolean).join(" | ") || "Project tidak tersedia",
+              })),
+          ]}
+          placeholder="Pilih project"
+          searchPlaceholder="Cari project..."
         />
       </div>
       <div className="space-y-1.5">

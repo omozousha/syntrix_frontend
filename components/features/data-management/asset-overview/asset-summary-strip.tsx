@@ -20,18 +20,34 @@ export function AssetSummaryStrip({
   stats: AssetSummaryStat[];
 }) {
   return (
-    <section className="space-y-2">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+    <section className="space-y-3 rounded-lg border bg-muted/20 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+        <span className="text-xs text-muted-foreground">{stats.length} metrics</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
         {stats.map((stat) => (
-          <OperationalKpiCard
-            key={stat.key}
-            label={stat.label}
-            value={stat.value}
-            caption={stat.caption}
-            icon={stat.icon}
-            tone={stat.tone}
-          />
+          <div key={stat.key} className="xl:hidden">
+            <OperationalKpiCard
+              label={stat.label}
+              value={stat.value}
+              caption={stat.caption}
+              icon={stat.icon}
+              tone={stat.tone}
+              compact
+            />
+          </div>
+        ))}
+        {stats.map((stat) => (
+          <div key={`${stat.key}-wide`} className="hidden xl:block">
+            <OperationalKpiCard
+              label={stat.label}
+              value={stat.value}
+              caption={stat.caption}
+              icon={stat.icon}
+              tone={stat.tone}
+            />
+          </div>
         ))}
       </div>
     </section>

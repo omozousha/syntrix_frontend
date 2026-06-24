@@ -243,14 +243,12 @@ export default function DataManagementPage() {
 
         const nextAssetCategories = [...staticAssetCategories, ...dynamicDeviceCategories];
 
-        const globalRequests = await Promise.all([
-          fetchSummaryByPath("/devices?page=1&limit=1", token),
-          fetchSummaryByPath(categoryPath(nextAssetCategories, "pop"), token),
-          fetchSummaryByPath(categoryPath(nextAssetCategories, "route"), token),
-          fetchSummaryByPath(categoryPath(nextAssetCategories, "cable"), token),
-          fetchSummaryByPath(categoryPath(nextAssetCategories, "projects"), token),
-          fetchRouteMetrics(token),
-        ]);
+        const nextGlobalSummary = await fetchGlobalSummaryForScope(
+          token,
+          nextAssetCategories,
+          nextRegions,
+          isSuperadmin,
+        );
 
         if (cancelled) return;
 
@@ -259,17 +257,7 @@ export default function DataManagementPage() {
         setRegionSummaryCache({});
         setRegionDetailsCache({});
         setOpenRegionIds(new Set());
-        setGlobalSummary({
-          devices: globalRequests[0],
-          pop: globalRequests[1],
-          route: globalRequests[2],
-          cable: globalRequests[3],
-          projects: globalRequests[4],
-          routeMetrics: {
-            total: globalRequests[5].routeDistanceMeters,
-            latestUpdatedAt: globalRequests[5].latestUpdatedAt,
-          },
-        });
+        setGlobalSummary(nextGlobalSummary);
       } catch (err) {
         if (cancelled) return;
         setError((err as Error).message || "Gagal memuat ringkasan data.");
@@ -286,8 +274,8 @@ export default function DataManagementPage() {
 
   const subtitle = useMemo(() => {
     if (isSuperadmin) return "Superadmin - Semua region";
-    if (isAdminRegion) return "Admin Region - Hanya region scope akun";
-    return `Validator Field - Scope ${scopeRegionIds.size} region`;
+    if (isAdminRegion) return `Admin Region - ${scopeRegionIds.size} region scope`;
+    return `Validator Field - ${scopeRegionIds.size} region scope`;
   }, [isSuperadmin, isAdminRegion, scopeRegionIds.size]);
 
   const filteredRegions = useMemo(() => {
@@ -444,6 +432,7 @@ export default function DataManagementPage() {
         key: "device-types",
         label: "Device Types",
         value: activeDeviceTypesCount,
+        caption: "Master catalog",
       },
     ],
     [regions.length, globalSummary, activeDeviceTypesCount],
@@ -709,16 +698,26 @@ export default function DataManagementPage() {
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 px-3 pb-3 md:px-4 md:pb-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            <h2 className="text-2xl font-semibold tracking-tight">Asset Overview</h2>
-            <Badge variant="outline">{subtitle}</Badge>
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{subtitle}</Badge>
+                {!isSuperadmin ? <Badge variant="secondary">{regions.length} region scope</Badge> : null}
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-2xl font-semibold tracking-tight">Asset Overview</h2>
+                <p className="max-w-2xl text-sm text-muted-foreground">
+                  Ringkasan aset pasif, kualitas data, dan relasi inventory berdasarkan scope akun.
+                </p>
+              </div>
+            </div>
+            <AddDataMenu
+              canCreatePop={isSuperadmin || isAdminRegion}
+              canCreateDevice={isSuperadmin || isAdminRegion}
+              canManageMaster={isSuperadmin}
+            />
           </div>
-          <AddDataMenu
-            canCreatePop={isSuperadmin || isAdminRegion}
-            canCreateDevice={isSuperadmin || isAdminRegion}
-            canManageMaster={isSuperadmin}
-          />
         </div>
 
         {loading ? <AssetSummaryLoading /> : null}
@@ -727,63 +726,60 @@ export default function DataManagementPage() {
         {!loading && !error ? (
           <div className="space-y-3">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3">
-            <TabsList className={`grid w-full justify-start overflow-x-auto sm:w-auto ${canViewQuality ? "grid-cols-2" : "grid-cols-1"}`}>
-              <TabsTrigger value="overview">{isValidator ? "Validator Home" : "Overview"}</TabsTrigger>
-              {canViewQuality ? <TabsTrigger value="quality">Data Quality</TabsTrigger> : null}
-            </TabsList>
+              <TabsList className={`inline-grid w-fit max-w-full overflow-x-auto ${canViewQuality ? "grid-cols-2" : "grid-cols-1"}`}>
+                <TabsTrigger value="overview">{isValidator ? "Validator Home" : "Overview"}</TabsTrigger>
+                {canViewQuality ? <TabsTrigger value="quality">Data Quality</TabsTrigger> : null}
+              </TabsList>
 
-            <TabsContent value="overview" className="space-y-3">
-              <AssetSummaryStrip title={isValidator ? "Ringkasan Field" : "Summary"} stats={summaryStats} />
+              <TabsContent value="overview" className="space-y-3">
+                {!isValidator ? <AssetSummaryStrip title={isSuperadmin ? "Ringkasan Global" : "Ringkasan Scope Region"} stats={summaryStats} /> : null}
 
-              {isSuperadmin ? (
-                <RegionCardGrid
-                  regions={pagedRegions}
-                  allRegionsCount={regions.length}
-                  assetCategories={assetCategories}
-                  regionSummaryCache={regionSummaryCache}
-                  regionSummaryLoadingIds={regionSummaryLoadingIds}
-                  regionDetailsCache={regionDetailsCache}
-                  regionDetailsLoadingIds={regionDetailsLoadingIds}
-                  openRegionIds={openRegionIds}
-                  searchRegion={searchRegion}
-                  safeRegionPage={safeRegionPage}
-                  totalRegionPages={totalRegionPages}
-                  onSearchRegionChange={setSearchRegion}
-                  onRegionOpenChange={(regionId, nextOpen) => {
-                    setOpenRegionIds((prev) => {
-                      const next = new Set(prev);
-                      if (nextOpen) next.add(regionId);
-                      else next.delete(regionId);
-                      return next;
-                    });
-                  }}
-                  onPrevPage={() => setRegionPage((prev) => Math.max(1, prev - 1))}
-                  onNextPage={() => setRegionPage((prev) => Math.min(totalRegionPages, prev + 1))}
-                  formatDateTime={formatDateTime}
-                  formatKilometers={formatKilometers}
-                  latestDate={latestDate}
-                />
-              ) : null}
+                {isSuperadmin ? (
+                  <RegionCardGrid
+                    regions={pagedRegions}
+                    allRegionsCount={regions.length}
+                    assetCategories={assetCategories}
+                    regionSummaryCache={regionSummaryCache}
+                    regionSummaryLoadingIds={regionSummaryLoadingIds}
+                    regionDetailsCache={regionDetailsCache}
+                    regionDetailsLoadingIds={regionDetailsLoadingIds}
+                    openRegionIds={openRegionIds}
+                    searchRegion={searchRegion}
+                    safeRegionPage={safeRegionPage}
+                    totalRegionPages={totalRegionPages}
+                    onSearchRegionChange={setSearchRegion}
+                    onRegionOpenChange={(regionId, nextOpen) => {
+                      setOpenRegionIds((prev) => {
+                        const next = new Set(prev);
+                        if (nextOpen) next.add(regionId);
+                        else next.delete(regionId);
+                        return next;
+                      });
+                    }}
+                    onPrevPage={() => setRegionPage((prev) => Math.max(1, prev - 1))}
+                    onNextPage={() => setRegionPage((prev) => Math.min(totalRegionPages, prev + 1))}
+                    formatDateTime={formatDateTime}
+                    formatKilometers={formatKilometers}
+                    latestDate={latestDate}
+                  />
+                ) : null}
 
-              {!isSuperadmin ? (
-                <FocusedRegionCard
-                  title={isAdminRegion ? "Region Aktif" : "Area Kerja Validator"}
-                  focusedRegion={focusedRegion}
-                  regions={regions}
-                  focusedRegionId={focusedRegionId}
-                  focusedRegionSummary={focusedRegionSummary}
-                  focusedRegionLoading={focusedRegionLoading}
-                  focusedRegionDetail={focusedRegionDetail}
-                  focusedRegionDetailLoading={focusedRegionDetailLoading}
-                  focusedRegionLastUpdated={focusedRegionLastUpdated}
-                  focusedAssetCategories={focusedAssetCategories}
-                  isAdminRegion={isAdminRegion}
-                  onFocusedRegionChange={setFocusedRegionId}
-                  formatDateTime={formatDateTime}
-                  formatKilometers={formatKilometers}
-                />
-              ) : null}
-            </TabsContent>
+                {!isSuperadmin ? (
+                  <FocusedRegionCard
+                    title={isAdminRegion ? "Inventory Region" : "Area Kerja Validator"}
+                    focusedRegion={focusedRegion}
+                    regions={regions}
+                    focusedRegionId={focusedRegionId}
+                    focusedRegionDetail={focusedRegionDetail}
+                    focusedRegionDetailLoading={focusedRegionDetailLoading}
+                    focusedRegionLastUpdated={focusedRegionLastUpdated}
+                    focusedAssetCategories={focusedAssetCategories}
+                    isAdminRegion={isAdminRegion}
+                    onFocusedRegionChange={setFocusedRegionId}
+                    formatDateTime={formatDateTime}
+                  />
+                ) : null}
+              </TabsContent>
 
             {canViewQuality ? (
               <TabsContent value="quality" className="space-y-3">
@@ -822,6 +818,83 @@ async function fetchSummaryByPath(path: string, token: string): Promise<Category
   return {
     total: payload.meta?.total ?? payload.data?.length ?? 0,
     latestUpdatedAt: first?.updated_at || first?.created_at || null,
+  };
+}
+
+function mergeCategorySummaries(summaries: CategorySummary[]): CategorySummary {
+  return {
+    total: summaries.reduce((acc, item) => acc + item.total, 0),
+    latestUpdatedAt: latestDate(...summaries.map((item) => item.latestUpdatedAt)),
+  };
+}
+
+async function fetchGlobalSummaryForScope(
+  token: string,
+  categories: DataCategory[],
+  regions: RegionsListResponse["data"],
+  isSuperadmin: boolean,
+): Promise<Record<string, CategorySummary>> {
+  const popPath = categoryPath(categories, "pop");
+  const routePath = categoryPath(categories, "route");
+  const cablePath = categoryPath(categories, "cable");
+  const projectPath = categoryPath(categories, "projects");
+
+  if (isSuperadmin) {
+    const [devices, pop, route, cable, projects, routeMetrics] = await Promise.all([
+      fetchSummaryByPath("/devices?page=1&limit=1", token),
+      fetchSummaryByPath(popPath, token),
+      fetchSummaryByPath(routePath, token),
+      fetchSummaryByPath(cablePath, token),
+      fetchSummaryByPath(projectPath, token),
+      fetchRouteMetrics(token),
+    ]);
+
+    return {
+      devices,
+      pop,
+      route,
+      cable,
+      projects,
+      routeMetrics: {
+        total: routeMetrics.routeDistanceMeters,
+        latestUpdatedAt: routeMetrics.latestUpdatedAt,
+      },
+    };
+  }
+
+  const entries = await Promise.all(
+    regions.map(async (region) => {
+      const regionId = encodeURIComponent(region.id);
+      const [devices, pop, route, cable, projects, routeMetrics] = await Promise.all([
+        fetchSummaryByPath(`/devices?page=1&limit=1&region_id=${regionId}`, token),
+        fetchSummaryByPath(`${popPath}&region_id=${regionId}`, token),
+        fetchSummaryByPath(`${routePath}&region_id=${regionId}`, token),
+        fetchSummaryByPath(`${cablePath}&region_id=${regionId}`, token),
+        fetchSummaryByPath(`${projectPath}&region_id=${regionId}`, token),
+        fetchRouteMetrics(token, region.id),
+      ]);
+
+      return {
+        devices,
+        pop,
+        route,
+        cable,
+        projects,
+        routeMetrics: {
+          total: routeMetrics.routeDistanceMeters,
+          latestUpdatedAt: routeMetrics.latestUpdatedAt,
+        },
+      };
+    }),
+  );
+
+  return {
+    devices: mergeCategorySummaries(entries.map((item) => item.devices)),
+    pop: mergeCategorySummaries(entries.map((item) => item.pop)),
+    route: mergeCategorySummaries(entries.map((item) => item.route)),
+    cable: mergeCategorySummaries(entries.map((item) => item.cable)),
+    projects: mergeCategorySummaries(entries.map((item) => item.projects)),
+    routeMetrics: mergeCategorySummaries(entries.map((item) => item.routeMetrics)),
   };
 }
 

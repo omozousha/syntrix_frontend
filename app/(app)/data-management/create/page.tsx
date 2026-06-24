@@ -112,6 +112,7 @@ type SplitterProfileOption = {
   id: string;
   ratio_label: string;
   output_port_count?: number | null;
+  allowed_device_type_keys?: string[] | null;
   is_active?: boolean | null;
 };
 type ApprovalResponse = {
@@ -140,7 +141,7 @@ type CustomFieldDefinition = {
 };
 
 const CORE_TYPES = new Set(["OTB", "ODC", "JC", "CABLE"]);
-const PORT_TYPES = new Set(["OLT", "SWITCH", "ROUTER", "ONT", "ODP"]);
+const PORT_TYPES = new Set(["OLT", "ODC", "SWITCH", "ROUTER", "ONT", "ODP"]);
 const PASSIVE_TYPES = new Set(["OTB", "ODC", "JC", "ODP", "CABLE"]);
 const MAX_IMAGE_ATTACHMENTS = 10;
 const MAX_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -472,13 +473,13 @@ export default function CreateDataManagementPage() {
 
   const showCoreFields = isDevice && CORE_TYPES.has(form.device_type_key);
   const showPortFields = isDevice && PORT_TYPES.has(form.device_type_key) && form.device_type_key !== "ONT";
-  const showSplitterField = isDevice && form.device_type_key === "ODP";
+  const showSplitterField = isDevice && (form.device_type_key === "ODP" || form.device_type_key === "ODC");
   const selectedSplitterProfile = useMemo(
     () => splitterProfiles.find((item) => item.ratio_label === form.splitter_ratio) || null,
     [splitterProfiles, form.splitter_ratio],
   );
   const selectedSplitterOutputPort = selectedSplitterProfile?.output_port_count ?? null;
-  const needsPortPresetSelector = showSplitterField && Number(selectedSplitterOutputPort || 0) >= 16;
+  const needsPortPresetSelector = form.device_type_key === "ODP" && Number(selectedSplitterOutputPort || 0) >= 16;
   const splitterPortPresetOptions = useMemo(() => {
     const total = Number(selectedSplitterOutputPort || 0);
     if (!Number.isFinite(total) || total <= 0) return [] as number[];
@@ -1012,21 +1013,23 @@ export default function CreateDataManagementPage() {
             {isDevice ? (
               <>
                 <DeviceCreateForm
-                  values={{
-                    device_type_key: form.device_type_key,
-                    device_name: form.device_name,
-                    odp_type: form.odp_type,
-                    installation_type: form.installation_type,
-                    pop_id: form.pop_id,
-                    region_id: form.region_id,
-                    tenant_id: form.tenant_id,
-                  }}
-                  pops={pops}
-                  odpTypes={odpTypes}
-                  installationTypes={installationTypes}
-                  tenants={tenants}
-                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-                  onPopChange={(nextPopId) => {
+          values={{
+            device_type_key: form.device_type_key,
+            device_name: form.device_name,
+            odp_type: form.odp_type,
+            installation_type: form.installation_type,
+            pop_id: form.pop_id,
+            region_id: form.region_id,
+            tenant_id: form.tenant_id,
+            project_id: form.project_id,
+          }}
+          pops={pops}
+          projects={projects}
+          odpTypes={odpTypes}
+          installationTypes={installationTypes}
+          tenants={tenants}
+          onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+          onPopChange={(nextPopId) => {
                       if (form.customer_id && form.pop_id !== nextPopId) {
                         setAutoFillNotice("Customer reference dikosongkan karena POP berubah. Pilih customer dari POP baru untuk mengisi ulang data lokasi.");
                       }

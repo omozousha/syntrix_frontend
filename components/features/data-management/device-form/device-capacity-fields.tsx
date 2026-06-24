@@ -10,6 +10,7 @@ import {
 type SplitterProfileOption = {
   ratio_label: string;
   output_port_count?: number | null;
+  allowed_device_type_keys?: string[] | null;
 };
 
 export type DeviceCapacityValues = {
@@ -45,6 +46,17 @@ export function DeviceCapacityFields({
   onChange: (patch: Partial<DeviceCapacityValues>) => void;
 }) {
   const isOdp = values.device_type_key === "ODP";
+  const isOdc = values.device_type_key === "ODC";
+  const totalPortsLabel = isOdp ? "Kapasitas ODP" : isOdc ? "Total Port Cabinet" : "Total Ports";
+  const usedPortsLabel = isOdp ? "Port Aktif" : isOdc ? "Port Terpakai" : "Used Ports";
+  const splitterLabel = isOdp ? "Kapasitas Splitter" : isOdc ? "Splitter Profile" : "Splitter Ratio";
+
+  // Filter splitter profiles based on device type + show all if allowed_device_type_keys is empty (no restriction)
+  const filteredSplitterProfiles = splitterProfiles.filter((profile) => {
+    const allowedKeys = profile.allowed_device_type_keys || [];
+    if (!allowedKeys.length) return false; // no device type assigned = inactive, hide
+    return allowedKeys.includes(values.device_type_key);
+  });
 
   return (
     <>
@@ -70,7 +82,7 @@ export function DeviceCapacityFields({
           {needsPortPresetSelector ? (
             <div className="space-y-1.5">
               <FieldLabel
-                label={isOdp ? "Kapasitas ODP" : "Total Ports"}
+                label={totalPortsLabel}
                 tooltip="Untuk splitter ratio 1:16 ke atas, pilih jumlah port aktual terpasang di lapangan."
               />
               <Combobox
@@ -86,14 +98,14 @@ export function DeviceCapacityFields({
             </div>
           ) : (
             <Field
-              label={isOdp ? "Kapasitas ODP" : "Total Ports"}
+              label={totalPortsLabel}
               type="number"
               value={values.total_ports}
               onChange={(value) => onChange({ total_ports: value })}
             />
           )}
           <Field
-            label={isOdp ? "Port Aktif" : "Used Ports"}
+            label={usedPortsLabel}
             type="number"
             value={values.used_ports}
             onChange={(value) => onChange({ used_ports: value })}
@@ -104,7 +116,7 @@ export function DeviceCapacityFields({
       {showSplitterField ? (
         <div className="space-y-1.5">
           <FieldLabel
-            label={isOdp ? "Kapasitas Splitter" : "Splitter Ratio"}
+            label={splitterLabel}
             tooltip="Pilih rasio splitter dari master data."
             badge={<AutoFilledBadge label="Auto-fill" />}
           />
@@ -125,7 +137,7 @@ export function DeviceCapacityFields({
             }}
             options={toOptions([
               { value: "__none__", label: "Pilih splitter ratio" },
-              ...splitterProfiles.map((item) => ({
+              ...filteredSplitterProfiles.map((item) => ({
                 value: item.ratio_label,
                 label: item.output_port_count ? `${item.ratio_label} (${item.output_port_count} port)` : item.ratio_label,
               })),

@@ -636,7 +636,7 @@ export default function DataManagementListPage() {
     if (category.resource === "manufacturers") return [selectAllHeader, "Code", "Manufacturer", "Updated"];
     if (category.resource === "brands") return [selectAllHeader, "Code", "Brand", "Manufacturer", "Updated"];
     if (category.resource === "assetModels") return [selectAllHeader, "Code", "Model", "Brand", "Updated"];
-    if (category.resource === "splitterProfiles") return [selectAllHeader, "Ratio", "Input", "Output", "Loss (dB)", "Status", "Updated"];
+    if (category.resource === "splitterProfiles") return [selectAllHeader, "Ratio", "Input", "Output", "Loss (dB)", "Device Types", "Status", "Updated"];
     if (category.resource === "provinces") return [selectAllHeader, "Province", "Status", "Updated"];
     if (category.resource === "cities") return [selectAllHeader, "Code", "City", "Province", "Updated"];
     return [selectAllHeader, "Project ID", "Project Name", "Status", "Region", "POP", "Updated"];
@@ -841,6 +841,7 @@ export default function DataManagementListPage() {
           pick(item, ["input_port_count"]),
           pick(item, ["output_port_count"]),
           pick(item, ["expected_loss_db"]),
+          renderDeviceTypeTags(item.allowed_device_type_keys),
           pick(item, ["is_active"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -1504,9 +1505,8 @@ export default function DataManagementListPage() {
             <SheetTitle>Quick Edit {category.label}</SheetTitle>
             <SheetDescription>Ubah data langsung dari list tanpa pindah halaman.</SheetDescription>
           </SheetHeader>
-          <div className="grid gap-3 px-4">
-            {renderCreateFields(category.resource, quickEditForm, setQuickEditForm, lookupOptions)}
-            {supportsIsActiveResource(category.resource) ? (
+          <div className="grid gap-3 px-4">          {renderCreateFields(category.resource, quickEditForm, setQuickEditForm, lookupOptions)}
+          {supportsIsActiveResource(category.resource) && category.resource !== "splitterProfiles" ? (
               <div className="space-y-1.5">
                 <Label>Status</Label>
                 <Combobox
@@ -1842,6 +1842,12 @@ function renderCreateFields(
   }
 
   if (resource === "splitterProfiles") {
+    const allowedKeys = parseJsonStringArray(form.allowed_device_type_keys);
+    const toggleDeviceTypeKey = (key: string) => {
+      const next = allowedKeys.includes(key) ? allowedKeys.filter((k) => k !== key) : [...allowedKeys, key];
+      setValue("allowed_device_type_keys", JSON.stringify(next));
+    };
+
     return (
       <>
         <div className="space-y-1.5">
@@ -1859,6 +1865,30 @@ function renderCreateFields(
         <div className="space-y-1.5">
           <Label>Expected Loss (dB)</Label>
           <Input type="number" step="0.01" min={0} value={form.expected_loss_db || ""} onChange={(e) => setValue("expected_loss_db", e.target.value)} placeholder="Contoh: 10.5" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Device Types</Label>
+          <p className="text-xs text-muted-foreground">Pilih tipe perangkat yang diizinkan menggunakan splitter ratio ini.</p>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allowedKeys.includes("ODC")}
+                onChange={() => toggleDeviceTypeKey("ODC")}
+                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
+              />
+              ODC
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allowedKeys.includes("ODP")}
+                onChange={() => toggleDeviceTypeKey("ODP")}
+                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
+              />
+              ODP
+            </label>
+          </div>
         </div>
         <div className="space-y-1.5">
           <Label>Notes</Label>
@@ -1919,7 +1949,7 @@ function getCreateDefaults(resource: string): Record<string, string> {
   if (resource === "installationTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "serviceTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "tenants") return { is_active: "true", sort_order: "0" };
-  if (resource === "splitterProfiles") return { input_port_count: "1", output_port_count: "8", is_active: "true" };
+  if (resource === "splitterProfiles") return { input_port_count: "1", output_port_count: "8", allowed_device_type_keys: "[]", is_active: "true" };
   if (resource === "provinces") return { is_active: "true" };
   if (resource === "cities") return { is_active: "true" };
   return {};
@@ -2209,11 +2239,13 @@ function buildEditFormFromItem(resource: string, item: GenericItem): Record<stri
     };
   }
   if (resource === "splitterProfiles") {
+    const rawKeys = item.allowed_device_type_keys;
     return {
       ratio_label: read("ratio_label"),
       input_port_count: read("input_port_count"),
       output_port_count: read("output_port_count"),
       expected_loss_db: read("expected_loss_db"),
+      allowed_device_type_keys: JSON.stringify(Array.isArray(rawKeys) ? rawKeys : []),
       notes: read("notes"),
       is_active: readBool("is_active", true),
     };
@@ -2346,8 +2378,10 @@ function buildCreatePayload(resource: string, form: Record<string, string>) {
     payload.input_port_count = Number(trim("input_port_count"));
     payload.output_port_count = Number(trim("output_port_count"));
     if (trim("expected_loss_db")) payload.expected_loss_db = Number(trim("expected_loss_db"));
+    const parsedKeys = parseJsonStringArray(form.allowed_device_type_keys);
+    payload.allowed_device_type_keys = parsedKeys;
+    payload.is_active = parsedKeys.length > 0; // auto-derive: ada device type = aktif, kosong = nonaktif
     assign("notes");
-    payload.is_active = (trim("is_active") || "true") !== "false";
     return payload;
   }
   if (resource === "provinces") {
@@ -2373,6 +2407,30 @@ function pick(item: Record<string, unknown>, keys: string[]) {
     if (value !== null && value !== undefined && String(value).trim() !== "") return String(value);
   }
   return "-";
+}
+
+function renderDeviceTypeTags(value: unknown) {
+  const arr = Array.isArray(value) ? value.filter(Boolean) : [];
+  if (!arr.length) return <span className="text-xs text-muted-foreground">-</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {arr.map((type: string) => (
+        <Badge key={type} variant="outline" className="text-xs font-normal">
+          {type}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
+function parseJsonStringArray(value: string | undefined | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 function renderDeviceIconCell(iconName: string) {

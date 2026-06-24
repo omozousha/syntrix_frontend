@@ -11,6 +11,11 @@ type OperationalKpiCardProps = {
   icon?: LucideIcon;
   badge?: string;
   tone?: "blue" | "emerald" | "amber" | "rose" | "slate";
+  /**
+   * Tampilan ringkas untuk grid padat (mis. strip 3-kolom di mobile).
+   * Saat `true`: icon di-stack di atas, label/caption tidak dipotong.
+   */
+  compact?: boolean;
 };
 
 const KPI_TONE_CLASS: Record<NonNullable<OperationalKpiCardProps["tone"]>, string> = {
@@ -28,24 +33,27 @@ export function OperationalKpiCard({
   icon: Icon = Database,
   badge,
   tone = "blue",
+  compact = false,
 }: OperationalKpiCardProps) {
   return (
     <Card className="overflow-hidden">
-      <CardContent className="flex items-center gap-3 p-3">
-        <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg border ${KPI_TONE_CLASS[tone]}`}>
-          <Icon className="size-4" />
+      <CardContent className={compact ? "flex flex-col items-stretch gap-1.5 p-2.5" : "flex items-center gap-3 p-3"}>
+        <div className={`flex shrink-0 items-center justify-center rounded-md border ${KPI_TONE_CLASS[tone]} ${compact ? "size-7 self-start" : "size-9"}`}>
+          <Icon className={compact ? "size-3.5" : "size-4"} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+          <div className="flex items-center gap-1.5">
+            <p className={`font-semibold uppercase tracking-wide text-muted-foreground ${compact ? "text-[10px] leading-tight" : "truncate text-[11px]"}`}>{label}</p>
             {badge ? (
               <Badge variant="outline" className="h-4 px-1 text-[9px]">
                 {badge}
               </Badge>
             ) : null}
           </div>
-          <p className="text-xl font-semibold leading-tight">{value}</p>
-          {caption ? <p className="truncate text-[11px] text-muted-foreground">{caption}</p> : null}
+          <p className={`font-semibold leading-tight ${compact ? "text-lg" : "text-xl"}`}>{value}</p>
+          {caption ? (
+            <p className={`text-muted-foreground ${compact ? "text-[10px] leading-snug line-clamp-2" : "truncate text-[11px]"}`}>{caption}</p>
+          ) : null}
         </div>
       </CardContent>
     </Card>
