@@ -18,9 +18,7 @@ import {
 import { CustomerCreateForm } from "@/components/features/data-management/device-form/customer-create-form";
 import { CreateLocationFields } from "@/components/features/data-management/device-form/create-location-fields";
 import { CreateOperationalFields } from "@/components/features/data-management/device-form/create-operational-fields";
-import { DeviceCapacityFields } from "@/components/features/data-management/device-form/device-capacity-fields";
-import { DeviceCreateForm } from "@/components/features/data-management/device-form/device-create-form";
-import { DeviceHardwareFields } from "@/components/features/data-management/device-form/device-hardware-fields";
+import { CreateFormSelection } from "@/components/features/data-management/device-form/create-form-selection";
 import {
   ImageAttachmentField,
   SupportDocumentField,
@@ -30,7 +28,6 @@ import {
   PopCreateOperationalFields,
 } from "@/components/features/data-management/device-form/pop-create-form";
 import { ProjectCreateForm } from "@/components/features/data-management/device-form/project-create-form";
-import { RouteCreateForm } from "@/components/features/data-management/device-form/route-create-form";
 import {
   AutoFilledBadge,
   Field,
@@ -177,10 +174,9 @@ export default function CreateDataManagementPage() {
   const selectedType = (params.get("type") || "OLT").toUpperCase();
   const deviceType = selectedType || "OLT";
   const isPop = kind === "pop";
-  const isRoute = kind === "route";
   const isProject = kind === "project";
   const isCustomer = kind === "customer";
-  const isDevice = !isPop && !isRoute && !isProject && !isCustomer;
+  const isDevice = !isPop && !isProject && !isCustomer;
 
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -197,6 +193,8 @@ export default function CreateDataManagementPage() {
   const [autoFillNotice, setAutoFillNotice] = useState("");
   const [popTypes, setPopTypes] = useState<PopTypeOption[]>([]);
   const [routeTypes, setRouteTypes] = useState<RouteTypeOption[]>([]);
+  const [cableTypes, setCableTypes] = useState<Array<{ id: string; cable_type_code: string; cable_type_name: string }>>([]);
+  const [coreCapacities, setCoreCapacities] = useState<Array<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>>([]);
   const [provinces, setProvinces] = useState<ProvinceOption[]>([]);
   const [cities, setCities] = useState<CityOption[]>([]);
   const [manufacturers, setManufacturers] = useState<ManufacturerOption[]>([]);
@@ -267,11 +265,17 @@ export default function CreateDataManagementPage() {
     splitter_ratio: "",
     odp_type: "",
     installation_type: "",
+    management_ip: "",
+    feeder_port_count: "",
+    distribution_port_count: "",
+    cable_type: "",
+    cable_category: "",
+    cable_length_m: "",
     route_name: "",
     route_type: "",
-    route_status: "planning",
-    route_project_id: "",
-    distance_meters: "",
+    route_coordinates: "",
+    route_file_url: "",
+
     project_name: "",
     project_status: "planning",
     project_description: "",
@@ -298,6 +302,7 @@ export default function CreateDataManagementPage() {
   );
   const isFixedRegionRole = me.role === "user_all_region" || me.role === "user_region";
   const selectedRegionLabel = regions.find((region) => region.id === form.region_id)?.region_name || "-";
+  const isCableDevice = isDevice && form.device_type_key === "CABLE";
   const isOntDevice = isDevice && form.device_type_key === "ONT";
   const hasCustomerAutoFill = isOntDevice && Boolean(form.customer_id);
 
@@ -306,19 +311,21 @@ export default function CreateDataManagementPage() {
 
     async function bootstrap() {
       try {
-        const needsPops = isDevice || isRoute || isProject || isCustomer;
-        const needsProjects = isDevice || isRoute || isCustomer;
+        const needsPops = isDevice || isProject || isCustomer;
+        const needsProjects = isDevice || isCustomer;
         const needsDeviceMasterData = isDevice;
         const needsCustomerMasterData = isCustomer;
         const needsTenantMasterData = isDevice || isPop;
 
-        const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, serviceTypesRes, tenantsRes, splitterProfilesRes] = await Promise.all([
+        const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, cableTypeRes, coreCapacityRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, serviceTypesRes, tenantsRes, splitterProfilesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
           optionalPaginatedRequest<PopOption>(needsPops, () => apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token })),
           optionalPaginatedRequest<ProjectOption>(needsProjects, () => apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token })),
           emptyPaginatedResponse<CustomerOption>(),
           optionalPaginatedRequest<PopTypeOption>(isPop, () => apiFetch<PaginatedResponse<PopTypeOption>>("/popTypes?page=1&limit=200&is_active=true", { token })),
-          optionalPaginatedRequest<RouteTypeOption>(isRoute, () => apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<RouteTypeOption>(deviceType === "CABLE", () => apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<{ id: string; cable_type_code: string; cable_type_name: string }>(deviceType === "CABLE", () => apiFetch<PaginatedResponse<{ id: string; cable_type_code: string; cable_type_name: string }>>("/cableTypes?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>(deviceType === "CABLE", () => apiFetch<PaginatedResponse<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>>("/coreCapacities?page=1&limit=200&is_active=true", { token })),
           apiFetch<PaginatedResponse<ProvinceOption>>("/provinces?page=1&limit=500&is_active=true", { token }),
           fetchAllPaginated<CityOption>("/cities?is_active=true", token),
           optionalPaginatedRequest<ManufacturerOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<ManufacturerOption>>("/manufacturers?page=1&limit=500", { token })),
@@ -344,6 +351,8 @@ export default function CreateDataManagementPage() {
         setCustomers(customersRes.data || []);
         setPopTypes(popTypesRes.data || []);
         setRouteTypes(routeTypesRes.data || []);
+        setCableTypes(cableTypeRes?.data || []);
+        setCoreCapacities(coreCapacityRes?.data || []);
         setProvinces(provincesRes.data || []);
         setCities(citiesAll || []);
         setManufacturers(manufacturersRes.data || []);
@@ -370,7 +379,7 @@ export default function CreateDataManagementPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, me.role, scopeRegionIds, deviceType, isCustomer, isDevice, isPop, isProject, isRoute]);
+  }, [token, me.role, scopeRegionIds, deviceType, isCustomer, isDevice, isPop, isProject]);
 
   useEffect(() => {
     if (!isOntDevice) return;
@@ -479,21 +488,11 @@ export default function CreateDataManagementPage() {
     [splitterProfiles, form.splitter_ratio],
   );
   const selectedSplitterOutputPort = selectedSplitterProfile?.output_port_count ?? null;
-  const needsPortPresetSelector = form.device_type_key === "ODP" && Number(selectedSplitterOutputPort || 0) >= 16;
-  const splitterPortPresetOptions = useMemo(() => {
-    const total = Number(selectedSplitterOutputPort || 0);
-    if (!Number.isFinite(total) || total <= 0) return [] as number[];
-    if (total < 16) return [total];
-
-    const presets = [8, 16, 32, 64].filter((value) => value <= total);
-    if (!presets.includes(total)) presets.push(total);
-    return Array.from(new Set(presets)).sort((a, b) => a - b);
-  }, [selectedSplitterOutputPort]);
   const showDeviceImageField = isDevice;
   const sectionSpanClass = "md:col-span-2 xl:col-span-3";
   const sectionLabelClass =
     "rounded-md border bg-muted/40 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
-  const formGridClass = isPop || isRoute || isProject || isCustomer
+  const formGridClass = isPop || isProject || isCustomer
     ? "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 lg:gap-4"
     : "grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3 lg:gap-3";
   const buildListTarget = (basePath: string, regionId: string) => {
@@ -576,7 +575,7 @@ export default function CreateDataManagementPage() {
     setErrorMessage("");
     setSuccessMessage("");
     try {
-      if (!isProject) {
+      if (!isProject && !isCableDevice) {
         const latitudeValidation = validateCoordinateFormat(form.latitude, "latitude");
         if (!latitudeValidation.valid) {
           throw new Error(`Latitude tidak valid: ${latitudeValidation.message}`);
@@ -689,40 +688,6 @@ export default function CreateDataManagementPage() {
 
         setSuccessMessage("POP berhasil dibuat.");
         router.push(buildListTarget("/data-management/list/pop", form.region_id));
-        return;
-      }
-
-      if (isRoute) {
-        if (!form.route_name || !form.region_id) {
-          throw new Error("Route Name dan Region wajib diisi.");
-        }
-
-        const payload: Record<string, unknown> = {
-          route_name: form.route_name.trim(),
-          route_type: nullIfEmpty(form.route_type),
-          status: form.route_status || "planning",
-          region_id: form.region_id,
-          pop_id: nullIfEmpty(form.pop_id),
-          project_id: nullIfEmpty(form.route_project_id),
-          distance_meters: numberOrNull(form.distance_meters),
-          tags: csvToTags(form.tags),
-          custom_fields: {},
-        };
-
-        const createdRoute = await apiFetch<{ data?: ApprovalResponse }>("/routes", {
-          method: "POST",
-          token,
-          body: JSON.stringify(payload),
-        });
-
-        if (createdRoute.data?.approval_request) {
-          const requestId = getApprovalRequestId(createdRoute.data);
-          openApprovalNotice("Route", requestId, buildListTarget("/data-management/list/route", form.region_id));
-          return;
-        }
-
-        setSuccessMessage("Route berhasil dibuat.");
-        router.push(buildListTarget("/data-management/list/route", form.region_id));
         return;
       }
 
@@ -885,8 +850,10 @@ export default function CreateDataManagementPage() {
         validation_status: "unvalidated",
         validation_date: null,
         address: nullIfEmpty(form.address),
-        longitude: numberOrNull(form.longitude),
-        latitude: numberOrNull(form.latitude),
+        ...(isCableDevice ? {} : {
+          longitude: numberOrNull(form.longitude),
+          latitude: numberOrNull(form.latitude),
+        }),
         custom_fields: buildCustomFieldsPayload(customDefinitions, customValues),
         image_attachment_id: null,
         image_attachments: [],
@@ -928,6 +895,24 @@ export default function CreateDataManagementPage() {
         payload.installation_type = nullIfEmpty(form.installation_type);
       }
 
+      // Per-type extra fields
+      if (form.device_type_key === "OLT" || form.device_type_key === "ONT" || form.device_type_key === "SWITCH" || form.device_type_key === "ROUTER") {
+        payload.management_ip = form.management_ip || null;
+      }
+      if (form.device_type_key === "ODC") {
+        payload.feeder_port_count = numberOrNull(form.feeder_port_count);
+        payload.distribution_port_count = numberOrNull(form.distribution_port_count);
+      }
+      if (form.device_type_key === "CABLE") {
+        payload.cable_type = nullIfEmpty(form.cable_type);
+        payload.cable_category = nullIfEmpty(form.cable_category);
+        payload.cable_length_m = numberOrNull(form.cable_length_m);
+        payload.route_name = nullIfEmpty(form.route_name);
+        payload.route_type = nullIfEmpty(form.route_type);
+        payload.route_coordinates = form.route_coordinates ? JSON.parse(form.route_coordinates) : null;
+        payload.route_file_url = nullIfEmpty(form.route_file_url);
+      }
+
       const createdDevice = await apiFetch<{ data?: ApprovalResponse }>("/devices", {
         method: "POST",
         token,
@@ -957,7 +942,6 @@ export default function CreateDataManagementPage() {
       setCreateResponseDialog({
         title: getCreateErrorTitle({
           isPop,
-          isRoute,
           isProject,
           isCustomer,
           isOntDevice,
@@ -977,14 +961,14 @@ export default function CreateDataManagementPage() {
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 pr-3">
       <CreateFormPageHeader
-        flags={{ isPop, isRoute, isProject, isCustomer }}
+        flags={{ isPop, isProject, isCustomer }}
         deviceTypeKey={form.device_type_key}
       />
 
       <CreateFormStatusAlerts errorMessage={errorMessage} successMessage={successMessage} />
 
       <Card>
-        <CreateFormCardHeader flags={{ isPop, isRoute, isProject, isCustomer }} />
+        <CreateFormCardHeader flags={{ isPop, isProject, isCustomer }} />
         <CardContent className="space-y-5">
           {!loaded ? <AppLoading label="Sedang memuat data region dan POP..." /> : null}
           {isDevice ? (
@@ -1012,22 +996,21 @@ export default function CreateDataManagementPage() {
 
             {isDevice ? (
               <>
-                <DeviceCreateForm
-          values={{
-            device_type_key: form.device_type_key,
-            device_name: form.device_name,
-            odp_type: form.odp_type,
-            installation_type: form.installation_type,
-            pop_id: form.pop_id,
-            region_id: form.region_id,
-            tenant_id: form.tenant_id,
-            project_id: form.project_id,
-          }}
+                <CreateFormSelection
+          deviceTypeKey={form.device_type_key}
+          values={form}
           pops={pops}
-          projects={projects}
           odpTypes={odpTypes}
           installationTypes={installationTypes}
           tenants={tenants}
+          projects={projects}
+          routeTypes={routeTypes}
+                cableTypes={cableTypes}
+                coreCapacities={coreCapacities}
+          manufacturers={manufacturers}
+          brands={brands}
+          assetModels={assetModels}
+          splitterProfiles={splitterProfiles}
           onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
           onPopChange={(nextPopId) => {
                       if (form.customer_id && form.pop_id !== nextPopId) {
@@ -1129,22 +1112,7 @@ export default function CreateDataManagementPage() {
               </div>
             ) : null}
 
-            {isRoute ? (
-              <RouteCreateForm
-                values={{
-                  route_name: form.route_name,
-                  route_type: form.route_type,
-                  pop_id: form.pop_id,
-                  route_project_id: form.route_project_id,
-                  region_id: form.region_id,
-                  distance_meters: form.distance_meters,
-                }}
-                pops={pops}
-                projects={projects}
-                routeTypes={routeTypes}
-                onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-              />
-            ) : null}
+
 
             {isProject ? (
               <ProjectCreateForm
@@ -1210,10 +1178,9 @@ export default function CreateDataManagementPage() {
             </div>
 
             <CreateOperationalFields
-              flags={{ isPop, isRoute, isProject, isCustomer, isDevice }}
+              flags={{ isPop, isProject, isCustomer, isDevice }}
               values={{
                 status_pop: form.status_pop,
-                route_status: form.route_status,
                 project_status: form.project_status,
                 customer_status: form.customer_status,
                 status: form.status,
@@ -1231,25 +1198,7 @@ export default function CreateDataManagementPage() {
               </div>
             ) : null}
 
-            {isDevice ? (
-              <>
-                <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-                  Identitas Perangkat
-                </div>
-                <DeviceHardwareFields
-                  values={{
-                    manufacturer_id: form.manufacturer_id,
-                    brand_id: form.brand_id,
-                    model_id: form.model_id,
-                    serial_number: form.serial_number,
-                  }}
-                  manufacturers={manufacturers}
-                  brands={brands}
-                  assetModels={assetModels}
-                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-                />
-              </>
-            ) : null}
+
 
             {isPop ? (
               <>
@@ -1316,7 +1265,7 @@ export default function CreateDataManagementPage() {
               </>
             ) : null}
 
-            {isRoute || isProject || isCustomer ? (
+            {isProject || isCustomer ? (
               <Field
                 label="Tags (comma separated)"
                 value={form.tags}
@@ -1340,44 +1289,32 @@ export default function CreateDataManagementPage() {
               </div>
             ) : null}
 
-            <DeviceCapacityFields
-              values={{
-                device_type_key: form.device_type_key,
-                capacity_core: form.capacity_core,
-                used_core: form.used_core,
-                total_ports: form.total_ports,
-                used_ports: form.used_ports,
-                splitter_ratio: form.splitter_ratio,
-              }}
-              showCoreFields={showCoreFields}
-              showPortFields={showPortFields}
-              showSplitterField={showSplitterField}
-              needsPortPresetSelector={needsPortPresetSelector}
-              splitterPortPresetOptions={splitterPortPresetOptions}
-              splitterProfiles={splitterProfiles}
-              onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-            />
 
-            <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-              Lokasi
-            </div>
-            <CreateLocationFields
-              values={{
-                address: form.address,
-                province: form.province,
-                province_id: form.province_id,
-                city: form.city,
-                city_id: form.city_id,
-                longitude: form.longitude,
-                latitude: form.latitude,
-              }}
-              provinces={provinces}
-              cities={cities}
-              sectionSpanClass={sectionSpanClass}
-              showCoordinates={!isProject}
-              badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
-              onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-            />
+
+            {!isCableDevice ? (
+              <>
+                <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
+                  Lokasi
+                </div>
+                <CreateLocationFields
+                  values={{
+                    address: form.address,
+                    province: form.province,
+                    province_id: form.province_id,
+                    city: form.city,
+                    city_id: form.city_id,
+                    longitude: form.longitude,
+                    latitude: form.latitude,
+                  }}
+                  provinces={provinces}
+                  cities={cities}
+                  sectionSpanClass={sectionSpanClass}
+                  showCoordinates={!isProject && !isCableDevice}
+                  badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
+                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+                />
+              </>
+            ) : null}
           </div>
 
           {isPop || isDevice ? (
@@ -1415,7 +1352,7 @@ export default function CreateDataManagementPage() {
 
           <div className="flex justify-end">
             <Button onClick={() => void submit()} disabled={saving || Boolean(approvalNotice)}>
-              {saving ? "Menyimpan..." : isPop ? "Simpan POP" : isRoute ? "Simpan Route" : isProject ? "Simpan Project" : isCustomer ? "Simpan Customer" : "Simpan Device"}
+              {saving ? "Menyimpan..." : isPop ? "Simpan POP" : isProject ? "Simpan Project" : isCustomer ? "Simpan Customer" : "Simpan Device"}
             </Button>
           </div>
         </CardContent>
@@ -1612,21 +1549,18 @@ function validateCid(value: string) {
 
 function getCreateErrorTitle({
   isPop,
-  isRoute,
   isProject,
   isCustomer,
   isOntDevice,
   deviceTypeKey,
 }: {
   isPop: boolean;
-  isRoute: boolean;
   isProject: boolean;
   isCustomer: boolean;
   isOntDevice: boolean;
   deviceTypeKey: string;
 }) {
   if (isPop) return "Create POP Gagal";
-  if (isRoute) return "Create Route Gagal";
   if (isProject) return "Create Project Gagal";
   if (isCustomer) return "Create Customer Gagal";
   if (isOntDevice) return "Create ONT Gagal";

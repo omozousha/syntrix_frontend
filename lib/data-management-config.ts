@@ -21,6 +21,8 @@ export type DataCategory = {
     | "brands"
     | "assetModels"
     | "splitterProfiles"
+    | "cableTypes"
+    | "coreCapacities"
     | "provinces"
     | "cities";
   deviceTypeKey?: string;
@@ -38,9 +40,10 @@ export const DATA_CATEGORIES: DataCategory[] = [
   { slug: "odc", label: "ODC", description: "Optical Distribution Cabinet", resource: "devices", deviceTypeKey: "ODC", group: "asset" },
   { slug: "odp", label: "ODP", description: "Optical Distribution Point", resource: "devices", deviceTypeKey: "ODP", group: "asset" },
   { slug: "cable", label: "Cable", description: "Fiber cable asset", resource: "devices", deviceTypeKey: "CABLE", group: "asset" },
+  { slug: "rack", label: "Rack", description: "Cabinet/Rack perangkat", resource: "devices", deviceTypeKey: "RACK", group: "asset" },
+  { slug: "rectifier", label: "Rectifier", description: "Rectifier & power system", resource: "devices", deviceTypeKey: "RECTIFIER", group: "asset" },
   { slug: "pole", label: "Pole", description: "Tiang jaringan", resource: "poles", group: "asset" },
   { slug: "customer", label: "Customer", description: "Pelanggan dan titik layanan", resource: "customers", group: "asset" },
-  { slug: "route", label: "Route", description: "Jalur jaringan", resource: "routes", group: "asset" },
   { slug: "projects", label: "Projects", description: "Proyek aktif dan arsip", resource: "projects", group: "asset" },
 
   { slug: "master-regions", label: "Regions", description: "Master region", resource: "regions", group: "master" },
@@ -54,6 +57,8 @@ export const DATA_CATEGORIES: DataCategory[] = [
   { slug: "master-manufacturers", label: "Manufacturers", description: "Master manufacturer", resource: "manufacturers", group: "master" },
   { slug: "master-brands", label: "Brands", description: "Master brand", resource: "brands", group: "master" },
   { slug: "master-models", label: "Models", description: "Master model perangkat", resource: "assetModels", group: "master" },
+  { slug: "master-cable-types", label: "Cable Types", description: "Master tipe kabel fiber optik", resource: "cableTypes", group: "master" },
+  { slug: "master-core-capacities", label: "Core Capacities", description: "Master kapasitas core kabel fiber optik", resource: "coreCapacities", group: "master" },
   { slug: "master-splitter-profiles", label: "Splitter Profiles", description: "Master rasio splitter", resource: "splitterProfiles", group: "master" },
   { slug: "master-provinces", label: "Provinces", description: "Master provinsi", resource: "provinces", group: "master" },
   { slug: "master-cities", label: "Cities", description: "Master kota/kabupaten", resource: "cities", group: "master" },
@@ -62,7 +67,7 @@ export const DATA_CATEGORIES: DataCategory[] = [
 export const ASSET_DATA_CATEGORIES = DATA_CATEGORIES.filter((item) => item.group !== "master");
 export const MASTER_DATA_CATEGORIES = DATA_CATEGORIES.filter((item) => item.group === "master");
 
-const RESERVED_ASSET_SLUGS = new Set(["pop", "pole", "customer", "route", "projects"]);
+const RESERVED_ASSET_SLUGS = new Set(["pop", "pole", "customer", "projects"]);
 const dynamicDeviceCategoryCache = new Map<string, DataCategory>();
 
 export function deviceTypeKeyToSlug(key: string) {

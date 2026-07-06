@@ -1,48 +1,25 @@
-import { ChevronDown } from "lucide-react";
+"use client";
+
+import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { OperationalState } from "@/components/operational-ui";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import type { DataCategory } from "@/lib/data-management-config";
-import { buildRegionCardDisplay } from "@/lib/display-adapters/asset-overview-display-adapter";
-import { QuickCountButton } from "./quick-count-button";
-
-type RegionItem = {
-  id: string;
-  region_name?: string | null;
-  region_id?: string | null;
-};
-
-type RegionCoreSummary = {
-  pops: number;
-  routes: number;
-  routeDistanceMeters: number;
-  cableDevices: number;
-  projects: number;
-  devices: number;
-  popLatestUpdatedAt: string | null;
-  deviceLatestUpdatedAt: string | null;
-  routeLatestUpdatedAt: string | null;
-};
-
-type RegionCategorySummary = Record<string, { total: number; latestUpdatedAt: string | null }>;
+import { RegionCard, type RegionCoreSummary, type RegionItem } from "./region-card";
+import { RegionInventoryDialog, type DeviceTypeOption } from "./region-inventory-dialog";
 
 export function RegionCardGrid({
   regions,
   allRegionsCount,
   assetCategories,
+  token,
   regionSummaryCache,
   regionSummaryLoadingIds,
-  regionDetailsCache,
-  regionDetailsLoadingIds,
-  openRegionIds,
   searchRegion,
   safeRegionPage,
   totalRegionPages,
   onSearchRegionChange,
-  onRegionOpenChange,
   onPrevPage,
   onNextPage,
   formatDateTime,
@@ -52,116 +29,89 @@ export function RegionCardGrid({
   regions: RegionItem[];
   allRegionsCount: number;
   assetCategories: DataCategory[];
+  token: string;
   regionSummaryCache: Record<string, RegionCoreSummary>;
   regionSummaryLoadingIds: Set<string>;
-  regionDetailsCache: Record<string, RegionCategorySummary>;
-  regionDetailsLoadingIds: Set<string>;
-  openRegionIds: Set<string>;
   searchRegion: string;
   safeRegionPage: number;
   totalRegionPages: number;
   onSearchRegionChange: (value: string) => void;
-  onRegionOpenChange: (regionId: string, open: boolean) => void;
   onPrevPage: () => void;
   onNextPage: () => void;
   formatDateTime: (value?: string | null) => string;
   formatKilometers: (valueMeters: number) => string;
   latestDate: (...values: Array<string | null | undefined>) => string | null;
 }) {
+  const [selectedRegion, setSelectedRegion] = useState<RegionItem | null>(null);
+  const deviceTypes = useMemo<DeviceTypeOption[]>(
+    () =>
+      assetCategories
+        .filter((category) => category.resource === "devices" && category.deviceTypeKey)
+        .map((category) => ({ value: category.deviceTypeKey || "", label: category.label })),
+    [assetCategories],
+  );
+
   return (
-    <section className="space-y-2">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Region Cards</h3>
-        <div className="w-full sm:w-72">
-          <Input value={searchRegion} onChange={(event) => onSearchRegionChange(event.target.value)} placeholder="Search region..." />
+    <section className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h3 className="text-sm font-semibold uppercase text-muted-foreground">Daftar Region</h3>
+          <p className="text-xs text-muted-foreground">{regions.length} dari {allRegionsCount} region ditampilkan</p>
+        </div>
+        <div className="relative w-full sm:w-72">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchRegion}
+            onChange={(event) => onSearchRegionChange(event.target.value)}
+            placeholder="Cari region..."
+            className="pl-8"
+          />
         </div>
       </div>
 
       {regions.length === 0 ? (
         <OperationalState
           title={allRegionsCount === 0 ? "Belum ada region" : "Region tidak ditemukan"}
-          description={
-            allRegionsCount === 0
-              ? "Akun ini belum memiliki data region yang bisa ditampilkan."
-              : "Coba gunakan kata kunci region lain atau reset pencarian."
-          }
+          description={allRegionsCount === 0 ? "Belum ada data region yang bisa ditampilkan." : "Ubah kata kunci pencarian region."}
         />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {regions.map((region) => {
-              const display = buildRegionCardDisplay(region);
               const summary = regionSummaryCache[region.id];
-              const isLoadingCard = regionSummaryLoadingIds.has(region.id) && !summary;
-              const isOpen = openRegionIds.has(region.id);
-              const regionDetail = regionDetailsCache[region.id];
-              const regionDetailLoading = regionDetailsLoadingIds.has(region.id) && !regionDetail;
-              const regionLastUpdated = latestDate(summary?.popLatestUpdatedAt, summary?.deviceLatestUpdatedAt, summary?.routeLatestUpdatedAt);
-
               return (
-                <Collapsible key={region.id} open={isOpen} onOpenChange={(nextOpen) => onRegionOpenChange(region.id, nextOpen)}>
-                  <Card>
-                    <CollapsibleTrigger asChild>
-                      <Button type="button" variant="ghost" className="h-auto w-full justify-start p-0 text-left hover:bg-transparent">
-                        <CardHeader className="w-full space-y-1 px-3 py-3">
-                          <CardTitle className="flex items-start justify-between gap-2 text-sm">
-                            <span className="truncate">{display.name}</span>
-                            <div className="flex items-center gap-1">
-                              {display.code ? (
-                                <Badge variant="outline" className="text-[10px] uppercase">
-                                  {display.code}
-                                </Badge>
-                              ) : null}
-                              <ChevronDown className={`size-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                            </div>
-                          </CardTitle>
-                          <div className="space-y-1 text-[11px] text-muted-foreground">
-                            <p>
-                              POP {isLoadingCard ? "..." : summary?.pops ?? 0} | Devices {isLoadingCard ? "..." : summary?.devices ?? 0}
-                            </p>
-                            <p>
-                              Route {isLoadingCard ? "..." : formatKilometers(summary?.routeDistanceMeters ?? 0)} | Cable on Route{" "}
-                              {isLoadingCard ? "..." : summary?.cableDevices ?? 0}
-                            </p>
-                            <p>Update terakhir: {formatDateTime(regionLastUpdated)}</p>
-                          </div>
-                        </CardHeader>
-                      </Button>
-                    </CollapsibleTrigger>
-
-                    <CollapsibleContent>
-                      <CardContent className="space-y-2 px-3 pb-3 pt-0">
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {assetCategories.map((category) => (
-                            <QuickCountButton
-                              key={category.slug}
-                              href={`/data-management/list/${category.slug}?region_id=${encodeURIComponent(region.id)}`}
-                              label={category.label}
-                              value={regionDetailLoading ? undefined : regionDetail?.[category.slug]?.total ?? 0}
-                            />
-                          ))}
-                        </div>
-                      </CardContent>
-                    </CollapsibleContent>
-                  </Card>
-                </Collapsible>
+                <RegionCard
+                  key={region.id}
+                  region={region}
+                  summary={summary}
+                  loading={!summary || regionSummaryLoadingIds.has(region.id)}
+                  onOpen={() => setSelectedRegion(region)}
+                  formatDateTime={formatDateTime}
+                  formatKilometers={formatKilometers}
+                  latestDate={latestDate}
+                />
               );
             })}
           </div>
 
           <div className="flex items-center justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onPrevPage} disabled={safeRegionPage <= 1}>
-              Prev
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              Page {safeRegionPage} / {totalRegionPages}
-            </span>
-            <Button type="button" variant="outline" size="sm" onClick={onNextPage} disabled={safeRegionPage >= totalRegionPages}>
-              Next
-            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={onPrevPage} disabled={safeRegionPage <= 1}>Sebelumnya</Button>
+            <span className="text-xs text-muted-foreground">Halaman {safeRegionPage} / {totalRegionPages}</span>
+            <Button type="button" variant="outline" size="sm" onClick={onNextPage} disabled={safeRegionPage >= totalRegionPages}>Berikutnya</Button>
           </div>
         </>
       )}
+
+      <RegionInventoryDialog
+        key={selectedRegion?.id || "no-region"}
+        open={Boolean(selectedRegion)}
+        region={selectedRegion}
+        token={token}
+        deviceTypes={deviceTypes}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setSelectedRegion(null);
+        }}
+      />
     </section>
   );
 }

@@ -194,7 +194,6 @@ export default function DataManagementPage() {
   const [regionSummaryLoadingIds, setRegionSummaryLoadingIds] = useState<Set<string>>(new Set());
   const [regionDetailsCache, setRegionDetailsCache] = useState<Record<string, RegionCategorySummary>>({});
   const [regionDetailsLoadingIds, setRegionDetailsLoadingIds] = useState<Set<string>>(new Set());
-  const [openRegionIds, setOpenRegionIds] = useState<Set<string>>(new Set());
   const [searchRegion, setSearchRegion] = useState("");
   const [regionPage, setRegionPage] = useState(1);
   const [activeTab, setActiveTab] = useState("overview");
@@ -256,7 +255,6 @@ export default function DataManagementPage() {
         setAssetCategories(nextAssetCategories);
         setRegionSummaryCache({});
         setRegionDetailsCache({});
-        setOpenRegionIds(new Set());
         setGlobalSummary(nextGlobalSummary);
       } catch (err) {
         if (cancelled) return;
@@ -459,8 +457,7 @@ export default function DataManagementPage() {
     [regions, focusedRegionId],
   );
   const focusedRegionSummary = focusedRegion ? regionSummaryCache[focusedRegion.id] : null;
-  const focusedRegionLoading = focusedRegion ? regionSummaryLoadingIds.has(focusedRegion.id) && !focusedRegionSummary : false;
-  const focusedRegionDetail = focusedRegion ? regionDetailsCache[focusedRegion.id] : null;
+    const focusedRegionDetail = focusedRegion ? regionDetailsCache[focusedRegion.id] : null;
   const focusedRegionDetailLoading = focusedRegion ? regionDetailsLoadingIds.has(focusedRegion.id) && !focusedRegionDetail : false;
   const focusedRegionLastUpdated = focusedRegionSummary
     ? latestDate(
@@ -518,60 +515,6 @@ export default function DataManagementPage() {
       cancelled = true;
     };
   }, [activeTab, qualityKey, qualityCache, qualityRegionId, token]);
-
-  useEffect(() => {
-    if (!assetCategories.length || !openRegionIds.size) return;
-    let cancelled = false;
-
-    async function run() {
-      const missingIds = Array.from(openRegionIds).filter((id) => !regionDetailsCache[id]);
-      if (!missingIds.length) return;
-
-      setRegionDetailsLoadingIds((prev) => new Set([...prev, ...missingIds]));
-      try {
-        const entries = await Promise.all(
-          missingIds.map(async (regionId) => {
-            const categorySummaries = await Promise.all(
-              assetCategories.map((category) =>
-                fetchSummaryByPath(
-                  `${buildCategoryApiPath(category, { page: 1, limit: 1 })}&region_id=${encodeURIComponent(regionId)}`,
-                  token,
-                ),
-              ),
-            );
-
-            const summaryMap: RegionCategorySummary = {};
-            assetCategories.forEach((category, index) => {
-              summaryMap[category.slug] = categorySummaries[index];
-            });
-            return [regionId, summaryMap] as const;
-          }),
-        );
-
-        if (cancelled) return;
-        setRegionDetailsCache((prev) => {
-          const next = { ...prev };
-          entries.forEach(([regionId, summaryMap]) => {
-            next[regionId] = summaryMap;
-          });
-          return next;
-        });
-      } finally {
-        if (!cancelled) {
-          setRegionDetailsLoadingIds((prev) => {
-            const next = new Set(prev);
-            missingIds.forEach((id) => next.delete(id));
-            return next;
-          });
-        }
-      }
-    }
-
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [assetCategories, openRegionIds, regionDetailsCache, token]);
 
   useEffect(() => {
     if (!focusedRegion || !assetCategories.length) return;
@@ -739,23 +682,13 @@ export default function DataManagementPage() {
                     regions={pagedRegions}
                     allRegionsCount={regions.length}
                     assetCategories={assetCategories}
+                    token={token}
                     regionSummaryCache={regionSummaryCache}
                     regionSummaryLoadingIds={regionSummaryLoadingIds}
-                    regionDetailsCache={regionDetailsCache}
-                    regionDetailsLoadingIds={regionDetailsLoadingIds}
-                    openRegionIds={openRegionIds}
                     searchRegion={searchRegion}
                     safeRegionPage={safeRegionPage}
                     totalRegionPages={totalRegionPages}
                     onSearchRegionChange={setSearchRegion}
-                    onRegionOpenChange={(regionId, nextOpen) => {
-                      setOpenRegionIds((prev) => {
-                        const next = new Set(prev);
-                        if (nextOpen) next.add(regionId);
-                        else next.delete(regionId);
-                        return next;
-                      });
-                    }}
                     onPrevPage={() => setRegionPage((prev) => Math.max(1, prev - 1))}
                     onNextPage={() => setRegionPage((prev) => Math.min(totalRegionPages, prev + 1))}
                     formatDateTime={formatDateTime}

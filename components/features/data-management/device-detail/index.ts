@@ -1,5 +1,13 @@
 export { DeviceDetailHeader } from "@/components/features/data-management/device-detail/device-detail-header";
-export { DeviceDetailForm } from "@/components/features/data-management/device-detail/device-detail-form";
+export { DeviceFormSelection, type DeviceFormSelectionProps } from "@/components/features/data-management/device-detail/device-form-selection";
+export {
+  GenericDeviceForm,
+  OdcDeviceForm,
+  OdpDeviceForm,
+  type GenericDeviceFormProps,
+  type OdcDeviceFormProps,
+  type OdpDeviceFormProps,
+} from "@/components/features/data-management/device-detail/forms";
 export { DeviceGallerySection } from "@/components/features/data-management/device-detail/device-gallery-section";
 export { DeviceOperationalSummary } from "@/components/features/data-management/device-detail/device-operational-summary";
 export { DevicePortSummarySection } from "@/components/features/data-management/device-detail/device-port-summary-section";
@@ -10,6 +18,10 @@ export {
   OdpCoreChainSummarySection,
   OdpPortMetrics,
 } from "@/components/features/data-management/device-detail/odp-core-chain-section";
+export {
+  OdcCoreChainSummarySection,
+  OtbCoreChainSummarySection,
+} from "@/components/features/data-management/device-detail/odc-otb-chain-section";
 export { OdpOperationsShell } from "@/components/features/data-management/device-detail/odp-operations-shell";
 export { OdpPortSection } from "@/components/features/data-management/device-detail/odp-port-section";
 export {
@@ -25,3 +37,4 @@ export {
 export { OdpValidationHistorySection } from "@/components/features/data-management/device-detail/odp-validation-history-section";
 export { ValidationEvidenceAction } from "@/components/features/data-management/device-detail/validation-evidence-action";
 export { ValidationReminderDialog } from "@/components/features/data-management/device-detail/validation-reminder-dialog";
+export { DeviceTopologyChainVisualizer } from "@/components/features/data-management/device-detail/device-topology-chain-visualizer";

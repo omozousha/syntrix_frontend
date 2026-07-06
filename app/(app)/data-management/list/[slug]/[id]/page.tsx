@@ -9,7 +9,9 @@ import { ArrowLeft, CheckCircle2, ChevronDown, CircleHelp, Download, ImagePlus, 
 import { AppLoading } from "@/components/app-loading-new";
 import { ResponseDialog } from "@/components/response-dialog";
 import {
-  DeviceDetailForm,
+  DeviceFormSelection,
+  OdcCoreChainSummarySection,
+  OtbCoreChainSummarySection,
   DeviceDetailHeader,
   DeviceGallerySection,
   DeviceOperationalSummary,
@@ -24,6 +26,7 @@ import {
   OdpPortSection,
   OdpValidationHistorySection,
   ValidationReminderDialog,
+  DeviceTopologyChainVisualizer,
 } from "@/components/features/data-management/device-detail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -147,6 +150,7 @@ type DeviceTopologySummary = {
     has_fiber_core_inventory?: boolean;
     trace_endpoint?: string;
   };
+  odc_relations?: any;
 };
 type OdpCustomerOption = {
   id: string;
@@ -575,6 +579,10 @@ export default function DataManagementDetailPage() {
   const [loadingOdpValidations, setLoadingOdpValidations] = useState(false);
   const [odpCoreChainSummary, setOdpCoreChainSummary] = useState<OdpCoreChainSummary | null>(null);
   const [loadingOdpCoreChainSummary, setLoadingOdpCoreChainSummary] = useState(false);
+  const [odcChainSummary, setOdcChainSummary] = useState<Parameters<typeof OdcCoreChainSummarySection>[0]["chainSummary"] | null>(null);
+  const [loadingOdcChainSummary, setLoadingOdcChainSummary] = useState(false);
+  const [otbChainSummary, setOtbChainSummary] = useState<Parameters<typeof OtbCoreChainSummarySection>[0]["chainSummary"] | null>(null);
+  const [loadingOtbChainSummary, setLoadingOtbChainSummary] = useState(false);
   const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   const [servicePortRelations, setServicePortRelations] = useState<ServicePortRelation[]>([]);
   const [loadingServicePortRelations, setLoadingServicePortRelations] = useState(false);
@@ -595,6 +603,8 @@ export default function DataManagementDetailPage() {
   const canOpenAsBuilt = me.role === "admin" || me.role === "user_all_region";
   const editable = canEditAsset && (category?.resource === "pops" || category?.resource === "devices");
   const isOdpDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "ODP";
+  const isOdcDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "ODC";
+  const isOtbDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "OTB";
   const isOntDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "ONT";
   const showServicePortRelations = category?.resource === "customers" || isOntDevice;
   const backToListHref = category
@@ -1045,6 +1055,16 @@ export default function DataManagementDetailPage() {
         setOdpPorts(sortedPorts);
         setDevicePortConnections(summary.connections?.items || []);
         setDeviceTopologySummary(summary);
+        if (valueOf(activeItem.device_type_key).toUpperCase() === "ODC") {
+          const upConn = summary.odc_relations?.upstream?.[0];
+          setForm((prev) => ({
+            ...prev,
+            upstream_device_id: upConn?.peer_device?.id || "",
+            upstream_cable_id: upConn?.cable_device?.id || "",
+            upstream_core_start: upConn?.core_start != null ? String(upConn.core_start) : "",
+            upstream_core_end: upConn?.core_end != null ? String(upConn.core_end) : "",
+          }));
+        }
       } catch (err) {
         if (!cancelled) {
           setOdpPorts([]);
@@ -1290,6 +1310,84 @@ export default function DataManagementDetailPage() {
     };
   }, [isOdpDevice, item, token]);
 
+  // ── Fetch ODC chain summary ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!isOdcDevice || !item || !token) {
+      setOdcChainSummary(null);
+      setLoadingOdcChainSummary(false);
+      return;
+    }
+    const deviceId = item.id;
+    let cancelled = false;
+    async function loadOdcChainSummary() {
+      setLoadingOdcChainSummary(true);
+      try {
+        const result = await apiFetch<{ data: Parameters<typeof OdcCoreChainSummarySection>[0]["chainSummary"] }>(
+          `/devices/${deviceId}/odc-chain-summary`,
+          { token },
+        );
+        if (cancelled) return;
+        setOdcChainSummary(result.data || null);
+      } catch {
+        if (cancelled) return;
+        setOdcChainSummary(null);
+      } finally {
+        if (!cancelled) setLoadingOdcChainSummary(false);
+      }
+    }
+    void loadOdcChainSummary();
+    return () => { cancelled = true; };
+  }, [isOdcDevice, item, token]);
+
+  // ── Fetch OTB chain summary (dari topology/devices/:id/summary) ───────────
+  useEffect(() => {
+    if (!isOtbDevice || !item || !token) {
+      setOtbChainSummary(null);
+      setLoadingOtbChainSummary(false);
+      return;
+    }
+    const deviceId = item.id;
+    let cancelled = false;
+    async function loadOtbChainSummary() {
+      setLoadingOtbChainSummary(true);
+      try {
+        const result = await apiFetch<{ data: Record<string, unknown> }>(
+          `/topology/devices/${deviceId}/summary`,
+          { token },
+        );
+        if (cancelled) return;
+        const data = result.data as Record<string, unknown> | null;
+        if (data) {
+          const dev = (data.device as Record<string, unknown> | null);
+          const odcList = (data.odc_list as Array<Record<string, unknown>> | null) || [];
+          const conns = (data.connections as { total?: number } | null);
+          setOtbChainSummary({
+            downstream_odc_count: odcList.length,
+            downstream_odp_count: 0,
+            total_core_used: Number(dev?.used_core || 0),
+            total_core_capacity: Number(dev?.capacity_core || 0),
+            is_connected: odcList.length > 0 || Number(conns?.total || 0) > 0,
+            odc_list: odcList.map((odc) => ({
+              id: String(odc.id || ""),
+              device_name: odc.device_name as string | null,
+              device_id: odc.device_id as string | null,
+              is_chain_complete: Boolean(odc.is_chain_complete),
+            })),
+          });
+        } else {
+          setOtbChainSummary(null);
+        }
+      } catch {
+        if (cancelled) return;
+        setOtbChainSummary(null);
+      } finally {
+        if (!cancelled) setLoadingOtbChainSummary(false);
+      }
+    }
+    void loadOtbChainSummary();
+    return () => { cancelled = true; };
+  }, [isOtbDevice, item, token]);
+
   useEffect(() => {
     if (!showServicePortRelations || !item || !token) {
       setServicePortRelations([]);
@@ -1434,6 +1532,107 @@ export default function DataManagementDetailPage() {
       payload.image_attachment_id = mergedImageAttachments[0]?.id || null;
       payload.image_attachments = mergedImageAttachments;
 
+      // ODC upstream connection saving (if it changed)
+      const isOdcDevice = category.resource === "devices" && valueOf(item.device_type_key).toUpperCase() === "ODC";
+      if (isOdcDevice) {
+        const existingUpstream = deviceTopologySummary?.odc_relations?.upstream?.[0] || null;
+        const currentOtbId = form.upstream_device_id || "";
+        const currentCableId = form.upstream_cable_id || "";
+        const currentCoreStart = form.upstream_core_start || "";
+        const currentCoreEnd = form.upstream_core_end || "";
+
+        const prevOtbId = existingUpstream?.peer_device?.id || "";
+        const prevCableId = existingUpstream?.cable_device?.id || "";
+        const prevCoreStart = existingUpstream?.core_start != null ? String(existingUpstream.core_start) : "";
+        const prevCoreEnd = existingUpstream?.core_end != null ? String(existingUpstream.core_end) : "";
+
+        const hasConnChanged =
+          currentOtbId !== prevOtbId ||
+          currentCableId !== prevCableId ||
+          currentCoreStart !== prevCoreStart ||
+          currentCoreEnd !== prevCoreEnd;
+
+        if (hasConnChanged) {
+          if (!currentOtbId) {
+            // Delete / Archive connection
+            if (existingUpstream?.id) {
+              await apiFetch(`/topology/port-connections/${existingUpstream.id}`, {
+                method: "DELETE",
+                token,
+              });
+            }
+          } else {
+            // Update or Create connection
+            const coreStartNum = currentCoreStart ? Number(currentCoreStart) : null;
+            const coreEndNum = currentCoreEnd ? Number(currentCoreEnd) : null;
+            const fiberCount = (coreStartNum != null && coreEndNum != null) ? Math.max(0, coreEndNum - coreStartNum + 1) : null;
+
+            if (existingUpstream?.id) {
+              // If OTB device has changed, we must find a port on the new OTB
+              let fromPortId = existingUpstream.peer_port?.id;
+              if (currentOtbId !== prevOtbId) {
+                const otbPortsRes = await apiFetch<{ data: DevicePort[] }>(
+                  `/devicePorts?page=1&limit=100&device_id=${encodeURIComponent(currentOtbId)}`,
+                  { token }
+                );
+                const otbPorts = otbPortsRes.data || [];
+                const otbPort = otbPorts.find(p => p.direction?.toLowerCase() === 'out') || otbPorts[0];
+                if (!otbPort) {
+                  throw new Error("Perangkat OTB terpilih tidak memiliki port.");
+                }
+                fromPortId = otbPort.id;
+              }
+
+              await apiFetch(`/topology/port-connections/${existingUpstream.id}`, {
+                method: "PATCH",
+                token,
+                body: JSON.stringify({
+                  from_port_id: fromPortId,
+                  cable_device_id: currentCableId || null,
+                  core_start: coreStartNum,
+                  core_end: coreEndNum,
+                  fiber_count: fiberCount,
+                }),
+              });
+            } else {
+              // Create new connection
+              // Find feeder/input port of ODC
+              const odcPort = odpPorts.find(p => p.direction?.toLowerCase() === 'in') || odpPorts[0];
+              if (!odcPort) {
+                throw new Error("ODC tidak memiliki port input/feeder. Silakan buat port input terlebih dahulu.");
+              }
+
+              // Find output/feeder port of OTB
+              const otbPortsRes = await apiFetch<{ data: DevicePort[] }>(
+                `/devicePorts?page=1&limit=100&device_id=${encodeURIComponent(currentOtbId)}`,
+                { token }
+              );
+              const otbPorts = otbPortsRes.data || [];
+              const otbPort = otbPorts.find(p => p.direction?.toLowerCase() === 'out') || otbPorts[0];
+              if (!otbPort) {
+                throw new Error("Perangkat OTB terpilih tidak memiliki port.");
+              }
+
+              await apiFetch(`/topology/port-connections`, {
+                method: "POST",
+                token,
+                body: JSON.stringify({
+                  region_id: item.region_id,
+                  from_port_id: otbPort.id,
+                  to_port_id: odcPort.id,
+                  connection_type: "feeder",
+                  status: "active",
+                  cable_device_id: currentCableId || null,
+                  core_start: coreStartNum,
+                  core_end: coreEndNum,
+                  fiber_count: fiberCount,
+                }),
+              });
+            }
+          }
+        }
+      }
+
       await apiFetch(`/${category.resource}/${item.id}`, {
         method: "PATCH",
         token,
@@ -1444,7 +1643,31 @@ export default function DataManagementDetailPage() {
       setNewImageFiles([]);
       const refreshed = await apiFetch<{ data: GenericItem }>(`/${category.resource}/${item.id}`, { token });
       setItem(refreshed.data);
-      setForm(buildEditableForm(refreshed.data, category.resource));
+
+      let finalSummary = deviceTopologySummary;
+      if (category.resource === "devices") {
+        const topoResult = await apiFetch<{ data: DeviceTopologySummary }>(
+          `/topology/devices/${encodeURIComponent(refreshed.data.id)}/summary?limit=200`,
+          { token }
+        );
+        finalSummary = topoResult.data || null;
+        const sortedPorts = (finalSummary?.ports?.items || []).sort((a, b) => Number(a.port_index) - Number(b.port_index));
+        setOdpPorts(sortedPorts);
+        setDevicePortConnections(finalSummary?.connections?.items || []);
+        setDeviceTopologySummary(finalSummary);
+
+        if (isOdcDevice) {
+          setLoadingOdcChainSummary(true);
+          try {
+            const odcResult = await apiFetch<{ data: any }>(`/devices/${refreshed.data.id}/odc-chain-summary`, { token });
+            setOdcChainSummary(odcResult.data || null);
+          } catch {} finally {
+            setLoadingOdcChainSummary(false);
+          }
+        }
+      }
+
+      setForm(buildEditableForm(refreshed.data, category.resource, finalSummary));
     } catch (err) {
       setError((err as Error).message || "Gagal menyimpan perubahan.");
     } finally {
@@ -1904,13 +2127,13 @@ export default function DataManagementDetailPage() {
               ) : null}
 
               {category.resource === "devices" ? (
-                <DeviceDetailForm
+                <DeviceFormSelection
                   form={form}
                   onChange={setForm}
                   editing={isEditing}
                   relationLabels={relationLabels}
                   relationLoading={relationLabelsLoading}
-                  isOdpDevice={isOdpDevice}
+                  deviceTypeKey={valueOf(item?.device_type_key)}
                   splitterProfiles={splitterProfiles}
                   odpTypes={odpTypes}
                   installationTypes={installationTypes}
@@ -1920,6 +2143,16 @@ export default function DataManagementDetailPage() {
                   projectHref={buildProjectDetailHref(valueOf(item.project_id), valueOf(item.region_id))}
                   latestFieldValidation={latestApprovedOdpValidation?.payload?.field_validation || null}
                   effectiveValidationStatus={detailValidationStatus}
+                  provinces={[]}
+                  cities={[]}
+                  topologyLookup={undefined}
+                  topologySummary={deviceTopologySummary}
+                  coreCapacities={[]}
+                  cableTypes={[]}
+                  odcChainSummary={isOdcDevice ? odcChainSummary : undefined}
+                  odcChainLoading={isOdcDevice ? loadingOdcChainSummary : undefined}
+                  otbChainSummary={isOtbDevice ? otbChainSummary : undefined}
+                  otbChainLoading={isOtbDevice ? loadingOtbChainSummary : undefined}
                 />
               ) : null}
 
@@ -1948,6 +2181,9 @@ export default function DataManagementDetailPage() {
                     topologySummary={deviceTopologySummary}
                     loading={loadingOdpPorts}
                   />
+                  {(isOdcDevice || isOtbDevice) && (
+                    <DeviceTopologyChainVisualizer deviceId={item.id} token={token} />
+                  )}
                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
                     <div className="lg:max-w-[280px]">
                       <DeviceQrActionPanel
@@ -2021,7 +2257,7 @@ export default function DataManagementDetailPage() {
                       <Button
                         variant="outline"
                         onClick={() => {
-                          setForm(buildEditableForm(item, category.resource));
+                          setForm(buildEditableForm(item, category.resource, deviceTopologySummary));
                           setNewImageFiles([]);
                           setIsEditing(false);
                         }}
@@ -2075,6 +2311,7 @@ export default function DataManagementDetailPage() {
                 onCreateDraftLink={(nextPayload) => void handleCreateDraftLink(nextPayload)}
                 editing={isEditing}
                 onStartEdit={() => setIsEditing(true)}
+                token={token}
               />
             ) : null}
           </>
@@ -2331,6 +2568,7 @@ function OdpOperationsPanel({
   onCreateDraftLink,
   editing,
   onStartEdit,
+  token,
 }: {
   device: GenericItem;
   ports: DevicePort[];
@@ -2365,6 +2603,7 @@ function OdpOperationsPanel({
   cableDevices: OdpCableOption[];
   editing: boolean;
   onStartEdit: () => void;
+  token: string | null;
   onCreateDraftLink: (payload: {
     upstreamPortId: string;
     odpPortId: string;
@@ -2449,7 +2688,9 @@ function OdpOperationsPanel({
             onDraftCoreStartChange={setDraftCoreStart}
             onDraftCoreEndChange={setDraftCoreEnd}
             onCreateDraftLink={onCreateDraftLink}
-          />
+           />
+
+          <DeviceTopologyChainVisualizer deviceId={device.id} token={token} />
 
           <OdpTopologyReadinessSummary summary={topologySummary} loading={loadingPorts} />
 
@@ -3325,7 +3566,7 @@ function SelectField({
   );
 }
 
-function buildEditableForm(item: GenericItem, resource: string): EditableForm {
+function buildEditableForm(item: GenericItem, resource: string, topologySummary?: DeviceTopologySummary | null): EditableForm {
   if (resource === "pops") {
     return {
       pop_id: valueOf(item.pop_id),
@@ -3351,6 +3592,9 @@ function buildEditableForm(item: GenericItem, resource: string): EditableForm {
   }
 
   if (resource === "devices") {
+    const isOdc = valueOf(item.device_type_key).toUpperCase() === "ODC";
+    const upConn = isOdc ? topologySummary?.odc_relations?.upstream?.[0] : null;
+
     return {
       device_id: valueOf(item.device_id),
       device_code: valueOf(item.device_code),
@@ -3381,6 +3625,11 @@ function buildEditableForm(item: GenericItem, resource: string): EditableForm {
       longitude: valueOf(item.longitude),
       latitude: valueOf(item.latitude),
       tags: arrayToCsv(item.tags),
+      // ODC upstream connection fields
+      upstream_device_id: upConn?.peer_device?.id || "",
+      upstream_cable_id: upConn?.cable_device?.id || "",
+      upstream_core_start: upConn?.core_start != null ? String(upConn.core_start) : "",
+      upstream_core_end: upConn?.core_end != null ? String(upConn.core_end) : "",
     };
   }
 

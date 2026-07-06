@@ -15,12 +15,15 @@ type SplitterProfileOption = {
 
 export type DeviceCapacityValues = {
   device_type_key: string;
+  route_type?: string;
   capacity_core: string;
   used_core: string;
   total_ports: string;
   used_ports: string;
   splitter_ratio: string;
 };
+
+type CoreCapacityOption = { core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null };
 
 function toOptions(options: ComboboxOption[]): ComboboxOption[] {
   return options;
@@ -34,6 +37,7 @@ export function DeviceCapacityFields({
   needsPortPresetSelector,
   splitterPortPresetOptions,
   splitterProfiles,
+  coreCapacities,
   onChange,
 }: {
   values: DeviceCapacityValues;
@@ -43,6 +47,7 @@ export function DeviceCapacityFields({
   needsPortPresetSelector: boolean;
   splitterPortPresetOptions: number[];
   splitterProfiles: SplitterProfileOption[];
+  coreCapacities?: CoreCapacityOption[];
   onChange: (patch: Partial<DeviceCapacityValues>) => void;
 }) {
   const isOdp = values.device_type_key === "ODP";
@@ -51,23 +56,44 @@ export function DeviceCapacityFields({
   const usedPortsLabel = isOdp ? "Port Aktif" : isOdc ? "Port Terpakai" : "Used Ports";
   const splitterLabel = isOdp ? "Kapasitas Splitter" : isOdc ? "Splitter Profile" : "Splitter Ratio";
 
-  // Filter splitter profiles based on device type + show all if allowed_device_type_keys is empty (no restriction)
+  // Filter splitter profiles based on device type
   const filteredSplitterProfiles = splitterProfiles.filter((profile) => {
     const allowedKeys = profile.allowed_device_type_keys || [];
     if (!allowedKeys.length) return false; // no device type assigned = inactive, hide
     return allowedKeys.includes(values.device_type_key);
   });
 
+  // Filter core capacities based on route type (kategori kabel)
+  // Sama seperti splitter profiles: allowed_route_type_keys menentukan route_type mana yang boleh pakai core ini
+  const routeType = values.route_type || "";
+  const filteredCoreCapacities = (coreCapacities || []).filter((item) => {
+    const allowedKeys = item.allowed_route_type_keys || [];
+    if (!allowedKeys.length) return true; // empty = ALL (berlaku untuk semua route type)
+    if (allowedKeys.includes("_NONE_")) return false; // _NONE_ = tidak berlaku di kategori manapun
+    if (!routeType) return true; // route_type belum dipilih, tampilkan semua core
+    return allowedKeys.includes(routeType);
+  });
+
   return (
     <>
       {showCoreFields ? (
         <>
-          <Field
-            label="Capacity Core"
-            type="number"
-            value={values.capacity_core}
-            onChange={(value) => onChange({ capacity_core: value })}
-          />
+          <div className="space-y-1.5">
+            <FieldLabel label="Capacity Core" tooltip="Pilih kapasitas core kabel dari master data." />
+            <Combobox
+              value={values.capacity_core || "__none__"}
+              onValueChange={(value) => onChange({ capacity_core: value === "__none__" ? "" : value })}
+              options={[
+                { value: "__none__", label: "Pilih kapasitas core" },
+                ...filteredCoreCapacities.map((item) => ({
+                  value: String(item.core_capacity_value),
+                  label: `${item.core_capacity_value} Core${item.label ? ` — ${item.label}` : ""}`,
+                })),
+              ]}
+              placeholder="Pilih kapasitas core"
+              searchPlaceholder="Cari kapasitas core..."
+            />
+          </div>
           <Field
             label="Used Core"
             type="number"

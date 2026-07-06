@@ -9,7 +9,6 @@ import {
   Cable,
   CircleDot,
   FolderPlus,
-  GitBranch,
   HardDrive,
   LibraryBig,
   MapPinned,
@@ -165,16 +164,6 @@ export function AddDataMenu({
             <div className="space-y-0.5">
               <p className="text-sm font-medium">POP</p>
               <p className="text-xs text-muted-foreground">Create Point of Presence data.</p>
-            </div>
-          </DropdownMenuItem>
-        ) : null}
-
-        {canCreateDevice ? (
-          <DropdownMenuItem className="items-start gap-3 py-2" onSelect={() => go("/data-management/create?kind=route")}>
-            <GitBranch className="mt-0.5 size-4 text-muted-foreground" />
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium">Route</p>
-              <p className="text-xs text-muted-foreground">Create route segment and distance baseline.</p>
             </div>
           </DropdownMenuItem>
         ) : null}

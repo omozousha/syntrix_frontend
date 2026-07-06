@@ -10,7 +10,6 @@ import {
 
 type CreateKindFlags = {
   isPop: boolean;
-  isRoute: boolean;
   isProject: boolean;
   isCustomer: boolean;
   isDevice: boolean;
@@ -18,7 +17,6 @@ type CreateKindFlags = {
 
 export type CreateOperationalValues = {
   status_pop: string;
-  route_status: string;
   project_status: string;
   customer_status: string;
   status: string;
@@ -28,7 +26,7 @@ export type CreateOperationalValues = {
 };
 
 const POP_STATUS_OPTIONS = ["planning", "active", "inactive", "maintenance"];
-const ROUTE_STATUS_OPTIONS = ["planning", "active", "maintenance", "closed"];
+
 const PROJECT_STATUS_OPTIONS = ["planning", "running", "done", "hold", "cancelled"];
 const CUSTOMER_STATUS_OPTIONS = ["prospect", "active", "suspend", "inactive", "terminated"];
 const DEVICE_STATUS_OPTIONS = ["draft", "installed", "active", "inactive", "maintenance", "retired"];
@@ -141,15 +139,6 @@ function getStatusState(
       tooltip: "Status operasional POP.",
       options: toOptions(POP_STATUS_OPTIONS),
       onValueChange: (value: string) => onChange({ status_pop: value }),
-    };
-  }
-
-  if (flags.isRoute) {
-    return {
-      value: values.route_status,
-      tooltip: "Status progress route.",
-      options: toOptions(ROUTE_STATUS_OPTIONS),
-      onValueChange: (value: string) => onChange({ route_status: value }),
     };
   }
 

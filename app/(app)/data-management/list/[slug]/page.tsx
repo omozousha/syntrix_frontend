@@ -629,6 +629,8 @@ export default function DataManagementListPage() {
     if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Inventory Code", "Asset Group", "Status", "Updated"];
     if (category.resource === "popTypes") return [selectAllHeader, "Code", "POP Type", "Status", "Updated"];
     if (category.resource === "routeTypes") return [selectAllHeader, "Code", "Route Type", "Status", "Updated"];
+    if (category.resource === "cableTypes") return [selectAllHeader, "Code", "Cable Type", "Description", "Status", "Updated"];
+    if (category.resource === "coreCapacities") return [selectAllHeader, "Value", "Label", "Description", "Route Types", "Status", "Updated"];
     if (category.resource === "odpTypes") return [selectAllHeader, "Code", "ODP Type", "Status", "Updated"];
     if (category.resource === "installationTypes") return [selectAllHeader, "Code", "Installation Type", "Status", "Updated"];
     if (category.resource === "serviceTypes") return [selectAllHeader, "Code", "Service Type", "Status", "Updated"];
@@ -768,6 +770,27 @@ export default function DataManagementListPage() {
           selectCell,
           pick(item, ["route_type_code"]),
           withArchivedLabel(item, pick(item, ["route_type_name"])),
+          pick(item, ["is_active"]),
+          formatDateTime(pick(item, ["updated_at", "created_at"])),
+        ];
+      }
+      if (category.resource === "cableTypes") {
+        return [
+          selectCell,
+          pick(item, ["cable_type_code"]),
+          withArchivedLabel(item, pick(item, ["cable_type_name"])),
+          pick(item, ["description"]),
+          pick(item, ["is_active"]),
+          formatDateTime(pick(item, ["updated_at", "created_at"])),
+        ];
+      }
+      if (category.resource === "coreCapacities") {
+        return [
+          selectCell,
+          pick(item, ["core_capacity_value"]),
+          withArchivedLabel(item, pick(item, ["label"])),
+          pick(item, ["description"]),
+          renderRouteTypeTags(item.allowed_route_type_keys),
           pick(item, ["is_active"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -1680,6 +1703,134 @@ function renderCreateFields(
     );
   }
 
+  if (resource === "cableTypes") {
+    return (
+      <>
+        <div className="space-y-1.5">
+          <Label>Cable Type Name *</Label>
+          <Input value={form.cable_type_name || ""} onChange={(e) => setValue("cable_type_name", e.target.value)} placeholder="Contoh: Single-mode (SM)" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Cable Type Code</Label>
+          <Input value={form.cable_type_code || ""} onChange={(e) => setValue("cable_type_code", e.target.value.toUpperCase())} placeholder="Contoh: SM" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Description</Label>
+          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi tipe kabel" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Sort Order</Label>
+          <Input type="number" value={form.sort_order || "0"} onChange={(e) => setValue("sort_order", e.target.value)} />
+        </div>
+      </>
+    );
+  }
+
+  if (resource === "coreCapacities") {
+    const allowedKeys = parseJsonStringArray(form.allowed_route_type_keys);
+    const isAllState = allowedKeys.length === 0;
+    const isNoneState = allowedKeys.includes("_NONE_");
+    const routeTypeList = ["BACKBONE", "FEEDER", "DISTRIBUTION", "ACCESS", "DROP"];
+    const isChecked = (key: string) => isAllState || allowedKeys.includes(key);
+    const toggleRouteTypeKey = (key: string) => {
+      let next: string[];
+      if (isAllState) {
+        // Currently ALL, unchecking one → only the other 4
+        next = routeTypeList.filter((k) => k !== key);
+      } else if (isNoneState) {
+        // Currently NONE, checking one → only this one
+        next = [key];
+      } else {
+        next = allowedKeys.includes(key)
+          ? allowedKeys.filter((k) => k !== key)
+          : [...allowedKeys, key];
+      }
+      // All checked → ALL (empty)
+      if (next.length === routeTypeList.length) {
+        setValue("allowed_route_type_keys", "[]");
+      }
+      // None checked → NONE
+      else if (next.length === 0) {
+        setValue("allowed_route_type_keys", JSON.stringify(["_NONE_"]));
+      }
+      else {
+        setValue("allowed_route_type_keys", JSON.stringify(next));
+      }
+    };
+
+    return (
+      <>
+        <div className="space-y-1.5">
+          <Label>Core Capacity Value *</Label>
+          <Input type="number" min={1} value={form.core_capacity_value || ""} onChange={(e) => setValue("core_capacity_value", e.target.value)} placeholder="Contoh: 96" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Label *</Label>
+          <Input value={form.label || ""} onChange={(e) => setValue("label", e.target.value)} placeholder="Contoh: 96 Cores" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Description</Label>
+          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi kapasitas core" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Route Types</Label>
+          <p className="text-xs text-muted-foreground">Pilih kategori kabel yang diizinkan. Centang semua = ALL (semua kategori). Kosongkan semua = NONE (tidak ada kategori).</p>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isChecked("BACKBONE")}
+                onChange={() => toggleRouteTypeKey("BACKBONE")}
+                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
+              />
+              BACKBONE
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isChecked("FEEDER")}
+                onChange={() => toggleRouteTypeKey("FEEDER")}
+                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
+              />
+              FEEDER
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isChecked("DISTRIBUTION")}
+                onChange={() => toggleRouteTypeKey("DISTRIBUTION")}
+                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
+              />
+              DISTRIBUTION
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isChecked("ACCESS")}
+                onChange={() => toggleRouteTypeKey("ACCESS")}
+                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
+              />
+              ACCESS
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isChecked("DROP")}
+                onChange={() => toggleRouteTypeKey("DROP")}
+                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
+              />
+              DROP
+            </label>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Sort Order</Label>
+          <Input type="number" value={form.sort_order || "0"} onChange={(e) => setValue("sort_order", e.target.value)} />
+        </div>
+      </>
+    );
+  }
+
   if (resource === "odpTypes") {
     return (
       <>
@@ -1945,6 +2096,8 @@ function getCreateDefaults(resource: string): Record<string, string> {
   if (resource === "deviceTypes") return { asset_group: "active", icon_name: "HardDrive", is_active: "true", sort_order: "0" };
   if (resource === "popTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "routeTypes") return { is_active: "true", sort_order: "0" };
+  if (resource === "cableTypes") return { is_active: "true", sort_order: "0" };
+  if (resource === "coreCapacities") return { is_active: "true", sort_order: "0", allowed_route_type_keys: "[]" };
   if (resource === "odpTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "installationTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "serviceTypes") return { is_active: "true", sort_order: "0" };
@@ -2177,6 +2330,26 @@ function buildEditFormFromItem(resource: string, item: GenericItem): Record<stri
       is_active: readBool("is_active", true),
     };
   }
+  if (resource === "cableTypes") {
+    return {
+      cable_type_name: read("cable_type_name"),
+      cable_type_code: read("cable_type_code"),
+      description: read("description"),
+      sort_order: read("sort_order") || "0",
+      is_active: readBool("is_active", true),
+    };
+  }
+  if (resource === "coreCapacities") {
+    const rawKeys = item.allowed_route_type_keys;
+    return {
+      label: read("label"),
+      core_capacity_value: read("core_capacity_value"),
+      description: read("description"),
+      allowed_route_type_keys: JSON.stringify(Array.isArray(rawKeys) ? rawKeys : []),
+      sort_order: read("sort_order") || "0",
+      is_active: readBool("is_active", true),
+    };
+  }
   if (resource === "odpTypes") {
     return {
       odp_type_name: read("odp_type_name"),
@@ -2311,6 +2484,26 @@ function buildCreatePayload(resource: string, form: Record<string, string>) {
     payload.is_active = (trim("is_active") || "true") !== "false";
     return payload;
   }
+  if (resource === "cableTypes") {
+    if (!trim("cable_type_name")) return null;
+    assign("cable_type_name");
+    assign("cable_type_code");
+    assign("description");
+    payload.sort_order = Number(trim("sort_order") || "0");
+    payload.is_active = (trim("is_active") || "true") !== "false";
+    return payload;
+  }
+  if (resource === "coreCapacities") {
+    if (!trim("label") || !trim("core_capacity_value")) return null;
+    assign("label");
+    payload.core_capacity_value = Number(trim("core_capacity_value"));
+    assign("description");
+    const parsedRouteKeys = parseJsonStringArray(form.allowed_route_type_keys);
+    payload.allowed_route_type_keys = parsedRouteKeys;
+    payload.sort_order = Number(trim("sort_order") || "0");
+    payload.is_active = (trim("is_active") || "true") !== "false";
+    return payload;
+  }
   if (resource === "odpTypes") {
     if (!trim("odp_type_name")) return null;
     assign("odp_type_name");
@@ -2407,6 +2600,33 @@ function pick(item: Record<string, unknown>, keys: string[]) {
     if (value !== null && value !== undefined && String(value).trim() !== "") return String(value);
   }
   return "-";
+}
+
+function renderRouteTypeTags(value: unknown) {
+  const arr = Array.isArray(value) ? value.filter(Boolean) : [];
+  if (!arr.length) {
+    return (
+      <Badge variant="secondary" className="text-xs font-normal">
+        ALL
+      </Badge>
+    );
+  }
+  if (arr.includes("_NONE_")) {
+    return (
+      <Badge variant="outline" className="text-xs font-normal text-destructive border-destructive/50">
+        NONE
+      </Badge>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {arr.map((type: string) => (
+        <Badge key={type} variant="outline" className="text-xs font-normal">
+          {type}
+        </Badge>
+      ))}
+    </div>
+  );
 }
 
 function renderDeviceTypeTags(value: unknown) {
@@ -2615,11 +2835,11 @@ function canWriteResource(role: string, resource: string) {
 }
 
 function supportsIsActiveResource(resource: string) {
-  return ["deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "splitterProfiles", "provinces", "cities"].includes(resource);
+  return ["deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "splitterProfiles", "cableTypes", "provinces", "cities"].includes(resource);
 }
 
 function supportsSoftDeleteResource(resource: string) {
-  return ["regions", "deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "manufacturers", "brands", "assetModels", "provinces", "cities"].includes(resource);
+  return ["regions", "deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "manufacturers", "brands", "assetModels", "cableTypes", "provinces", "cities"].includes(resource);
 }
 
 function supportsPopFilterResource(resource: string) {
