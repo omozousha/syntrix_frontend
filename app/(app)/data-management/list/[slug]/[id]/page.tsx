@@ -3826,7 +3826,7 @@ function buildUpdatePayload(form: EditableForm, resource: string, originalItem?:
       longitude: numberOrNull(form.longitude),
       latitude: numberOrNull(form.latitude),
       tags: csvToArray(form.tags),
-      specifications: Object.keys(specs).length > 0 ? specs : null,
+      specifications: Object.keys(specs).length > 0 ? specs : {},
     };
   }
 

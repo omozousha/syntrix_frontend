@@ -621,7 +621,10 @@ export default function DataManagementListPage() {
   const headers = useMemo(() => {
     if (!category) return [];
     if (category.resource === "pops") return [selectAllHeader, "POP ID", "Code", "Name", "Status", "Updated"];
-    if (category.resource === "devices") return [selectAllHeader, "Device ID", "Name", "Type", "POP", "Status", "Validation", "Updated"];
+    if (category.resource === "devices") {
+      if (category.deviceTypeKey === "CABLE") return [selectAllHeader, "Device ID", "Name", "Type", "Kategori", "POP", "Status", "Validation", "Updated"];
+      return [selectAllHeader, "Device ID", "Name", "Type", "POP", "Status", "Validation", "Updated"];
+    }
     if (category.resource === "poles") return [selectAllHeader, "Pole ID", "Pole Number", "Region", "POP", "Status", "Updated"];
     if (category.resource === "customers") return [selectAllHeader, "CID", "Name", "Service", "POP", "Status", "Updated"];
     if (category.resource === "routes") return [selectAllHeader, "Route ID", "Route Name", "Region", "POP", "Status", "Updated"];
@@ -682,16 +685,21 @@ export default function DataManagementListPage() {
         const validationStatus = getDeviceDisplayValidationStatus(item);
         const validation = formatValidationStatus(validationStatus);
         const validationTitle = getDeviceValidationTitle(item, validation.label);
-        return [
+        const isCable = category.deviceTypeKey === "CABLE";
+        const baseCells = [
           selectCell,
           pick(item, ["device_id"]),
           pick(item, ["device_name", "name"]),
           pick(item, ["device_type_key"]),
+        ];
+        const extraCableCells = isCable ? [pick(item, ["route_type"])] : [];
+        const remainingCells = [
           display.pop,
           pick(item, ["status"]),
           <span key={`validation-${item.id}`} title={validationTitle} className={`inline-flex rounded border px-2 py-0.5 text-xs ${validation.className}`}>{validation.label}</span>,
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
+        return [...baseCells, ...extraCableCells, ...remainingCells];
       }
       if (category.resource === "poles") {
         return [
