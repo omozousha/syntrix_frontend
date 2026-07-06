@@ -22,6 +22,7 @@ import {
   OdpDeviceForm,
   CableDeviceForm,
   OtbDeviceForm,
+  JcDeviceForm,
   type OdcDeviceFormProps,
   type OtbDeviceFormProps,
 } from "./forms/index";
@@ -158,6 +159,27 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
         odcChainSummary={props.odcChainSummary}
         odcChainLoading={props.odcChainLoading}
         onOdcChainRefresh={props.onOdcChainRefresh}
+      />
+    );
+  }
+
+  if (deviceTypeKey === "JC") {
+    return (
+      <JcDeviceForm
+        form={form}
+        onChange={props.onChange}
+        editing={props.editing}
+        relationLabels={props.relationLabels}
+        relationLoading={props.relationLoading}
+        splitterProfiles={props.splitterProfiles}
+        tenants={props.tenants}
+        popOptions={props.popOptions}
+        projectOptions={props.projectOptions}
+        projectHref={props.projectHref}
+        effectiveValidationStatus={props.effectiveValidationStatus}
+        provinces={props.provinces}
+        cities={props.cities}
+        topologyLookup={topologyLookup}
       />
     );
   }

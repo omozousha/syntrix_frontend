@@ -50,6 +50,7 @@ import { useReferenceData } from "@/hooks/use-reference-data";
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
 import { buildDeviceQrHref, buildQrLabelPngDataUrl, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
+import { TopologyLookupData, emptyTopologyLookup, DeviceLookupOption, RouteLookupOption, PortLookupOption } from "@/components/features/data-management/device-detail/sections/device-topology-helpers";
 const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() || "";
 
 type GenericItem = Record<string, unknown> & {
@@ -546,6 +547,7 @@ export default function DataManagementDetailPage() {
   const [reminderError, setReminderError] = useState("");
   const [popOptions, setPopOptions] = useState<PopLookupOption[]>([]);
   const [loadingOdpLookups, setLoadingOdpLookups] = useState(false);
+  const [topologyLookupData, setTopologyLookupData] = useState<TopologyLookupData>(emptyTopologyLookup());
   const relationReferenceMaps = useMemo(() => {
     const data = relationReferenceQuery.data?.data || {};
     return {
@@ -1145,6 +1147,67 @@ export default function DataManagementDetailPage() {
       cancelled = true;
     };
   }, [isOdpDevice, item, token]);
+  // ── Fetch topology lookup data (ODC devices, routes, ports) ──────────────
+  useEffect(() => {
+    if (category?.resource !== "devices" || !item || !token) {
+      setTopologyLookupData(emptyTopologyLookup());
+      return;
+    }
+
+    const activeRegionId = valueOf(item.region_id);
+    const regionQuery = activeRegionId ? `&region_id=${encodeURIComponent(activeRegionId)}` : "";
+    let cancelled = false;
+
+    async function loadTopologyLookups() {
+      setTopologyLookupData((prev) => ({ ...prev, loadingDevices: true, loadingPorts: true, loadingRoutes: true }));
+      try {
+        const deviceTypeFilter = "device_type_key=ODC";
+        const [devicesResult, routesResult] = await Promise.all([
+          apiFetch<PaginatedResponse<DeviceLookupOption>>(`/devices?page=1&limit=500&${deviceTypeFilter}${regionQuery}`, { token }),
+          apiFetch<PaginatedResponse<RouteLookupOption>>(`/routes?page=1&limit=500${regionQuery}`, { token }),
+        ]);
+        if (cancelled) return;
+
+        const devices = devicesResult.data || [];
+        const routes = routesResult.data || [];
+        const deviceIds = new Set(devices.map((d) => d.id));
+
+        // Fetch ports for all fetched ODC devices in one query
+        let ports: PortLookupOption[] = [];
+        if (deviceIds.size > 0) {
+          const portsResult = await apiFetch<PaginatedResponse<PortLookupOption>>(
+            `/devicePorts?page=1&limit=1000${regionQuery}`,
+            { token },
+          );
+          if (!cancelled) {
+            ports = (portsResult.data || []).filter((p) => p.device_id && deviceIds.has(p.device_id));
+          }
+        }
+
+        if (!cancelled) {
+          setTopologyLookupData({
+            devices,
+            ports,
+            routes,
+            customers: [],
+            loadingDevices: false,
+            loadingPorts: false,
+            loadingRoutes: false,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setTopologyLookupData(emptyTopologyLookup());
+        }
+      }
+    }
+
+    void loadTopologyLookups();
+    return () => {
+      cancelled = true;
+    };
+  }, [category?.resource, item, token]);
+
 
   useEffect(() => {
     if (!isOdpDevice || !item || !token) {
@@ -1502,7 +1565,7 @@ export default function DataManagementDetailPage() {
         }
       }
 
-      const payload = buildUpdatePayload(form, category.resource) as Record<string, unknown>;
+      const payload = buildUpdatePayload(form, category.resource, item) as Record<string, unknown>;
       let mergedImageAttachments = infoImageAttachments.map((attachment) => ({
         id: attachment.id,
         original_name: attachmentNames[attachment.id] || attachment.name || "attachment",
@@ -2145,7 +2208,7 @@ export default function DataManagementDetailPage() {
                   effectiveValidationStatus={detailValidationStatus}
                   provinces={[]}
                   cities={[]}
-                  topologyLookup={undefined}
+                  topologyLookup={topologyLookupData}
                   topologySummary={deviceTopologySummary}
                   coreCapacities={[]}
                   cableTypes={[]}
@@ -3594,6 +3657,7 @@ function buildEditableForm(item: GenericItem, resource: string, topologySummary?
   if (resource === "devices") {
     const isOdc = valueOf(item.device_type_key).toUpperCase() === "ODC";
     const upConn = isOdc ? topologySummary?.odc_relations?.upstream?.[0] : null;
+    const specs = (item.specifications || {}) as Record<string, unknown>;
 
     return {
       device_id: valueOf(item.device_id),
@@ -3630,13 +3694,34 @@ function buildEditableForm(item: GenericItem, resource: string, topologySummary?
       upstream_cable_id: upConn?.cable_device?.id || "",
       upstream_core_start: upConn?.core_start != null ? String(upConn.core_start) : "",
       upstream_core_end: upConn?.core_end != null ? String(upConn.core_end) : "",
+      // ODP topology fields (direct columns on devices table)
+      source_odc_id: valueOf(item.source_odc_id),
+      source_odc_port_id: valueOf(item.source_odc_port_id),
+      feeder_cable_id: valueOf(item.feeder_cable_id),
+      feeder_core_start: valueOf(item.feeder_core_start),
+      feeder_core_end: valueOf(item.feeder_core_end),
+      // OLT uplink fields (direct columns on devices table)
+      uplink_switch_id: valueOf(item.uplink_switch_id),
+      uplink_router_id: valueOf(item.uplink_router_id),
+      // ODC port count fields
+      feeder_port_count: valueOf(item.feeder_port_count),
+      distribution_port_count: valueOf(item.distribution_port_count),
+      // JC & Rack specifications fields
+      from_cable_id: valueOf(specs.from_cable_id),
+      to_cable_id: valueOf(specs.to_cable_id),
+      core_start: specs.core_start != null ? String(specs.core_start) : "",
+      core_end: specs.core_end != null ? String(specs.core_end) : "",
+      splice_tray_count: specs.splice_tray_count != null ? String(specs.splice_tray_count) : "",
+      rack_device_id: valueOf(specs.rack_device_id),
+      rack_unit_position: specs.rack_unit_position != null ? String(specs.rack_unit_position) : "",
+      u_height: specs.u_height != null ? String(specs.u_height) : "1",
     };
   }
 
   return {};
 }
 
-function buildUpdatePayload(form: EditableForm, resource: string): Record<string, unknown> {
+function buildUpdatePayload(form: EditableForm, resource: string, originalItem?: GenericItem | null): Record<string, unknown> {
   const normalizedValidation = normalizeValidationPayload(form.validation_status, form.validation_date);
 
   if (resource === "pops") {
@@ -3668,6 +3753,43 @@ function buildUpdatePayload(form: EditableForm, resource: string): Record<string
   }
 
   if (resource === "devices") {
+    // Reconstruct and merge specifications JSONB
+    const originalSpecs = (originalItem?.specifications || {}) as Record<string, unknown>;
+    const specs = { ...originalSpecs };
+
+    if (form.from_cable_id !== undefined) {
+      if (form.from_cable_id) specs.from_cable_id = form.from_cable_id;
+      else delete specs.from_cable_id;
+    }
+    if (form.to_cable_id !== undefined) {
+      if (form.to_cable_id) specs.to_cable_id = form.to_cable_id;
+      else delete specs.to_cable_id;
+    }
+    if (form.core_start !== undefined) {
+      if (form.core_start) specs.core_start = numberOrNull(form.core_start);
+      else delete specs.core_start;
+    }
+    if (form.core_end !== undefined) {
+      if (form.core_end) specs.core_end = numberOrNull(form.core_end);
+      else delete specs.core_end;
+    }
+    if (form.splice_tray_count !== undefined) {
+      if (form.splice_tray_count) specs.splice_tray_count = numberOrNull(form.splice_tray_count);
+      else delete specs.splice_tray_count;
+    }
+
+    if (form.rack_device_id !== undefined) {
+      if (form.rack_device_id) {
+        specs.rack_device_id = form.rack_device_id;
+        if (form.rack_unit_position) specs.rack_unit_position = numberOrNull(form.rack_unit_position);
+        if (form.u_height) specs.u_height = numberOrNull(form.u_height);
+      } else {
+        delete specs.rack_device_id;
+        delete specs.rack_unit_position;
+        delete specs.u_height;
+      }
+    }
+
     return {
       device_name: normalizeDeviceName(form.device_name) || null,
       status: nullIfEmpty(form.status),
@@ -3688,10 +3810,23 @@ function buildUpdatePayload(form: EditableForm, resource: string): Record<string
       splitter_ratio: nullIfEmpty(form.splitter_ratio),
       odp_type: nullIfEmpty(form.odp_type),
       installation_type: nullIfEmpty(form.installation_type),
+      // ODP topology fields (direct columns on devices table)
+      source_odc_id: nullIfEmpty(form.source_odc_id),
+      source_odc_port_id: nullIfEmpty(form.source_odc_port_id),
+      feeder_cable_id: nullIfEmpty(form.feeder_cable_id),
+      feeder_core_start: numberOrNull(form.feeder_core_start),
+      feeder_core_end: numberOrNull(form.feeder_core_end),
+      // OLT uplink fields (direct columns on devices table)
+      uplink_switch_id: nullIfEmpty(form.uplink_switch_id),
+      uplink_router_id: nullIfEmpty(form.uplink_router_id),
+      // ODC port count fields
+      feeder_port_count: numberOrNull(form.feeder_port_count),
+      distribution_port_count: numberOrNull(form.distribution_port_count),
       address: nullIfEmpty(form.address),
       longitude: numberOrNull(form.longitude),
       latitude: numberOrNull(form.latitude),
       tags: csvToArray(form.tags),
+      specifications: Object.keys(specs).length > 0 ? specs : null,
     };
   }
 
