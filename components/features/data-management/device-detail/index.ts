@@ -38,3 +38,28 @@ export { OdpValidationHistorySection } from "@/components/features/data-manageme
 export { ValidationEvidenceAction } from "@/components/features/data-management/device-detail/validation-evidence-action";
 export { ValidationReminderDialog } from "@/components/features/data-management/device-detail/validation-reminder-dialog";
 export { DeviceTopologyChainVisualizer } from "@/components/features/data-management/device-detail/device-topology-chain-visualizer";
+
+// ── Fase 2a — Visual Port Tray ───────────────────────────────────────────
+export { PortTrayContainer } from "@/components/features/data-management/device-detail/port-tray-container";
+export { PortTrayCard } from "@/components/features/data-management/device-detail/port-tray-card";
+export { PortTrayBadge } from "@/components/features/data-management/device-detail/port-tray-badge";
+export { PortAssignmentDrawer } from "@/components/features/data-management/device-detail/port-assignment-drawer";
+export {
+  type DevicePort,
+  type PortConnection,
+  type TrayConfig,
+  type TrayLayoutConfig,
+  type FiberColor,
+  type PeerDeviceOption,
+  type PeerPortOption,
+  FIBER_COLORS,
+  ODC_TRAY_LAYOUT,
+  JC_TRAY_LAYOUT,
+  generateTrayLayout,
+  resolveTrayLayout,
+  getFiberColor,
+  getPortStatusClass,
+  getPortStatusLabel,
+  buildConnectionMap,
+  groupPortsByTray,
+} from "@/components/features/data-management/device-detail/port-tray-types";

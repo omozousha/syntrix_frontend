@@ -19,6 +19,7 @@ import { CustomerCreateForm } from "@/components/features/data-management/device
 import { CreateLocationFields } from "@/components/features/data-management/device-form/create-location-fields";
 import { CreateOperationalFields } from "@/components/features/data-management/device-form/create-operational-fields";
 import { CreateFormSelection } from "@/components/features/data-management/device-form/create-form-selection";
+import { CreateStickyFooter } from "@/components/features/data-management/device-form/create-sticky-footer";
 import {
   ImageAttachmentField,
   SupportDocumentField,
@@ -52,6 +53,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
 import { deviceTypeKeyToSlug } from "@/lib/data-management-config";
@@ -62,6 +64,13 @@ type PopOption = {
   pop_name: string;
   pop_code: string;
   region_id: string;
+  address?: string | null;
+  city?: string | null;
+  city_id?: string | null;
+  province?: string | null;
+  province_id?: string | null;
+  longitude?: number | string | null;
+  latitude?: number | string | null;
 };
 type ProjectOption = {
   id: string;
@@ -190,11 +199,14 @@ export default function CreateDataManagementPage() {
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
+    const [activeTab, setActiveTab] = useState("identitas");
+  const [missingTabFields, setMissingTabFields] = useState<Record<string, string[]>>({});
   const [autoFillNotice, setAutoFillNotice] = useState("");
   const [popTypes, setPopTypes] = useState<PopTypeOption[]>([]);
   const [routeTypes, setRouteTypes] = useState<RouteTypeOption[]>([]);
   const [cableTypes, setCableTypes] = useState<Array<{ id: string; cable_type_code: string; cable_type_name: string }>>([]);
   const [coreCapacities, setCoreCapacities] = useState<Array<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>>([]);
+  const [deviceCoreCapacities, setDeviceCoreCapacities] = useState<Array<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>>([]);
   const [provinces, setProvinces] = useState<ProvinceOption[]>([]);
   const [cities, setCities] = useState<CityOption[]>([]);
   const [manufacturers, setManufacturers] = useState<ManufacturerOption[]>([]);
@@ -205,6 +217,12 @@ export default function CreateDataManagementPage() {
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeOption[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
+  const [topologyFrontDevices, setTopologyFrontDevices] = useState<Array<{ id: string; device_name: string; device_type_key: string }>>([]);
+  const [topologyRearDevices, setTopologyRearDevices] = useState<Array<{ id: string; device_name: string; device_type_key: string }>>([]);
+  const [frontDevicePorts, setFrontDevicePorts] = useState<Array<{ id: string; port_label?: string | null; port_index: number; status: string }>>([]);
+  const [rearDevicePorts, setRearDevicePorts] = useState<Array<{ id: string; port_label?: string | null; port_index: number; status: string }>>([]);
+  const [loadingTopology, setLoadingTopology] = useState(false);
+  const [cableConnections, setCableConnections] = useState<Array<{ route_type: string; cable_type: string; cable_length_m: string; route_name: string }>>([]);
   const [loaded, setLoaded] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
@@ -262,6 +280,10 @@ export default function CreateDataManagementPage() {
     used_core: "",
     total_ports: "",
     used_ports: "",
+    front_device_id: "",
+    front_port_id: "",
+    rear_device_id: "",
+    rear_port_id: "",
     splitter_ratio: "",
     odp_type: "",
     installation_type: "",
@@ -302,6 +324,7 @@ export default function CreateDataManagementPage() {
   );
   const isFixedRegionRole = me.role === "user_all_region" || me.role === "user_region";
   const selectedRegionLabel = regions.find((region) => region.id === form.region_id)?.region_name || "-";
+  const hasCoreCapacities = isDevice && (form.device_type_key === "OTB" || form.device_type_key === "ODC" || form.device_type_key === "JC" || form.device_type_key === "CABLE");
   const isCableDevice = isDevice && form.device_type_key === "CABLE";
   const isOntDevice = isDevice && form.device_type_key === "ONT";
   const hasCustomerAutoFill = isOntDevice && Boolean(form.customer_id);
@@ -317,15 +340,16 @@ export default function CreateDataManagementPage() {
         const needsCustomerMasterData = isCustomer;
         const needsTenantMasterData = isDevice || isPop;
 
-        const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, cableTypeRes, coreCapacityRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, serviceTypesRes, tenantsRes, splitterProfilesRes] = await Promise.all([
+        const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, cableTypeRes, coreCapacityRes, deviceCoreCapacityRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, serviceTypesRes, tenantsRes, splitterProfilesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
           optionalPaginatedRequest<PopOption>(needsPops, () => apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token })),
           optionalPaginatedRequest<ProjectOption>(needsProjects, () => apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token })),
           emptyPaginatedResponse<CustomerOption>(),
           optionalPaginatedRequest<PopTypeOption>(isPop, () => apiFetch<PaginatedResponse<PopTypeOption>>("/popTypes?page=1&limit=200&is_active=true", { token })),
-          optionalPaginatedRequest<RouteTypeOption>(deviceType === "CABLE", () => apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token })),
-          optionalPaginatedRequest<{ id: string; cable_type_code: string; cable_type_name: string }>(deviceType === "CABLE", () => apiFetch<PaginatedResponse<{ id: string; cable_type_code: string; cable_type_name: string }>>("/cableTypes?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<RouteTypeOption>(deviceType === "CABLE" || deviceType === "ODC", () => apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<{ id: string; cable_type_code: string; cable_type_name: string }>(deviceType === "CABLE" || deviceType === "ODC", () => apiFetch<PaginatedResponse<{ id: string; cable_type_code: string; cable_type_name: string }>>("/cableTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>(deviceType === "CABLE", () => apiFetch<PaginatedResponse<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>>("/coreCapacities?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>(hasCoreCapacities, () => apiFetch<PaginatedResponse<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>>("/deviceCoreCapacities?page=1&limit=200&is_active=true", { token })),
           apiFetch<PaginatedResponse<ProvinceOption>>("/provinces?page=1&limit=500&is_active=true", { token }),
           fetchAllPaginated<CityOption>("/cities?is_active=true", token),
           optionalPaginatedRequest<ManufacturerOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<ManufacturerOption>>("/manufacturers?page=1&limit=500", { token })),
@@ -353,6 +377,7 @@ export default function CreateDataManagementPage() {
         setRouteTypes(routeTypesRes.data || []);
         setCableTypes(cableTypeRes?.data || []);
         setCoreCapacities(coreCapacityRes?.data || []);
+        setDeviceCoreCapacities(deviceCoreCapacityRes?.data || []);
         setProvinces(provincesRes.data || []);
         setCities(citiesAll || []);
         setManufacturers(manufacturersRes.data || []);
@@ -380,6 +405,167 @@ export default function CreateDataManagementPage() {
       cancelled = true;
     };
   }, [token, me.role, scopeRegionIds, deviceType, isCustomer, isDevice, isPop, isProject]);
+
+  const needsTopology = isDevice && (form.device_type_key === "OTB" || form.device_type_key === "ODC" || form.device_type_key === "CABLE" || form.device_type_key === "JC" || form.device_type_key === "ODP");
+
+  // ── Fetch topology device candidates by POP ────────────────────────────
+  useEffect(() => {
+    if (!needsTopology || !form.pop_id) {
+      setTopologyFrontDevices([]);
+      setTopologyRearDevices([]);
+      setFrontDevicePorts([]);
+      setRearDevicePorts([]);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingTopology(true);
+
+    async function loadTopologyDevices() {
+      try {
+        // Backend pakai _eq (single value), jadi fetch per device type & combine
+        async function loadFront() {
+          if (form.device_type_key === "OTB") {
+            const [oltRes, switchRes] = await Promise.all([
+              apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
+                `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=OLT`,
+                { token },
+              ),
+              apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
+                `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=SWITCH`,
+                { token },
+              ),
+            ]);
+            return [...(oltRes.data || []), ...(switchRes.data || [])];
+          }
+          if (form.device_type_key === "ODC" || form.device_type_key === "CABLE" || form.device_type_key === "JC") {
+            const otbRes = await apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
+              `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=OTB`,
+              { token },
+            );
+            return otbRes.data || [];
+          }
+          if (form.device_type_key === "ODP") {
+            const odcRes = await apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
+              `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=ODC`,
+              { token },
+            );
+            return odcRes.data || [];
+          }
+          return [];
+        }
+
+        async function loadRear() {
+          if (form.device_type_key === "OTB" || form.device_type_key === "CABLE") {
+            const [odcRes, jcRes] = await Promise.all([
+              apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
+                `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=ODC`,
+                { token },
+              ),
+              apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
+                `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=JC`,
+                { token },
+              ),
+            ]);
+            return [...(odcRes.data || []), ...(jcRes.data || [])];
+          }
+          if (form.device_type_key === "ODC") {
+            const odpRes = await apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
+              `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=ODP`,
+              { token },
+            );
+            return odpRes.data || [];
+          }
+          if (form.device_type_key === "JC") {
+            const [hhRes, mhRes] = await Promise.all([
+              apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
+                `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=HH`,
+                { token },
+              ),
+              apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
+                `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=MH`,
+                { token },
+              ),
+            ]);
+            return [...(hhRes.data || []), ...(mhRes.data || [])];
+          }
+          return [];
+        }
+
+        const [frontDevices, rearDevices] = await Promise.all([loadFront(), loadRear()]);
+        if (!cancelled) {
+          setTopologyFrontDevices(frontDevices);
+          setTopologyRearDevices(rearDevices);
+        }
+      } catch {
+        if (!cancelled) {
+          setTopologyFrontDevices([]);
+          setTopologyRearDevices([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingTopology(false);
+      }
+    }
+
+    void loadTopologyDevices();
+    return () => {
+      cancelled = true;
+    };
+  }, [needsTopology, form.pop_id, form.device_type_key, token]);
+
+  // ── Fetch ports when front device changes ───────────────────────────────
+  useEffect(() => {
+    if (!needsTopology || !form.front_device_id) {
+      setFrontDevicePorts([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadFrontPorts() {
+      try {
+        const res = await apiFetch<PaginatedResponse<{ id: string; port_label?: string | null; port_index: number; status: string }>>(
+          `/devicePorts?device_id=${form.front_device_id}&status=idle&limit=200`,
+          { token },
+        );
+        if (!cancelled) setFrontDevicePorts(res.data || []);
+      } catch {
+        if (!cancelled) setFrontDevicePorts([]);
+      }
+    }
+
+    void loadFrontPorts();
+    return () => {
+      cancelled = true;
+    };
+  }, [needsTopology, form.front_device_id, token]);
+
+  // ── Fetch ports when rear device changes ────────────────────────────────
+  useEffect(() => {
+    if (!needsTopology || !form.rear_device_id) {
+      setRearDevicePorts([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadRearPorts() {
+      try {
+        const res = await apiFetch<PaginatedResponse<{ id: string; port_label?: string | null; port_index: number; status: string }>>(
+          `/devicePorts?device_id=${form.rear_device_id}&status=idle&limit=200`,
+          { token },
+        );
+        if (!cancelled) setRearDevicePorts(res.data || []);
+      } catch {
+        if (!cancelled) setRearDevicePorts([]);
+      }
+    }
+
+    void loadRearPorts();
+    return () => {
+      cancelled = true;
+    };
+  }, [needsTopology, form.rear_device_id, token]);
 
   useEffect(() => {
     if (!isOntDevice) return;
@@ -481,7 +667,9 @@ export default function CreateDataManagementPage() {
   }, [token, isPop, isDevice, form.region_id, form.pop_type, form.device_type_key]);
 
   const showCoreFields = isDevice && CORE_TYPES.has(form.device_type_key);
-  const showPortFields = isDevice && PORT_TYPES.has(form.device_type_key) && form.device_type_key !== "ONT";
+  const showPortFields = isDevice && PORT_TYPES.has(form.device_type_key) && !["ONT", "OLT", "SWITCH", "ROUTER"].includes(form.device_type_key);
+  const showCoreWarning_create = showCoreFields && Boolean(form.capacity_core) && Boolean(form.used_core) && Number.isFinite(Number(form.capacity_core)) && Number.isFinite(Number(form.used_core)) && Number(form.used_core) > Number(form.capacity_core);
+  const showPortWarning_create = showPortFields && Boolean(form.total_ports) && Boolean(form.used_ports) && Number.isFinite(Number(form.total_ports)) && Number.isFinite(Number(form.used_ports)) && Number(form.used_ports) > Number(form.total_ports);
   const showSplitterField = isDevice && (form.device_type_key === "ODP" || form.device_type_key === "ODC");
   const selectedSplitterProfile = useMemo(
     () => splitterProfiles.find((item) => item.ratio_label === form.splitter_ratio) || null,
@@ -566,6 +754,35 @@ export default function CreateDataManagementPage() {
 
   function clearImages() {
     setImageFiles([]);
+  }
+
+  function getMissingDeviceFields() {
+    const missing: Record<string, string[]> = {};
+
+    // Identitas & Relasi fields
+    const identitasMissing: string[] = [];
+    if (!form.device_name) identitasMissing.push("Device Name");
+    if (!form.pop_id) identitasMissing.push("POP");
+    if (!form.region_id) identitasMissing.push("Region");
+    if (form.device_type_key === "ODP") {
+      if (!form.odp_type) identitasMissing.push("Tipe ODP");
+      if (!form.installation_type) identitasMissing.push("Jenis Instalasi");
+    }
+    if (identitasMissing.length > 0) missing.identitas = identitasMissing;
+
+    // Lokasi field format checks
+    const lokasiMissing: string[] = [];
+    if (!isCableDevice) {
+      if (form.latitude && !validateCoordinateFormat(form.latitude, "latitude").valid) {
+        lokasiMissing.push("Latitude (format salah)");
+      }
+      if (form.longitude && !validateCoordinateFormat(form.longitude, "longitude").valid) {
+        lokasiMissing.push("Longitude (format salah)");
+      }
+    }
+    if (lokasiMissing.length > 0) missing.lokasi = lokasiMissing;
+
+    return missing;
   }
 
   async function submit() {
@@ -895,6 +1112,22 @@ export default function CreateDataManagementPage() {
         payload.installation_type = nullIfEmpty(form.installation_type);
       }
 
+      // Topology relations (front/rear port connections)
+      if (form.front_device_id) payload.front_device_id = form.front_device_id;
+      if (form.front_port_id) payload.front_port_id = form.front_port_id;
+      if (form.rear_device_id) payload.rear_device_id = form.rear_device_id;
+      if (form.rear_port_id) payload.rear_port_id = form.rear_port_id;
+
+      // Cable connections array (ODC distribution cables)
+      if (cableConnections.length > 0) {
+        payload.cable_connections = cableConnections.map((conn) => ({
+          route_type: conn.route_type || null,
+          cable_type: conn.cable_type || null,
+          cable_length_m: numberOrNull(conn.cable_length_m),
+          route_name: conn.route_name || null,
+        }));
+      }
+
       // Per-type extra fields
       if (form.device_type_key === "OLT" || form.device_type_key === "ONT" || form.device_type_key === "SWITCH" || form.device_type_key === "ROUTER") {
         payload.management_ip = form.management_ip || null;
@@ -980,350 +1213,1140 @@ export default function CreateDataManagementPage() {
             </div>
           ) : null}
 
-          <div className={formGridClass}>
-            <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-              Informasi Utama
-            </div>
-            {isPop ? (
-              <PopCreateIdentityFields
-                values={{
-                  pop_name: form.pop_name,
-                  pop_code: form.pop_code,
-                }}
-                onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-              />
-            ) : null}
+          {isDevice ? (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="flex items-center gap-2 mb-4 overflow-x-auto">
+                <TabsList>
+                  <TabsTrigger value="identitas" className="relative text-xs sm:text-sm">
+                    Identitas & Relasi
+                    {missingTabFields.identitas?.length > 0 ? (
+                      <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
+                        {missingTabFields.identitas.length}
+                      </Badge>
+                    ) : null}
+                  </TabsTrigger>
+                  <TabsTrigger value="teknis" className="relative text-xs sm:text-sm">
+                    Teknis & Kapasitas
+                    {missingTabFields.teknis?.length > 0 ? (
+                      <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
+                        {missingTabFields.teknis.length}
+                      </Badge>
+                    ) : null}
+                  </TabsTrigger>
+                  <TabsTrigger value="lokasi" className="relative text-xs sm:text-sm">
+                    Lokasi
+                    {missingTabFields.lokasi?.length > 0 ? (
+                      <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
+                        {missingTabFields.lokasi.length}
+                      </Badge>
+                    ) : null}
+                  </TabsTrigger>
+                  <TabsTrigger value="operasional" className="relative text-xs sm:text-sm">
+                    Operasional & Lampiran
+                    {missingTabFields.operasional?.length > 0 ? (
+                      <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
+                        {missingTabFields.operasional.length}
+                      </Badge>
+                    ) : null}
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-            {isDevice ? (
-              <>
-                <CreateFormSelection
-          deviceTypeKey={form.device_type_key}
-          values={form}
-          pops={pops}
-          odpTypes={odpTypes}
-          installationTypes={installationTypes}
-          tenants={tenants}
-          projects={projects}
-          routeTypes={routeTypes}
-                cableTypes={cableTypes}
-                coreCapacities={coreCapacities}
-          manufacturers={manufacturers}
-          brands={brands}
-          assetModels={assetModels}
-          splitterProfiles={splitterProfiles}
-          onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-          onPopChange={(nextPopId) => {
+              {/* ── Tab 1: Identitas & Relasi ──────────────────────────── */}
+              <TabsContent value="identitas" className="mt-0">
+                <div className={formGridClass}>
+                  <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
+                    Identitas & Relasi
+                  </div>
+                  <CreateFormSelection
+                    deviceTypeKey={form.device_type_key}
+                    values={form}
+                    pops={pops}
+                    odpTypes={odpTypes}
+                    installationTypes={installationTypes}
+                    tenants={tenants}
+                    projects={projects}
+                    routeTypes={routeTypes}
+                    cableTypes={cableTypes}
+                    manufacturers={manufacturers}
+                    brands={brands}
+                    assetModels={assetModels}
+                    onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+                    onPopChange={(nextPopId) => {
                       if (form.customer_id && form.pop_id !== nextPopId) {
                         setAutoFillNotice("Customer reference dikosongkan karena POP berubah. Pilih customer dari POP baru untuk mengisi ulang data lokasi.");
                       }
-                      setForm((p) => ({ ...p, pop_id: nextPopId, customer_id: "" }));
-                  }}
-                />
-                {isOntDevice ? (
-                  <div className="space-y-1.5">
-                    <FieldLabel label="Customer Reference (opsional)" tooltip="Customer yang tampil hanya customer dengan POP yang sama dengan POP ONT." />
-                    <p className="text-xs text-muted-foreground">
-                      Memilih customer akan mengisi otomatis lokasi ONT dari data customer terkait. Field tetap bisa dikoreksi sebelum disimpan.
-                    </p>
-                    <Combobox
-                      value={form.customer_id || "__none__"}
-                      onValueChange={(value) => {
-                        if (value === "__none__") {
-                          setForm((p) => ({ ...p, customer_id: "" }));
-                          setAutoFillNotice("Customer reference dilepas. Data lokasi yang sudah terisi tidak dihapus otomatis, silakan review kembali sebelum menyimpan.");
+                      if (nextPopId) {
+                        const selectedPop = pops.find((p) => p.id === nextPopId);
+                        if (selectedPop && (selectedPop.address || selectedPop.city || selectedPop.province)) {
+                          setForm((p) => ({
+                            ...p,
+                            pop_id: nextPopId,
+                            customer_id: "",
+                            address: selectedPop.address || p.address,
+                            city: selectedPop.city || p.city,
+                            city_id: selectedPop.city_id || p.city_id,
+                            province: selectedPop.province || p.province,
+                            province_id: selectedPop.province_id || p.province_id,
+                            longitude: selectedPop.longitude != null ? String(selectedPop.longitude) : p.longitude,
+                            latitude: selectedPop.latitude != null ? String(selectedPop.latitude) : p.latitude,
+                          }));
+                          setAutoFillNotice("Lokasi otomatis terisi dari data POP. Review dan koreksi bila diperlukan sebelum menyimpan.");
                           return;
                         }
-                        const selectedCustomer = customers.find((customer) => customer.id === value) || null;
-                        const selectedLabel = selectedCustomer?.customer_name || selectedCustomer?.customer_number || "customer terpilih";
-                        setForm((p) => ({
-                          ...p,
-                          customer_id: value,
-                          region_id: selectedCustomer?.region_id || p.region_id,
-                          pop_id: selectedCustomer?.pop_id || p.pop_id,
-                          project_id: selectedCustomer?.project_id || p.project_id,
-                          address: selectedCustomer?.address || p.address,
-                          province: selectedCustomer?.province || p.province,
-                          province_id: selectedCustomer?.province_id || p.province_id,
-                          city: selectedCustomer?.city || p.city,
-                          city_id: selectedCustomer?.city_id || p.city_id,
-                          longitude: valueToFormText(selectedCustomer?.longitude) || p.longitude,
-                          latitude: valueToFormText(selectedCustomer?.latitude) || p.latitude,
-                          installation_date: selectedCustomer?.installation_date || p.installation_date,
-                          status: mapCustomerStatusToDeviceStatus(selectedCustomer?.status) || p.status,
-                        }));
-                        setAutoFillNotice(`Data lokasi, tanggal instalasi, dan status ONT diisi otomatis dari ${selectedLabel}.`);
-                      }}
-                      options={toOptions([
-                        { value: "__none__", label: form.pop_id ? "Tanpa customer" : "Pilih POP terlebih dahulu" },
-                        ...customers
-                          .filter((customer) => customer.pop_id === form.pop_id)
-                          .map((customer) => ({
-                            value: customer.id,
-                            label: [
-                              customer.customer_name,
-                              customer.customer_number ? `CID ${customer.customer_number}` : customer.customer_id,
-                            ].filter(Boolean).join(" - ") || "Customer tidak tersedia",
+                      }
+                      setForm((p) => ({ ...p, pop_id: nextPopId, customer_id: "" }));
+                    }}
+                  />
+                  {isOntDevice ? (
+                    <div className="space-y-1.5 col-span-full md:col-span-2 xl:col-span-3">
+                      <FieldLabel label="Customer Reference (opsional)" tooltip="Customer yang tampil hanya customer dengan POP yang sama dengan POP ONT." />
+                      <p className="text-xs text-muted-foreground">
+                        Memilih customer akan mengisi otomatis lokasi ONT dari data customer terkait. Field tetap bisa dikoreksi sebelum disimpan.
+                      </p>
+                      <Combobox
+                        value={form.customer_id || "__none__"}
+                        onValueChange={(value) => {
+                          if (value === "__none__") {
+                            setForm((p) => ({ ...p, customer_id: "" }));
+                            setAutoFillNotice("Customer reference dilepas. Data lokasi yang sudah terisi tidak dihapus otomatis, silakan review kembali sebelum menyimpan.");
+                            return;
+                          }
+                          const selectedCustomer = customers.find((customer) => customer.id === value) || null;
+                          const selectedLabel = selectedCustomer?.customer_name || selectedCustomer?.customer_number || "customer terpilih";
+                          setForm((p) => ({
+                            ...p,
+                            customer_id: value,
+                            region_id: selectedCustomer?.region_id || p.region_id,
+                            pop_id: selectedCustomer?.pop_id || p.pop_id,
+                            project_id: selectedCustomer?.project_id || p.project_id,
+                            address: selectedCustomer?.address || p.address,
+                            province: selectedCustomer?.province || p.province,
+                            province_id: selectedCustomer?.province_id || p.province_id,
+                            city: selectedCustomer?.city || p.city,
+                            city_id: selectedCustomer?.city_id || p.city_id,
+                            longitude: valueToFormText(selectedCustomer?.longitude) || p.longitude,
+                            latitude: valueToFormText(selectedCustomer?.latitude) || p.latitude,
+                            installation_date: selectedCustomer?.installation_date || p.installation_date,
+                            status: mapCustomerStatusToDeviceStatus(selectedCustomer?.status) || p.status,
+                          }));
+                          setAutoFillNotice(`Data lokasi, tanggal instalasi, dan status ONT diisi otomatis dari ${selectedLabel}.`);
+                        }}
+                        options={toOptions([
+                          { value: "__none__", label: form.pop_id ? "Tanpa customer" : "Pilih POP terlebih dahulu" },
+                          ...customers
+                            .filter((customer) => customer.pop_id === form.pop_id)
+                            .map((customer) => ({
+                              value: customer.id,
+                              label: [
+                                customer.customer_name,
+                                customer.customer_number ? `CID ${customer.customer_number}` : customer.customer_id,
+                              ].filter(Boolean).join(" - ") || "Customer tidak tersedia",
+                            })),
+                        ])}
+                        placeholder={form.pop_id ? "Pilih customer" : "Pilih POP terlebih dahulu"}
+                        searchPlaceholder="Cari customer..."
+                        emptyText={form.pop_id ? "Tidak ada customer pada POP ini." : "Pilih POP terlebih dahulu."}
+                        disabled={!form.pop_id || loadingCustomers}
+                      />
+                      {autoFillNotice ? (
+                        <Alert className="border-blue-200 bg-blue-50/70 py-2 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-100">
+                          <AlertTitle className="flex items-center gap-2 text-xs">
+                            <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal">
+                              Auto-fill
+                            </Badge>
+                            Review data otomatis
+                          </AlertTitle>
+                          <AlertDescription className="text-xs">{autoFillNotice}</AlertDescription>
+                        </Alert>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-1.5">
+                    <FieldLabel label="Region" tooltip={isFixedRegionRole ? "Region terkunci mengikuti scope akun." : "Region wajib dipilih."} required />
+                    {isFixedRegionRole ? (
+                      <Input value={selectedRegionLabel} disabled />
+                    ) : (
+                      <Combobox
+                        value={form.region_id || "__none__"}
+                        onValueChange={(v) => setForm((p) => ({ ...p, region_id: v === "__none__" ? "" : v }))}
+                        options={toOptions([
+                          { value: "__none__", label: "Pilih region" },
+                          ...regions.map((region) => ({
+                            value: region.id,
+                            label: region.region_name,
                           })),
-                      ])}
-                      placeholder={form.pop_id ? "Pilih customer" : "Pilih POP terlebih dahulu"}
-                      searchPlaceholder="Cari customer..."
-                      emptyText={form.pop_id ? "Tidak ada customer pada POP ini." : "Pilih POP terlebih dahulu."}
-                      disabled={!form.pop_id || loadingCustomers}
+                        ])}
+                        placeholder="Pilih region"
+                        searchPlaceholder="Cari region..."
+                      />
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* ── Tab 2: Teknis & Kapasitas ──────────────────────────── */}
+              <TabsContent value="teknis" className="mt-0">
+                <div className={formGridClass}>
+                  <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
+                    Teknis & Kapasitas
+                  </div>
+                  {showCoreFields ? (
+                    <>
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Capacity Core" tooltip={form.device_type_key === "CABLE" ? "Pilih kapasitas core kabel dari master data." : "Pilih kapasitas core perangkat dari master data."} required />
+                        <Combobox
+                          value={form.capacity_core || "__none__"}
+                          onValueChange={(v) => setForm((p) => ({ ...p, capacity_core: v === "__none__" ? "" : v }))}
+                          options={[
+                            { value: "__none__", label: "Pilih kapasitas core" },
+                            ...(form.device_type_key === "CABLE" ? coreCapacities : deviceCoreCapacities)
+                              .filter((cc) => {
+                                if (form.device_type_key === "CABLE") {
+                                  const allowedKeys = (cc as any).allowed_route_type_keys || [];
+                                  if (!allowedKeys.length || !form.route_type) return true;
+                                  return allowedKeys.includes(form.route_type);
+                                }
+                                const allowedKeys = (cc as any).allowed_device_type_keys || [];
+                                if (!allowedKeys.length) return true;
+                                return allowedKeys.includes(form.device_type_key);
+                              })
+                              .map((cc) => ({
+                                value: String(cc.core_capacity_value),
+                                label: `${cc.core_capacity_value} Core${(cc as any).label ? ` — ${(cc as any).label}` : ""}`,
+                              })),
+                          ]}
+                          placeholder="Pilih kapasitas core"
+                          searchPlaceholder="Cari kapasitas core..."
+                        />
+                      </div>
+                      {/* Used Core — hanya untuk device selain OTB yang ada di CORE_TYPES */}
+                      {form.device_type_key !== "OTB" ? (
+                        <Field
+                          label="Used Core"
+                          type="number"
+                          value={form.used_core}
+                          onChange={(v) => setForm((p) => ({ ...p, used_core: v }))}
+                        />
+                      ) : null}
+                      {showCoreWarning_create && form.device_type_key !== "OTB" ? (
+                        <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
+                          &#9888; Used core ({form.used_core}) melebihi kapasitas core ({form.capacity_core}).
+                        </p>
+                      ) : null}
+                    </>
+                  ) : null}
+
+                  {/* ── Relasi Topologi (OTB) ─────────────────────────── */}
+                  {needsTopology && form.device_type_key === "OTB" ? (
+                    <>
+                      <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
+                        Relasi Topologi
+                      </div>
+
+                      {/* Front Port */}
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Front Port (Hulu)" tooltip="Pilih perangkat OLT/SWITCH di POP yang sama sebagai sumber koneksi hulu." />
+                        <Combobox
+                          value={form.front_device_id || "__none__"}
+                          onValueChange={(v) => {
+                            const deviceId = v === "__none__" ? "" : v;
+                            setForm((p) => ({ ...p, front_device_id: deviceId, front_port_id: "" }));
+                          }}
+                          options={toOptions([
+                            { value: "__none__", label: form.pop_id ? "Pilih device hulu" : "Pilih POP terlebih dahulu" },
+                            ...topologyFrontDevices.map((d) => ({
+                              value: d.id,
+                              label: `${d.device_name} (${d.device_type_key})`,
+                            })),
+                          ])}
+                          placeholder={form.pop_id ? "Pilih device hulu" : "Pilih POP terlebih dahulu"}
+                          searchPlaceholder="Cari device hulu..."
+                          disabled={loadingTopology || !form.pop_id}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Port Hulu" tooltip="Pilih port idle dari device hulu yang terpilih." />
+                        <Combobox
+                          value={form.front_port_id || "__none__"}
+                          onValueChange={(v) => setForm((p) => ({ ...p, front_port_id: v === "__none__" ? "" : v }))}
+                          options={toOptions([
+                            { value: "__none__", label: form.front_device_id ? "Pilih port hulu" : "Pilih device hulu terlebih dahulu" },
+                            ...frontDevicePorts.map((port) => ({
+                              value: port.id,
+                              label: port.port_label || `Port #${port.port_index}`,
+                            })),
+                          ])}
+                          placeholder={form.front_device_id ? "Pilih port hulu" : "Pilih device hulu terlebih dahulu"}
+                          searchPlaceholder="Cari port hulu..."
+                          disabled={!form.front_device_id}
+                        />
+                      </div>
+
+                      {/* Rear Port */}
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Rear Port (Hilir)" tooltip="Pilih perangkat ODC/JC di POP yang sama sebagai tujuan koneksi hilir." />
+                        <Combobox
+                          value={form.rear_device_id || "__none__"}
+                          onValueChange={(v) => {
+                            const deviceId = v === "__none__" ? "" : v;
+                            setForm((p) => ({ ...p, rear_device_id: deviceId, rear_port_id: "" }));
+                          }}
+                          options={toOptions([
+                            { value: "__none__", label: form.pop_id ? "Pilih device hilir" : "Pilih POP terlebih dahulu" },
+                            ...topologyRearDevices.map((d) => ({
+                              value: d.id,
+                              label: `${d.device_name} (${d.device_type_key})`,
+                            })),
+                          ])}
+                          placeholder={form.pop_id ? "Pilih device hilir" : "Pilih POP terlebih dahulu"}
+                          searchPlaceholder="Cari device hilir..."
+                          disabled={loadingTopology || !form.pop_id}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Port Hilir" tooltip="Pilih port idle dari device hilir yang terpilih." />
+                        <Combobox
+                          value={form.rear_port_id || "__none__"}
+                          onValueChange={(v) => setForm((p) => ({ ...p, rear_port_id: v === "__none__" ? "" : v }))}
+                          options={toOptions([
+                            { value: "__none__", label: form.rear_device_id ? "Pilih port hilir" : "Pilih device hilir terlebih dahulu" },
+                            ...rearDevicePorts.map((port) => ({
+                              value: port.id,
+                              label: port.port_label || `Port #${port.port_index}`,
+                            })),
+                          ])}
+                          placeholder={form.rear_device_id ? "Pilih port hilir" : "Pilih device hilir terlebih dahulu"}
+                          searchPlaceholder="Cari port hilir..."
+                          disabled={!form.rear_device_id}
+                        />
+                      </div>
+                    </>
+                  ) : null}
+
+                  {/* ── Relasi Topologi (CABLE) ──────────────────────── */}
+                  {needsTopology && form.device_type_key === "CABLE" ? (
+                    <>
+                      <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
+                        Relasi Topologi Kabel
+                      </div>
+
+                      {/* Front Port — OTB */}
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Front Port (OTB)" tooltip="Pilih perangkat OTB di POP yang sama sebagai sumber koneksi hulu (feeder/backbone)." />
+                        <Combobox
+                          value={form.front_device_id || "__none__"}
+                          onValueChange={(v) => {
+                            const deviceId = v === "__none__" ? "" : v;
+                            setForm((p) => ({ ...p, front_device_id: deviceId, front_port_id: "" }));
+                          }}
+                          options={toOptions([
+                            { value: "__none__", label: form.pop_id ? "Pilih OTB hulu" : "Pilih POP terlebih dahulu" },
+                            ...topologyFrontDevices.map((d) => ({
+                              value: d.id,
+                              label: `${d.device_name} (${d.device_type_key})`,
+                            })),
+                          ])}
+                          placeholder={form.pop_id ? "Pilih OTB hulu" : "Pilih POP terlebih dahulu"}
+                          searchPlaceholder="Cari OTB hulu..."
+                          disabled={loadingTopology || !form.pop_id}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Port OTB" tooltip="Pilih port idle dari OTB yang terpilih." />
+                        <Combobox
+                          value={form.front_port_id || "__none__"}
+                          onValueChange={(v) => setForm((p) => ({ ...p, front_port_id: v === "__none__" ? "" : v }))}
+                          options={toOptions([
+                            { value: "__none__", label: form.front_device_id ? "Pilih port OTB" : "Pilih OTB terlebih dahulu" },
+                            ...frontDevicePorts.map((port) => ({
+                              value: port.id,
+                              label: port.port_label || `Port #${port.port_index}`,
+                            })),
+                          ])}
+                          placeholder={form.front_device_id ? "Pilih port OTB" : "Pilih OTB terlebih dahulu"}
+                          searchPlaceholder="Cari port OTB..."
+                          disabled={!form.front_device_id}
+                        />
+                      </div>
+
+                      {/* Rear Port — ODC/JC */}
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Rear Port (ODC/JC)" tooltip="Pilih perangkat ODC atau JC di POP yang sama sebagai tujuan koneksi hilir kabel." />
+                        <Combobox
+                          value={form.rear_device_id || "__none__"}
+                          onValueChange={(v) => {
+                            const deviceId = v === "__none__" ? "" : v;
+                            setForm((p) => ({ ...p, rear_device_id: deviceId, rear_port_id: "" }));
+                          }}
+                          options={toOptions([
+                            { value: "__none__", label: form.pop_id ? "Pilih ODC/JC hilir" : "Pilih POP terlebih dahulu" },
+                            ...topologyRearDevices.map((d) => ({
+                              value: d.id,
+                              label: `${d.device_name} (${d.device_type_key})`,
+                            })),
+                          ])}
+                          placeholder={form.pop_id ? "Pilih ODC/JC hilir" : "Pilih POP terlebih dahulu"}
+                          searchPlaceholder="Cari device hilir..."
+                          disabled={loadingTopology || !form.pop_id}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Port ODC/JC" tooltip="Pilih port idle dari device hilir yang terpilih." />
+                        <Combobox
+                          value={form.rear_port_id || "__none__"}
+                          onValueChange={(v) => setForm((p) => ({ ...p, rear_port_id: v === "__none__" ? "" : v }))}
+                          options={toOptions([
+                            { value: "__none__", label: form.rear_device_id ? "Pilih port hilir" : "Pilih device hilir terlebih dahulu" },
+                            ...rearDevicePorts.map((port) => ({
+                              value: port.id,
+                              label: port.port_label || `Port #${port.port_index}`,
+                            })),
+                          ])}
+                          placeholder={form.rear_device_id ? "Pilih port hilir" : "Pilih device hilir terlebih dahulu"}
+                          searchPlaceholder="Cari port hilir..."
+                          disabled={!form.rear_device_id}
+                        />
+                      </div>
+                    </>
+                  ) : null}
+
+                  {/* ── Relasi Topologi (ODC) ─────────────────────────── */}
+                  {needsTopology && form.device_type_key === "ODC" ? (
+                    <>
+                      <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
+                        Relasi Topologi
+                      </div>
+
+                      {/* Front Port — OTB */}
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Front Port (OTB)" tooltip="Pilih perangkat OTB di POP yang sama sebagai sumber koneksi hulu (feeder)." />
+                        <Combobox
+                          value={form.front_device_id || "__none__"}
+                          onValueChange={(v) => {
+                            const deviceId = v === "__none__" ? "" : v;
+                            setForm((p) => ({ ...p, front_device_id: deviceId, front_port_id: "" }));
+                          }}
+                          options={toOptions([
+                            { value: "__none__", label: form.pop_id ? "Pilih OTB hulu" : "Pilih POP terlebih dahulu" },
+                            ...topologyFrontDevices.map((d) => ({
+                              value: d.id,
+                              label: `${d.device_name} (${d.device_type_key})`,
+                            })),
+                          ])}
+                          placeholder={form.pop_id ? "Pilih OTB hulu" : "Pilih POP terlebih dahulu"}
+                          searchPlaceholder="Cari OTB hulu..."
+                          disabled={loadingTopology || !form.pop_id}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Port OTB" tooltip="Pilih port idle dari OTB yang terpilih." />
+                        <Combobox
+                          value={form.front_port_id || "__none__"}
+                          onValueChange={(v) => setForm((p) => ({ ...p, front_port_id: v === "__none__" ? "" : v }))}
+                          options={toOptions([
+                            { value: "__none__", label: form.front_device_id ? "Pilih port OTB" : "Pilih OTB terlebih dahulu" },
+                            ...frontDevicePorts.map((port) => ({
+                              value: port.id,
+                              label: port.port_label || `Port #${port.port_index}`,
+                            })),
+                          ])}
+                          placeholder={form.front_device_id ? "Pilih port OTB" : "Pilih OTB terlebih dahulu"}
+                          searchPlaceholder="Cari port OTB..."
+                          disabled={!form.front_device_id}
+                        />
+                      </div>
+
+                      {/* Cable Connections — multiple */}
+                      <div className={`${sectionSpanClass} space-y-2`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground">Kabel Distribusi</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setCableConnections((prev) => [
+                                ...prev,
+                                { route_type: "", cable_type: "", cable_length_m: "", route_name: "" },
+                              ])
+                            }
+                          >
+                            + Tambah Kabel
+                          </Button>
+                        </div>
+                        {cableConnections.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">Belum ada kabel distribusi. Klik "Tambah Kabel" untuk menambahkan.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {cableConnections.map((conn, idx) => (
+                              <div
+                                key={idx}
+                                className="grid grid-cols-1 gap-2 rounded-md border bg-muted/20 p-2 md:grid-cols-4"
+                              >
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground">Route Type</label>
+                                  <Combobox
+                                    value={conn.route_type || "__none__"}
+                                    onValueChange={(v) =>
+                                      setCableConnections((prev) => {
+                                        const next = [...prev];
+                                        next[idx] = { ...next[idx], route_type: v === "__none__" ? "" : v };
+                                        return next;
+                                      })
+                                    }
+                                    options={toOptions([
+                                      { value: "__none__", label: "Pilih route type" },
+                                      ...routeTypes.map((rt) => ({
+                                        value: rt.route_type_name,
+                                        label: rt.route_type_name,
+                                      })),
+                                    ])}
+                                    searchPlaceholder="Cari route type..."
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground">Cable Type</label>
+                                  <Combobox
+                                    value={conn.cable_type || "__none__"}
+                                    onValueChange={(v) =>
+                                      setCableConnections((prev) => {
+                                        const next = [...prev];
+                                        next[idx] = { ...next[idx], cable_type: v === "__none__" ? "" : v };
+                                        return next;
+                                      })
+                                    }
+                                    options={toOptions([
+                                      { value: "__none__", label: "Pilih cable type" },
+                                      ...cableTypes.map((ct) => ({
+                                        value: ct.cable_type_name,
+                                        label: ct.cable_type_name,
+                                      })),
+                                    ])}
+                                    searchPlaceholder="Cari cable type..."
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground">Panjang (m)</label>
+                                  <input
+                                    type="number"
+                                    className="flex h-8 w-full rounded-md border border-input bg-transparent px-2 text-xs ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    value={conn.cable_length_m}
+                                    onChange={(e) =>
+                                      setCableConnections((prev) => {
+                                        const next = [...prev];
+                                        next[idx] = { ...next[idx], cable_length_m: e.target.value };
+                                        return next;
+                                      })
+                                    }
+                                    placeholder="0"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground">Nama Rute</label>
+                                  <div className="flex gap-1">
+                                    <input
+                                      className="flex h-8 w-full rounded-md border border-input bg-transparent px-2 text-xs ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                      value={conn.route_name}
+                                      onChange={(e) =>
+                                        setCableConnections((prev) => {
+                                          const next = [...prev];
+                                          next[idx] = { ...next[idx], route_name: e.target.value };
+                                          return next;
+                                        })
+                                      }
+                                      placeholder="Nama rute"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-destructive"
+                                      onClick={() =>
+                                        setCableConnections((prev) => prev.filter((_, i) => i !== idx))
+                                      }
+                                    >
+                                      ✕
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Rear Port — ODP (opsional) */}
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Rear Port (ODP, opsional)" tooltip="Pilih perangkat ODP di POP yang sama sebagai tujuan koneksi hilir. Detail relasi bisa diatur di detail device ODC." />
+                        <Combobox
+                          value={form.rear_device_id || "__none__"}
+                          onValueChange={(v) => {
+                            const deviceId = v === "__none__" ? "" : v;
+                            setForm((p) => ({ ...p, rear_device_id: deviceId, rear_port_id: "" }));
+                          }}
+                          options={toOptions([
+                            { value: "__none__", label: form.pop_id ? "Pilih ODP hilir (opsional)" : "Pilih POP terlebih dahulu" },
+                            ...topologyRearDevices.map((d) => ({
+                              value: d.id,
+                              label: `${d.device_name} (${d.device_type_key})`,
+                            })),
+                          ])}
+                          placeholder={form.pop_id ? "Pilih ODP hilir" : "Pilih POP terlebih dahulu"}
+                          searchPlaceholder="Cari ODP hilir..."
+                          disabled={loadingTopology || !form.pop_id}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Port ODP (opsional)" tooltip="Pilih port idle dari ODP yang terpilih." />
+                        <Combobox
+                          value={form.rear_port_id || "__none__"}
+                          onValueChange={(v) => setForm((p) => ({ ...p, rear_port_id: v === "__none__" ? "" : v }))}
+                          options={toOptions([
+                            { value: "__none__", label: form.rear_device_id ? "Pilih port ODP (opsional)" : "Pilih ODP terlebih dahulu" },
+                            ...rearDevicePorts.map((port) => ({
+                              value: port.id,
+                              label: port.port_label || `Port #${port.port_index}`,
+                            })),
+                          ])}
+                          placeholder={form.rear_device_id ? "Pilih port ODP" : "Pilih ODP terlebih dahulu"}
+                          searchPlaceholder="Cari port ODP..."
+                          disabled={!form.rear_device_id}
+                        />
+                      </div>
+                    </>
+                  ) : null}
+
+                  {/* ── Relasi Topologi (JC) ─────────────────────────── */}
+                  {needsTopology && form.device_type_key === "JC" ? (
+                    <>
+                      <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
+                        Relasi Topologi
+                      </div>
+
+                      {/* Front Port — OTB */}
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Front Port (OTB)" tooltip="Pilih perangkat OTB di POP yang sama sebagai sumber koneksi hulu." />
+                        <Combobox
+                          value={form.front_device_id || "__none__"}
+                          onValueChange={(v) => {
+                            const deviceId = v === "__none__" ? "" : v;
+                            setForm((p) => ({ ...p, front_device_id: deviceId, front_port_id: "" }));
+                          }}
+                          options={toOptions([
+                            { value: "__none__", label: form.pop_id ? "Pilih OTB hulu" : "Pilih POP terlebih dahulu" },
+                            ...topologyFrontDevices.map((d) => ({
+                              value: d.id,
+                              label: `${d.device_name} (${d.device_type_key})`,
+                            })),
+                          ])}
+                          placeholder={form.pop_id ? "Pilih OTB hulu" : "Pilih POP terlebih dahulu"}
+                          searchPlaceholder="Cari OTB hulu..."
+                          disabled={loadingTopology || !form.pop_id}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Port OTB" tooltip="Pilih port idle dari OTB yang terpilih." />
+                        <Combobox
+                          value={form.front_port_id || "__none__"}
+                          onValueChange={(v) => setForm((p) => ({ ...p, front_port_id: v === "__none__" ? "" : v }))}
+                          options={toOptions([
+                            { value: "__none__", label: form.front_device_id ? "Pilih port OTB" : "Pilih OTB terlebih dahulu" },
+                            ...frontDevicePorts.map((port) => ({
+                              value: port.id,
+                              label: port.port_label || `Port #${port.port_index}`,
+                            })),
+                          ])}
+                          placeholder={form.front_device_id ? "Pilih port OTB" : "Pilih OTB terlebih dahulu"}
+                          searchPlaceholder="Cari port OTB..."
+                          disabled={!form.front_device_id}
+                        />
+                      </div>
+
+                      {/* Rear Port — HH/MH (opsional) */}
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Rear Port (HH/MH, opsional)" tooltip="Pilih perangkat HH/MH di POP yang sama sebagai tujuan koneksi hilir. Detail relasi bisa diatur di detail device JC." />
+                        <Combobox
+                          value={form.rear_device_id || "__none__"}
+                          onValueChange={(v) => {
+                            const deviceId = v === "__none__" ? "" : v;
+                            setForm((p) => ({ ...p, rear_device_id: deviceId, rear_port_id: "" }));
+                          }}
+                          options={toOptions([
+                            { value: "__none__", label: form.pop_id ? "Pilih HH/MH hilir (opsional)" : "Pilih POP terlebih dahulu" },
+                            ...topologyRearDevices.map((d) => ({
+                              value: d.id,
+                              label: `${d.device_name} (${d.device_type_key})`,
+                            })),
+                          ])}
+                          placeholder={form.pop_id ? "Pilih HH/MH hilir" : "Pilih POP terlebih dahulu"}
+                          searchPlaceholder="Cari HH/MH hilir..."
+                          disabled={loadingTopology || !form.pop_id}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Port HH/MH (opsional)" tooltip="Pilih port idle dari HH/MH yang terpilih." />
+                        <Combobox
+                          value={form.rear_port_id || "__none__"}
+                          onValueChange={(v) => setForm((p) => ({ ...p, rear_port_id: v === "__none__" ? "" : v }))}
+                          options={toOptions([
+                            { value: "__none__", label: form.rear_device_id ? "Pilih port HH/MH (opsional)" : "Pilih HH/MH terlebih dahulu" },
+                            ...rearDevicePorts.map((port) => ({
+                              value: port.id,
+                              label: port.port_label || `Port #${port.port_index}`,
+                            })),
+                          ])}
+                          placeholder={form.rear_device_id ? "Pilih port HH/MH" : "Pilih HH/MH terlebih dahulu"}
+                          searchPlaceholder="Cari port HH/MH..."
+                          disabled={!form.rear_device_id}
+                        />
+                      </div>
+                    </>
+                  ) : null}
+
+                  {/* ── Relasi Topologi (ODP) ─────────────────────────── */}
+                  {needsTopology && form.device_type_key === "ODP" ? (
+                    <>
+                      <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
+                        Relasi Topologi
+                      </div>
+
+                      {/* Front Port — ODC */}
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Front Port (ODC)" tooltip="Pilih perangkat ODC di POP yang sama sebagai sumber koneksi hulu. (Auto-populate jika ODC sudah punya rear port)." />
+                        <Combobox
+                          value={form.front_device_id || "__none__"}
+                          onValueChange={(v) => {
+                            const deviceId = v === "__none__" ? "" : v;
+                            setForm((p) => ({ ...p, front_device_id: deviceId, front_port_id: "" }));
+                          }}
+                          options={toOptions([
+                            { value: "__none__", label: form.pop_id ? "Pilih ODC hulu" : "Pilih POP terlebih dahulu" },
+                            ...topologyFrontDevices.map((d) => ({
+                              value: d.id,
+                              label: `${d.device_name} (${d.device_type_key})`,
+                            })),
+                          ])}
+                          placeholder={form.pop_id ? "Pilih ODC hulu" : "Pilih POP terlebih dahulu"}
+                          searchPlaceholder="Cari ODC hulu..."
+                          disabled={loadingTopology || !form.pop_id}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <FieldLabel label="Port ODC" tooltip="Pilih port idle dari ODC yang terpilih." />
+                        <Combobox
+                          value={form.front_port_id || "__none__"}
+                          onValueChange={(v) => setForm((p) => ({ ...p, front_port_id: v === "__none__" ? "" : v }))}
+                          options={toOptions([
+                            { value: "__none__", label: form.front_device_id ? "Pilih port ODC" : "Pilih ODC terlebih dahulu" },
+                            ...frontDevicePorts.map((port) => ({
+                              value: port.id,
+                              label: port.port_label || `Port #${port.port_index}`,
+                            })),
+                          ])}
+                          placeholder={form.front_device_id ? "Pilih port ODC" : "Pilih ODC terlebih dahulu"}
+                          searchPlaceholder="Cari port ODC..."
+                          disabled={!form.front_device_id}
+                        />
+                      </div>
+
+                      {/* Rear Port — info ke ODP Operations */}
+                      <div className={`${sectionSpanClass} space-y-1.5`}>
+                        <div className="rounded-md border border-blue-200 bg-blue-50/50 px-3 py-2 text-xs text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-200">
+                          <span className="font-semibold">Rear Port (ONT-Customer):</span> Atur di <strong>detail device ODP → ODP Operations</strong>. Front port yang dipilih di sini akan otomatis tersambung ke ODP Operations.
+                        </div>
+                      </div>
+                    </>
+                  ) : null}
+
+                  {showPortFields ? (
+                    <>
+                      <Field
+                        label={form.device_type_key === "ODP" ? "Kapasitas ODP" : form.device_type_key === "ODC" ? "Total Port Cabinet" : "Total Ports"}
+                        type="number"
+                        value={form.total_ports}
+                        onChange={(v) => setForm((p) => ({ ...p, total_ports: v }))}
+                      />
+                      <Field
+                        label={form.device_type_key === "ODP" ? "Port Aktif" : form.device_type_key === "ODC" ? "Port Terpakai" : "Used Ports"}
+                        type="number"
+                        value={form.used_ports}
+                        onChange={(v) => setForm((p) => ({ ...p, used_ports: v }))}
+                      />
+                      {showPortWarning_create ? (
+                        <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
+                          &#9888; {form.device_type_key === "ODP" ? "Port Aktif" : form.device_type_key === "ODC" ? "Port Terpakai" : "Used Ports"} ({form.used_ports}) melebihi {form.device_type_key === "ODP" ? "Kapasitas ODP" : form.device_type_key === "ODC" ? "Total Port Cabinet" : "Total Ports"} ({form.total_ports}).
+                        </p>
+                      ) : null}
+                    </>
+                  ) : null}
+                  {showSplitterField ? (
+                    <>
+                      <FieldLabel label={form.device_type_key === "ODP" ? "Kapasitas Splitter" : "Splitter Profile"} tooltip="Pilih rasio splitter dari master data." />
+                      {autoFillNotice ? (
+                        <p className="text-xs text-muted-foreground">Pilihan splitter akan mengisi rekomendasi kapasitas port.</p>
+                      ) : null}
+                      <Combobox
+                        value={form.splitter_ratio || "__none__"}
+                        onValueChange={(value) => {
+                          const ratioValue = value === "__none__" ? "" : value;
+                          const profile = splitterProfiles.find((item) => item.ratio_label === ratioValue) || null;
+                          const output = Number(profile?.output_port_count || 0);
+                          const autoTotal = Number.isFinite(output) && output > 0 ? (output >= 16 ? 8 : output) : 0;
+                          setForm((p) => ({
+                            ...p,
+                            splitter_ratio: ratioValue,
+                            total_ports: autoTotal ? String(autoTotal) : p.total_ports,
+                          }));
+                        }}
+                        options={toOptions([
+                          { value: "__none__", label: "Pilih splitter ratio" },
+                          ...splitterProfiles
+                            .filter((sp) => (sp.allowed_device_type_keys || []).includes(form.device_type_key))
+                            .map((item) => ({
+                              value: item.ratio_label,
+                              label: item.output_port_count ? `${item.ratio_label} (${item.output_port_count} port)` : item.ratio_label,
+                            })),
+                        ])}
+                        placeholder="Pilih splitter ratio"
+                        searchPlaceholder="Cari splitter ratio..."
+                      />
+                    </>
+                  ) : null}
+                  {form.device_type_key === "ODC" ? (
+                    <>
+                      <Field label="Feeder Port Count" type="number" value={form.feeder_port_count} onChange={(v) => setForm((p) => ({ ...p, feeder_port_count: v }))} />
+                      <Field label="Distribution Port Count" type="number" value={form.distribution_port_count} onChange={(v) => setForm((p) => ({ ...p, distribution_port_count: v }))} />
+                    </>
+                  ) : null}
+                  {(form.device_type_key === "OLT" || form.device_type_key === "ONT" || form.device_type_key === "SWITCH" || form.device_type_key === "ROUTER") ? (
+                    <Field
+                      label="Management IP"
+                      value={form.management_ip}
+                      onChange={(v) => setForm((p) => ({ ...p, management_ip: v }))}
+                      placeholder="10.0.0.1"
                     />
-                    {autoFillNotice ? (
-                      <Alert className="border-blue-200 bg-blue-50/70 py-2 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-100">
-                        <AlertTitle className="flex items-center gap-2 text-xs">
-                          <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal">
-                            Auto-fill
-                          </Badge>
-                          Review data otomatis
-                        </AlertTitle>
-                        <AlertDescription className="text-xs">{autoFillNotice}</AlertDescription>
-                      </Alert>
-                    ) : null}
+                  ) : null}
+                </div>
+              </TabsContent>
+
+              {/* ── Tab 3: Lokasi ────────────────────────────────────────── */}
+              <TabsContent value="lokasi" className="mt-0">
+                {!isCableDevice ? (
+                  <div className={formGridClass}>
+                    <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
+                      Lokasi
+                    </div>
+                    <CreateLocationFields
+                      values={{
+                        address: form.address,
+                        province: form.province,
+                        province_id: form.province_id,
+                        city: form.city,
+                        city_id: form.city_id,
+                        longitude: form.longitude,
+                        latitude: form.latitude,
+                      }}
+                      provinces={provinces}
+                      cities={cities}
+                      sectionSpanClass={sectionSpanClass}
+                      showCoordinates={true}
+                      badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
+                      onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+                    />
+                  </div>
+                ) : (
+                  <div className={formGridClass}>
+                    <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
+                      Lokasi
+                    </div>
+                    <p className="text-xs text-muted-foreground col-span-full">
+                      Kabel tidak memiliki data lokasi spesifik. Informasi posisi kabel tercakup pada data rute dan koordinat rute di tab Teknis.
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* ── Tab 4: Operasional & Lampiran ────────────────────────── */}
+              <TabsContent value="operasional" className="mt-0 space-y-5">
+                <div className={formGridClass}>
+                  <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
+                    Operasional
+                  </div>
+                  <CreateOperationalFields
+                    flags={{ isPop: false, isProject: false, isCustomer: false, isDevice: true }}
+                    values={{
+                      status_pop: form.status_pop,
+                      project_status: form.project_status,
+                      customer_status: form.customer_status,
+                      status: form.status,
+                      installation_date: form.installation_date,
+                      validation_status: form.validation_status,
+                      validation_date: form.validation_date,
+                    }}
+                    hasCustomerAutoFill={hasCustomerAutoFill}
+                    onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+                  />
+                </div>
+
+                {showDeviceImageField ? (
+                  <div className="space-y-1.5">
+                    <div className={sectionLabelClass}>Lampiran Gambar</div>
+                    <ImageAttachmentField
+                      label="Image Attachments"
+                      tooltip="Upload maksimal 10 foto perangkat (masing-masing max 5MB). Gambar pertama jadi primary image."
+                      files={imageFiles}
+                      previewUrls={imagePreviewUrls}
+                      onChange={handleImageFilesChange}
+                      onRemove={removeImageAt}
+                      onClear={clearImages}
+                    />
                   </div>
                 ) : null}
-              </>
-            ) : null}
 
-            {isDevice ? (
+                {isPop || isDevice ? (
+                  <div className="space-y-3 rounded-lg border p-3">
+                    <Separator />
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium">Custom Fields</p>
+                        <p className="text-xs text-muted-foreground">Khusus untuk data Device yang sedang dibuat.</p>
+                      </div>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setCustomDialogOpen(true)}>
+                        Add Custom Field
+                      </Button>
+                    </div>
+                    {customDefinitions.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Belum ada custom field untuk konteks ini.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {customDefinitions.map((field) => (
+                          <div key={field.id} className={field.layout_span === 12 ? "sm:col-span-2 space-y-1.5" : "space-y-1.5"}>
+                            <FieldLabel label={field.field_label} tooltip={field.help_text || "Custom field untuk data ini."} />
+                            {renderCustomFieldInput({
+                              field,
+                              value: customValues[field.field_key] || "",
+                              onChange: (value) => setCustomValues((prev) => ({ ...prev, [field.field_key]: value })),
+                            })}
+                            {field.help_text ? <p className="text-xs text-muted-foreground">{field.help_text}</p> : null}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+
+              </TabsContent>
+            </Tabs>
+          ) : (
+            // Non-device entities (POP, Project, Customer) - keep existing layout
+            <div className={formGridClass}>
+              {isPop ? (
+                <PopCreateIdentityFields
+                  values={{
+                    pop_name: form.pop_name,
+                    pop_code: form.pop_code,
+                  }}
+                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+                />
+              ) : null}
+              {isProject ? (
+                <ProjectCreateForm
+                  values={{
+                    project_name: form.project_name,
+                    vendor_name: form.vendor_name,
+                    bast_number: form.bast_number,
+                    spk_number: form.spk_number,
+                    pop_id: form.pop_id,
+                    region_id: form.region_id,
+                    project_description: form.project_description,
+                    start_date: form.start_date,
+                    end_date: form.end_date,
+                    budget_value: form.budget_value,
+                  }}
+                  pops={pops}
+                  sectionSpanClass={sectionSpanClass}
+                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+                />
+              ) : null}
+              {isCustomer ? (
+                <CustomerCreateForm
+                  values={{
+                    customer_name: form.customer_name,
+                    customer_number: form.customer_number,
+                    service_type_id: form.service_type_id,
+                    service_type: form.service_type,
+                    pop_id: form.pop_id,
+                    customer_project_id: form.customer_project_id,
+                    region_id: form.region_id,
+                  }}
+                  serviceTypes={serviceTypes}
+                  pops={pops}
+                  projects={projects}
+                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+                />
+              ) : null}
               <div className="space-y-1.5">
-                <FieldLabel
-                  label="Project"
-                  tooltip="Project delivery atau pekerjaan yang menjadi konteks utama device ini. Bisa dikosongkan untuk asset legacy atau device umum."
-                />
-                <Combobox
-                  value={form.project_id || "__none__"}
-                  onValueChange={(value) => setForm((previous) => ({ ...previous, project_id: value === "__none__" ? "" : value }))}
-                  options={toOptions([
-                    { value: "__none__", label: "Tanpa project" },
-                    ...projects
-                      .filter((project) => !form.region_id || !project.region_id || project.region_id === form.region_id)
-                      .filter((project) => !form.pop_id || !project.pop_id || project.pop_id === form.pop_id)
-                      .map((project) => ({
-                        value: project.id,
-                        label: [project.project_name, project.project_code].filter(Boolean).join(" | ") || "Project tidak tersedia",
+                <FieldLabel label="Region" tooltip={isFixedRegionRole ? "Region terkunci mengikuti scope akun." : "Region wajib dipilih."} />
+                {isFixedRegionRole ? (
+                  <Input value={selectedRegionLabel} disabled />
+                ) : (
+                  <Combobox
+                    value={form.region_id || "__none__"}
+                    onValueChange={(v) => setForm((p) => ({ ...p, region_id: v === "__none__" ? "" : v }))}
+                    options={toOptions([
+                      { value: "__none__", label: "Pilih region" },
+                      ...regions.map((region) => ({
+                        value: region.id,
+                        label: region.region_name,
                       })),
-                  ])}
-                  placeholder="Pilih project"
-                  searchPlaceholder="Cari project..."
-                  emptyText="Tidak ada project sesuai filter region/POP."
-                />
+                    ])}
+                    placeholder="Pilih region"
+                    searchPlaceholder="Cari region..."
+                  />
+                )}
               </div>
-            ) : null}
-
-
-
-            {isProject ? (
-              <ProjectCreateForm
-                values={{
-                  project_name: form.project_name,
-                  vendor_name: form.vendor_name,
-                  bast_number: form.bast_number,
-                  spk_number: form.spk_number,
-                  pop_id: form.pop_id,
-                  region_id: form.region_id,
-                  project_description: form.project_description,
-                  start_date: form.start_date,
-                  end_date: form.end_date,
-                  budget_value: form.budget_value,
-                }}
-                pops={pops}
-                sectionSpanClass={sectionSpanClass}
-                onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-              />
-            ) : null}
-
-            {isCustomer ? (
-              <CustomerCreateForm
-                values={{
-                  customer_name: form.customer_name,
-                  customer_number: form.customer_number,
-                  service_type_id: form.service_type_id,
-                  service_type: form.service_type,
-                  pop_id: form.pop_id,
-                  customer_project_id: form.customer_project_id,
-                  region_id: form.region_id,
-                }}
-                serviceTypes={serviceTypes}
-                pops={pops}
-                projects={projects}
-                onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-              />
-            ) : null}
-
-            <div className="space-y-1.5">
-              <FieldLabel label="Region" tooltip={isFixedRegionRole ? "Region terkunci mengikuti scope akun." : "Region wajib dipilih."} />
-              {isFixedRegionRole ? (
-                <Input value={selectedRegionLabel} disabled />
-              ) : (
-                <Combobox
-                  value={form.region_id || "__none__"}
-                  onValueChange={(v) => setForm((p) => ({ ...p, region_id: v === "__none__" ? "" : v }))}
-                  options={toOptions([
-                    { value: "__none__", label: "Pilih region" },
-                    ...regions.map((region) => ({
-                      value: region.id,
-                      label: region.region_name,
-                    })),
-                  ])}
-                  placeholder="Pilih region"
-                  searchPlaceholder="Cari region..."
-                />
-              )}
-            </div>
-
-            <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-              Validasi & Operasional
-            </div>
-
-            <CreateOperationalFields
-              flags={{ isPop, isProject, isCustomer, isDevice }}
-              values={{
-                status_pop: form.status_pop,
-                project_status: form.project_status,
-                customer_status: form.customer_status,
-                status: form.status,
-                installation_date: form.installation_date,
-                validation_status: form.validation_status,
-                validation_date: form.validation_date,
-              }}
-              hasCustomerAutoFill={hasCustomerAutoFill}
-              onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-            />
-
-            {isPop || isProject || showDeviceImageField ? (
               <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-                Lampiran Gambar
+                Validasi & Operasional
               </div>
-            ) : null}
-
-
-
-            {isPop ? (
-              <>
-                <PopCreateOperationalFields
-                  values={{
-                    tenant: form.tenant,
-                    pln_cid_number: form.pln_cid_number,
-                    pln_payment_method: form.pln_payment_method,
-                    pln_phase: form.pln_phase,
-                    pln_wattage: form.pln_wattage,
-                    pop_type_id: form.pop_type_id,
-                    pop_type: form.pop_type,
-                    tanggal_pop_aktif: form.tanggal_pop_aktif,
-                    tags: form.tags,
-                  }}
-                  popTypes={popTypes}
-                  tenants={tenants}
-                  sectionSpanClass={sectionSpanClass}
-                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-                />
-                <div className={`space-y-1.5 ${sectionSpanClass}`}>
-                  <ImageAttachmentField
-                    label="Image Attachments"
-                    tooltip="Upload maksimal 10 foto POP (masing-masing max 5MB)."
-                    files={imageFiles}
-                    previewUrls={imagePreviewUrls}
-                    onChange={handleImageFilesChange}
-                    onRemove={removeImageAt}
-                    onClear={clearImages}
-                  />
-                </div>
-                <div className={`space-y-1.5 ${sectionSpanClass}`}>
-                  <SupportDocumentField
-                    label="Support Documents"
-                    tooltip="Upload dokumen pendukung POP: image, excel, word, atau pdf."
-                    files={supportFiles}
-                    onChange={setSupportFiles}
-                  />
-                </div>
-              </>
-            ) : null}
-
-            {isProject ? (
-              <>
-                <div className={`space-y-1.5 ${sectionSpanClass}`}>
-                  <ImageAttachmentField
-                    label="Image Attachments"
-                    tooltip="Upload maksimal 10 foto project (masing-masing max 5MB). Gambar pertama jadi primary image."
-                    files={imageFiles}
-                    previewUrls={imagePreviewUrls}
-                    onChange={handleImageFilesChange}
-                    onRemove={removeImageAt}
-                    onClear={clearImages}
-                  />
-                </div>
-                <div className={`space-y-1.5 ${sectionSpanClass}`}>
-                  <SupportDocumentField
-                    label="Document Attachments"
-                    tooltip="Upload dokumen pendukung project: image, excel, word, atau pdf."
-                    files={supportFiles}
-                    onChange={setSupportFiles}
-                  />
-                </div>
-              </>
-            ) : null}
-
-            {isProject || isCustomer ? (
-              <Field
-                label="Tags (comma separated)"
-                value={form.tags}
-                onChange={(v) => setForm((p) => ({ ...p, tags: v }))}
-                placeholder="backbone,west,phase-1"
-                containerClassName={sectionSpanClass}
+              <CreateOperationalFields
+                flags={{ isPop, isProject, isCustomer, isDevice }}
+                values={{
+                  status_pop: form.status_pop,
+                  project_status: form.project_status,
+                  customer_status: form.customer_status,
+                  status: form.status,
+                  installation_date: form.installation_date,
+                  validation_status: form.validation_status,
+                  validation_date: form.validation_date,
+                }}
+                hasCustomerAutoFill={hasCustomerAutoFill}
+                onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
               />
-            ) : null}
-
-            {isDevice && showDeviceImageField ? (
-              <div className={`space-y-1.5 ${sectionSpanClass}`}>
-                <ImageAttachmentField
-                  label="Image Attachments"
-                  tooltip="Upload maksimal 10 foto perangkat (masing-masing max 5MB). Gambar pertama jadi primary image."
-                  files={imageFiles}
-                  previewUrls={imagePreviewUrls}
-                  onChange={handleImageFilesChange}
-                  onRemove={removeImageAt}
-                  onClear={clearImages}
-                />
-              </div>
-            ) : null}
-
-
-
-            {!isCableDevice ? (
-              <>
+              {isPop || isProject || showDeviceImageField ? (
                 <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-                  Lokasi
+                  Lampiran Gambar
                 </div>
-                <CreateLocationFields
-                  values={{
-                    address: form.address,
-                    province: form.province,
-                    province_id: form.province_id,
-                    city: form.city,
-                    city_id: form.city_id,
-                    longitude: form.longitude,
-                    latitude: form.latitude,
-                  }}
-                  provinces={provinces}
-                  cities={cities}
-                  sectionSpanClass={sectionSpanClass}
-                  showCoordinates={!isProject && !isCableDevice}
-                  badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
-                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+              ) : null}
+              {isPop ? (
+                <>
+                  <PopCreateOperationalFields
+                    values={{
+                      tenant: form.tenant,
+                      pln_cid_number: form.pln_cid_number,
+                      pln_payment_method: form.pln_payment_method,
+                      pln_phase: form.pln_phase,
+                      pln_wattage: form.pln_wattage,
+                      pop_type_id: form.pop_type_id,
+                      pop_type: form.pop_type,
+                      tanggal_pop_aktif: form.tanggal_pop_aktif,
+                      tags: form.tags,
+                    }}
+                    popTypes={popTypes}
+                    tenants={tenants}
+                    sectionSpanClass={sectionSpanClass}
+                    onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+                  />
+                  <div className={`space-y-1.5 ${sectionSpanClass}`}>
+                    <ImageAttachmentField
+                      label="Image Attachments"
+                      tooltip="Upload maksimal 10 foto POP (masing-masing max 5MB)."
+                      files={imageFiles}
+                      previewUrls={imagePreviewUrls}
+                      onChange={handleImageFilesChange}
+                      onRemove={removeImageAt}
+                      onClear={clearImages}
+                    />
+                  </div>
+                  <div className={`space-y-1.5 ${sectionSpanClass}`}>
+                    <SupportDocumentField
+                      label="Support Documents"
+                      tooltip="Upload dokumen pendukung POP: image, excel, word, atau pdf."
+                      files={supportFiles}
+                      onChange={setSupportFiles}
+                    />
+                  </div>
+                </>
+              ) : null}
+              {isProject ? (
+                <>
+                  <div className={`space-y-1.5 ${sectionSpanClass}`}>
+                    <ImageAttachmentField
+                      label="Image Attachments"
+                      tooltip="Upload maksimal 10 foto project (masing-masing max 5MB)."
+                      files={imageFiles}
+                      previewUrls={imagePreviewUrls}
+                      onChange={handleImageFilesChange}
+                      onRemove={removeImageAt}
+                      onClear={clearImages}
+                    />
+                  </div>
+                  <div className={`space-y-1.5 ${sectionSpanClass}`}>
+                    <SupportDocumentField
+                      label="Document Attachments"
+                      tooltip="Upload dokumen pendukung project."
+                      files={supportFiles}
+                      onChange={setSupportFiles}
+                    />
+                  </div>
+                </>
+              ) : null}
+              {isProject || isCustomer ? (
+                <Field
+                  label="Tags (comma separated)"
+                  value={form.tags}
+                  onChange={(v) => setForm((p) => ({ ...p, tags: v }))}
+                  placeholder="backbone,west,phase-1"
+                  containerClassName={sectionSpanClass}
                 />
-              </>
-            ) : null}
-          </div>
-
-          {isPop || isDevice ? (
+              ) : null}
+              {isDevice && showDeviceImageField ? (
+                <div className={`space-y-1.5 ${sectionSpanClass}`}>
+                  <ImageAttachmentField
+                    label="Image Attachments"
+                    tooltip="Upload maksimal 10 foto perangkat (masing-masing max 5MB)."
+                    files={imageFiles}
+                    previewUrls={imagePreviewUrls}
+                    onChange={handleImageFilesChange}
+                    onRemove={removeImageAt}
+                    onClear={clearImages}
+                  />
+                </div>
+              ) : null}
+              {!isCableDevice ? (
+                <>
+                  <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
+                    Lokasi
+                  </div>
+                  <CreateLocationFields
+                    values={{
+                      address: form.address,
+                      province: form.province,
+                      province_id: form.province_id,
+                      city: form.city,
+                      city_id: form.city_id,
+                      longitude: form.longitude,
+                      latitude: form.latitude,
+                    }}
+                    provinces={provinces}
+                    cities={cities}
+                    sectionSpanClass={sectionSpanClass}
+                    showCoordinates={true}
+                    badge={hasCustomerAutoFill ? <AutoFilledBadge /> : null}
+                    onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+                  />
+                </>
+              ) : null}
+            </div>
+          )}{isPop ? (
             <div className="space-y-3 rounded-lg border p-3">
               <Separator />
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <p className="text-sm font-medium">Custom Fields</p>
-                  <p className="text-xs text-muted-foreground">Khusus untuk data {isPop ? "POP" : "Device"} yang sedang dibuat.</p>
+                  <p className="text-xs text-muted-foreground">Khusus untuk data POP yang sedang dibuat.</p>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={() => setCustomDialogOpen(true)}>
                   Add Custom Field
@@ -1350,13 +2373,34 @@ export default function CreateDataManagementPage() {
             </div>
           ) : null}
 
-          <div className="flex justify-end">
-            <Button onClick={() => void submit()} disabled={saving || Boolean(approvalNotice)}>
-              {saving ? "Menyimpan..." : isPop ? "Simpan POP" : isProject ? "Simpan Project" : isCustomer ? "Simpan Customer" : "Simpan Device"}
-            </Button>
-          </div>
+          {!isDevice ? (
+            <div className="flex justify-end">
+              <Button onClick={() => void submit()} disabled={saving || Boolean(approvalNotice)}>
+                {saving ? "Menyimpan..." : isPop ? "Simpan POP" : isProject ? "Simpan Project" : "Simpan Customer"}
+              </Button>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
+
+        <CreateStickyFooter
+          flags={{ isDevice, isPop, isProject, isCustomer }}
+          saving={saving}
+          canSave={!approvalNotice}
+          missingCount={Object.values(getMissingDeviceFields()).flat().length}
+          onSave={() => {
+            const missing = getMissingDeviceFields();
+            setMissingTabFields(missing);
+            const totalMissing = Object.values(missing).flat().length;
+            if (totalMissing > 0) {
+              const firstMissingTab = Object.entries(missing).find(([, fields]) => fields.length > 0);
+              if (firstMissingTab) setActiveTab(firstMissingTab[0]);
+              setErrorMessage(`Ada ${totalMissing} field wajib yang belum diisi. Lengkapi field yang ditandai di setiap tab.`);
+              return;
+            }
+            void submit();
+          }}
+        />
 
         <CreateApprovalDialog
           notice={approvalNotice}

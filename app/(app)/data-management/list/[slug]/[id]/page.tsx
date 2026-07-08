@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { ArrowLeft, CheckCircle2, ChevronDown, CircleHelp, Download, ImagePlus, Pencil, Save, X, XCircle } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
@@ -27,6 +27,10 @@ import {
   OdpValidationHistorySection,
   ValidationReminderDialog,
   DeviceTopologyChainVisualizer,
+  PortTrayContainer,
+  PortAssignmentDrawer,
+  type PeerDeviceOption,
+  type PeerPortOption,
 } from "@/components/features/data-management/device-detail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -189,6 +193,13 @@ type PopLookupOption = {
   pop_code?: string | null;
   pop_name?: string | null;
   region_id?: string | null;
+  address?: string | null;
+  city?: string | null;
+  city_id?: string | null;
+  province?: string | null;
+  province_id?: string | null;
+  longitude?: number | string | null;
+  latitude?: number | string | null;
 };
 type ProjectLookupOption = {
   id: string;
@@ -518,6 +529,7 @@ export default function DataManagementDetailPage() {
   const [projectRelationDevices, setProjectRelationDevices] = useState<ProjectAssetItem[]>([]);
   const [loadingProjectAssets, setLoadingProjectAssets] = useState(false);
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
+  const [deviceCoreCapacities, setDeviceCoreCapacities] = useState<Array<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>>([]);
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
@@ -585,7 +597,16 @@ export default function DataManagementDetailPage() {
   const [loadingOdcChainSummary, setLoadingOdcChainSummary] = useState(false);
   const [otbChainSummary, setOtbChainSummary] = useState<Parameters<typeof OtbCoreChainSummarySection>[0]["chainSummary"] | null>(null);
   const [loadingOtbChainSummary, setLoadingOtbChainSummary] = useState(false);
-  const [creatingDraftLink, setCreatingDraftLink] = useState(false);
+    // ── Fase 2b — Port Tray Drawer State ──
+  const [trayDrawerOpen, setTrayDrawerOpen] = useState(false);
+  const [traySelectedPort, setTraySelectedPort] = useState<DevicePort | null>(null);
+  const [trayDirection, setTrayDirection] = useState<"front" | "rear">("front");
+  const [trayPeerDevices, setTrayPeerDevices] = useState<{ value: string; label: string }[]>([]);
+  const [trayPeerDeviceValue, setTrayPeerDeviceValue] = useState("");
+  const [trayPeerPorts, setTrayPeerPorts] = useState<{ value: string; label: string }[]>([]);
+  const [trayPeerPortValue, setTrayPeerPortValue] = useState("");
+  const [trayAssignLoading, setTrayAssignLoading] = useState(false);
+const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   const [servicePortRelations, setServicePortRelations] = useState<ServicePortRelation[]>([]);
   const [loadingServicePortRelations, setLoadingServicePortRelations] = useState(false);
   const [submittingOdpValidation, setSubmittingOdpValidation] = useState(false);
@@ -1007,17 +1028,19 @@ export default function DataManagementDetailPage() {
     let cancelled = false;
     async function loadDeviceMasterData() {
       try {
-        const [splitterResponse, odpTypesResponse, installationTypesResponse, tenantsResponse] = await Promise.allSettled([
+        const [splitterResponse, odpTypesResponse, installationTypesResponse, tenantsResponse, deviceCoreCapacitiesResponse] = await Promise.allSettled([
           apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<OdpTypeOption>>("/odpTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<TenantOption>>("/tenants?page=1&limit=200&is_active=true", { token }),
+          apiFetch<PaginatedResponse<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>>("/deviceCoreCapacities?page=1&limit=200&is_active=true", { token }),
         ]);
         if (cancelled) return;
         setSplitterProfiles(splitterResponse.status === "fulfilled" ? splitterResponse.value.data || [] : []);
         setOdpTypes(odpTypesResponse.status === "fulfilled" ? odpTypesResponse.value.data || [] : []);
         setInstallationTypes(installationTypesResponse.status === "fulfilled" ? installationTypesResponse.value.data || [] : []);
         setTenants(tenantsResponse.status === "fulfilled" ? tenantsResponse.value.data || [] : []);
+        setDeviceCoreCapacities(deviceCoreCapacitiesResponse.status === "fulfilled" ? deviceCoreCapacitiesResponse.value.data || [] : []);
       } catch {
         if (cancelled) return;
         setSplitterProfiles([]);
@@ -1109,6 +1132,36 @@ export default function DataManagementDetailPage() {
       cancelled = true;
     };
   }, [category?.resource, item, token]);
+  // ── Auto-fill location from POP when POP changes in edit mode ──────────
+  const prevPopIdRef = useRef(form.pop_id);
+
+  useEffect(() => {
+    if (!isEditing) {
+      prevPopIdRef.current = form.pop_id;
+      return;
+    }
+
+    const prevPopId = prevPopIdRef.current;
+    prevPopIdRef.current = form.pop_id;
+
+    // Only auto-fill when POP actually changes (not on initial mount)
+    if (prevPopId === form.pop_id || !form.pop_id) return;
+
+    const selectedPop = popOptions.find((p) => p.id === form.pop_id);
+    if (!selectedPop) return;
+
+    setForm((prev) => ({
+      ...prev,
+      address: selectedPop.address || prev.address,
+      city: selectedPop.city || prev.city,
+      city_id: selectedPop.city_id || prev.city_id,
+      province: selectedPop.province || prev.province,
+      province_id: selectedPop.province_id || prev.province_id,
+      longitude: selectedPop.longitude != null ? String(selectedPop.longitude) : prev.longitude,
+      latitude: selectedPop.latitude != null ? String(selectedPop.latitude) : prev.latitude,
+    }));
+  }, [form.pop_id, isEditing, popOptions]);
+
 
   useEffect(() => {
     if (!isOdpDevice || !item || !token) {
@@ -2078,7 +2131,161 @@ export default function DataManagementDetailPage() {
     }
   }
 
-  if (!category) {
+  
+  // ── Fase 2b — Port Tray Handlers
+  async function loadPeerDevices(
+    port: DevicePort,
+    direction: string,
+    signal: AbortSignal | undefined,
+  ): Promise<Array<{ id: string; device_name?: string | null; device_id?: string | null }>> {
+    if (!item || !token) return [];
+    const popId = valueOf(item.pop_id);
+    if (!popId) return [];
+    const deviceTypes = direction === "front" ? "OLT,SWITCH" : "ODC,JC";
+    try {
+      const params = new URLSearchParams({ page: "1", limit: "500", pop_id: popId, status: "active" });
+      const promises = deviceTypes.split(",").map(dt =>
+        apiFetch<{ data: Array<{ id: string; device_name?: string | null; device_id?: string | null }> }>(
+          "/devices?" + params.toString() + "&device_type_key=" + dt, { token }
+        ).catch(() => ({ data: [] }))
+      );
+      const results = await Promise.all(promises);
+      if (signal?.aborted) return [];
+      const allDevices = results.flatMap(r => r.data || []);
+      return allDevices;
+    } catch { return []; }
+  }
+
+  async function loadPeerPorts(
+    deviceId: string,
+    signal: AbortSignal | undefined,
+  ): Promise<Array<{ id: string; port_label?: string | null; port_index?: number | null }>> {
+    if (!token) return [];
+    try {
+      const result = await apiFetch<{ data: Array<{ id: string; port_label?: string | null; port_index?: number | null }> }>(
+        "/devicePorts?page=1&limit=200&device_id=" + encodeURIComponent(deviceId) + "&status=idle", { token }
+      );
+      if (signal?.aborted) return [];
+      return result.data || [];
+    } catch { return []; }
+  }
+
+  const trayAbortRef = useRef<AbortController | null>(null);
+
+  function handlePortClick(port: DevicePort) {
+    if (trayAbortRef.current) trayAbortRef.current.abort();
+    const abortController = new AbortController();
+    trayAbortRef.current = abortController;
+
+    setTraySelectedPort(port);
+    setTrayDirection("front");
+    setTrayPeerDeviceValue("");
+    setTrayPeerPortValue("");
+    setTrayPeerDevices([]);
+    setTrayPeerPorts([]);
+    setTrayDrawerOpen(true);
+
+    loadPeerDevices(port, "front", abortController.signal).then(devices => {
+      if (!abortController.signal.aborted) {
+        setTrayPeerDevices(devices.map(d => ({ value: d.id, label: [d.device_name, d.device_id].filter(Boolean).join(" - ") || d.id })));
+      }
+    });
+  }
+
+  function handleTrayPeerDeviceChange(value: string) {
+    setTrayPeerDeviceValue(value);
+    setTrayPeerPortValue("");
+    if (value && value !== "__none__") {
+      if (trayAbortRef.current) trayAbortRef.current.abort();
+      const abortController = new AbortController();
+      trayAbortRef.current = abortController;
+      loadPeerPorts(value, abortController.signal).then(ports => {
+        if (!abortController.signal.aborted) {
+          setTrayPeerPorts(ports.map(p => ({ value: p.id, label: p.port_label || ("Port " + (p.port_index || "?")) })));
+        }
+      });
+    } else {
+      setTrayPeerPorts([]);
+    }
+  }
+
+  function handleTrayPeerPortChange(value: string) {
+    setTrayPeerPortValue(value);
+  }
+
+  async function handleTrayDirectionChange(direction: "front" | "rear") {
+    setTrayDirection(direction);
+    setTrayPeerDeviceValue("");
+    setTrayPeerPortValue("");
+    setTrayPeerDevices([]);
+    setTrayPeerPorts([]);
+
+    if (!traySelectedPort) return;
+    if (trayAbortRef.current) trayAbortRef.current.abort();
+    const abortController = new AbortController();
+    trayAbortRef.current = abortController;
+    const devices = await loadPeerDevices(traySelectedPort, direction, abortController.signal);
+    if (!abortController.signal.aborted) {
+      setTrayPeerDevices(devices.map(d => ({ value: d.id, label: [d.device_name, d.device_id].filter(Boolean).join(" - ") || d.id })));
+    }
+  }
+
+  async function handleAssign() {
+    if (!item || !token || !traySelectedPort || !trayPeerDeviceValue || !trayPeerPortValue) return;
+    const activeItem = item;
+    const activePort = traySelectedPort;
+    setTrayAssignLoading(true);
+    setError("");
+    try {
+      const isFront = trayDirection === "front";
+      await apiFetch("/portConnections", {
+        method: "POST",
+        token,
+        body: JSON.stringify({
+          region_id: activeItem.region_id,
+          from_port_id: isFront ? trayPeerPortValue : activePort.id,
+          to_port_id: isFront ? activePort.id : trayPeerPortValue,
+          connection_type: isFront ? "feeder" : "distribution",
+          status: "active",
+        }),
+      });
+      setMessage("Port berhasil di-assign.");
+      setTrayDrawerOpen(false);
+      const refreshed = await apiFetch<{ data: DeviceTopologySummary }>("/topology/devices/" + encodeURIComponent(activeItem.id) + "/summary?limit=200", { token });
+      const summary = refreshed.data || {};
+      setOdpPorts((summary.ports?.items || []).sort((a, b) => Number(a.port_index) - Number(b.port_index)));
+      setDevicePortConnections(summary.connections?.items || []);
+      setDeviceTopologySummary(summary);
+    } catch (err) {
+      setError((err as Error).message || "Gagal assign port.");
+    } finally {
+      setTrayAssignLoading(false);
+    }
+  }
+
+  async function handleDisconnect() {
+    if (!token || !traySelectedPort || !item) return;
+    const activeItem = item;
+    const conn = devicePortConnections.find(c => c.from_port_id === traySelectedPort.id || c.to_port_id === traySelectedPort.id);
+    if (!conn) return;
+    setTrayAssignLoading(true);
+    setError("");
+    try {
+      await apiFetch("/topology/port-connections/" + conn.id, { method: "DELETE", token });
+      setMessage("Koneksi port diputuskan.");
+      setTrayDrawerOpen(false);
+      const refreshed = await apiFetch<{ data: DeviceTopologySummary }>("/topology/devices/" + encodeURIComponent(activeItem.id) + "/summary?limit=200", { token });
+      const summary = refreshed.data || {};
+      setOdpPorts((summary.ports?.items || []).sort((a, b) => Number(a.port_index) - Number(b.port_index)));
+      setDevicePortConnections(summary.connections?.items || []);
+      setDeviceTopologySummary(summary);
+    } catch (err) {
+      setError((err as Error).message || "Gagal putuskan koneksi.");
+    } finally {
+      setTrayAssignLoading(false);
+    }
+  }
+if (!category) {
     return (
       <ScrollArea className="h-full min-h-0 w-full">
         <div className="space-y-3 pr-3">
@@ -2143,7 +2350,28 @@ export default function DataManagementDetailPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <CardTitle>{isOdpDevice ? "Informasi ODP" : `Informasi ${category.label}`}</CardTitle>
-                    {isOdpDevice ? (
+                    
+          {/* Fase 2b --- Port Assignment Drawer untuk OTB */}
+          {isOtbDevice && (
+            <PortAssignmentDrawer
+              open={trayDrawerOpen}
+              onOpenChange={setTrayDrawerOpen}
+              port={traySelectedPort}
+              deviceTypeKey="OTB"
+              direction={trayDirection}
+              onDirectionChange={handleTrayDirectionChange}
+              peerDevices={trayPeerDevices}
+              peerDeviceValue={trayPeerDeviceValue}
+              onPeerDeviceChange={handleTrayPeerDeviceChange}
+              peerPorts={trayPeerPorts}
+              peerPortValue={trayPeerPortValue}
+              onPeerPortChange={handleTrayPeerPortChange}
+              onAssign={handleAssign}
+              onDisconnect={handleDisconnect}
+              loading={trayAssignLoading}
+            />
+          )}
+{isOdpDevice ? (
                       <CollapsibleTrigger asChild>
                         <Button type="button" variant="ghost" size="icon" className="size-8">
                           <ChevronDown className={`size-4 transition-transform ${odpInfoOpen ? "rotate-180" : ""}`} />
@@ -2212,6 +2440,7 @@ export default function DataManagementDetailPage() {
                   topologySummary={deviceTopologySummary}
                   coreCapacities={[]}
                   cableTypes={[]}
+                  deviceCoreCapacities={deviceCoreCapacities}
                   odcChainSummary={isOdcDevice ? odcChainSummary : undefined}
                   odcChainLoading={isOdcDevice ? loadingOdcChainSummary : undefined}
                   otbChainSummary={isOtbDevice ? otbChainSummary : undefined}
@@ -2247,29 +2476,42 @@ export default function DataManagementDetailPage() {
                   {(isOdcDevice || isOtbDevice) && (
                     <DeviceTopologyChainVisualizer deviceId={item.id} token={token} />
                   )}
-                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
-                    <div className="lg:max-w-[280px]">
-                      <DeviceQrActionPanel
-                        qrDataUrl={qrDataUrl}
-                        logoDataUrl={qrLabelLogoDataUrl}
-                        logoReady={qrLabelReady}
+                  {/* OTB: Port Tray / Non-OTB: Summary Grid */}
+                  {isOtbDevice ? (
+                    <PortTrayContainer
+                      devicePorts={odpPorts}
+                      connections={devicePortConnections}
+                      totalPorts={Number(valueOf(item?.total_ports)) || 0}
+                      deviceTypeKey="OTB"
+                      deviceTypeLabel="OTB"
+                      loading={loadingOdpPorts}
+                      onPortClick={handlePortClick}
+                    />
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
+                      <div className="lg:max-w-[280px]">
+                        <DeviceQrActionPanel
+                          qrDataUrl={qrDataUrl}
+                          logoDataUrl={qrLabelLogoDataUrl}
+                          logoReady={qrLabelReady}
+                          deviceTypeLabel={valueOf(item.device_type_key, "Device")}
+                          showReminder={false}
+                          reminderDisabled
+                          onOpenReminder={() => undefined}
+                          onDownloadQrLabel={handleDownloadQrLabel}
+                        />
+                      </div>
+                      <DevicePortSummarySection
                         deviceTypeLabel={valueOf(item.device_type_key, "Device")}
-                        showReminder={false}
-                        reminderDisabled
-                        onOpenReminder={() => undefined}
-                        onDownloadQrLabel={handleDownloadQrLabel}
+                        ports={odpPorts}
+                        connections={devicePortConnections}
+                        coreSummary={deviceTopologySummary?.core_management?.summary || null}
+                        fiberSummary={deviceTopologySummary?.fiber_cores?.summary || null}
+                        readiness={deviceTopologySummary?.readiness || null}
+                        loading={loadingOdpPorts}
                       />
                     </div>
-                    <DevicePortSummarySection
-                      deviceTypeLabel={valueOf(item.device_type_key, "Device")}
-                      ports={odpPorts}
-                      connections={devicePortConnections}
-                      coreSummary={deviceTopologySummary?.core_management?.summary || null}
-                      fiberSummary={deviceTopologySummary?.fiber_cores?.summary || null}
-                      readiness={deviceTopologySummary?.readiness || null}
-                      loading={loadingOdpPorts}
-                    />
-                  </div>
+                  )}
                 </div>
               ) : null}
 
@@ -3939,7 +4181,7 @@ function validateCoordinateFormat(value: string, kind: "longitude" | "latitude")
         valid: false,
         state: "invalid" as const,
         message: `Ada karakter tidak valid: ${invalidChars.join(" ")}. Gunakan hanya angka dan titik${kind === "latitude" ? ", plus minus (-) di depan" : ""}.`,
-      };
+      } as Record<string, unknown>;
     }
     if (/\s/.test(text)) {
       return { valid: false, state: "invalid" as const, message: "Koordinat tidak boleh mengandung spasi." };

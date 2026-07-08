@@ -634,6 +634,7 @@ export default function DataManagementListPage() {
     if (category.resource === "routeTypes") return [selectAllHeader, "Code", "Route Type", "Status", "Updated"];
     if (category.resource === "cableTypes") return [selectAllHeader, "Code", "Cable Type", "Description", "Status", "Updated"];
     if (category.resource === "coreCapacities") return [selectAllHeader, "Value", "Label", "Description", "Route Types", "Status", "Updated"];
+    if (category.resource === "deviceCoreCapacities") return [selectAllHeader, "Value", "Label", "Description", "Device Types", "Status", "Updated"];
     if (category.resource === "odpTypes") return [selectAllHeader, "Code", "ODP Type", "Status", "Updated"];
     if (category.resource === "installationTypes") return [selectAllHeader, "Code", "Installation Type", "Status", "Updated"];
     if (category.resource === "serviceTypes") return [selectAllHeader, "Code", "Service Type", "Status", "Updated"];
@@ -799,6 +800,17 @@ export default function DataManagementListPage() {
           withArchivedLabel(item, pick(item, ["label"])),
           pick(item, ["description"]),
           renderRouteTypeTags(item.allowed_route_type_keys),
+          pick(item, ["is_active"]),
+          formatDateTime(pick(item, ["updated_at", "created_at"])),
+        ];
+      }
+      if (category.resource === "deviceCoreCapacities") {
+        return [
+          selectCell,
+          pick(item, ["core_capacity_value"]),
+          withArchivedLabel(item, pick(item, ["label"])),
+          pick(item, ["description"]),
+          renderDeviceTypeTags(item.allowed_device_type_keys),
           pick(item, ["is_active"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -2038,15 +2050,6 @@ function renderCreateFields(
               />
               ODC
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={allowedKeys.includes("ODP")}
-                onChange={() => toggleDeviceTypeKey("ODP")}
-                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
-              />
-              ODP
-            </label>
           </div>
         </div>
         <div className="space-y-1.5">
@@ -2093,6 +2096,68 @@ function renderCreateFields(
     );
   }
 
+  if (resource === "deviceCoreCapacities") {
+    const allowedKeys = parseJsonStringArray(form.allowed_device_type_keys);
+    const toggleDeviceTypeKey = (key: string) => {
+      const next = allowedKeys.includes(key) ? allowedKeys.filter((k) => k !== key) : [...allowedKeys, key];
+      setValue("allowed_device_type_keys", JSON.stringify(next));
+    };
+
+    return (
+      <>
+        <div className="space-y-1.5">
+          <Label>Core Capacity Value *</Label>
+          <Input type="number" min={1} value={form.core_capacity_value || ""} onChange={(e) => setValue("core_capacity_value", e.target.value)} placeholder="Contoh: 48" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Label *</Label>
+          <Input value={form.label || ""} onChange={(e) => setValue("label", e.target.value)} placeholder="Contoh: 48 Cores" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Description</Label>
+          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi kapasitas core" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Device Types</Label>
+          <p className="text-xs text-muted-foreground">Pilih tipe perangkat yang diizinkan. Kosongkan = berlaku untuk semua.</p>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allowedKeys.includes("OTB")}
+                onChange={() => toggleDeviceTypeKey("OTB")}
+                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
+              />
+              OTB
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allowedKeys.includes("ODC")}
+                onChange={() => toggleDeviceTypeKey("ODC")}
+                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
+              />
+              ODC
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allowedKeys.includes("JC")}
+                onChange={() => toggleDeviceTypeKey("JC")}
+                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
+              />
+              JC
+            </label>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Sort Order</Label>
+          <Input type="number" value={form.sort_order || "0"} onChange={(e) => setValue("sort_order", e.target.value)} />
+        </div>
+      </>
+    );
+  }
+
   return (
     <p className="text-sm text-muted-foreground">
       Form create belum tersedia untuk resource ini.
@@ -2106,6 +2171,7 @@ function getCreateDefaults(resource: string): Record<string, string> {
   if (resource === "routeTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "cableTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "coreCapacities") return { is_active: "true", sort_order: "0", allowed_route_type_keys: "[]" };
+  if (resource === "deviceCoreCapacities") return { is_active: "true", sort_order: "0", allowed_device_type_keys: "[]" };
   if (resource === "odpTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "installationTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "serviceTypes") return { is_active: "true", sort_order: "0" };
@@ -2358,6 +2424,17 @@ function buildEditFormFromItem(resource: string, item: GenericItem): Record<stri
       is_active: readBool("is_active", true),
     };
   }
+  if (resource === "deviceCoreCapacities") {
+    const rawKeys = item.allowed_device_type_keys;
+    return {
+      label: read("label"),
+      core_capacity_value: read("core_capacity_value"),
+      description: read("description"),
+      allowed_device_type_keys: JSON.stringify(Array.isArray(rawKeys) ? rawKeys : []),
+      sort_order: read("sort_order") || "0",
+      is_active: readBool("is_active", true),
+    };
+  }
   if (resource === "odpTypes") {
     return {
       odp_type_name: read("odp_type_name"),
@@ -2510,6 +2587,17 @@ function buildCreatePayload(resource: string, form: Record<string, string>) {
     payload.allowed_route_type_keys = parsedRouteKeys;
     payload.sort_order = Number(trim("sort_order") || "0");
     payload.is_active = (trim("is_active") || "true") !== "false";
+    return payload;
+  }
+  if (resource === "deviceCoreCapacities") {
+    if (!trim("label") || !trim("core_capacity_value")) return null;
+    assign("label");
+    payload.core_capacity_value = Number(trim("core_capacity_value"));
+    assign("description");
+    const parsedDeviceKeys = parseJsonStringArray(form.allowed_device_type_keys);
+    payload.allowed_device_type_keys = parsedDeviceKeys;
+    payload.sort_order = Number(trim("sort_order") || "0");
+    payload.is_active = form.is_active === "true";
     return payload;
   }
   if (resource === "odpTypes") {
@@ -2843,11 +2931,11 @@ function canWriteResource(role: string, resource: string) {
 }
 
 function supportsIsActiveResource(resource: string) {
-  return ["deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "splitterProfiles", "cableTypes", "provinces", "cities"].includes(resource);
+  return ["deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "splitterProfiles", "cableTypes", "coreCapacities", "deviceCoreCapacities", "provinces", "cities"].includes(resource);
 }
 
 function supportsSoftDeleteResource(resource: string) {
-  return ["regions", "deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "manufacturers", "brands", "assetModels", "cableTypes", "provinces", "cities"].includes(resource);
+  return ["regions", "deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "manufacturers", "brands", "assetModels", "cableTypes", "coreCapacities", "deviceCoreCapacities", "provinces", "cities"].includes(resource);
 }
 
 function supportsPopFilterResource(resource: string) {

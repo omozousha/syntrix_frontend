@@ -32,7 +32,7 @@ const MASTER_SECTIONS: MasterDataSectionConfig[] = [
     title: "Referensi Perangkat",
     description: "Referensi tipe perangkat, ODP, instalasi, model, dan splitter sebagai fondasi inventaris.",
     icon: Boxes,
-    slugs: ["master-device-types", "master-odp-types", "master-cable-types", "master-core-capacities", "master-installation-types", "master-models", "master-splitter-profiles"],
+    slugs: ["master-device-types", "master-odp-types", "master-cable-types", "master-core-capacities", "master-device-core-capacities", "master-installation-types", "master-models", "master-splitter-profiles"],
   },
   {
     title: "Referensi Vendor & Tenant",
