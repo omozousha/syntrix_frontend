@@ -210,6 +210,13 @@ export type PopLookupOption = {
   pop_code?: string | null;
   pop_name?: string | null;
   region_id?: string | null;
+  address?: string | null;
+  city?: string | null;
+  city_id?: string | null;
+  province?: string | null;
+  province_id?: string | null;
+  longitude?: number | string | null;
+  latitude?: number | string | null;
 };
 
 export type ProjectLookupOption = {

@@ -2,14 +2,11 @@
 
 import { DeviceCreateForm } from "@/components/features/data-management/device-form/device-create-form";
 import { DeviceHardwareFields } from "@/components/features/data-management/device-form/device-hardware-fields";
-import { DeviceCapacityFields } from "@/components/features/data-management/device-form/device-capacity-fields";
-import { Field } from "@/components/features/data-management/device-form/form-field-grid";
 
 type PopOption = { id: string; pop_name: string; pop_code: string; region_id: string };
 type ProjectOption = { id: string; project_name: string; project_code?: string | null; region_id?: string | null; pop_id?: string | null };
 type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
-type SplitterProfileOption = { ratio_label: string; output_port_count?: number | null; allowed_device_type_keys?: string[] | null };
 type ManufacturerOption = { id: string; manufacturer_name: string; manufacturer_code?: string | null };
 type BrandOption = { id: string; brand_name: string; brand_code?: string | null; manufacturer_id?: string | null };
 type AssetModelOption = { id: string; model_name: string; model_code?: string | null; brand_id?: string | null; manufacturer_id?: string | null };
@@ -47,7 +44,6 @@ export function OdcDeviceCreate({
   manufacturers,
   brands,
   assetModels,
-  splitterProfiles,
   onChange,
   onPopChange,
 }: {
@@ -60,7 +56,6 @@ export function OdcDeviceCreate({
   manufacturers: ManufacturerOption[];
   brands: BrandOption[];
   assetModels: AssetModelOption[];
-  splitterProfiles: SplitterProfileOption[];
   onChange: (patch: Record<string, string>) => void;
   onPopChange: (popId: string) => void;
 }) {
@@ -92,40 +87,6 @@ export function OdcDeviceCreate({
         brands={brands}
         assetModels={assetModels}
         onChange={onChange}
-      />
-
-      <DeviceCapacityFields
-        values={{
-          device_type_key: "ODC",
-          capacity_core: values.capacity_core,
-          used_core: values.used_core,
-          total_ports: values.total_ports,
-          used_ports: values.used_ports,
-          splitter_ratio: values.splitter_ratio,
-        }}
-        showCoreFields={true}
-        showPortFields={true}
-        showSplitterField={true}
-        needsPortPresetSelector={false}
-        splitterPortPresetOptions={[]}
-        splitterProfiles={splitterProfiles}
-        onChange={onChange}
-      />
-
-      {/* ODC-specific: Feeder & Distribution Port Count */}
-      <Field
-        label="Feeder Port Count"
-        type="number"
-        value={values.feeder_port_count}
-        onChange={(v) => onChange({ feeder_port_count: v })}
-        tooltip="Jumlah port untuk koneksi upstream ke backbone."
-      />
-      <Field
-        label="Distribution Port Count"
-        type="number"
-        value={values.distribution_port_count}
-        onChange={(v) => onChange({ distribution_port_count: v })}
-        tooltip="Jumlah port untuk koneksi downstream ke ODP."
       />
     </>
   );

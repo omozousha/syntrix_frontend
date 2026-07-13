@@ -2,7 +2,6 @@
 
 import { DeviceCreateForm } from "@/components/features/data-management/device-form/device-create-form";
 import { DeviceHardwareFields } from "@/components/features/data-management/device-form/device-hardware-fields";
-import { DeviceCapacityFields } from "@/components/features/data-management/device-form/device-capacity-fields";
 import { Field, FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
 import { Input } from "@/components/ui/input";
 
@@ -10,7 +9,6 @@ type PopOption = { id: string; pop_name: string; pop_code: string; region_id: st
 type ProjectOption = { id: string; project_name: string; project_code?: string | null; region_id?: string | null; pop_id?: string | null };
 type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
-type SplitterProfileOption = { ratio_label: string; output_port_count?: number | null; allowed_device_type_keys?: string[] | null };
 type ManufacturerOption = { id: string; manufacturer_name: string; manufacturer_code?: string | null };
 type BrandOption = { id: string; brand_name: string; brand_code?: string | null; manufacturer_id?: string | null };
 type AssetModelOption = { id: string; model_name: string; model_code?: string | null; brand_id?: string | null; manufacturer_id?: string | null };
@@ -36,6 +34,10 @@ export type OdpCreateFormValues = {
   splitter_ratio: string;
 };
 
+/**
+ * ODP Create Form - aligned with classic ODC styling patterns.
+ * Ensures visual and structure compatibility across passive inventory registers.
+ */
 export function OdpDeviceCreate({
   values,
   pops,
@@ -46,7 +48,6 @@ export function OdpDeviceCreate({
   manufacturers,
   brands,
   assetModels,
-  splitterProfiles,
   onChange,
   onPopChange,
 }: {
@@ -59,7 +60,6 @@ export function OdpDeviceCreate({
   manufacturers: ManufacturerOption[];
   brands: BrandOption[];
   assetModels: AssetModelOption[];
-  splitterProfiles: SplitterProfileOption[];
   onChange: (patch: Record<string, string>) => void;
   onPopChange: (popId: string) => void;
 }) {
@@ -93,34 +93,16 @@ export function OdpDeviceCreate({
         onChange={onChange}
       />
 
-      {/* ODP: core fields disabled (readonly dari core chain) */}
       <div className="space-y-1.5">
-        <FieldLabel label="Capacity Core" tooltip="Kapasitas core diisi otomatis dari core chain — tidak bisa diedit manual." />
+        <FieldLabel label="Capacity Core" tooltip="Kapasitas core diisi otomatis dari core chain dan tidak bisa diedit manual." />
         <Input value={values.capacity_core} disabled />
       </div>
+
       <Field
         label="Used Core"
         value={values.used_core}
         onChange={(v) => onChange({ used_core: v })}
         type="number"
-      />
-
-      <DeviceCapacityFields
-        values={{
-          device_type_key: "ODP",
-          capacity_core: values.capacity_core,
-          used_core: values.used_core,
-          total_ports: values.total_ports,
-          used_ports: values.used_ports,
-          splitter_ratio: values.splitter_ratio,
-        }}
-        showCoreFields={false}
-        showPortFields={true}
-        showSplitterField={true}
-        needsPortPresetSelector={false}
-        splitterPortPresetOptions={[]}
-        splitterProfiles={splitterProfiles}
-        onChange={onChange}
       />
     </>
   );

@@ -27,7 +27,10 @@ import {
   OdpValidationHistorySection,
   ValidationReminderDialog,
   DeviceTopologyChainVisualizer,
+  DeviceLinkBudgetSection,
   PortTrayContainer,
+  OltPortContainer,
+  SwitchPortContainer,
   PortAssignmentDrawer,
   type PeerDeviceOption,
   type PeerPortOption,
@@ -629,6 +632,11 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   const isOdcDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "ODC";
   const isOtbDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "OTB";
   const isOntDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "ONT";
+  const isJcDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "JC";
+  const isOltDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "OLT";
+  const isSwitchDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "SWITCH";
+  const isCableDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "CABLE";
+  const showPortTray = isOtbDevice || isOdcDevice || isJcDevice || isCableDevice;
   const showServicePortRelations = category?.resource === "customers" || isOntDevice;
   const backToListHref = category
     ? `/data-management/list/${category.slug}${queryString ? `?${queryString}` : ""}`
@@ -2133,6 +2141,18 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
 
   
   // ── Fase 2b — Port Tray Handlers
+  function getPeerDeviceTypes(deviceTypeKey: string, direction: string): string[] {
+    // Map device type to valid peer device types for front/rear
+    const peerMap: Record<string, { front: string[]; rear: string[] }> = {
+      OTB: { front: ["OLT", "SWITCH"], rear: ["ODC", "JC"] },
+      ODC: { front: ["OTB"], rear: ["ODP"] },
+      JC:  { front: ["OTB"], rear: ["HH", "MH"] },
+    };
+    const config = peerMap[deviceTypeKey];
+    if (!config) return [];
+    return direction === "front" ? config.front : config.rear;
+  }
+
   async function loadPeerDevices(
     port: DevicePort,
     direction: string,
@@ -2141,10 +2161,12 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     if (!item || !token) return [];
     const popId = valueOf(item.pop_id);
     if (!popId) return [];
-    const deviceTypes = direction === "front" ? "OLT,SWITCH" : "ODC,JC";
+    const deviceTypeKey = valueOf(item.device_type_key).toUpperCase();
+    const deviceTypes = getPeerDeviceTypes(deviceTypeKey, direction);
+    if (!deviceTypes.length) return [];
     try {
       const params = new URLSearchParams({ page: "1", limit: "500", pop_id: popId, status: "active" });
-      const promises = deviceTypes.split(",").map(dt =>
+      const promises = deviceTypes.map(dt =>
         apiFetch<{ data: Array<{ id: string; device_name?: string | null; device_id?: string | null }> }>(
           "/devices?" + params.toString() + "&device_type_key=" + dt, { token }
         ).catch(() => ({ data: [] }))
@@ -2257,16 +2279,30 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       setDevicePortConnections(summary.connections?.items || []);
       setDeviceTopologySummary(summary);
     } catch (err) {
-      setError((err as Error).message || "Gagal assign port.");
-    } finally {
+    const message = (err as Error).message || "Gagal assign port.";
+    const isPortConflict = /already used|not idle|409|conflict/i.test(message);
+    setError(isPortConflict ? "Port sudah digunakan oleh koneksi lain. Daftar port sudah diperbarui, silakan pilih port lain." : message);
+
+    if (isPortConflict && trayPeerDeviceValue && trayPeerDeviceValue !== "__none__") {
+      const abortController = new AbortController();
+      trayAbortRef.current = abortController;
+      loadPeerPorts(trayPeerDeviceValue, abortController.signal).then((ports) => {
+        if (!abortController.signal.aborted) {
+          setTrayPeerPortValue("");
+          setTrayPeerPorts(ports.map((p) => ({ value: p.id, label: p.port_label || `Port ${p.port_index ?? "?"}` })));
+        }
+      });
+    }
+  } finally {
       setTrayAssignLoading(false);
     }
   }
 
+
   async function handleDisconnect() {
     if (!token || !traySelectedPort || !item) return;
     const activeItem = item;
-    const conn = devicePortConnections.find(c => c.from_port_id === traySelectedPort.id || c.to_port_id === traySelectedPort.id);
+    const conn = devicePortConnections.find((c) => c.from_port_id === traySelectedPort.id || c.to_port_id === traySelectedPort.id);
     if (!conn) return;
     setTrayAssignLoading(true);
     setError("");
@@ -2357,7 +2393,7 @@ if (!category) {
               open={trayDrawerOpen}
               onOpenChange={setTrayDrawerOpen}
               port={traySelectedPort}
-              deviceTypeKey="OTB"
+              deviceTypeKey={valueOf(item?.device_type_key)}
               direction={trayDirection}
               onDirectionChange={handleTrayDirectionChange}
               peerDevices={trayPeerDevices}
@@ -2378,6 +2414,24 @@ if (!category) {
                         </Button>
                       </CollapsibleTrigger>
                     ) : null}
+                  {/* SWITCH: Port grid layout (active device) */}
+                  {isSwitchDevice ? (
+                    <SwitchPortContainer
+                      devicePorts={odpPorts}
+                      connections={devicePortConnections}
+                      totalPorts={Math.max(Number(valueOf(item?.total_ports)) || 0, Number(valueOf(item?.capacity_core)) || 0) || 0}
+                      accessPortCount={(() => {
+                        const specs = (item as any)?.specifications;
+                        return specs?.access_port_count ? Number(specs.access_port_count) : undefined;
+                      })()}
+                      uplinkPortCount={(() => {
+                        const specs = (item as any)?.specifications;
+                        return specs?.uplink_port_count ? Number(specs.uplink_port_count) : undefined;
+                      })()}
+                      loading={loadingOdpPorts}
+                      onPortClick={handlePortClick}
+                    />
+                  ) : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {editable && !isEditing ? (
@@ -2476,15 +2530,44 @@ if (!category) {
                   {(isOdcDevice || isOtbDevice) && (
                     <DeviceTopologyChainVisualizer deviceId={item.id} token={token} />
                   )}
-                  {/* OTB: Port Tray / Non-OTB: Summary Grid */}
-                  {isOtbDevice ? (
+                  <DeviceLinkBudgetSection deviceId={item.id} regionId={valueOf(item.region_id)} token={token} />
+                  {/* OLT: Line card layout (active device) */}
+                  {isOltDevice ? (
+                    <OltPortContainer
+                      devicePorts={odpPorts}
+                      connections={devicePortConnections}
+                      totalPorts={Math.max(Number(valueOf(item?.total_ports)) || 0, Number(valueOf(item?.capacity_core)) || 0) || 0}
+                      ponPortCount={(() => {
+                        const specs = (item as any)?.specifications;
+                        return specs?.pon_port_count ? Number(specs.pon_port_count) : undefined;
+                      })()}
+                      uplinkPortCount={(() => {
+                        const specs = (item as any)?.specifications;
+                        return specs?.uplink_port_count ? Number(specs.uplink_port_count) : undefined;
+                      })()}
+                      loading={loadingOdpPorts}
+                      onPortClick={handlePortClick}
+                    />
+                  ) : null}
+                  {/* Port Tray untuk OTB/ODC/JC / Summary Grid untuk lainnya */}
+                  {showPortTray ? (
                     <PortTrayContainer
                       devicePorts={odpPorts}
                       connections={devicePortConnections}
-                      totalPorts={Number(valueOf(item?.total_ports)) || 0}
-                      deviceTypeKey="OTB"
-                      deviceTypeLabel="OTB"
+                      totalPorts={Math.max(Number(valueOf(item?.total_ports)) || 0, Number(valueOf(item?.capacity_core)) || 0) || 0}
+                      usedCore={Number(valueOf(item?.used_core)) || 0}
+                      deviceTypeKey={valueOf(item?.device_type_key)}
+                      deviceTypeLabel={valueOf(item?.device_type_key)}
                       loading={loadingOdpPorts}
+                      trayConfigPayload={(() => {
+                        if (!item || category?.resource !== "devices") return undefined;
+                        const mId = valueOf(item.model_id);
+                        if (!mId) return undefined;
+                        const mdl = relationReferenceMaps.models.get(mId);
+                        if (!mdl) return undefined;
+                        // Langsung baca tray_config dari asset_model response
+                        return (mdl as Record<string, unknown>)["tray_config"] as Record<string, unknown> | undefined;
+                      })()}
                       onPortClick={handlePortClick}
                     />
                   ) : (
@@ -2998,6 +3081,8 @@ function OdpOperationsPanel({
           <DeviceTopologyChainVisualizer deviceId={device.id} token={token} />
 
           <OdpTopologyReadinessSummary summary={topologySummary} loading={loadingPorts} />
+
+          <DeviceLinkBudgetSection deviceId={device.id} regionId={valueOf(device.region_id)} token={token || ""} />
 
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[260px_1fr]">
             <DeviceQrActionPanel
@@ -4181,7 +4266,7 @@ function validateCoordinateFormat(value: string, kind: "longitude" | "latitude")
         valid: false,
         state: "invalid" as const,
         message: `Ada karakter tidak valid: ${invalidChars.join(" ")}. Gunakan hanya angka dan titik${kind === "latitude" ? ", plus minus (-) di depan" : ""}.`,
-      } as Record<string, unknown>;
+      };
     }
     if (/\s/.test(text)) {
       return { valid: false, state: "invalid" as const, message: "Koordinat tidak boleh mengandung spasi." };

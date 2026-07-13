@@ -3,7 +3,6 @@
 import { Combobox } from "@/components/ui/combobox";
 import { DeviceCreateForm } from "@/components/features/data-management/device-form/device-create-form";
 import { DeviceHardwareFields } from "@/components/features/data-management/device-form/device-hardware-fields";
-import { DeviceCapacityFields } from "@/components/features/data-management/device-form/device-capacity-fields";
 import { RouteFileUploadField } from "@/components/features/data-management/device-form/route-file-upload-field";
 import { Field, FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
 
@@ -11,7 +10,6 @@ type PopOption = { id: string; pop_name: string; pop_code: string; region_id: st
 type ProjectOption = { id: string; project_name: string; project_code?: string | null; region_id?: string | null; pop_id?: string | null };
 type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
-type SplitterProfileOption = { ratio_label: string; output_port_count?: number | null; allowed_device_type_keys?: string[] | null };
 type ManufacturerOption = { id: string; manufacturer_name: string; manufacturer_code?: string | null };
 type BrandOption = { id: string; brand_name: string; brand_code?: string | null; manufacturer_id?: string | null };
 type AssetModelOption = { id: string; model_name: string; model_code?: string | null; brand_id?: string | null; manufacturer_id?: string | null };
@@ -19,7 +17,6 @@ type TenantOption = { id: string; tenant_name: string; tenant_code?: string | nu
 type RouteTypeOption = { id: string; route_type_name: string; route_type_code?: string | null };
 
 type CableTypeOption = { id: string; cable_type_code: string; cable_type_name: string };
-type CoreCapacityOption = { core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null };
 
 export type CableCreateFormValues = {
   device_type_key: string;
@@ -58,10 +55,8 @@ export function CableDeviceCreate({
   manufacturers,
   brands,
   assetModels,
-  splitterProfiles,
   routeTypes,
   cableTypes = [],
-  coreCapacities,
   onChange,
   onPopChange,
 }: {
@@ -73,11 +68,9 @@ export function CableDeviceCreate({
   projects: ProjectOption[];
   routeTypes: RouteTypeOption[];
   cableTypes?: CableTypeOption[];
-  coreCapacities?: CoreCapacityOption[];
   manufacturers: ManufacturerOption[];
   brands: BrandOption[];
   assetModels: AssetModelOption[];
-  splitterProfiles: SplitterProfileOption[];
   onChange: (patch: Record<string, string>) => void;
   onPopChange: (popId: string) => void;
 }) {
@@ -187,38 +180,13 @@ export function CableDeviceCreate({
         onChange={onChange}
       />
 
-      {/* ═══ 5. CORE FIBER ═══ */}
-      <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border bg-muted/40 px-3 py-1.5">
-        Core Fiber
-      </div>
-
-      <DeviceCapacityFields
-        values={{
-          device_type_key: "CABLE",
-          route_type: values.route_type,
-          capacity_core: values.capacity_core,
-          used_core: values.used_core,
-          total_ports: values.total_ports,
-          used_ports: values.used_ports,
-          splitter_ratio: values.splitter_ratio,
-        }}
-        showCoreFields={true}
-        showPortFields={true}
-        showSplitterField={false}
-        needsPortPresetSelector={false}
-        splitterPortPresetOptions={[]}
-        splitterProfiles={splitterProfiles}
-        coreCapacities={coreCapacities}
-        onChange={onChange}
-      />
-
-      {/* ═══ 6. RELASI DEVICE ═══ */}
+      {/* ═══ 5. RELASI DEVICE ═══ */}
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border border-dashed bg-muted/20 px-3 py-1.5">
         Relasi Device
         <span className="ml-2 font-normal normal-case text-muted-foreground">— Buat relasi topology setelah device tersimpan, melalui halaman detail CABLE.</span>
       </div>
 
-      {/* ═══ 7. DOKUMENTASI ═══ */}
+      {/* ═══ 6. DOKUMENTASI ═══ */}
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border border-dashed bg-muted/20 px-3 py-1.5">
         Dokumentasi
         <span className="ml-2 font-normal normal-case text-muted-foreground">— Tambah gambar/attachment setelah device tersimpan, melalui halaman detail CABLE.</span>

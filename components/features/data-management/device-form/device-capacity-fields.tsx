@@ -24,6 +24,7 @@ export type DeviceCapacityValues = {
 };
 
 type CoreCapacityOption = { core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null };
+type DeviceCoreCapacityOption = { core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null };
 
 function toOptions(options: ComboboxOption[]): ComboboxOption[] {
   return options;
@@ -38,6 +39,7 @@ export function DeviceCapacityFields({
   splitterPortPresetOptions,
   splitterProfiles,
   coreCapacities,
+  deviceCoreCapacities,
   onChange,
 }: {
   values: DeviceCapacityValues;
@@ -48,10 +50,12 @@ export function DeviceCapacityFields({
   splitterPortPresetOptions: number[];
   splitterProfiles: SplitterProfileOption[];
   coreCapacities?: CoreCapacityOption[];
+  deviceCoreCapacities?: DeviceCoreCapacityOption[];
   onChange: (patch: Partial<DeviceCapacityValues>) => void;
 }) {
   const isOdp = values.device_type_key === "ODP";
   const isOdc = values.device_type_key === "ODC";
+  const isCable = values.device_type_key === "CABLE";
   const totalPortsLabel = isOdp ? "Kapasitas ODP" : isOdc ? "Total Port Cabinet" : "Total Ports";
   const usedPortsLabel = isOdp ? "Port Aktif" : isOdc ? "Port Terpakai" : "Used Ports";
   const splitterLabel = isOdp ? "Kapasitas Splitter" : isOdc ? "Splitter Profile" : "Splitter Ratio";
@@ -63,8 +67,7 @@ export function DeviceCapacityFields({
     return allowedKeys.includes(values.device_type_key);
   });
 
-  // Filter core capacities based on route type (kategori kabel)
-  // Sama seperti splitter profiles: allowed_route_type_keys menentukan route_type mana yang boleh pakai core ini
+  // Filter core capacities based on route type (kategori kabel) — untuk CABLE
   const routeType = values.route_type || "";
   const filteredCoreCapacities = (coreCapacities || []).filter((item) => {
     const allowedKeys = item.allowed_route_type_keys || [];
@@ -74,18 +77,37 @@ export function DeviceCapacityFields({
     return allowedKeys.includes(routeType);
   });
 
+  // Filter device core capacities based on device type — untuk OTB/ODC/JC
+  const deviceType = values.device_type_key;
+  const filteredDeviceCoreCapacities = (deviceCoreCapacities || []).filter((item) => {
+    const allowedKeys = item.allowed_device_type_keys || [];
+    if (!allowedKeys.length) return true; // empty = ALL
+    return allowedKeys.includes(deviceType);
+  });
+
+  // Determine which core capacity source to use
+  const activeCoreCapacities = isCable ? filteredCoreCapacities : filteredDeviceCoreCapacities;
+
+  // ── Validation warnings ──────────────────────────────────────────────
+  const capNum = Number(values.capacity_core);
+  const usedNum = Number(values.used_core);
+  const totalNum = Number(values.total_ports);
+  const usedPortNum = Number(values.used_ports);
+  const showCoreWarning = showCoreFields && Boolean(values.capacity_core) && Boolean(values.used_core) && Number.isFinite(capNum) && Number.isFinite(usedNum) && usedNum > capNum;
+  const showPortWarning = showPortFields && Boolean(values.total_ports) && Boolean(values.used_ports) && Number.isFinite(totalNum) && Number.isFinite(usedPortNum) && usedPortNum > totalNum;
+
   return (
     <>
       {showCoreFields ? (
         <>
           <div className="space-y-1.5">
-            <FieldLabel label="Capacity Core" tooltip="Pilih kapasitas core kabel dari master data." />
+            <FieldLabel label="Capacity Core" tooltip={isCable ? "Pilih kapasitas core kabel dari master data." : "Pilih kapasitas core perangkat dari master data."} required />
             <Combobox
               value={values.capacity_core || "__none__"}
               onValueChange={(value) => onChange({ capacity_core: value === "__none__" ? "" : value })}
               options={[
                 { value: "__none__", label: "Pilih kapasitas core" },
-                ...filteredCoreCapacities.map((item) => ({
+                ...activeCoreCapacities.map((item) => ({
                   value: String(item.core_capacity_value),
                   label: `${item.core_capacity_value} Core${item.label ? ` — ${item.label}` : ""}`,
                 })),
@@ -100,6 +122,11 @@ export function DeviceCapacityFields({
             value={values.used_core}
             onChange={(value) => onChange({ used_core: value })}
           />
+          {showCoreWarning ? (
+            <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
+              &#9888; Used core ({values.used_core}) melebihi kapasitas core ({values.capacity_core}).
+            </p>
+          ) : null}
         </>
       ) : null}
 
@@ -136,6 +163,11 @@ export function DeviceCapacityFields({
             value={values.used_ports}
             onChange={(value) => onChange({ used_ports: value })}
           />
+          {showPortWarning ? (
+            <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
+              &#9888; {usedPortsLabel} ({values.used_ports}) melebihi {totalPortsLabel} ({values.total_ports}).
+            </p>
+          ) : null}
         </>
       ) : null}
 

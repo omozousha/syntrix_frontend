@@ -50,6 +50,7 @@ export type DeviceFormSelectionProps = {
   cableTypes?: Array<{ id: string; cable_type_code: string; cable_type_name: string }>;
   routeTypes?: Array<{ id: string; route_type_code?: string | null; route_type_name: string }>;
   coreCapacities?: Array<{ core_capacity_value: number; label: string }>;
+  deviceCoreCapacities?: Array<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>;
   // ODC chain summary props
   odcChainSummary?: OdcDeviceFormProps["odcChainSummary"];
   odcChainLoading?: boolean;
@@ -131,6 +132,7 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
         provinces={props.provinces}
         cities={props.cities}
         topologyLookup={topologyLookup}
+        deviceCoreCapacities={props.deviceCoreCapacities}
         otbChainSummary={props.otbChainSummary}
         otbChainLoading={props.otbChainLoading}
         onOtbChainRefresh={props.onOtbChainRefresh}
@@ -156,6 +158,7 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
         cities={props.cities}
         topologyLookup={topologyLookup}
         topologySummary={props.topologySummary as any || null}
+        deviceCoreCapacities={props.deviceCoreCapacities}
         odcChainSummary={props.odcChainSummary}
         odcChainLoading={props.odcChainLoading}
         onOdcChainRefresh={props.onOdcChainRefresh}
@@ -180,6 +183,7 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
         provinces={props.provinces}
         cities={props.cities}
         topologyLookup={topologyLookup}
+        deviceCoreCapacities={props.deviceCoreCapacities}
       />
     );
   }
@@ -200,6 +204,7 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
       provinces={props.provinces}
       cities={props.cities}
       topologyLookup={topologyLookup}
+      deviceCoreCapacities={props.deviceCoreCapacities}
     />
   );
 }

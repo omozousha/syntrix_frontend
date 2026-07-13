@@ -220,3 +220,106 @@
     display: none;
   }
 }
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Nothing Design — Tokens
+ * Refs: .claude/skills/nothing-design/references/tokens.md
+ * Namespaced under `--nd-*` to coexist with shadcn/ui tokens.
+ * ──────────────────────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    --nd-black: #000000;
+    --nd-surface: #0a0a0a;
+    --nd-surface-raised: #141414;
+    --nd-border: #1f1f1f;
+    --nd-border-visible: #2a2a2a;
+    --nd-text-disabled: #4d4d4d;
+    --nd-text-secondary: #8a8a8a;
+    --nd-text-primary: #e8e8e8;
+    --nd-text-display: #ffffff;
+    --nd-accent: #d71921;
+    --nd-accent-subtle: rgba(215, 25, 33, 0.15);
+    --nd-success: #4a9e5c;
+    --nd-warning: #d4a843;
+    --nd-info: #5b9bf6;
+    --nd-interactive: #5b9bf6;
+
+    --nd-space-2xs: 2px;
+    --nd-space-xs: 4px;
+    --nd-space-sm: 8px;
+    --nd-space-md: 16px;
+    --nd-space-lg: 24px;
+    --nd-space-xl: 32px;
+    --nd-space-2xl: 48px;
+    --nd-space-3xl: 64px;
+    --nd-space-4xl: 96px;
+
+    --nd-label-size: 11px;
+    --nd-label-tracking: 0.08em;
+    --nd-data-tracking: 0;
+  }
+
+  .light,
+  :root[data-theme="light"] {
+    --nd-black: #f5f5f5;
+    --nd-surface: #ffffff;
+    --nd-surface-raised: #fafafa;
+    --nd-border: #e8e8e8;
+    --nd-border-visible: #cccccc;
+    --nd-text-disabled: #999999;
+    --nd-text-secondary: #666666;
+    --nd-text-primary: #1a1a1a;
+    --nd-text-display: #000000;
+  }
+}
+
+/* Nothing Design primitives — utility classes (paired with primitives/components)
+ * Use sparingly. Prefer the React primitives in `components/ui/nothing/*`.
+ */
+@layer primitives {
+  .nd-label {
+    font-family: var(--font-nd-mono), "Space Mono", monospace;
+    font-size: var(--nd-label-size);
+    line-height: 1.2;
+    letter-spacing: var(--nd-label-tracking);
+    text-transform: uppercase;
+    color: var(--nd-text-secondary);
+    font-weight: 400;
+  }
+  .nd-data {
+    font-family: var(--font-nd-mono), "Space Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--nd-data-tracking);
+    color: var(--nd-text-primary);
+    font-weight: 400;
+  }
+  .nd-data-numeric {
+    font-family: var(--font-nd-mono), "Space Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    color: var(--nd-text-primary);
+    font-weight: 400;
+  }
+  .nd-display {
+    font-family: var(--font-nd-display), "Doto", "Space Mono", monospace;
+    color: var(--nd-text-display);
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    font-weight: 500;
+  }
+  .nd-body {
+    font-family: var(--font-nd-body), "Space Grotesk", system-ui, sans-serif;
+    color: var(--nd-text-primary);
+    font-weight: 400;
+  }
+  .nd-mono-caps {
+    font-family: var(--font-nd-mono), "Space Mono", monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 13px;
+    font-weight: 400;
+  }
+  .nd-divider {
+    border-top: 1px solid var(--nd-border-visible);
+  }
+}

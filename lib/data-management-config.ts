@@ -23,10 +23,12 @@ export type DataCategory = {
     | "splitterProfiles"
     | "cableTypes"
     | "coreCapacities"
+    | "deviceCoreCapacities"
     | "provinces"
     | "cities";
   deviceTypeKey?: string;
   group?: "asset" | "master";
+  supportsBulkImport?: boolean;
 };
 
 export const DATA_CATEGORIES: DataCategory[] = [
@@ -38,7 +40,7 @@ export const DATA_CATEGORIES: DataCategory[] = [
   { slug: "otb", label: "OTB", description: "Optical Termination Box", resource: "devices", deviceTypeKey: "OTB", group: "asset" },
   { slug: "jc", label: "JC", description: "Joint Closure asset", resource: "devices", deviceTypeKey: "JC", group: "asset" },
   { slug: "odc", label: "ODC", description: "Optical Distribution Cabinet", resource: "devices", deviceTypeKey: "ODC", group: "asset" },
-  { slug: "odp", label: "ODP", description: "Optical Distribution Point", resource: "devices", deviceTypeKey: "ODP", group: "asset" },
+  { slug: "odp", label: "ODP", description: "Optical Distribution Point", resource: "devices", deviceTypeKey: "ODP", group: "asset", supportsBulkImport: true },
   { slug: "cable", label: "Cable", description: "Fiber cable asset", resource: "devices", deviceTypeKey: "CABLE", group: "asset" },
   { slug: "rack", label: "Rack", description: "Cabinet/Rack perangkat", resource: "devices", deviceTypeKey: "RACK", group: "asset" },
   { slug: "rectifier", label: "Rectifier", description: "Rectifier & power system", resource: "devices", deviceTypeKey: "RECTIFIER", group: "asset" },
@@ -58,7 +60,8 @@ export const DATA_CATEGORIES: DataCategory[] = [
   { slug: "master-brands", label: "Brands", description: "Master brand", resource: "brands", group: "master" },
   { slug: "master-models", label: "Models", description: "Master model perangkat", resource: "assetModels", group: "master" },
   { slug: "master-cable-types", label: "Cable Types", description: "Master tipe kabel fiber optik", resource: "cableTypes", group: "master" },
-  { slug: "master-core-capacities", label: "Core Capacities", description: "Master kapasitas core kabel fiber optik", resource: "coreCapacities", group: "master" },
+  { slug: "master-core-capacities", label: "Core Capacities Cable", description: "Master kapasitas core kabel fiber optik", resource: "coreCapacities", group: "master" },
+  { slug: "master-device-core-capacities", label: "Core Capacities Passive Device", description: "Master kapasitas core perangkat pasif (OTB, ODC, JC)", resource: "deviceCoreCapacities", group: "master" },
   { slug: "master-splitter-profiles", label: "Splitter Profiles", description: "Master rasio splitter", resource: "splitterProfiles", group: "master" },
   { slug: "master-provinces", label: "Provinces", description: "Master provinsi", resource: "provinces", group: "master" },
   { slug: "master-cities", label: "Cities", description: "Master kota/kabupaten", resource: "cities", group: "master" },

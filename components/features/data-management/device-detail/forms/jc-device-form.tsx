@@ -8,6 +8,7 @@ import {
   type SplitterProfileOption,
   DEVICE_TECHNICAL_COPY,
   Field,
+  ComboboxField,
 } from "../sections/index";
 import {
   type TopologySectionProps,
@@ -15,9 +16,12 @@ import {
 } from "../sections/device-topology-helpers";
 import { JcTopologySection } from "./sections/index";
 
+type DeviceCoreCapacityOption = { core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null };
+
 export type JcDeviceFormProps = DefaultInfoSectionProps & {
   splitterProfiles: SplitterProfileOption[];
   topologyLookup?: TopologySectionProps["topologyLookup"];
+  deviceCoreCapacities?: DeviceCoreCapacityOption[];
 };
 
 export function JcDeviceForm(props: JcDeviceFormProps) {
@@ -28,6 +32,12 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
   };
 
   const lookup = props.topologyLookup || emptyTopologyLookup();
+
+  const filteredJcCoreCapacities = (props.deviceCoreCapacities || []).filter((item) => {
+    const allowedKeys = item.allowed_device_type_keys || [];
+    if (!allowedKeys.length) return true;
+    return allowedKeys.includes("JC");
+  });
 
   // Find cable names for Splicing Matrix
   const fromCable = lookup.devices?.find((d) => d.id === props.form.from_cable_id);
@@ -48,6 +58,11 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
     }
   }
 
+  // ── Validation warnings ──────────────────────────────────────────────
+  const jcCapNum = Number(props.form.capacity_core);
+  const jcUsedNum = Number(props.form.used_core);
+  const showJcCoreWarning = Boolean(props.form.capacity_core) && Boolean(props.form.used_core) && Number.isFinite(jcCapNum) && Number.isFinite(jcUsedNum) && jcUsedNum > jcCapNum;
+
   return (
     <div className="space-y-3">
       <DefaultInfoSection {...props} />
@@ -57,13 +72,19 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
           <CardTitle className="text-sm">{technicalCopy.title}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
-          <Field
+          <ComboboxField
             label={technicalCopy.coreCapacityLabel || "Capacity Core"}
-            type="number"
-            value={props.form.capacity_core}
-            onChange={(value) => props.onChange((prev) => ({ ...prev, capacity_core: value }))}
+            value={props.form.capacity_core || "__none__"}
+            onValueChange={(value) => props.onChange((prev) => ({ ...prev, capacity_core: value === "__none__" ? "" : value }))}
             disabled={!props.editing}
-            compact
+            searchPlaceholder="Cari kapasitas core..."
+            options={[
+              { value: "__none__", label: "Pilih kapasitas core" },
+              ...filteredJcCoreCapacities.map((item) => ({
+                value: String(item.core_capacity_value),
+                label: `${item.core_capacity_value} Core${item.label ? ` — ${item.label}` : ""}`,
+              })),
+            ]}
           />
           <Field
             label={technicalCopy.usedCoreLabel || "Used Core"}
@@ -73,6 +94,11 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
             disabled={!props.editing}
             compact
           />
+          {showJcCoreWarning ? (
+            <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
+              &#9888; Used core ({props.form.used_core}) melebihi kapasitas core ({props.form.capacity_core}).
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 

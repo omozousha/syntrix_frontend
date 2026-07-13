@@ -30,6 +30,7 @@ import { DataBulkActions } from "@/components/features/data-management/device-li
 import { DataEmptyState } from "@/components/features/data-management/device-list/data-empty-state";
 import { DataListFilterBar } from "@/components/features/data-management/device-list/data-list-filter-bar";
 import { DataListHeader } from "@/components/features/data-management/device-list/data-list-header";
+import { OdpCreateModeDialog } from "@/components/features/data-management/device-list/odp-create-mode-dialog";
 import { DataListKpiStrip } from "@/components/features/data-management/device-list/data-list-kpi-strip";
 import { DataMobileList } from "@/components/features/data-management/device-list/data-mobile-list";
 import { DataTableView } from "@/components/features/data-management/device-list/data-table-view";
@@ -159,6 +160,7 @@ export default function DataManagementListPage() {
   const [quickEditForm, setQuickEditForm] = useState<Record<string, string>>({});
   const [quickEditError, setQuickEditError] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [odpModeDialogOpen, setOdpModeDialogOpen] = useState(false);
   const [createForm, setCreateForm] = useState<Record<string, string>>({});
   const [createError, setCreateError] = useState("");
   const [downloadingQr, setDownloadingQr] = useState(false);
@@ -288,6 +290,16 @@ export default function DataManagementListPage() {
     if (nextQuery === queryString) return;
     router.replace(`/data-management/list/${slug}${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
   }, [queryString, router, slug]);
+
+  useEffect(() => {
+    if (category?.slug === "odp" && searchParams.get("triggerCreate") === "true") {
+      setOdpModeDialogOpen(true);
+      const nextParams = new URLSearchParams(window.location.search);
+      nextParams.delete("triggerCreate");
+      const nextQuery = nextParams.toString();
+      router.replace(`/data-management/list/odp${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
+    }
+  }, [category, searchParams, router]);
 
   useEffect(() => {
     if (!category) return;
@@ -1210,7 +1222,13 @@ export default function DataManagementListPage() {
           isRegionScoped={Boolean(effectiveRegionScopeId)}
           canCreateMaster={canCreateMaster}
           isMasterCategory={isMasterCategory}
-          onCreate={() => setCreateOpen(true)}
+          onCreate={() => {
+            if (isOdpCategory && category?.supportsBulkImport) {
+              setOdpModeDialogOpen(true);
+            } else {
+              setCreateOpen(true);
+            }
+          }}
         />
 
         <DataListKpiStrip
@@ -1595,6 +1613,12 @@ export default function DataManagementListPage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      <OdpCreateModeDialog
+        open={odpModeDialogOpen}
+        onOpenChange={setOdpModeDialogOpen}
+        onSingleMode={() => setCreateOpen(true)}
+      />
     </div>
   );
 }

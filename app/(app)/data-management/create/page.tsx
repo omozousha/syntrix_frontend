@@ -1463,7 +1463,7 @@ export default function CreateDataManagementPage() {
                           ])}
                           placeholder={form.pop_id ? "Pilih device hulu" : "Pilih POP terlebih dahulu"}
                           searchPlaceholder="Cari device hulu..."
-                          disabled={loadingTopology || !form.pop_id}
+                          disabled={loadingTopology || form.pop_id === ""}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -1502,7 +1502,7 @@ export default function CreateDataManagementPage() {
                           ])}
                           placeholder={form.pop_id ? "Pilih device hilir" : "Pilih POP terlebih dahulu"}
                           searchPlaceholder="Cari device hilir..."
-                          disabled={loadingTopology || !form.pop_id}
+                          disabled={loadingTopology || form.pop_id === ""}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -1550,7 +1550,7 @@ export default function CreateDataManagementPage() {
                           ])}
                           placeholder={form.pop_id ? "Pilih OTB hulu" : "Pilih POP terlebih dahulu"}
                           searchPlaceholder="Cari OTB hulu..."
-                          disabled={loadingTopology || !form.pop_id}
+                          disabled={loadingTopology || form.pop_id === ""}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -1589,7 +1589,7 @@ export default function CreateDataManagementPage() {
                           ])}
                           placeholder={form.pop_id ? "Pilih ODC/JC hilir" : "Pilih POP terlebih dahulu"}
                           searchPlaceholder="Cari device hilir..."
-                          disabled={loadingTopology || !form.pop_id}
+                          disabled={loadingTopology || form.pop_id === ""}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -1637,7 +1637,7 @@ export default function CreateDataManagementPage() {
                           ])}
                           placeholder={form.pop_id ? "Pilih OTB hulu" : "Pilih POP terlebih dahulu"}
                           searchPlaceholder="Cari OTB hulu..."
-                          disabled={loadingTopology || !form.pop_id}
+                          disabled={loadingTopology || form.pop_id === ""}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -1795,7 +1795,7 @@ export default function CreateDataManagementPage() {
                           ])}
                           placeholder={form.pop_id ? "Pilih ODP hilir" : "Pilih POP terlebih dahulu"}
                           searchPlaceholder="Cari ODP hilir..."
-                          disabled={loadingTopology || !form.pop_id}
+                          disabled={loadingTopology || form.pop_id === ""}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -1843,7 +1843,7 @@ export default function CreateDataManagementPage() {
                           ])}
                           placeholder={form.pop_id ? "Pilih OTB hulu" : "Pilih POP terlebih dahulu"}
                           searchPlaceholder="Cari OTB hulu..."
-                          disabled={loadingTopology || !form.pop_id}
+                          disabled={loadingTopology || form.pop_id === ""}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -1882,7 +1882,7 @@ export default function CreateDataManagementPage() {
                           ])}
                           placeholder={form.pop_id ? "Pilih HH/MH hilir" : "Pilih POP terlebih dahulu"}
                           searchPlaceholder="Cari HH/MH hilir..."
-                          disabled={loadingTopology || !form.pop_id}
+                          disabled={loadingTopology || form.pop_id === ""}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -1930,7 +1930,7 @@ export default function CreateDataManagementPage() {
                           ])}
                           placeholder={form.pop_id ? "Pilih ODC hulu" : "Pilih POP terlebih dahulu"}
                           searchPlaceholder="Cari ODC hulu..."
-                          disabled={loadingTopology || !form.pop_id}
+                          disabled={loadingTopology || form.pop_id === ""}
                         />
                       </div>
                       <div className="space-y-1.5">

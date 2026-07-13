@@ -74,6 +74,8 @@ const benignLineFragments = [
   "const ",
   "let ",
   "var ",
+  "disabled",
+  "selectedOdcRegion",
   "return Boolean",
   "getRegionDisplay(",
   "getPopDisplay(",

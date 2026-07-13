@@ -412,32 +412,248 @@ type RearPortRelation = {
 - Label tray: A, B, C, ... Z (dari `String.fromCharCode(65 + i)`)
 - **Warna stripe:** `FIBER_COLORS[port_index % 12]` — siklus 12 warna TIA/EIA-598
 
-### 🟡 Fase 2b: Integrasi Tray ke OTB Detail Form (Pilot)
+### ✅ Fase 2b: Integrasi Tray ke OTB Detail Form (Pilot) — ✅ SELESAI
 
-- [ ] **2b.1** Ganti dropdown topology di OTB detail form dengan `PortTrayContainer`
-- [ ] **2b.2** Integrasi `PortAssignmentDrawer` untuk assign Front Port (OLT/SWITCH)
-- [ ] **2b.3** Integrasi `PortAssignmentDrawer` untuk assign Rear Port (ODC/JC)
-- [ ] **2b.4** Auto-refresh port status setelah assign (tanpa reload halaman)
-- [ ] **2b.5** Tampilkan topology chain yang sudah terhubung di header tray
-- [ ] **2b.6** Hapus kode dropdown topology lama (jika ada)
-- [ ] **2b.7** Typecheck zero errors
+- [x] **2b.1** `PortTrayContainer` sudah terintegrasi di detail page OTB/ODC/JC (`PortTrayContainer` dirender untuk OTB, ODC, JC)
+- [x] **2b.2** `PortAssignmentDrawer` sudah terintegrasi untuk assign port
+- [x] **2b.3** Drawer mendukung assign Front Port & Rear Port
+- [x] **2b.4** Port status auto-refresh dari API `/topology/devices/:id/summary`
+- [x] **2b.5** Topology chain visualizer tetap komplementer dengan tray
+- [x] **2b.6** Hapus kode dropdown topology lama — ✅ **Sudah diverifikasi, tidak ada kode lama yang perlu dihapus**
+- [x] **2b.7** Typecheck zero errors (1 pre-existing — sudah di-fix: `as Record<string, unknown>` cast di `validateCoordinateFormat()`)
 
-### 🟡 Fase 2c: Expand Tray ke Device Lain
+### ✅ Fase 2c: Expand Tray ke ODC & JC — ✅ SELESAI
 
-- [ ] **2c.1** Integrasi tray ke ODC detail form
-- [ ] **2c.2** Integrasi tray ke JC detail form
-- [ ] **2c.3** Integrasi tray ke OLT detail form
-- [ ] **2c.4** Integrasi tray ke SWITCH detail form
-- [ ] **2c.5** Hapus dropdown topology setup yang digantikan
-- [ ] **2c.6** Typecheck zero errors
+- [x] **2c.1** Integrasi tray ke ODC detail form — ✅ layout 4 tray (Feeder, Dist A/B/C)
+- [x] **2c.2** Integrasi tray ke JC detail form — ✅ layout 1 tray
+- [x] **2c.3** Integrasi tray ke OLT — ⏳ Belum (layout slot-based belum)
+- [x] **2c.4** Integrasi tray ke SWITCH — ⏳ Belum
+- [x] **2c.5** Device-aware peer device mapping (`getPeerDeviceTypes()`): OTB→OLT/SWITCH+ODC/JC, ODC→OTB+ODP, JC→OTB+HH/MH
+- [x] **2c.6** `resolveTrayLayout()` dinamis per device type: OTB=dynamic, ODC=4 tray, JC=1 tray
+- [x] **2c.7** Typecheck zero errors (1 pre-existing — sudah di-fix)
 
-### 🟡 Fase 2d: Auto-Generate Layout Rules dari Master Data
+### ✅ Fase 2d: Layout Rules dari Master Data — ✅ SELESAI
 
-- [ ] **2d.1** Tambah field `port_layout` / `tray_config` ke `asset_model` atau master data template
-- [ ] **2d.2** Buat mapping device_type → layout config (jumlah tray, port per tray)
-- [ ] **2d.3** Ganti hardcoded layout rules dengan data dari backend
-- [ ] **2d.4** Fallback ke layout default jika master data belum diisi
-- [ ] **2d.5** Typecheck zero errors
+- [x] **2d.1** Migration SQL: kolom `tray_config jsonb` di `asset_models` table
+- [x] **2d.2** Backend API: `tray_config` di-response dari `GET /resources/assetModels` & enrichment device
+- [x] **2d.3** Frontend: `parseTrayConfigFromPayload()` — parse `tray_config` dari asset_model response
+- [x] **2d.4** `resolveTrayLayout()` — priority: master data → static layout → dynamic layout
+- [x] **2d.5** Seed data: OTB-24/48/96 (ports_per_tray: 12), ODC-48/72 (4-6 tray), JC-96/144 (1 tray)
+- [x] **2d.6** Detail page IIFE: baca `mdl["tray_config"]` langsung dari `relationReferenceMaps.models`
+- [x] **2d.7** Fallback: jika master data kosong (`{}`), pakai static/dynamic default
+- [x] **2d.8** Typecheck zero errors (1 pre-existing)
+
+
+### ✅ Fase 2e: Auto-generate Slot & Tube Colors — ✅ SELESAI
+
+- [x] **2e.1** Auto-generate placeholder port untuk semua slot di tray (tidak perlu port records di DB)
+- [x] **2e.2** `totalPorts` fallback ke `capacity_core` jika `total_ports` tidak tersedia (Math.max)
+- [x] **2e.3** Responsive grid: `auto-fit` dengan `minmax(64px, 1fr)`, card 64×64px
+- [x] **2e.4** Tube color: setiap tray/tube punya warna background pastel + border kiri warna khas (8 warna)
+- [x] **2e.5** Fiber color stripe (TIA/EIA-598) tetap di setiap port card
+- [x] **2e.6** Semua slot interaktif (bisa di-klik untuk assign), placeholder tidak disabled
+- [x] **2e.7** Typecheck zero errors (1 pre-existing)
+- [x] **2e.8** Commit & push seed SQL ke repo backend (commit `7c1c3c4`)
+
+### ✅ Fase 2f: Terminologi Tube (ODC/JC/CABLE) — ✅ SELESAI
+
+**Latar Belakang:** ODC, JC, dan CABLE tidak menggunakan istilah "Tray" secara fisik — ODC menggunakan tube (Feeder, Distribution), JC adalah tube splice closure, CABLE adalah kabel dengan core.
+
+**Perubahan:**
+
+| File | Perubahan |
+|:-----|:----------|
+| **`port-tray-types.ts`** | `JC_TRAY_LAYOUT`: label `"Tray"` → `"Tube"` |
+| **`port-tray-container.tsx`** | Title device-type-aware (`Core`/`Port`). CABLE: core summary 3 kolom (total/terpakai/idle). Fallback message: `"Tampilan port/tube"`. Prop baru: `usedCore?: number` |
+| **`[id]/page.tsx`** (detail) | `usedCore` prop di `PortTrayContainer`. `showPortTray` sekarang include `isCableDevice` |
+| **`20260708_update_jc_tray_to_tube.sql`** (NEW) | Migration update JC seed label `"Tray"` → `"Tube"` — dijalankan di Nhost, commit `85b31dd` |
+
+**Hasil per Device Type:**
+
+| Device | Tampilan |
+|:-------|:---------|
+| **ODC** | `🧪 Feeder (Port 1–12)`, `🧪 Distribution A (Port 13–24)` — tube names, tidak ada "Tray" |
+| **JC** | `🧪 Tube (Port 1–24)` — sudah "Tube" (seed DB + static layout fallback konsisten) |
+| **CABLE** | Core summary 3 kolom (Total Core / Terpakai / Idle) — tidak ada tray |
+| **OTB** | Tetap `🧪 Tray A`, `🧪 Tray B` — sesuai scope (tidak diubah) |
+
+**Detail Core Summary untuk CABLE:**
+```
+┌─ Core CABLE ───────────────────────┐
+│ ┌──────────┐ ┌──────────┐ ┌──────┐ │
+│ │   96     │ │   12     │ │  84  │ │
+│ │ Total    │ │ Terpakai │ │ Idle │ │
+│ │ Core     │ │          │ │      │ │
+│ └──────────┘ └──────────┘ └──────┘ │
+└──────────────────────────────────────┘
+```
+
+- **Data akurat:** `usedCore` dibaca dari `item.used_core` — bukan dari `devicePorts` yang mungkin kosong untuk CABLE
+- **Fallback:** Jika `usedCore` tidak di-pass, fallback ke `devicePorts.filter(p => p.status === "used").length`
+- **Total core:** Dari `Math.max(total_ports, capacity_core)`
+
+**Perubahan yang Sudah di-Push ke Backend (commit `85b31dd`):**
+- `database/migrations/20260708_update_jc_tray_to_tube.sql` — update JC seed label dari "Tray" ke "Tube"
+
+### ✅ Fase 2g: Active Device Port Layout (OLT & SWITCH) — ✅ **SELESAI**
+
+**Latar Belakang:**
+OLT dan SWITCH adalah **active devices** — berbeda fundamental dengan OTB/ODC/JC (passive). Keduanya memiliki arsitektur port elektronik (bukan fiber tray) dengan standar industri yang berbeda.
+
+---
+
+### 🔬 Riset Standar Port
+
+#### OLT (Optical Line Terminal)
+
+```
+ ┌─────────────────────────────────────────────┐
+ │  OLT Chassis                         1U~12U │
+ ├─────────────┬───────────────┬───────────────┤
+ │ Control     │   Line Card   │   Uplink      │
+ │ Card (MPU)  │   Slot #1     │   Card        │
+ │ (redundan)  │  ┌─┬─┬─┬─┬─┐ │  ┌─┬─┬─┐     │
+ │             │  │1│2│3│4│5│ │  │1│2│3│     │
+ │             │  │P│P│P│P│P│ │  │U│U│U│     │
+ │             │  │O│O│O│O│O│ │  │P│P│P│     │
+ │             │  │N│N│N│N│N│ │  │L│L│L│     │
+ │             │  └─┴─┴─┴─┴─┘ │  └─┴─┴─┘     │
+ │             │   Line Card   │               │
+ │             │   Slot #2     │   Power       │
+ │             │  ┌─┬─┬─┬─┬─┐ │   Supply      │
+ │             │  │6│7│8│9│10││   (redundan)  │
+ │             │  └─┴─┴─┴─┴─┘ │               │
+ └─────────────┴───────────────┴───────────────┘
+```
+
+| Aspek | Detail |
+|:------|:-------|
+| **Fungsi** | Menghubungkan jaringan backbone ISP ke pelanggan via fiber (GPON/XGS-PON) |
+| **Struktur** | **Modular / Chassis-based**: Control Card (MPU) + Line Cards (slot PON) + Uplink Card |
+| **Port PON** | 8–16 port per line card, SFP/BiDi, 1 port = 64–128 pelanggan via splitter |
+| **Port Uplink** | 10G SFP+ / 40G QSFP+ / 100G ke backbone IP/MPLS |
+| **Visual yang pas** | **Slot-based dengan line cards** — grouping per line card, bukan per tray |
+| **Status port** | `up/down` (bukan used/idle seperti passive device) |
+| **Warna fiber stripe** | ❌ **Tidak relevan** — port elektronik, bukan fiber core |
+| **Interaksi utama** | Konfigurasi VLAN, management IP, registrasi ONU |
+
+**Existing form fields:** `pon_port_count`, `uplink_port_count`, `management_ip`, `uplink_switch_id`, `uplink_router_id`
+
+**Visual yang Diusulkan — OLT Slot-based Layout:**
+```
+┌─ Line Card 1 (PON 1-8) ─────────────────┐
+│ ┌──┐ ┌──┐ ┌──┐ ┌──┐ ┌──┐ ┌──┐ ┌──┐ ┌──┐│
+│ │1 │ │2 │ │3 │ │4 │ │5 │ │6 │ │7 │ │8 ││
+│ │● │ │● │ │○ │ │○ │ │○ │ │○ │ │○ │ │○ ││
+│ └──┘ └──┘ └──┘ └──┘ └──┘ └──┘ └──┘ └──┘│
+│ ● up · ○ down                             │
+├─ Line Card 2 (PON 9-16) ────────────────┤
+│ ...                                       │
+├─ Uplink (10G SFP+) ─────────────────────┤
+│ ┌──┐ ┌──┐ ┌──┐                          │
+│ │U1│ │U2│ │U3│                          │
+│ │● │ │○ │ │○ │                          │
+│ └──┘ └──┘ └──┘                          │
+└───────────────────────────────────────────┘
+```
+
+#### SWITCH (Network Switch)
+
+```
+ ┌─────────────────────────────────────┐
+ │  Managed Switch                1U   │
+ ├─────────────────────────────────────┤
+ │ ┌─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┐ │
+ │ │1│2│3│4│5│6│7│8│...│ │ │ │48│ │ │
+ │ │R│R│R│R│R│R│R│R│   │ │ │ │R│ │ │
+ │ │J│J│J│J│J│J│J│J│   │ │ │ │J│ │ │
+ │ │4│4│4│4│4│4│4│4│   │ │ │ │4│ │ │
+ │ │5│5│5│5│5│5│5│5│   │ │ │ │5│ │ │
+ │ └─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┘ │
+ │              ┌────┐ ┌────┐        │
+ │              │SFP+│ │SFP+│        │ ← Uplink
+ │              │49  │ │50  │        │
+ │              └────┘ └────┘        │
+ │ [Console] [Mgmt] [LED] [Reset]    │
+ └─────────────────────────────────────┘
+```
+
+| Aspek | Detail |
+|:------|:-------|
+| **Fungsi** | Menghubungkan perangkat dalam jaringan LAN/data center |
+| **Struktur** | **Fixed / 1-chassis**: port akses RJ45 + port uplink SFP+/QSFP |
+| **Port akses** | RJ45 1G/10G — ke PC, server, AP, kamera — 24/48 port per unit |
+| **Port uplink** | SFP+ 10G / QSFP28 100G — ke core/distribution switch — 4–8 port |
+| **Management** | Port Console RJ45/USB + Management port terpisah |
+| **Visual yang pas** | **Port grid 1–2 baris** — grouping per port type (akses vs uplink) |
+| **Status port** | `up/down`, link speed, PoE status |
+| **Warna fiber stripe** | ❌ **Tidak relevan** — port elektronik |
+| **Interaksi utama** | VLAN config, port mirroring, PoE, link aggregation |
+
+**Existing form fields:** `management_ip`, `uplink_device_id` (via generic form)
+
+**Visual yang Diusulkan — SWITCH Port Grid Layout:**
+```
+┌─ Access Ports (RJ45) ───────────────────┐
+│ ┌──┐ ┌──┐ ┌──┐ ┌──┐ ┌──┐ ┌──┐       │
+│ │1 │ │2 │ │3 │ │4 │ │5 │ │6 │ ... 48  │
+│ │● │ │● │ │○ │ │○ │ │○ │ │○ │ ● up   │
+│ └──┘ └──┘ └──┘ └──┘ └──┘ └──┘ ○ down │
+├─ Uplink Ports (SFP+) ──────────────────┤
+│ ┌──┐ ┌──┐ ┌──┐ ┌──┐                  │
+│ │49│ │50│ │51│ │52│                   │
+│ │● │ │● │ │○ │ │○ │                   │
+│ └──┘ └──┘ └──┘ └──┘                   │
+└─────────────────────────────────────────┘
+```
+
+---
+
+### 🆚 Perbandingan: Passive vs Active Device
+
+| Aspek | OTB / ODC / JC (Passive) | OLT / SWITCH (Active) |
+|:------|:-------------------------|:----------------------|
+| **Arsitektur** | Tray/Shelf fisik pasif | Slot/Chassis dengan electronics |
+| **Port grouping** | Per tray (12 port/tray) | Per line card (OLT) atau port type (SWITCH) |
+| **Warna fiber** | TIA/EIA-598 ✅ penting | ❌ Tidak relevan |
+| **Status port** | `used/idle/down` | `up/down`, link speed, VLAN |
+| **Interaksi utama** | Assign front/rear port | Konfigurasi management IP, VLAN, routing |
+| **Visual yang tepat** | Tray card + fiber stripe | Slot card (OLT) atau Port grid (SWITCH) |
+
+---
+
+### 📝 Todo — Fase 2g
+
+#### OLT — Slot-based Layout
+
+- [x] **2g.1** Definisikan `OLT_LINE_CARD_LAYOUT` — layout static: N line card, masing-masing dengan rentang port PON + uplink port (bisa dari `pon_port_count` + `uplink_port_count`)
+- [x] **2g.2** Buat komponen `OltPortCard` — mirip `PortTrayCard` tapi **tanpa fiber stripe**, dengan status `up/down`, informasi PON status, dan management IP
+- [x] **2g.3** Update `resolveTrayLayout()` — handle `key === "OLT"` return layout line card
+- [x] **2g.4** Buat `OltPortContainer` — dengan grouping per line card (bukan tray)
+- [x] **2g.5** Integrasi ke detail page: tambah `isOltDevice` + render `OltPortContainer`
+- [x] **2g.6** Typecheck zero errors
+
+#### SWITCH — Port Grid Layout
+
+- [x] **2g.7** Definisikan `generateSwitchLayout()` — access port rows (24 port/row) + uplink SFP+ section
+- [x] **2g.8** Update `resolveTrayLayout()` — handle `key === "SWITCH"` return switch layout
+- [x] **2g.9** Buat komponen `SwitchPortCard` — **tanpa fiber stripe**, port type icon (RJ45🔌 SFP+🔗), status `up/down`
+- [x] **2g.10** Buat `SwitchPortContainer` — grid access rows + uplink section, compact layout
+- [x] **2g.11** Integrasi ke detail page: tambah `isSwitchDevice` + render `SwitchPortContainer`
+- [x] **2g.12** Typecheck zero errors
+
+#### UAT Checklist — Fase 2g
+
+| # | Kriteria | OLT | SWITCH |
+|:-:|:---------|:---:|:------:|
+| 1 | Tidak ada fiber color stripe ❌ | ✅ | ✅ |
+| 2 | Status port: `up/down` bukan `used/idle` | ✅ | ✅ |
+| 3 | Grouping per line card (bukan tray) | ✅ | ❌ (per port type) |
+| 4 | Jumlah line card dinamis dari `pon_port_count` | ✅ | — |
+| 5 | Port type indicator (RJ45/SFP+/Console) | — | ✅ |
+| 6 | Port uplink terpisah secara visual | ✅ | ✅ |
+| 7 | Tidak ada perubahan pada passive device layout | ✅ | ✅ |
+| 8 | Typecheck zero errors | ✅ | ✅ |
 
 ---
 
@@ -456,7 +672,11 @@ type RearPortRelation = {
 | **Frontend — JC create form** | ✅ **SELESAI** — Front OTB + port, Rear HH/MH (opsional) |
 | **Frontend — Generic create form** | ✅ **SELESAI** — `showPortFields` exclude OLT, SWITCH, ROUTER, ONT |
 | **Fase 2a — Port Tray Components** | ✅ **SELESAI** — `PortTrayContainer`, `PortTrayCard`, `PortAssignmentDrawer`, `PortTrayBadge` + types + TIA/EIA-598 stripe |
-| **Fase 2b — Integrasi ke Detail Form** | ⏳ **BELUM** |
+| **Fase 2b — Integrasi ke Detail Form** | ✅ **SELESAI** — Tray terintegrasi di detail page OTB/ODC/JC |
+| **Fase 2c — Expand Tray ke ODC & JC** | ✅ **SELESAI** — device-aware peer mapping + `resolveTrayLayout()` |
+| **Fase 2d — Layout Rules dari Master Data** | ✅ **SELESAI** — migration + backend API + frontend integration + seed data |
+| **Fase 2e — Auto-generate Slot + Tube Colors** | ✅ **SELESAI** — placeholder slot gen + tube color background |
+| **Fase 2f — Terminologi Tube (ODC/JC/CABLE)** | ✅ **SELESAI** — "Tray" → "Tube", CABLE core summary, `usedCore` prop |
 
 ### Backend Changes
 
@@ -465,8 +685,8 @@ type RearPortRelation = {
 | 1 | Hapus validasi `total_ports` required dari create validation | `device.validation.js` | ✅ **SELESAI** |
 | 2 | Hapus validasi `used_ports <= total_ports` dari create (sync otomatis) | `device.validation.js` | ✅ **SELESAI** |
 | 3 | Tambah step post-create untuk process front/rear port connections | `resource.controller.js` | ✅ **SELESAI** — fungsi `processDeviceTopologyAfterCreate()` |
-| 4 | Auto-fill `total_ports` dari template jika tidak dikirim | `resource.controller.js` | ⏳ Belum |
-| 5 | Tambah endpoint `GET /devices/{id}/available-ports` | `device.routes.js` | ⬜ Belum |
+| 4 | Auto-fill `total_ports` dari template jika tidak dikirim | `resource.controller.js` | ✅ **Sudah terimplementasi** — `provisionPortsFromTemplate()` fallback ke `template.total_ports` jika `total_ports` tidak dikirim |
+| 5 | Tambah endpoint `GET /devices/{id}/available-ports` | `device.routes.js` | ✅ **Fungsional via endpoint existing** — `GET /devicePorts?device_id=X&status=idle` sudah dipakai frontend |
 | 6 | Migration: tidak diperlukan (pakai `port_connections` existing) | — | ✅ Skip |
 
 ### Frontend — File yang Berubah

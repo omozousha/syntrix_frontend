@@ -6,6 +6,7 @@ import {
   type SplitterProfileOption,
   DEVICE_TECHNICAL_COPY,
   Field,
+  ComboboxField,
   SplitterRatioField,
 } from "../sections/index";
 import {
@@ -16,9 +17,12 @@ import { OdcTopologySection } from "./sections/index";
 import { OdcOutgoingCableSection } from "./sections/odc-outgoing-cable-section";
 import { OdcCoreChainSummarySection } from "../odc-otb-chain-section";
 
+type DeviceCoreCapacityOption = { core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null };
+
 export type OdcDeviceFormProps = DefaultInfoSectionProps & {
   splitterProfiles: SplitterProfileOption[];
   topologyLookup?: TopologySectionProps["topologyLookup"];
+  deviceCoreCapacities?: DeviceCoreCapacityOption[];
   topologySummary?: {
     odc_relations?: {
       downstream?: Array<Record<string, unknown>>;
@@ -35,6 +39,20 @@ export type OdcDeviceFormProps = DefaultInfoSectionProps & {
 export function OdcDeviceForm(props: OdcDeviceFormProps) {
   const technicalCopy = DEVICE_TECHNICAL_COPY.ODC;
 
+  // Validation warnings
+  const filteredOdcCoreCapacities = (props.deviceCoreCapacities || []).filter((item) => {
+    const allowedKeys = item.allowed_device_type_keys || [];
+    if (!allowedKeys.length) return true;
+    return allowedKeys.includes("ODC");
+  });
+
+  const odcCapNum = Number(props.form.capacity_core);
+  const odcUsedNum = Number(props.form.used_core);
+  const odcTotalNum = Number(props.form.total_ports);
+  const odcUsedPortNum = Number(props.form.used_ports);
+  const showOdcCoreWarning = Boolean(props.form.capacity_core) && Boolean(props.form.used_core) && Number.isFinite(odcCapNum) && Number.isFinite(odcUsedNum) && odcUsedNum > odcCapNum;
+  const showOdcPortWarning = Boolean(props.form.total_ports) && Boolean(props.form.used_ports) && Number.isFinite(odcTotalNum) && Number.isFinite(odcUsedPortNum) && odcUsedPortNum > odcTotalNum;
+
   return (
     <div className="space-y-3">
       <DefaultInfoSection {...props} />
@@ -44,13 +62,19 @@ export function OdcDeviceForm(props: OdcDeviceFormProps) {
           <CardTitle className="text-sm">{technicalCopy.title}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
-          <Field
+          <ComboboxField
             label={technicalCopy.coreCapacityLabel || "Total Core Capacity"}
-            type="number"
-            value={props.form.capacity_core}
-            onChange={(value) => props.onChange((prev) => ({ ...prev, capacity_core: value }))}
+            value={props.form.capacity_core || "__none__"}
+            onValueChange={(value) => props.onChange((prev) => ({ ...prev, capacity_core: value === "__none__" ? "" : value }))}
             disabled={!props.editing}
-            compact
+            searchPlaceholder="Cari kapasitas core..."
+            options={[
+              { value: "__none__", label: "Pilih kapasitas core" },
+              ...filteredOdcCoreCapacities.map((item) => ({
+                value: String(item.core_capacity_value),
+                label: `${item.core_capacity_value} Core${item.label ? ` — ${item.label}` : ""}`,
+              })),
+            ]}
           />
           <Field
             label={technicalCopy.usedCoreLabel || "Used Core"}
@@ -60,6 +84,11 @@ export function OdcDeviceForm(props: OdcDeviceFormProps) {
             disabled={!props.editing}
             compact
           />
+          {showOdcCoreWarning ? (
+            <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
+              &#9888; Used core ({props.form.used_core}) melebihi kapasitas core ({props.form.capacity_core}).
+            </p>
+          ) : null}
           <Field
             label={technicalCopy.totalPortsLabel}
             type="number"
@@ -76,6 +105,11 @@ export function OdcDeviceForm(props: OdcDeviceFormProps) {
             disabled={!props.editing}
             compact
           />
+          {showOdcPortWarning ? (
+            <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
+              &#9888; {technicalCopy.usedPortsLabel} ({props.form.used_ports}) melebihi {technicalCopy.totalPortsLabel} ({props.form.total_ports}).
+            </p>
+          ) : null}
           <SplitterRatioField
             value={props.form.splitter_ratio || "__none__"}
             label={technicalCopy.splitterLabel}

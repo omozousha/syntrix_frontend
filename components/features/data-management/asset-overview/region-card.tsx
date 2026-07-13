@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowUpRight, Cable, Database, MapPin, Network } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,10 +65,14 @@ export function RegionCard({
         </CardContent>
 
         <CardFooter className="px-4 pb-4 pt-2">
-          <span className="flex h-8 w-full items-center justify-between rounded-lg border bg-background px-2.5 text-sm font-medium group-hover:bg-muted">
-            Lihat device region
+          <Link
+            href={`/data-management/list/pop?region_id=${encodeURIComponent(region.id)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex h-8 w-full items-center justify-between rounded-lg border bg-background px-2.5 text-sm font-medium hover:bg-muted"
+          >
+            List POP
             <ArrowUpRight className="size-4" />
-          </span>
+          </Link>
         </CardFooter>
       </Card>
     </button>

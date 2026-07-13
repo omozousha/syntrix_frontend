@@ -50,6 +50,28 @@ export function DefaultInfoSection(props: DefaultInfoSectionProps) {
   );
 }
 
+// ── Individual section exports for tab-based layout ────────────────────────
+
+export function DefaultIdentitySection(props: DefaultInfoSectionProps) {
+  return <DeviceIdentitySection {...props} />;
+}
+
+export function DefaultRelationSection(props: DefaultInfoSectionProps) {
+  return <DeviceRelationSection {...props} />;
+}
+
+export function DefaultLocationSection(props: DefaultInfoSectionProps) {
+  return <DeviceLocationSection {...props} />;
+}
+
+export function DefaultTagsSection({
+  form,
+  onChange,
+  editing,
+}: Pick<DefaultInfoSectionProps, "form" | "onChange" | "editing">) {
+  return <DeviceTagsSection form={form} onChange={onChange} editing={editing} />;
+}
+
 // ── Identity Section ───────────────────────────────────────────────────────
 
 function DeviceIdentitySection({

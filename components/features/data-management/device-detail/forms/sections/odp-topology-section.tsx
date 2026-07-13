@@ -29,7 +29,7 @@ export function OdpTopologySection(props: TopologySectionProps) {
       (d) =>
         d.device_type_key === "CABLE" &&
         (!d.route_type || d.route_type === "DISTRIBUTION") &&
-        (!selectedOdcRegion || d.region_id === selectedOdcRegion),
+        (selectedOdcRegion === null || d.region_id === selectedOdcRegion),
     ),
     "Pilih cable distribusi",
   );

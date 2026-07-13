@@ -33,6 +33,39 @@ Syntrix Frontend saat ini difokuskan sebagai operational console untuk manajemen
 - Menyesuaikan detail ODP agar hasil validasi tidak mengubah data utama sebelum approval selesai.
 - Menambahkan installation date ODP dan validation status ongoing untuk proses menunggu approval.
 
+### Fase 2 — Visual Port Tray (Juli 2026)
+
+**Fase 2a — Port Tray Visualizer**
+- Menambahkan visualisasi port tray untuk device OTB dengan layout dinamis (auto-generate tray berdasarkan `total_ports`).
+- Menambahkan port card dengan fiber color stripe (TIA/EIA-598 12-color code).
+- Menambahkan port tray badge (total/used/idle/reserved/down).
+- Menambahkan port assignment drawer untuk manage koneksi port.
+- Menambahkan topology chain visualizer untuk ODC/OTB.
+
+**Fase 2b — Format Port Drawer**
+- Memformat ulang port assignment drawer agar konsisten dengan UI detail device.
+
+**Fase 2c — Expand Tray ke ODC & JC**
+- Memperluas port tray visualizer ke device ODC (Optical Distribution Cabinet) dan JC (Joint Closure).
+- Menambahkan device-aware peer device mapping (`getPeerDeviceTypes`).
+- Menambahkan `resolveTrayLayout()` untuk layout berbeda per device type.
+
+**Fase 2d — Layout Rules dari Master Data**
+- Menambahkan tipe `TrayConfigPayload`, fungsi `parseTrayConfigFromPayload()`.
+- Priority layout: master data (`tray_config`) → static layout (ODC/JC) → dynamic layout (OTB).
+- Backend API expose `tray_config` dari `asset_models`.
+- Frontend membaca `tray_config` langsung dari response asset_model.
+- Migration SQL: kolom `tray_config jsonb` di `asset_models`.
+- Seed data: sample model OTB-24/48/96, ODC-48/72, JC-96/144 dengan tray_config.
+
+**Fase 2e — Integrasi & Auto-generate Slot**
+- Auto-generate placeholder port untuk semua slot di tray (tidak perlu port records di DB).
+- `totalPorts` fallback ke `capacity_core` jika `total_ports` tidak tersedia.
+- Responsive grid: `auto-fit` dengan `minmax(64px, 1fr)`, card 64×64px.
+- Tube color: setiap tray/tube punya warna background pastel + border kiri warna khas (8 warna: biru, oranye, hijau, ungu, pink, cyan, kuning, merah).
+- Fiber color stripe (TIA/EIA-598) tetap di setiap port card.
+- Semua slot interaktif (bisa di-klik untuk assign), placeholder tidak disabled.
+
 ## Role Behavior
 
 - Superadmin dapat mengelola data lintas region sesuai aksesnya.

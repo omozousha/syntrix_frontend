@@ -86,7 +86,7 @@ export function DeviceCreateForm({
   ];
 
   const popOptions: ComboboxOption[] = [
-    { value: "__none__", label: "None" },
+    { value: "__none__", label: "Pilih POP" },
     ...pops
       .filter((pop) => !values.region_id || pop.region_id === values.region_id)
       .map((pop) => ({
@@ -96,7 +96,7 @@ export function DeviceCreateForm({
   ];
 
   const tenantOptions: ComboboxOption[] = [
-    { value: "__none__", label: "None" },
+    { value: "__none__", label: "Pilih Tenant (Opsional)" },
     ...tenants.map((item) => ({
       value: item.id,
       label: item.tenant_code ? `${item.tenant_name} (${item.tenant_code})` : item.tenant_name,
@@ -109,6 +109,7 @@ export function DeviceCreateForm({
         label={isOdp ? "Nama ODP" : "Device Name"}
         value={values.device_name}
         onChange={(value) => onChange({ device_name: normalizeDeviceName(value) })}
+        required
       />
       {isOdp ? (
         <>
@@ -135,7 +136,7 @@ export function DeviceCreateForm({
         </>
       ) : null}
       <div className="space-y-1.5">
-        <FieldLabel label="POP (opsional)" tooltip="Hubungkan device ke POP jika perangkat berada di POP tertentu." />
+        <FieldLabel label="POP" tooltip="POP adalah lokasi fisik perangkat. Setiap device wajib ditempatkan di POP." required />
         <Combobox
           value={values.pop_id || "__none__"}
           onValueChange={(value) => onPopChange(value === "__none__" ? "" : value)}
@@ -150,9 +151,10 @@ export function DeviceCreateForm({
           value={values.project_id || "__none__"}
           onValueChange={(value) => onChange({ project_id: value === "__none__" ? "" : value })}
           options={[
-            { value: "__none__", label: "Tidak ada project" },
+            { value: "__none__", label: "Pilih Project (Opsional)" },
             ...projects
               .filter((project) => !values.region_id || !project.region_id || project.region_id === values.region_id)
+              .filter((project) => !values.pop_id || !project.pop_id || project.pop_id === values.pop_id)
               .map((project) => ({
                 value: project.id,
                 label: [project.project_name, project.project_code].filter(Boolean).join(" | ") || "Project tidak tersedia",

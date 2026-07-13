@@ -1,5 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   type DefaultInfoSectionProps,
   DefaultInfoSection,
@@ -28,6 +33,10 @@ export type OdpDeviceFormProps = DefaultInfoSectionProps & {
   topologyLookup?: TopologySectionProps["topologyLookup"];
 };
 
+/**
+ * ODP Device Form - aligned with ODC (Optical Distribution Cabinet) styling patterns.
+ * Restores consistency across the passive inventory detail modules.
+ */
 export function OdpDeviceForm(props: OdpDeviceFormProps) {
   const technicalCopy = DEVICE_TECHNICAL_COPY.ODP;
   const selectedSplitterProfile =
@@ -35,6 +44,7 @@ export function OdpDeviceForm(props: OdpDeviceFormProps) {
   const selectedSplitterOutputPort = Number(selectedSplitterProfile?.output_port_count || 0);
   const needsPortPresetSelector =
     Number.isFinite(selectedSplitterOutputPort) && selectedSplitterOutputPort >= 16;
+
   const splitterPortPresetOptions = (() => {
     if (!needsPortPresetSelector) return [] as number[];
     const maxPort = selectedSplitterOutputPort;
@@ -52,11 +62,18 @@ export function OdpDeviceForm(props: OdpDeviceFormProps) {
           <CardTitle className="text-sm">{technicalCopy.title}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
-          <DisplayField label="Nama ODP Baru" value={valueOf(props.latestFieldValidation?.new_device_name, "-")} compact />
+          <DisplayField
+            label="Nama ODP Baru"
+            value={valueOf(props.latestFieldValidation?.new_device_name, "-")}
+            compact
+          />
+
           <ComboboxField
             label="Tipe ODP"
             value={props.form.odp_type || "__none__"}
-            onValueChange={(value) => props.onChange((prev) => ({ ...prev, odp_type: value === "__none__" ? "" : value }))}
+            onValueChange={(value) =>
+              props.onChange((prev) => ({ ...prev, odp_type: value === "__none__" ? "" : value }))
+            }
             disabled={!props.editing}
             searchPlaceholder="Cari tipe ODP..."
             options={[
@@ -67,10 +84,16 @@ export function OdpDeviceForm(props: OdpDeviceFormProps) {
               })),
             ]}
           />
+
           <ComboboxField
             label="Jenis Instalasi"
             value={props.form.installation_type || "__none__"}
-            onValueChange={(value) => props.onChange((prev) => ({ ...prev, installation_type: value === "__none__" ? "" : value }))}
+            onValueChange={(value) =>
+              props.onChange((prev) => ({
+                ...prev,
+                installation_type: value === "__none__" ? "" : value,
+              }))
+            }
             disabled={!props.editing}
             searchPlaceholder="Cari jenis instalasi..."
             options={[
@@ -81,12 +104,16 @@ export function OdpDeviceForm(props: OdpDeviceFormProps) {
               })),
             ]}
           />
+
           <DisplayField label="Capacity Core" value={technicalCopy.corePlaceholder || "-"} compact />
+
           {needsPortPresetSelector ? (
             <ComboboxField
               label={technicalCopy.totalPortsLabel}
               value={props.form.total_ports || "__none__"}
-              onValueChange={(value) => props.onChange((prev) => ({ ...prev, total_ports: value === "__none__" ? "" : value }))}
+              onValueChange={(value) =>
+                props.onChange((prev) => ({ ...prev, total_ports: value === "__none__" ? "" : value }))
+              }
               disabled={!props.editing}
               searchPlaceholder="Cari total port..."
               options={[
@@ -107,6 +134,7 @@ export function OdpDeviceForm(props: OdpDeviceFormProps) {
               compact
             />
           )}
+
           <Field
             label={technicalCopy.usedPortsLabel}
             type="number"
@@ -115,6 +143,7 @@ export function OdpDeviceForm(props: OdpDeviceFormProps) {
             disabled={!props.editing}
             compact
           />
+
           <SplitterRatioField
             value={props.form.splitter_ratio || "__none__"}
             label={technicalCopy.splitterLabel}
@@ -123,9 +152,11 @@ export function OdpDeviceForm(props: OdpDeviceFormProps) {
             splitterProfiles={props.splitterProfiles}
             onValueChange={(value) => {
               const ratioValue = value === "__none__" ? "" : value;
-              const profile = props.splitterProfiles.find((item) => item.ratio_label === ratioValue) || null;
+              const profile =
+                props.splitterProfiles.find((item) => item.ratio_label === ratioValue) || null;
               const output = Number(profile?.output_port_count || 0);
-              const autoTotal = Number.isFinite(output) && output > 0 ? (output >= 16 ? 8 : output) : 0;
+              const autoTotal =
+                Number.isFinite(output) && output > 0 ? (output >= 16 ? 8 : output) : 0;
               props.onChange((prev) => ({
                 ...prev,
                 splitter_ratio: ratioValue,

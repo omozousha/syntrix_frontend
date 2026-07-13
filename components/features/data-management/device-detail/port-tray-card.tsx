@@ -49,7 +49,7 @@ export function PortTrayCard({
   if (port.notes) {
     tooltipLines.push(`Catatan: ${port.notes}`);
   }
-  if (isIdle) {
+  if (isIdle && !disabled) {
     tooltipLines.push("Klik untuk assign");
   }
 
@@ -67,7 +67,7 @@ export function PortTrayCard({
         "disabled:cursor-default disabled:opacity-60",
         isIdle && "border-dashed border-muted-foreground/30",
         !isIdle && "border-solid",
-        size === "sm" ? "min-h-[48px] min-w-[48px]" : "min-h-[56px] min-w-[56px]",
+        size === "sm" ? "min-h-[52px] min-w-[52px]" : "min-h-[64px] min-w-[64px]",
         className,
       )}
     >
@@ -112,7 +112,7 @@ export function PortTrayCard({
       </span>
 
       {/* Hover indicator for idle ports */}
-      {isIdle && (
+      {isIdle && !disabled && (
         <span className="absolute inset-0 flex items-center justify-center rounded-md bg-foreground/5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
           <span className="text-[9px] font-medium text-foreground/70">Assign</span>
         </span>

@@ -1,4 +1,4 @@
-export { DefaultInfoSection, type DefaultInfoSectionProps } from "./default-info-section";
+export { DefaultInfoSection, DefaultIdentitySection, DefaultRelationSection, DefaultLocationSection, DefaultTagsSection, type DefaultInfoSectionProps } from "./default-info-section";
 export {
   type DeviceBaseForm,
   type EditableForm,

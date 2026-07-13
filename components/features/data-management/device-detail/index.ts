@@ -38,6 +38,7 @@ export { OdpValidationHistorySection } from "@/components/features/data-manageme
 export { ValidationEvidenceAction } from "@/components/features/data-management/device-detail/validation-evidence-action";
 export { ValidationReminderDialog } from "@/components/features/data-management/device-detail/validation-reminder-dialog";
 export { DeviceTopologyChainVisualizer } from "@/components/features/data-management/device-detail/device-topology-chain-visualizer";
+export { DeviceLinkBudgetSection } from "@/components/features/data-management/device-detail/device-link-budget-section";
 
 // ── Fase 2a — Visual Port Tray ───────────────────────────────────────────
 export { PortTrayContainer } from "@/components/features/data-management/device-detail/port-tray-container";
@@ -49,6 +50,7 @@ export {
   type PortConnection,
   type TrayConfig,
   type TrayLayoutConfig,
+  type TrayConfigPayload,
   type FiberColor,
   type PeerDeviceOption,
   type PeerPortOption,
@@ -56,10 +58,19 @@ export {
   ODC_TRAY_LAYOUT,
   JC_TRAY_LAYOUT,
   generateTrayLayout,
+  generateOltLayout,
+  generateSwitchLayout,
   resolveTrayLayout,
+  parseTrayConfigFromPayload,
   getFiberColor,
   getPortStatusClass,
   getPortStatusLabel,
   buildConnectionMap,
   groupPortsByTray,
 } from "@/components/features/data-management/device-detail/port-tray-types";
+
+// ── Fase 2g — Active Device (OLT/SWITCH) ────────────────────────────────
+export { OltPortContainer } from "@/components/features/data-management/device-detail/olt-port-container";
+export { OltPortCard } from "@/components/features/data-management/device-detail/olt-port-card";
+export { SwitchPortContainer } from "@/components/features/data-management/device-detail/switch-port-container";
+export { SwitchPortCard } from "@/components/features/data-management/device-detail/switch-port-card";

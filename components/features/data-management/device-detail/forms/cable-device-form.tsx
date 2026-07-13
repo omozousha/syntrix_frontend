@@ -1,8 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 import {
   type DefaultInfoSectionProps,
   DefaultInfoSection,
+  DefaultIdentitySection,
+  DefaultRelationSection,
+  DefaultLocationSection,
+  DefaultTagsSection,
   type SplitterProfileOption,
   DEVICE_TECHNICAL_COPY,
   Field,
@@ -36,123 +43,199 @@ export function CableDeviceForm(props: CableDeviceFormProps) {
     return allowedKeys.includes(routeType);
   });
 
+  const [activeTab, setActiveTab] = useState("identitas");
+  function getMissingDeviceFields() {
+    const missing: Record<string, string[]> = {};
+    const identitasMissing: string[] = [];
+    if (!props.form.device_name) identitasMissing.push("Device Name");
+    if (!props.form.region_id) identitasMissing.push("Region");
+    if (identitasMissing.length > 0) missing.identitas = identitasMissing;
+    return missing;
+  }
+
+  const missingTabFields = props.editing ? getMissingDeviceFields() : {};
+
+  const technicalCard = (
+    <Card className="bg-transparent">
+      <CardHeader className="px-3 py-2">
+        <CardTitle className="text-sm">{technicalCopy.title}</CardTitle>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
+        <ComboboxField
+          label="Tipe Kabel"
+          value={props.form.cable_type || "__none__"}
+          onValueChange={(value) => props.onChange((prev) => ({ ...prev, cable_type: value === "__none__" ? "" : value }))}
+          disabled={!props.editing}
+          searchPlaceholder="Cari tipe kabel..."
+          options={[
+            { value: "__none__", label: "Pilih tipe kabel" },
+            ...(props.cableTypes || []).map((t) => ({
+              value: t.cable_type_code,
+              label: t.cable_type_name,
+            })),
+          ]}
+        />
+        <ComboboxField
+          label="Kategori Kabel"
+          value={props.form.route_type || "__none__"}
+          onValueChange={(value) => props.onChange((prev) => ({ ...prev, route_type: value === "__none__" ? "" : value }))}
+          disabled={!props.editing}
+          searchPlaceholder="Cari kategori kabel..."
+          options={[
+            { value: "__none__", label: "Pilih kategori kabel" },
+            ...(props.routeTypes || []).map((rt) => ({
+              value: rt.route_type_code || rt.route_type_name,
+              label: rt.route_type_code ? `${rt.route_type_name} (${rt.route_type_code})` : rt.route_type_name,
+            })),
+          ]}
+        />
+        <ComboboxField
+          label="Capacity Core"
+          value={props.form.capacity_core || "__none__"}
+          onValueChange={(value) => props.onChange((prev) => ({ ...prev, capacity_core: value === "__none__" ? "" : value }))}
+          disabled={!props.editing}
+          searchPlaceholder="Cari kapasitas core..."
+          options={[
+            { value: "__none__", label: "Pilih kapasitas core" },
+            ...filteredCoreCapacities.map((item) => ({
+              value: String(item.core_capacity_value),
+              label: `${item.core_capacity_value} Core${item.label ? ` ${String.fromCharCode(8212)} ${item.label}` : ""}`,
+            })),
+          ]}
+        />
+        <Field
+          label="Used Core"
+          type="number"
+          value={props.form.used_core}
+          onChange={(value) => props.onChange((prev) => ({ ...prev, used_core: value }))}
+          disabled={!props.editing}
+          compact
+        />
+        <Field
+          label={technicalCopy.totalPortsLabel}
+          type="number"
+          value={props.form.total_ports}
+          onChange={(value) => props.onChange((prev) => ({ ...prev, total_ports: value }))}
+          disabled={!props.editing}
+          compact
+        />
+        <Field
+          label={technicalCopy.usedPortsLabel}
+          type="number"
+          value={props.form.used_ports}
+          onChange={(value) => props.onChange((prev) => ({ ...prev, used_ports: value }))}
+          disabled={!props.editing}
+          compact
+        />
+        <Field
+          label="Panjang Kabel (m)"
+          type="number"
+          value={props.form.cable_length_m}
+          onChange={(value) => props.onChange((prev) => ({ ...prev, cable_length_m: value }))}
+          disabled={!props.editing}
+          compact
+        />
+        <Field
+          label="Route Name"
+          value={props.form.route_name}
+          onChange={(value) => props.onChange((prev) => ({ ...prev, route_name: value }))}
+          disabled={!props.editing}
+          compact
+        />
+        <SplitterRatioField
+          value={props.form.splitter_ratio || "__none__"}
+          label={technicalCopy.splitterLabel}
+          editing={props.editing}
+          deviceTypeKey="CABLE"
+          splitterProfiles={props.splitterProfiles}
+          onValueChange={(value) => {
+            const ratioValue = value === "__none__" ? "" : value;
+            const profile = props.splitterProfiles.find((item) => item.ratio_label === ratioValue) || null;
+            const output = Number(profile?.output_port_count || 0);
+            const autoTotal = Number.isFinite(output) && output > 0 ? (output >= 16 ? 8 : output) : 0;
+            props.onChange((prev) => ({
+              ...prev,
+              splitter_ratio: ratioValue,
+              total_ports: autoTotal ? String(autoTotal) : prev.total_ports,
+            }));
+          }}
+        />
+      </CardContent>
+    </Card>
+  );
+
+  if (!props.editing) {
+    return (
+      <div className="space-y-3">
+        <DefaultInfoSection {...props} />
+        {technicalCard}
+        <CableTopologySection
+          form={props.form}
+          onChange={props.onChange}
+          editing={props.editing}
+          topologyLookup={props.topologyLookup || emptyTopologyLookup()}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3">
-      <DefaultInfoSection {...props} />
-
-      <Card className="bg-transparent">
-        <CardHeader className="px-3 py-2">
-          <CardTitle className="text-sm">{technicalCopy.title}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
-          <ComboboxField
-            label="Tipe Kabel"
-            value={props.form.cable_type || "__none__"}
-            onValueChange={(value) => props.onChange((prev) => ({ ...prev, cable_type: value === "__none__" ? "" : value }))}
-            disabled={!props.editing}
-            searchPlaceholder="Cari tipe kabel..."
-            options={[
-              { value: "__none__", label: "Pilih tipe kabel" },
-              ...(props.cableTypes || []).map((t) => ({
-                value: t.cable_type_code,
-                label: t.cable_type_name,
-              })),
-            ]}
-          />
-          <ComboboxField
-            label="Kategori Kabel"
-            value={props.form.route_type || "__none__"}
-            onValueChange={(value) => props.onChange((prev) => ({ ...prev, route_type: value === "__none__" ? "" : value }))}
-            disabled={!props.editing}
-            searchPlaceholder="Cari kategori kabel..."
-            options={[
-              { value: "__none__", label: "Pilih kategori kabel" },
-              ...(props.routeTypes || []).map((rt) => ({
-                value: rt.route_type_code || rt.route_type_name,
-                label: rt.route_type_code ? `${rt.route_type_name} (${rt.route_type_code})` : rt.route_type_name,
-              })),
-            ]}
-          />
-          <ComboboxField
-            label="Capacity Core"
-            value={props.form.capacity_core || "__none__"}
-            onValueChange={(value) => props.onChange((prev) => ({ ...prev, capacity_core: value === "__none__" ? "" : value }))}
-            disabled={!props.editing}
-            searchPlaceholder="Cari kapasitas core..."
-            options={[
-              { value: "__none__", label: "Pilih kapasitas core" },
-              ...filteredCoreCapacities.map((item) => ({
-                value: String(item.core_capacity_value),
-                label: `${item.core_capacity_value} Core${item.label ? ` — ${item.label}` : ""}`,
-              })),
-            ]}
-          />
-          <Field
-            label="Used Core"
-            type="number"
-            value={props.form.used_core}
-            onChange={(value) => props.onChange((prev) => ({ ...prev, used_core: value }))}
-            disabled={!props.editing}
-            compact
-          />
-          <Field
-            label={technicalCopy.totalPortsLabel}
-            type="number"
-            value={props.form.total_ports}
-            onChange={(value) => props.onChange((prev) => ({ ...prev, total_ports: value }))}
-            disabled={!props.editing}
-            compact
-          />
-          <Field
-            label={technicalCopy.usedPortsLabel}
-            type="number"
-            value={props.form.used_ports}
-            onChange={(value) => props.onChange((prev) => ({ ...prev, used_ports: value }))}
-            disabled={!props.editing}
-            compact
-          />
-          <Field
-            label="Panjang Kabel (m)"
-            type="number"
-            value={props.form.cable_length_m}
-            onChange={(value) => props.onChange((prev) => ({ ...prev, cable_length_m: value }))}
-            disabled={!props.editing}
-            compact
-          />
-          <Field
-            label="Route Name"
-            value={props.form.route_name}
-            onChange={(value) => props.onChange((prev) => ({ ...prev, route_name: value }))}
-            disabled={!props.editing}
-            compact
-          />
-          <SplitterRatioField
-            value={props.form.splitter_ratio || "__none__"}
-            label={technicalCopy.splitterLabel}
-            editing={props.editing}
-            deviceTypeKey="CABLE"
-            splitterProfiles={props.splitterProfiles}
-            onValueChange={(value) => {
-              const ratioValue = value === "__none__" ? "" : value;
-              const profile = props.splitterProfiles.find((item) => item.ratio_label === ratioValue) || null;
-              const output = Number(profile?.output_port_count || 0);
-              const autoTotal = Number.isFinite(output) && output > 0 ? (output >= 16 ? 8 : output) : 0;
-              props.onChange((prev) => ({
-                ...prev,
-                splitter_ratio: ratioValue,
-                total_ports: autoTotal ? String(autoTotal) : prev.total_ports,
-              }));
-            }}
-          />
-        </CardContent>
-      </Card>
-
-      <CableTopologySection
-        form={props.form}
-        onChange={props.onChange}
-        editing={props.editing}
-        topologyLookup={props.topologyLookup || emptyTopologyLookup()}
-      />
-    </div>
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto">
+        <TabsList>
+          <TabsTrigger value="identitas" className="relative text-xs sm:text-sm">
+            Identitas & Relasi
+            {missingTabFields.identitas?.length > 0 ? (
+              <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
+                {missingTabFields.identitas.length}
+              </Badge>
+            ) : null}
+          </TabsTrigger>
+          <TabsTrigger value="teknis" className="relative text-xs sm:text-sm">
+            Teknis & Kapasitas
+            {missingTabFields.teknis?.length > 0 ? (
+              <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
+                {missingTabFields.teknis.length}
+              </Badge>
+            ) : null}
+          </TabsTrigger>
+          <TabsTrigger value="lokasi" className="relative text-xs sm:text-sm">
+            Lokasi
+            {missingTabFields.lokasi?.length > 0 ? (
+              <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
+                {missingTabFields.lokasi.length}
+              </Badge>
+            ) : null}
+          </TabsTrigger>
+          <TabsTrigger value="tags" className="relative text-xs sm:text-sm">
+            Tags
+            {missingTabFields.tags?.length > 0 ? (
+              <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
+                {missingTabFields.tags.length}
+              </Badge>
+            ) : null}
+          </TabsTrigger>
+        </TabsList>
+      </div>
+      <TabsContent value="identitas" className="mt-0 space-y-3">
+        <DefaultIdentitySection {...props} />
+        <DefaultRelationSection {...props} />
+      </TabsContent>
+      <TabsContent value="teknis" className="mt-0 space-y-3">
+        {technicalCard}
+        <CableTopologySection
+          form={props.form}
+          onChange={props.onChange}
+          editing={props.editing}
+          topologyLookup={props.topologyLookup || emptyTopologyLookup()}
+        />
+      </TabsContent>
+      <TabsContent value="lokasi" className="mt-0 space-y-3">
+        <DefaultLocationSection {...props} />
+      </TabsContent>
+      <TabsContent value="tags" className="mt-0 space-y-3">
+        <DefaultTagsSection form={props.form} onChange={props.onChange} editing={props.editing} />
+      </TabsContent>
+    </Tabs>
   );
 }

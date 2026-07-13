@@ -22,6 +22,7 @@ export function Field({
   tooltip,
   containerClassName,
   badge,
+  required,
 }: {
   label: string;
   value: string;
@@ -31,10 +32,11 @@ export function Field({
   tooltip?: string;
   containerClassName?: string;
   badge?: ReactNode;
+  required?: boolean;
 }) {
   return (
     <div className={`space-y-1.5 ${containerClassName || ""}`}>
-      <FieldLabel label={label} tooltip={tooltip || getDefaultTooltip(label)} badge={badge} />
+      <FieldLabel label={label} tooltip={tooltip || getDefaultTooltip(label)} badge={badge} required={required} />
       <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
     </div>
   );
@@ -93,11 +95,18 @@ export function CoordinateField({
   );
 }
 
-export function FieldLabel({ label, tooltip, badge }: { label: string; tooltip?: string | null; badge?: ReactNode }) {
+export function FieldLabel({ label, tooltip, badge, required }: { label: string; tooltip?: string | null; badge?: ReactNode; required?: boolean }) {
+  const labelContent = (
+    <>
+      {label}
+      {required ? <span className="text-destructive ml-0.5">*</span> : null}
+    </>
+  );
+
   if (!tooltip) {
     return (
       <div className="flex flex-wrap items-center gap-1.5">
-        <Label>{label}</Label>
+        <Label>{labelContent}</Label>
         {badge}
       </div>
     );
@@ -105,7 +114,7 @@ export function FieldLabel({ label, tooltip, badge }: { label: string; tooltip?:
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <Label>{label}</Label>
+      <Label>{labelContent}</Label>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>

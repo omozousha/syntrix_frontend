@@ -208,11 +208,17 @@ export function AddDataMenu({
                 .map((type) => {
                   const DeviceIcon = getDeviceIcon(type.iconName, type.key);
                   return (
-                <DropdownMenuItem
-                  key={type.key}
-                  className="gap-2"
-                  onSelect={() => go(`/data-management/create?kind=device&type=${encodeURIComponent(type.key)}`)}
-                >
+                  <DropdownMenuItem
+                    key={type.key}
+                    className="gap-2"
+                    onSelect={() => {
+                      if (type.key === "ODP") {
+                        go("/data-management/list/odp?triggerCreate=true");
+                      } else {
+                        go(`/data-management/create?kind=device&type=${encodeURIComponent(type.key)}`);
+                      }
+                    }}
+                  >
                   <DeviceIcon className="size-4 text-muted-foreground" />
                   {type.label}
                 </DropdownMenuItem>

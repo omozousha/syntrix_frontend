@@ -23,7 +23,6 @@ type TenantOption = { id: string; tenant_name: string; tenant_code?: string | nu
 type RouteTypeOption = { id: string; route_type_name: string; route_type_code?: string | null };
 
 type CableTypeOption = { id: string; cable_type_code: string; cable_type_name: string };
-type CoreCapacityOption = { core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null };
 
 export type CreateFormSelectionProps = {
   deviceTypeKey: string;
@@ -35,11 +34,9 @@ export type CreateFormSelectionProps = {
   projects: ProjectOption[];
   routeTypes: RouteTypeOption[];
   cableTypes?: CableTypeOption[];
-  coreCapacities?: CoreCapacityOption[];
   manufacturers: ManufacturerOption[];
   brands: BrandOption[];
   assetModels: AssetModelOption[];
-  splitterProfiles: SplitterProfileOption[];
   onChange: (patch: Record<string, string>) => void;
   onPopChange: (popId: string) => void;
 };
@@ -54,11 +51,9 @@ export function CreateFormSelection({
   projects,
   routeTypes,
   cableTypes,
-  coreCapacities,
   manufacturers,
   brands,
   assetModels,
-  splitterProfiles,
   onChange,
   onPopChange,
 }: CreateFormSelectionProps) {
@@ -76,7 +71,6 @@ export function CreateFormSelection({
         manufacturers={manufacturers}
         brands={brands}
         assetModels={assetModels}
-        splitterProfiles={splitterProfiles}
         onChange={onChange}
         onPopChange={onPopChange}
       />
@@ -95,7 +89,6 @@ export function CreateFormSelection({
         manufacturers={manufacturers}
         brands={brands}
         assetModels={assetModels}
-        splitterProfiles={splitterProfiles}
         onChange={onChange}
         onPopChange={onPopChange}
       />
@@ -113,11 +106,9 @@ export function CreateFormSelection({
         projects={projects}
         routeTypes={routeTypes}
         cableTypes={cableTypes}
-        coreCapacities={coreCapacities}
         manufacturers={manufacturers}
         brands={brands}
         assetModels={assetModels}
-        splitterProfiles={splitterProfiles}
         onChange={onChange}
         onPopChange={onPopChange}
       />
@@ -136,7 +127,6 @@ export function CreateFormSelection({
       manufacturers={manufacturers}
       brands={brands}
       assetModels={assetModels}
-      splitterProfiles={splitterProfiles}
       onChange={onChange}
       onPopChange={onPopChange}
     />
