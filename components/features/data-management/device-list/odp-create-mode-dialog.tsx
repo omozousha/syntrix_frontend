@@ -3,13 +3,13 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { NdLabel, NdHero, NdDivider } from "@/components/ui/nothing";
 import { FileUp, SquarePen } from "lucide-react";
@@ -26,11 +26,7 @@ export type OdpCreateModeDialogProps = {
  * - **Tambah ODP Tunggal** (single create form)
  * - **Impor Massal ODP** (bulk import page)
  *
- * Nothing Design treatment:
- * - Sheet (right slide)
- * - Hero heading "ODP" + Mode label
- * - Two large option cards differentiated by spacing, not boxes
- * - Primary "Single" → outline button, Secondary "Bulk" → inverted primary
+ * Redesigned to show in the center using Dialog instead of Sheet.
  */
 export function OdpCreateModeDialog({
   open,
@@ -55,21 +51,21 @@ export function OdpCreateModeDialog({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
-        <SheetHeader className="space-y-3">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-full sm:max-w-md">
+        <DialogHeader className="space-y-3">
           <NdLabel color="secondary">MODE</NdLabel>
-          <SheetTitle>
+          <DialogTitle>
             <NdHero size="md">MODE TAMBAH ODP</NdHero>
-          </SheetTitle>
-          <SheetDescription>
+          </DialogTitle>
+          <DialogDescription>
             Pilih cara menambah data ODP: satu per satu via form, atau banyak sekaligus via file Excel/CSV.
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
         <NdDivider />
 
-        <div className="flex flex-col gap-4 px-4 py-4">
+        <div className="flex flex-col gap-4 py-2">
           <OptionCard
             icon={<SquarePen className="size-5" />}
             tag="01"
@@ -88,7 +84,7 @@ export function OdpCreateModeDialog({
           />
         </div>
 
-        <SheetFooter className="px-4 pb-4">
+        <DialogFooter className="pt-2">
           <Button
             type="button"
             variant="outline"
@@ -119,9 +115,9 @@ export function OdpCreateModeDialog({
           >
             {selected === "bulk" ? "LANJUT IMPOR" : selected === "single" ? "LANJUT FORM" : "PILIH MODE"}
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

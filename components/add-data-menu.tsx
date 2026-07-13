@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { OdpCreateModeDialog } from "@/components/features/data-management/device-list/odp-create-mode-dialog";
 import {
   Box,
   Boxes,
@@ -21,11 +22,9 @@ import {
   Sparkles,
   Split,
   UserRound,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { useSession } from "@/components/session-context";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 
 type DeviceTypeRow = {
   id: string;
@@ -47,6 +47,7 @@ type DeviceTypeRow = {
   is_active?: boolean;
   sort_order?: number;
 };
+
 const DEVICE_ICON_MAP: Record<string, LucideIcon> = {
   Box,
   Boxes,
@@ -69,6 +70,7 @@ const DEVICE_ICON_MAP: Record<string, LucideIcon> = {
   ODP: RadioTower,
   CABLE: Cable,
 };
+
 const FALLBACK_DEVICE_TYPES = [
   { key: "OLT", label: "OLT", iconName: "Server" },
   { key: "SWITCH", label: "Switch", iconName: "Network" },
@@ -82,7 +84,11 @@ const FALLBACK_DEVICE_TYPES = [
 ];
 
 function getDeviceIcon(iconName?: string | null, deviceTypeKey?: string | null) {
-  return DEVICE_ICON_MAP[iconName || ""] || DEVICE_ICON_MAP[deviceTypeKey || ""] || HardDrive;
+  return (
+    DEVICE_ICON_MAP[iconName || ""] ||
+    DEVICE_ICON_MAP[deviceTypeKey || ""] ||
+    HardDrive
+  );
 }
 
 type AddDataMenuProps = {
@@ -96,21 +102,25 @@ export function AddDataMenu({
   canCreateDevice = true,
   canManageMaster = false,
 }: AddDataMenuProps) {
-  const { token } = useSession();
+  const token = useSession();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [deviceTypes, setDeviceTypes] = useState<DeviceTypeRow[]>([]);
+  const [odpDialogOpen, setOdpDialogOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadDeviceTypes() {
       try {
-        const result = await apiFetch<PaginatedResponse<DeviceTypeRow>>("/deviceTypes?page=1&limit=200&is_active=true", { token });
+        const result = await apiFetch<PaginatedResponse<DeviceTypeRow>>(
+          "/deviceTypes?page=1&limit=200&is_active=true",
+          token,
+        );
         if (cancelled) return;
         const rows = (result.data || [])
-          .filter((item) => item.device_type_key)
-          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+          .filter((item: DeviceTypeRow) => item.device_type_key)
+          .sort((a: DeviceTypeRow, b: DeviceTypeRow) => (a.sort_order || 0) - (b.sort_order || 0));
         setDeviceTypes(rows);
       } catch {
         if (!cancelled) setDeviceTypes([]);
@@ -136,139 +146,195 @@ export function AddDataMenu({
   }
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button type="button" className="gap-2">
-          <Plus className="size-4" />
-          Add
-        </Button>
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent align="end" className="w-80 p-2">
-        <div className="mb-1 flex items-center justify-between px-1">
-          <DropdownMenuLabel className="px-0">Add to data</DropdownMenuLabel>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            onClick={() => setOpen(false)}
-          >
-            <X className="size-4" />
+    <>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" className="gap-2">
+            <Plus className="size-4" />
+            Add
           </Button>
-        </div>
+        </DropdownMenuTrigger>
 
-        {canCreatePop ? (
-          <DropdownMenuItem className="items-start gap-3 py-2" onSelect={() => go("/data-management/create?kind=pop")}>
-            <FolderPlus className="mt-0.5 size-4 text-muted-foreground" />
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium">POP</p>
-              <p className="text-xs text-muted-foreground">Create Point of Presence data.</p>
-            </div>
-          </DropdownMenuItem>
-        ) : null}
+        <DropdownMenuContent align="end" className="w-80 p-2">
+          <div className="mb-1 flex items-center justify-between px-1">
+            <DropdownMenuLabel className="px-0">Add data</DropdownMenuLabel>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={() => setOpen(false)}
+            >
+              <Plus className="size-4 rotate-45" />
+            </Button>
+          </div>
 
-        {canCreateDevice ? (
-          <DropdownMenuItem className="items-start gap-3 py-2" onSelect={() => go("/data-management/create?kind=project")}>
-            <Sparkles className="mt-0.5 size-4 text-muted-foreground" />
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium">Project</p>
-              <p className="text-xs text-muted-foreground">Create delivery project for topology rollout.</p>
-            </div>
-          </DropdownMenuItem>
-        ) : null}
-
-        {canCreatePop ? (
-          <DropdownMenuItem className="items-start gap-3 py-2" onSelect={() => go("/data-management/create?kind=customer")}>
-            <UserRound className="mt-0.5 size-4 text-muted-foreground" />
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium">Customer</p>
-              <p className="text-xs text-muted-foreground">Create customer and service location data.</p>
-            </div>
-          </DropdownMenuItem>
-        ) : null}
-
-        {canCreateDevice ? (
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="items-start gap-3 py-2">
-              <RouterIcon className="mt-0.5 size-4 text-muted-foreground" />
-              <div className="space-y-0.5 text-left">
-                <p className="text-sm font-medium">Device</p>
-                <p className="text-xs text-muted-foreground">Choose device type to create.</p>
+          {canCreatePop && (
+            <DropdownMenuItem
+              className="items-start gap-3 py-2"
+              onSelect={() => go("/data-management/create?kind=pop")}
+            >
+              <FolderPlus className="mt-0.5 size-4 text-muted-foreground" />
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">POP</p>
+                <p className="text-xs text-muted-foreground">
+                  Create Point of Presence data.
+                </p>
               </div>
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="w-56">
-              {(deviceTypes.length
-                ? deviceTypes.map((item) => ({
-                    key: item.device_type_key,
-                    label: item.device_type_name || item.device_type_key,
-                    iconName: item.icon_name,
-                  }))
-                : FALLBACK_DEVICE_TYPES)
-                .map((type) => {
+            </DropdownMenuItem>
+          )}
+
+          {canCreateDevice && (
+            <DropdownMenuItem
+              className="items-start gap-3 py-2"
+              onSelect={() => go("/data-management/create?kind=project")}
+            >
+              <Sparkles className="mt-0.5 size-4 text-muted-foreground" />
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">Project</p>
+                <p className="text-xs text-muted-foreground">
+                  Create delivery project for topology rollout.
+                </p>
+              </div>
+            </DropdownMenuItem>
+          )}
+
+          {canCreatePop && (
+            <DropdownMenuItem
+              className="items-start gap-3 py-2"
+              onSelect={() => go("/data-management/create?kind=customer")}
+            >
+              <UserRound className="mt-0.5 size-4 text-muted-foreground" />
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">Customer</p>
+                <p className="text-xs text-muted-foreground">
+                  Create customer and service location data.
+                </p>
+              </div>
+            </DropdownMenuItem>
+          )}
+
+          {canCreateDevice && (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="items-start gap-3 py-2">
+                <RouterIcon className="mt-0.5 size-4 text-muted-foreground" />
+                <div className="space-y-0.5 text-left">
+                  <p className="text-sm font-medium">Device</p>
+                  <p className="text-xs text-muted-foreground">
+                    Choose device type to create.
+                  </p>
+                </div>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-56">
+                {(deviceTypes.length > 0
+                  ? deviceTypes.map((item) => ({
+                      key: item.device_type_key,
+                      label: item.device_type_name || item.device_type_key,
+                      iconName: item.icon_name,
+                    }))
+                  : FALLBACK_DEVICE_TYPES
+                ).map((type) => {
                   const DeviceIcon = getDeviceIcon(type.iconName, type.key);
                   return (
-                  <DropdownMenuItem
-                    key={type.key}
-                    className="gap-2"
-                    onSelect={() => {
-                      if (type.key === "ODP") {
-                        go("/data-management/list/odp?triggerCreate=true");
-                      } else {
-                        go(`/data-management/create?kind=device&type=${encodeURIComponent(type.key)}`);
-                      }
-                    }}
-                  >
-                  <DeviceIcon className="size-4 text-muted-foreground" />
-                  {type.label}
-                </DropdownMenuItem>
+                    <DropdownMenuItem
+                      key={type.key}
+                      className="gap-2"
+                      onSelect={() => {
+                        setOpen(false);
+                        if (type.key === "ODP") {
+                          setOdpDialogOpen(true);
+                        } else {
+                          router.push(
+                            `/data-management/create?kind=device&type=${encodeURIComponent(
+                              type.key,
+                            )}`,
+                          );
+                        }
+                      }}
+                    >
+                      <DeviceIcon className="size-4 text-muted-foreground" />
+                      {type.label}
+                    </DropdownMenuItem>
                   );
                 })}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        ) : null}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          )}
 
-        {canManageMaster ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="items-start gap-3 py-2" onSelect={() => go("/master-data")}>
-              <LibraryBig className="mt-0.5 size-4 text-muted-foreground" />
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium">Master Data</p>
-                <p className="text-xs text-muted-foreground">Kelola data referensi reusable.</p>
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="items-start gap-3 py-2" onSelect={() => go("/data-management/list/master-device-types")}>
-              <Boxes className="mt-0.5 size-4 text-muted-foreground" />
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium">Device Types</p>
-                <p className="text-xs text-muted-foreground">Atur referensi tipe perangkat.</p>
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="items-start gap-3 py-2" onSelect={() => go("/data-management/list/master-manufacturers")}>
-              <Building2 className="mt-0.5 size-4 text-muted-foreground" />
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium">Manufacturers & Brands</p>
-                <p className="text-xs text-muted-foreground">Standardize vendor references.</p>
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="items-start gap-3 py-2" onSelect={() => go("/data-management/list/master-tenants")}>
-              <Building2 className="mt-0.5 size-4 text-muted-foreground" />
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium">Tenants</p>
-                <p className="text-xs text-muted-foreground">Kelola referensi tenant perangkat.</p>
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="items-start gap-3 py-2" onSelect={() => go("/data-management/list/master-provinces")}>
-              <MapPinned className="mt-0.5 size-4 text-muted-foreground" />
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium">Provinces & Cities</p>
-                <p className="text-xs text-muted-foreground">Location references for POP data.</p>
-              </div>
-            </DropdownMenuItem>
-          </>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          {canManageMaster && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="items-start gap-3 py-2"
+                onSelect={() => go("/master-data")}
+              >
+                <LibraryBig className="mt-0.5 size-4 text-muted-foreground" />
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Master Data</p>
+                  <p className="text-xs text-muted-foreground">
+                    Kelola data referensi reusable.
+                  </p>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="items-start gap-3 py-2"
+                onSelect={() =>
+                  go("/data-management/list/master-device-types")
+                }
+              >
+                <Boxes className="mt-0.5 size-4 text-muted-foreground" />
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Device Types</p>
+                  <p className="text-xs text-muted-foreground">
+                    Atur referensi tipe perangkat.
+                  </p>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="items-start gap-3 py-2"
+                onSelect={() => go("/data-management/list/master-manufacturers")}
+              >
+                <Building2 className="mt-0.5 size-4 text-muted-foreground" />
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Manufacturers & Brands</p>
+                  <p className="text-xs text-muted-foreground">
+                    Standardize vendor references.
+                  </p>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="items-start gap-3 py-2"
+                onSelect={() => go("/data-management/list/master-tenants")}
+              >
+                <Building2 className="mt-0.5 size-4 text-muted-foreground" />
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Tenants</p>
+                  <p className="text-xs text-muted-foreground">
+                    Kelola referensi tenant perangkat.
+                  </p>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="items-start gap-3 py-2"
+                onSelect={() => go("/data-management/list/master-provinces")}
+              >
+                <MapPinned className="mt-0.5 size-4 text-muted-foreground" />
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Provinces & Cities</p>
+                  <p className="text-xs text-muted-foreground">
+                    Location references for POP data.
+                  </p>
+                </div>
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <OdpCreateModeDialog
+        open={odpDialogOpen}
+        onOpenChange={setOdpDialogOpen}
+      />
+    </>
   );
 }
