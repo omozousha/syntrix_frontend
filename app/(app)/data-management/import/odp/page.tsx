@@ -50,6 +50,7 @@ export default function OdpBulkImportPage() {
   const session = useSession();
   const [step, setStep] = useState<StepKey>("template");
   const [filename, setFilename] = useState<string | null>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [rows, setRows] = useState<ImportPreviewRow[]>([]);
   const [summary, setSummary] = useState({ total: 0, valid: 0, invalid: 0 });
   const [applyState, setApplyState] = useState<
@@ -160,6 +161,7 @@ export default function OdpBulkImportPage() {
     }
 
     setFilename(file.name);
+    setUploadFile(file); // Keep original file so we can re-upload on Apply
     const ext = file.name.split(".").pop()?.toLowerCase();
     let parsed: Record<string, string>[] = [];
 
@@ -175,6 +177,7 @@ export default function OdpBulkImportPage() {
         (row as Record<string, unknown>) as Record<string, string>,
       );
     } else {
+      setUploadFile(null);
       setApplyState("error");
       setApplyMessage("Format file harus .csv atau .xlsx");
       return;
@@ -216,23 +219,31 @@ export default function OdpBulkImportPage() {
       setApplyMessage("Token session tidak ditemukan. Silakan login ulang.");
       return;
     }
+
+    if (!uploadFile) {
+      setApplyState("error");
+      setApplyMessage("File belum diunggah. Silakan balik ke langkah Unggah.");
+      return;
+    }
+
     setApplyState("loading");
     setApplyMessage("");
 
     try {
+      // Backend /imports/ingest expects multipart/form-data with a `file` field.
+      // apiFetch handles FormData by skipping the JSON Content-Type and passing
+      // the FormData directly (browser sets correct multipart boundary header).
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      formData.append("entity_type", "devices");
+      formData.append("device_type_key", "ODP");
+      formData.append("asset_group", "passive");
+      formData.append("apply", "true");
+
       const response = await apiFetch("/imports/ingest", {
         method: "POST",
         token: session.token,
-        body: JSON.stringify({
-          entity_type: "devices",
-          device_type_key: "ODP",
-          asset_group: "passive",
-          apply: true,
-          preview_rows: rows.map((r) => ({
-            row_index: r.rowIndex,
-            data: r.data,
-          })),
-        }),
+        body: formData,
       });
       setApplyState("success");
       setApplyMessage(
