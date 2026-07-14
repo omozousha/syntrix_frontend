@@ -11,8 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { NdLabel, NdHero, NdDivider } from "@/components/ui/nothing";
-import { FileUp, SquarePen } from "lucide-react";
+import { FileUp, SquarePen, Upload } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type OdpCreateModeDialogProps = {
   open: boolean;
@@ -22,11 +22,11 @@ export type OdpCreateModeDialogProps = {
 };
 
 /**
- * Dialog selection between:
+ * Centered dialog offering two ODP provisioning modes:
  * - **Tambah ODP Tunggal** (single create form)
  * - **Impor Massal ODP** (bulk import page)
  *
- * Redesigned to show in the center using Dialog instead of Sheet.
+ * Aligned with platform's standard Shadcn UI design system.
  */
 export function OdpCreateModeDialog({
   open,
@@ -52,32 +52,30 @@ export function OdpCreateModeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full sm:max-w-md">
-        <DialogHeader className="space-y-3">
-          <NdLabel color="secondary">MODE</NdLabel>
-          <DialogTitle>
-            <NdHero size="md">MODE TAMBAH ODP</NdHero>
+      <DialogContent className="w-full sm:max-w-lg">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-lg font-semibold">
+            Pilih Mode Tambah ODP
           </DialogTitle>
-          <DialogDescription>
-            Pilih cara menambah data ODP: satu per satu via form, atau banyak sekaligus via file Excel/CSV.
+          <DialogDescription className="text-sm text-muted-foreground">
+            Pilih cara menambah data ODP: satu per satu via form, atau banyak
+            sekaligus via file Excel/CSV.
           </DialogDescription>
         </DialogHeader>
 
-        <NdDivider />
-
-        <div className="flex flex-col gap-4 py-2">
+        <div className="flex flex-col gap-3 py-2">
           <OptionCard
+            value="single"
             icon={<SquarePen className="size-5" />}
-            tag="01"
-            title="TAMBAH ODP TUNGGAL"
+            title="Tambah ODP Tunggal"
             description="Isi form satu ODP, lengkapi detail & relasi topologi."
             selected={selected === "single"}
             onSelect={() => setSelected("single")}
           />
           <OptionCard
-            icon={<FileUp className="size-5" />}
-            tag="02"
-            title="IMPOR MASSAL ODP"
+            value="bulk"
+            icon={<Upload className="size-5" />}
+            title="Impor Massal ODP"
             description="Unggah file CSV/Excel hingga 2.000 baris. Cocok untuk rollout area luas."
             selected={selected === "bulk"}
             onSelect={() => setSelected("bulk")}
@@ -89,31 +87,19 @@ export function OdpCreateModeDialog({
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="rounded-full"
-            style={{
-              fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              fontSize: 13,
-            }}
           >
-            BATAL
+            Batal
           </Button>
           <Button
             type="button"
             onClick={() => (selected === "bulk" ? handleBulk() : handleSingle())}
             disabled={!selected}
-            className="rounded-full"
-            style={{
-              fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              fontSize: 13,
-              background: selected ? "var(--nd-text-display)" : "var(--nd-surface-raised)",
-              color: selected ? "var(--nd-black)" : "var(--nd-text-disabled)",
-            }}
           >
-            {selected === "bulk" ? "LANJUT IMPOR" : selected === "single" ? "LANJUT FORM" : "PILIH MODE"}
+            {selected === "bulk"
+              ? "Lanjut Impor"
+              : selected === "single"
+                ? "Lanjut Form"
+                : "Pilih Mode"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -121,74 +107,62 @@ export function OdpCreateModeDialog({
   );
 }
 
-function OptionCard({
-  icon,
-  tag,
-  title,
-  description,
-  selected,
-  onSelect,
-}: {
+type OptionCardProps = {
+  value: "single" | "bulk";
   icon: React.ReactNode;
-  tag: string;
   title: string;
   description: string;
   selected: boolean;
   onSelect: () => void;
-}) {
+};
+
+function OptionCard({
+  value,
+  icon,
+  title,
+  description,
+  selected,
+  onSelect,
+}: OptionCardProps) {
   return (
     <button
       type="button"
+      role="radio"
+      aria-checked={selected}
+      aria-label={title}
       onClick={onSelect}
-      className="flex w-full items-start gap-3 rounded-md border p-4 text-left transition-colors"
-      style={{
-        background: selected
-          ? "var(--nd-surface-raised)"
-          : "var(--nd-surface)",
-        borderColor: selected
-          ? "var(--nd-text-display)"
-          : "var(--nd-border)",
-        borderStyle: selected ? "solid" : "dashed",
-      }}
+      className={cn(
+        "flex w-full items-start gap-4 rounded-md border p-4 text-left transition-colors",
+        selected
+          ? "border-primary bg-primary/5"
+          : "border-border bg-background hover:bg-muted/40",
+      )}
     >
       <div
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border"
-        style={{
-          borderColor: selected ? "var(--nd-text-display)" : "var(--nd-border-visible)",
-          color: selected ? "var(--nd-text-display)" : "var(--nd-text-secondary)",
-        }}
+        className={cn(
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border transition-colors",
+          selected
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-input bg-muted text-muted-foreground",
+        )}
       >
         {icon}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <NdLabel color="secondary">OPTION {tag}</NdLabel>
-          {selected ? (
-            <span
-              className="nd-label"
-              style={{ fontSize: 9, color: "var(--nd-success)" }}
-            >
-              TERPILIH
-            </span>
-          ) : null}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-medium text-foreground">{title}</span>
+          <span
+            className={cn(
+              "inline-flex h-5 items-center rounded-full px-2 text-[11px] font-medium uppercase tracking-wide",
+              selected
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            {value === "single" ? "01" : "02"}
+          </span>
         </div>
-        <h3
-          style={{
-            fontFamily: "var(--font-nd-body), 'Space Grotesk', sans-serif",
-            fontSize: 16,
-            fontWeight: 500,
-            color: "var(--nd-text-display)",
-            letterSpacing: 0,
-          }}
-        >
-          {title}
-        </h3>
-        <p
-          className="nd-body"
-          style={{ fontSize: 13, color: "var(--nd-text-secondary)" }}
-        >
-          {description}
-        </p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
     </button>
   );

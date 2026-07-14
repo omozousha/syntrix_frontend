@@ -4,7 +4,7 @@ import * as React from "react";
 import { FileSpreadsheet, FileText } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
-import { NdLabel } from "@/components/ui/nothing";
+import { Label } from "@/components/ui/label";
 
 /**
  * Template columns required for ODP bulk import.
@@ -132,16 +132,12 @@ export function ImportTemplateDownload({
   }
 
   function downloadXlsx() {
-    // Sheet 1: ODP (header + 3 example rows)
     const wsOdp = XLSX.utils.aoa_to_sheet(buildOdpRows());
     (wsOdp as Record<string, unknown>)["!cols"] = ODP_TEMPLATE_COLUMNS.map((col) => ({
       wch: Math.max(18, col.length + 2),
     }));
 
-    // Sheet 2: Petunjuk
     const wsPetunjuk = XLSX.utils.aoa_to_sheet(buildPetunjukRows());
-
-    // Sheet 3: Validasi
     const wsValidasi = XLSX.utils.aoa_to_sheet(buildValidasiRows());
 
     const workbook = XLSX.utils.book_new();
@@ -168,54 +164,29 @@ export function ImportTemplateDownload({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <NdLabel color="secondary">UNDUH TEMPLATE</NdLabel>
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Primary: XLSX */}
-        <Button
-          type="button"
-          onClick={downloadXlsx}
-          className="rounded-full px-6"
-          style={{
-            background: "var(--nd-text-display)",
-            color: "var(--nd-black)",
-            fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-            fontSize: 13,
-            fontWeight: 500,
-          }}
-        >
-          <FileSpreadsheet className="mr-2 size-4" />
-          UNDUH TEMPLATE (.XLSX)
+    <div className="space-y-2">
+      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+        Unduh Template
+      </Label>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" onClick={downloadXlsx} className="gap-2">
+          <FileSpreadsheet className="size-4" />
+          Unduh Template XLSX
         </Button>
-
-        {/* Secondary: CSV */}
         <Button
           type="button"
           variant="outline"
           onClick={downloadCsv}
-          className="rounded-full px-6"
-          style={{
-            borderColor: "var(--nd-border-visible)",
-            color: "var(--nd-text-primary)",
-            fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-            fontSize: 13,
-          }}
+          className="gap-2"
         >
-          <FileText className="mr-2 size-4" />
-          UNDUH TEMPLATE (.CSV)
+          <FileText className="size-4" />
+          Unduh Template CSV
         </Button>
       </div>
-      <p
-        className="nd-body"
-        style={{ fontSize: 12, color: "var(--nd-text-secondary)" }}
-      >
-        Template `.xlsx` berisi 3 sheet: <strong>ODP</strong> (data + 3 contoh baris),{" "}
-        <strong>Petunjuk</strong>, <strong>Validasi</strong>. Format `.csv` adalah header
-        plain-text untuk editor teks.
+      <p className="text-xs text-muted-foreground">
+        Template XLSX berisi 3 sheet: <strong>ODP</strong> (data + 3 contoh baris),{" "}
+        <strong>Petunjuk</strong>, <strong>Validasi</strong>. Format CSV adalah
+        header plain-text untuk editor teks.
       </p>
     </div>
   );

@@ -1,18 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { NdLabel, NdValue, NdProgressBar, NdTextColor } from "@/components/ui/nothing";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export type ImportSummaryStatProps = {
   label: string;
   value: number;
   total?: number;
-  tone?: NdTextColor;
+  tone?: "primary" | "success" | "warning" | "destructive";
 };
 
 /**
- * Stat summary for import step — label Space Mono ALL CAPS,
- * value numeric with status color, optional progress bar when total is given.
+ * Stat summary for import step — label uppercase, value numeric with status color, optional progress bar when total is given.
  */
 export function ImportSummaryStat({
   label,
@@ -22,42 +23,33 @@ export function ImportSummaryStat({
 }: ImportSummaryStatProps) {
   const hasProgress = typeof total === "number";
   const ratio = hasProgress && total > 0 ? value / total : 0;
-  const progressTone: "neutral" | "good" | "moderate" | "over" =
-    label.toLowerCase().includes("error") || label.toLowerCase().includes("gagal")
-      ? ratio >= 0.5
-        ? "over"
-        : ratio >= 0.2
-          ? "moderate"
-          : "good"
-      : "good";
+  const progressPercent = Math.round(ratio * 100);
 
   return (
-    <div
-      className="flex flex-col gap-2 rounded-md border p-4"
-      style={{
-        background: "var(--nd-surface)",
-        borderColor: "var(--nd-border-visible)",
-        minWidth: 160,
-      }}
-    >
-      <NdLabel color="secondary">{label}</NdLabel>
-      <NdValue size="lg" color={tone}>
-        {value}
-        {hasProgress ? (
-          <span style={{ marginLeft: 4, color: "var(--nd-text-disabled)" }}>
-            / {total}
-          </span>
-        ) : null}
-      </NdValue>
-      {hasProgress ? (
-        <NdProgressBar
-          value={value}
-          max={total ?? 100}
-          tone={progressTone}
-          showValue={false}
-          size="sm"
-        />
-      ) : null}
+    <div className="min-w-[160px]">
+      <div
+        className="p-4 flex flex-col gap-2 rounded-md border bg-card"
+        style={{
+          background: "var(--card)",
+          borderColor: "var(--border)",
+        }}
+      >
+        <span className="text-xs uppercase tracking-wider text-muted-foreground">
+          {label}
+        </span>
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-2xl font-mono tabular-nums font-medium">{value}</span>
+          {hasProgress ? (
+            <span className="text-sm text-muted-foreground">/ {total}</span>
+          ) : null}
+        </div>
+        <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="relative h-full transition-all duration-300 bg-primary"
+            style={{ width: `${Math.min(100, Math.max(0, (value / (total || 1))) * 100)}%` }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

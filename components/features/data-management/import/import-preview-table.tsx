@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { NdLabel, NdValue } from "@/components/ui/nothing";
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, AlertCircle, CircleDot } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type ImportPreviewRow = {
   rowIndex: number;
@@ -19,12 +21,10 @@ export type ImportPreviewTableProps = {
 
 /**
  * Compact preview table for import rows.
- *
- * Nothing Design treatment:
- * - Header: small Space Mono ALL CAPS labels
+ * 
+ * - Header: small uppercase labels
  * - Row: monospace numeric / value
- * - Status column exposes value color (success/warning/accent/disabled) — never decorative
- *   badge
+ * - Status column uses Badge with semantic colors (success/warning/destructive)
  * - 50-row default limit (current spec); user sees summary for larger batches
  */
 export function ImportPreviewTable({
@@ -38,85 +38,39 @@ export function ImportPreviewTable({
   return (
     <div className="flex flex-col gap-3">
       <header className="flex items-center justify-between gap-3">
-        <NdLabel color="secondary">
+        <span className="text-xs uppercase tracking-wider text-muted-foreground">
           PRATINJAU {rows.length ? `(${rows.length} baris)` : ""}
-        </NdLabel>
+        </span>
         {overflow > 0 ? (
-          <span
-            style={{
-              fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-              fontSize: 9,
-              letterSpacing: "0.08em",
-              color: "var(--nd-text-disabled)",
-              textTransform: "uppercase",
-            }}
-          >
+          <span className="text-xs text-muted-foreground uppercase tracking-wider font-mono">
             +{overflow} BARIS TERSEMBUNYI (HANYA 50 PERTAMA)
           </span>
         ) : null}
       </header>
 
-      <div
-        className="overflow-x-auto rounded-md border"
-        style={{ borderColor: "var(--nd-border-visible)" }}
-      >
-        <table
-          className="w-full"
-          style={{
-            fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-            fontSize: 12,
-          }}
-        >
+      <div className="overflow-x-auto rounded-md border border-border">
+        <table className="w-full">
           <thead>
-            <tr
-              style={{
-                background: "var(--nd-surface-raised)",
-                borderBottom: "1px solid var(--nd-border-visible)",
-              }}
-            >
+            <tr className="bg-muted/50 border-b border-border">
               <th
-                className="px-3 py-2 text-left"
-                style={{
-                  fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-                  fontSize: 10,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "var(--nd-text-secondary)",
-                  fontWeight: 400,
-                  width: 60,
-                }}
+                className="px-3 py-2 text-left text-right"
+                style={{ width: 60 }}
               >
-                BARIS
+                <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                  BARIS
+                </span>
               </th>
               {columns.map((col) => (
-                <th
-                  key={col}
-                  className="px-3 py-2 text-left"
-                  style={{
-                    fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-                    fontSize: 10,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: "var(--nd-text-secondary)",
-                    fontWeight: 400,
-                  }}
-                >
-                  {col}
+                <th key={col} className="px-3 py-2 text-left">
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                    {col}
+                  </span>
                 </th>
               ))}
-              <th
-                className="px-3 py-2 text-left"
-                style={{
-                  fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-                  fontSize: 10,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "var(--nd-text-secondary)",
-                  fontWeight: 400,
-                  width: 120,
-                }}
-              >
-                STATUS
+              <th className="px-3 py-2 text-left" style={{ width: 120 }}>
+                <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                  STATUS
+                </span>
               </th>
             </tr>
           </thead>
@@ -124,38 +78,28 @@ export function ImportPreviewTable({
             {visibleRows.map((row) => (
               <tr
                 key={row.rowIndex}
-                style={{
-                  borderBottom: "1px solid var(--nd-border)",
-                  background:
-                    row.valid && !row.errors.length
-                      ? "transparent"
-                      : "rgba(215, 25, 33, 0.05)",
-                }}
+                className={cn(
+                  "border-b border-border/50",
+                  row.valid && !row.errors.length
+                    ? ""
+                    : "bg-destructive/5"
+                )}
               >
                 <td
-                  className="px-3 py-2"
-                  style={{
-                    color: "var(--nd-text-disabled)",
-                    fontVariantNumeric: "tabular-nums",
-                    textAlign: "right",
-                  }}
+                  className="px-3 py-2 text-right"
+                  style={{ width: 60 }}
                 >
-                  {row.rowIndex}
+                  <span className="font-mono text-xs text-muted-foreground tabular-nums text-right">
+                    {row.rowIndex}
+                  </span>
                 </td>
                 {columns.map((col) => (
-                  <td
-                    key={col}
-                    className="px-3 py-2"
-                    style={{
-                      color: "var(--nd-text-primary)",
-                      maxWidth: 180,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                    title={row.data?.[col] ?? ""}
-                  >
-                    {row.data?.[col] ?? <NdValue color="disabled">—</NdValue>}
+                  <td key={col} className="px-3 py-2" style={{ maxWidth: 180 }}>
+                    <span className="truncate block max-w-[180px]" title={row.data?.[col] ?? ""}>
+                      {row.data?.[col] ?? (
+                        <span className="text-muted-foreground font-mono text-xs">—</span>
+                      )}
+                    </span>
                   </td>
                 ))}
                 <td className="px-3 py-2" style={{ width: 120 }}>
@@ -168,21 +112,21 @@ export function ImportPreviewTable({
                 <td
                   colSpan={columns.length + 2}
                   className="px-3 py-12 text-center"
-                  style={{
-                    color: "var(--nd-text-disabled)",
-                    fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-                    fontSize: 11,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                  }}
                 >
-                  [KOSONG · TIDAK ADA BARIS]
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider font-mono">
+                    [KOSONG · TIDAK ADA BARIS]
+                  </span>
                 </td>
               </tr>
             ) : null}
           </tbody>
         </table>
       </div>
+      {rows.length > maxRows && (
+        <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono">
+          Menampilkan {maxRows} dari {rows.length} baris. Sisa {overflow} baris disembunyikan.
+        </p>
+      )}
     </div>
   );
 }
@@ -191,18 +135,9 @@ function StatusCell({ row }: { row: ImportPreviewRow }) {
   if (row.valid && !row.errors.length) {
     return (
       <div className="flex items-center gap-2">
-        <CheckCircle2 size={12} style={{ color: "var(--nd-success)" }} />
-        <span
-          style={{
-            fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-            fontSize: 11,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            color: "var(--nd-success)",
-          }}
-        >
+        <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20 h-5 px-2 text-xs">
           VALID
-        </span>
+        </Badge>
       </div>
     );
   }
@@ -210,37 +145,16 @@ function StatusCell({ row }: { row: ImportPreviewRow }) {
   if (row.errors.length > 0) {
     return (
       <div className="flex items-center gap-2">
-        <AlertCircle size={12} style={{ color: "var(--nd-accent)" }} />
-        <span
-          style={{
-            fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-            fontSize: 11,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            color: "var(--nd-accent)",
-          }}
-          title={row.errors.join(" · ")}
-        >
+        <Badge variant="destructive" className="h-5 px-2 text-xs">
           ERROR ({row.errors.length})
-        </span>
+        </Badge>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <CircleDot size={12} style={{ color: "var(--nd-text-disabled)" }} />
-      <span
-        style={{
-          fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-          fontSize: 11,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-          color: "var(--nd-text-disabled)",
-        }}
-      >
-        REVIEW
-      </span>
-    </div>
+    <Badge variant="secondary" className="h-5 px-2 text-xs">
+      REVIEW
+    </Badge>
   );
 }

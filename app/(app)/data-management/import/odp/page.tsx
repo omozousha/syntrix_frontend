@@ -1,31 +1,28 @@
 "use client";
 
 import * as React from "react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, ArrowLeft } from "lucide-react";
 import * as XLSX from "xlsx";
-import {
-  NdHero,
-  NdLabel,
-  NdDivider,
-  NdCard,
-  NdCardSection,
-  NdSegmented,
-} from "@/components/ui/nothing";
+import { useSession } from "@/components/session-context";
+import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { ImportSummaryStat } from "@/components/features/data-management/import/import-summary-stat";
-import {
-  ImportPreviewTable,
-  type ImportPreviewRow,
-} from "@/components/features/data-management/import/import-preview-table";
+import { ImportPreviewTable, type ImportPreviewRow } from "@/components/features/data-management/import/import-preview-table";
 import {
   ImportTemplateDownload,
   ODP_TEMPLATE_COLUMNS,
 } from "@/components/features/data-management/import/import-template-download";
-import { useSession } from "@/components/session-context";
-import { apiFetch } from "@/lib/api";
+import {
+  OdpBulkImportNoticeDialog,
+  type PopPrerequisiteCheck,
+} from "@/components/features/data-management/import/odp-bulk-import-notice";
 
 type StepKey = "template" | "upload" | "preview" | "apply";
 const STEPS: Array<{ value: StepKey; label: string }> = [
@@ -36,12 +33,17 @@ const STEPS: Array<{ value: StepKey; label: string }> = [
 ];
 
 /**
- * ODP Bulk Import page — Nothing Design layout.
+ * ODP Bulk Import page — aligned with platform design system.
  *
- * Step 1: Download XLSX/CSV template (primary XLSX)
- * Step 2: Upload file (CSV/XLSX) — local XLSX parse, client row-indexed preview
- * Step 3: Validation preview (50 row limit), per-row errors
- * Step 4: Apply batch (POST /imports/ingest)
+ * Steps:
+ * 1. Download template (XLSX/CSV)
+ * 2. Upload file (CSV/XLSX) — local parse + client-side preview
+ * 3. Validation preview (50-row limit), per-row errors
+ * 4. Apply batch (POST /imports/ingest)
+ *
+ * Also includes:
+ * - Interactive prerequisite notice dialog (with "don't show again" + localStorage)
+ * - POP availability check before allowing import
  */
 export default function OdpBulkImportPage() {
   const router = useRouter();
@@ -50,10 +52,92 @@ export default function OdpBulkImportPage() {
   const [filename, setFilename] = useState<string | null>(null);
   const [rows, setRows] = useState<ImportPreviewRow[]>([]);
   const [summary, setSummary] = useState({ total: 0, valid: 0, invalid: 0 });
-const [applyState, setApplyState] = useState<
+  const [applyState, setApplyState] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [applyMessage, setApplyMessage] = useState("");
+
+  // Notice dialog state — dialog always opens on first visit (unless user
+  // dismissed via "don't show again" stored in localStorage).
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [popCheck, setPopCheck] = useState<PopPrerequisiteCheck | null>(null);
+  const [isCheckingPops, setIsCheckingPops] = useState(false);
+
+  /**
+   * Check whether POPs exist in the user's accessible region before
+   * allowing ODP import. Each ODP must reference a valid POP, so POPs
+   * need to be created first.
+   */
+  const checkPopAvailability = useCallback(async (): Promise<PopPrerequisiteCheck | null> => {
+    if (!session?.token) {
+      setPopCheck({
+        hasPop: false,
+        popCount: 0,
+        message: "Tidak ada sesi login. Silakan login ulang.",
+      });
+      return null;
+    }
+
+    setIsCheckingPops(true);
+    try {
+      const response = await apiFetch<{
+        data: { items: Array<unknown> };
+        meta?: { total?: number };
+      }>("/pops?page=1&limit=1", { token: session.token });
+      const items = response?.data?.items || [];
+      const total = response?.meta?.total ?? items.length;
+      const message =
+        total > 0
+          ? `${total} data POP tersedia untuk ODP Anda.`
+          : "Belum ada data POP. Silakan buat data POP terlebih dahulu.";
+      const result: PopPrerequisiteCheck = {
+        hasPop: total > 0,
+        popCount: total,
+        message,
+      };
+      setPopCheck(result);
+      return result;
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      const result: PopPrerequisiteCheck = {
+        hasPop: false,
+        popCount: 0,
+        message: `Gagal memeriksa data POP: ${errorMsg}`,
+      };
+      setPopCheck(result);
+      return result;
+    } finally {
+      setIsCheckingPops(false);
+    }
+  }, [session?.token]);
+
+  // Show the notice dialog automatically on every page visit (unless the user
+  // explicitly dismissed it via the "don't show again" checkbox).
+  // The dialog intentionally always opens, even when POPs already exist, to
+  // ensure users always see the prerequisite notice first (per requirement).
+  // However, the heavy prereq check (POP availability) only runs after the
+  // dialog has opened, not before.
+  useEffect(() => {
+    // localStorage is read synchronously; we resolve dismissed state in a
+    // separate effect and only open the dialog once dismissed === false.
+    if (typeof window === "undefined") return;
+    const persisted = localStorage.getItem(
+      "odp-bulk-import-notice-dismissed",
+    );
+    if (persisted === "true") {
+      return; // user opted out; do not show
+    }
+    setNoticeOpen(true);
+    // Trigger POP availability check in parallel so the dialog can show
+    // status (or "Loading...") immediately on open.
+    void checkPopAvailability();
+    // Run only once per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleNoticeCheck = useCallback(async () => {
+    await checkPopAvailability();
+  }, [checkPopAvailability]);
 
   const goBack = useCallback(() => {
     if (step === "template") {
@@ -68,6 +152,13 @@ const [applyState, setApplyState] = useState<
   }, [step, router]);
 
   async function handleFile(file: File) {
+    // Re-verify POP availability when user uploads a file (gate)
+    const popResult = popCheck ?? (await checkPopAvailability());
+    if (!popResult?.hasPop) {
+      setNoticeOpen(true);
+      return;
+    }
+
     setFilename(file.name);
     const ext = file.name.split(".").pop()?.toLowerCase();
     let parsed: Record<string, string>[] = [];
@@ -111,6 +202,15 @@ const [applyState, setApplyState] = useState<
   }
 
   async function handleApply() {
+    // Re-verify POP availability before applying
+    const popResult = popCheck ?? (await checkPopAvailability());
+    if (!popResult?.hasPop) {
+      setNoticeOpen(true);
+      setApplyState("error");
+      setApplyMessage("Tidak dapat menerapkan: data POP belum tersedia.");
+      return;
+    }
+
     if (!session?.token) {
       setApplyState("error");
       setApplyMessage("Token session tidak ditemukan. Silakan login ulang.");
@@ -149,295 +249,231 @@ const [applyState, setApplyState] = useState<
     }
   }
 
-  function resetAll() {
-    setStep("template");
-    setFilename(null);
-    setRows([]);
-    setSummary({ total: 0, valid: 0, invalid: 0 });
-    setApplyState("idle");
-    setApplyMessage("");
-  }
+  const proceedAfterNotice = () => {
+    // Do nothing — notice dialog can only be closed.
+    // User can manually navigate or re-trigger the file upload flow.
+  };
+
+  // Gate step navigation: block Upload step if POPs are missing
+  const handleStepChange = (next: StepKey) => {
+    if (next === "upload" && popCheck && !popCheck.hasPop) {
+      setNoticeOpen(true);
+      return;
+    }
+    setStep(next);
+  };
 
   return (
     <div className="space-y-6">
       {/* Hero */}
       <header className="space-y-2">
-        <NdLabel color="secondary">IMPOR MASSAL</NdLabel>
-        <NdHero size="lg">IMPOR MASSAL ODP</NdHero>
-        <p
-          className="nd-body"
-          style={{ fontSize: 14, color: "var(--nd-text-secondary)" }}
-        >
+        <h2 className="text-2xl font-semibold tracking-tight">IMPOR MASSAL ODP</h2>
+        <p className="text-sm text-muted-foreground">
           Unggah CSV atau Excel hingga 2.000 baris. Cocok untuk rollout area
           luas. Sisanya (relasi topologi, project, attachment) bisa dilengkapi
           nanti lewat Detail ODP.
         </p>
       </header>
 
-      <NdDivider />
+      <Separator />
 
-      {/* Step segmented control */}
-      <NdSegmented<StepKey>
-        value={step}
-        onChange={setStep}
-        options={STEPS}
-      />
+      {/* Step tabs */}
+      <Tabs value={step} onValueChange={(v) => handleStepChange(v as StepKey)} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          {STEPS.map((s) => (
+            <TabsTrigger key={s.value} value={s.value}>
+              {s.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
-      <NdDivider />
+      <Separator />
 
+      {/* Step 1: Template */}
       {step === "template" && (
-        <NdCard padding="md">
-          <NdCardSection title="LANGKAH 1 · UNDUH TEMPLATE">
-            <div className="space-y-4">
-              <p
-                className="nd-body"
-                style={{ fontSize: 14, color: "var(--nd-text-primary)" }}
-              >
-                Persiapkan file Excel/CSV Anda. Template berisi 9 kolom wajib
-                dan 3 contoh baris valid.
-              </p>
-              <ImportTemplateDownload />
-            </div>
-          </NdCardSection>
-          <FooterButtons
-            onBack={goBack}
-            cancelHref="/data-management/list/odp"
-            onPrimary={() => setStep("upload")}
-            primaryLabel="LANJUT UNGGAH"
-          />
-        </NdCard>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">LANGKAH 1 · UNDUH TEMPLATE</h3>
+            <p className="text-sm text-muted-foreground">
+              Persiapkan file Excel/CSV Anda. Template berisi 9 kolom wajib
+              dan 3 contoh baris valid.
+            </p>
+          </div>
+
+          <ImportTemplateDownload />
+        </div>
       )}
 
+      {/* Step 2: Upload */}
       {step === "upload" && (
-        <NdCard padding="md">
-          <NdCardSection title="LANGKAH 2 · UNGGAH FILE">
-            <label
-              htmlFor="import-file"
-              className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed py-12 transition-colors"
-              style={{
-                borderColor: "var(--nd-border-visible)",
-                background: "var(--nd-surface-raised)",
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">LANGKAH 2 · UNGGAH FILE</h3>
+            <p className="text-sm text-muted-foreground">
+              Klik area ini atau drop file di sini. Maks 2.000 baris.
+            </p>
+          </div>
+
+          <label
+            htmlFor="import-file"
+            className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed border-border bg-muted/30 py-12 transition-colors hover:bg-muted/50"
+          >
+            <Upload size={32} className="text-muted-foreground" />
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+              UPLOAD CSV ATAU XLSX
+            </Label>
+            <p className="text-xs text-muted-foreground text-center max-w-md">
+              Klik area ini atau drop file di sini. Maks 2.000 baris.
+            </p>
+            <Input
+              id="import-file"
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleFile(file);
               }}
-            >
-              <Upload size={32} style={{ color: "var(--nd-text-secondary)" }} />
-              <NdLabel color="secondary">UNGGAH CSV ATAU XLSX</NdLabel>
-              <p
-                className="nd-body"
-                style={{
-                  fontSize: 12,
-                  color: "var(--nd-text-disabled)",
-                  textAlign: "center",
-                  maxWidth: 360,
-                }}
-              >
-                Klik area ini atau drop file di sini. Maks 2.000 baris.
-              </p>
-              <Input
-                id="import-file"
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void handleFile(file);
-                }}
-              />
-            </label>
-            {filename && (
-              <p
-                className="nd-body"
-                style={{ fontSize: 12, color: "var(--nd-text-secondary)" }}
-              >
-                FILE TERPILIH: <strong>{filename}</strong>
-              </p>
-            )}
-          </NdCardSection>
-          <FooterButtons
-            onBack={goBack}
-            cancelHref="/data-management/list/odp"
-            onPrimary={() => setStep("preview")}
-            primaryLabel="LIHAT VALIDASI"
-            primaryDisabled={!rows.length}
-          />
-        </NdCard>
-      )}
-
-      {step === "preview" && (
-        <NdCard padding="md">
-          <NdCardSection title="LANGKAH 3 · VALIDASI">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <ImportSummaryStat
-                label="TOTAL BARIS"
-                value={summary.total}
-                tone="primary"
-              />
-              <ImportSummaryStat
-                label="BARIS VALID"
-                value={summary.valid}
-                total={summary.total || 100}
-                tone="success"
-              />
-              <ImportSummaryStat
-                label="BARIS ERROR"
-                value={summary.invalid}
-                total={summary.total || 100}
-                tone="accent"
-              />
-            </div>
-
-            <NdDivider />
-
-            <ImportPreviewTable
-              rows={rows}
-              columns={[...ODP_TEMPLATE_COLUMNS]}
-              maxRows={50}
             />
-          </NdCardSection>
-          <FooterButtons
-            onBack={goBack}
-            cancelHref="/data-management/list/odp"
-            onPrimary={() => setStep("apply")}
-            primaryLabel="LANJUT TERAPKAN"
-            primaryDisabled={summary.valid === 0}
-          />
-        </NdCard>
+          </label>
+          {filename && (
+            <p className="text-sm text-muted-foreground">
+              FILE TERPILIH: <strong>{filename}</strong>
+            </p>
+          )}
+        </div>
       )}
 
+      {/* Step 3: Preview / Validation */}
+      {step === "preview" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <ImportSummaryStat
+              label="TOTAL BARIS"
+              value={summary.total}
+              tone="primary"
+            />
+            <ImportSummaryStat
+              label="BARIS VALID"
+              value={summary.valid}
+              total={summary.total || 100}
+              tone="success"
+            />
+            <ImportSummaryStat
+              label="BARIS ERROR"
+              value={summary.invalid}
+              total={summary.total || 100}
+              tone="destructive"
+            />
+          </div>
+
+          <Separator />
+
+          <ImportPreviewTable
+            rows={rows}
+            columns={[...ODP_TEMPLATE_COLUMNS]}
+            maxRows={50}
+          />
+        </div>
+      )}
+
+      {/* Step 4: Apply */}
       {step === "apply" && (
-        <NdCard padding="md">
-          <NdCardSection title="LANGKAH 4 · TERAPKAN">
-            <div className="flex flex-col gap-4">
-              <p
-                className="nd-body"
-                style={{
-                  fontSize: 14,
-                  color: "var(--nd-text-primary)",
-                  lineHeight: 1.5,
-                }}
-              >
-                Setelah Anda klik TERAPKAN, sistem akan mengirim{" "}
-                <strong>{summary.valid}</strong> baris valid ke server dan
-                membuat record <code>devices</code> bertipe{" "}
-                <code>ODP</code>. Baris dengan error akan dilewati dan dapat
-                di-export sebagai CSV terpisah bila diperlukan.
-              </p>
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Setelah Anda klik TERAPKAN, sistem akan mengirim{" "}
+              <strong>{summary.valid}</strong> baris valid ke server dan
+              membuat record <code>devices</code> bertipe <code>ODP</code>.
+              Baris dengan error akan dilewati dan dapat di-export sebagai
+              CSV terpisah bila diperlukan.
+            </p>
 
-              {applyState === "success" && (
-                <div
-                  style={{
-                    fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-                    fontSize: 12,
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    color: "var(--nd-success)",
-                  }}
-                >
-                  [OK] {applyMessage}
-                </div>
-              )}
-              {applyState === "error" && (
-                <div
-                  style={{
-                    fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-                    fontSize: 12,
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    color: "var(--nd-accent)",
-                  }}
-                >
-                  [ERROR] {applyMessage}
-                </div>
-              )}
-            </div>
-          </NdCardSection>
-          <FooterButtons
-            onBack={goBack}
-            cancelHref="/data-management/list/odp"
-            onPrimary={handleApply}
-            primaryLabel={
-              applyState === "loading"
-                ? "MENGIRIM..."
-                : applyState === "success"
-                  ? "BERHASIL"
-                  : "TERAPKAN SEKARANG"
-            }
-            primaryDisabled={
-              applyState === "success" || summary.valid === 0 || !session?.token
-            }
-          />
-        </NdCard>
+            {applyState === "success" && (
+              <Alert>
+                <AlertTitle className="text-xs uppercase tracking-wider text-green-600">
+                  [OK]
+                </AlertTitle>
+                <AlertDescription>{applyMessage}</AlertDescription>
+              </Alert>
+            )}
+            {applyState === "error" && (
+              <Alert variant="destructive">
+                <AlertTitle className="text-xs uppercase tracking-wider">
+                  [ERROR]
+                </AlertTitle>
+                <AlertDescription>{applyMessage}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+        </div>
       )}
-    </div>
-  );
-}
 
-function FooterButtons({
-  onBack,
-  cancelHref,
-  onPrimary,
-  primaryLabel,
-  primaryDisabled,
-}: {
-  onBack: () => void;
-  cancelHref: string;
-  onPrimary: () => void;
-  primaryLabel: string;
-  primaryDisabled?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2 pt-3">
-      <Button
-        type="button"
-        variant="outline"
-        onClick={onBack}
-        className="rounded-full"
-        style={{
-          fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-          fontSize: 13,
-        }}
-      >
-        <ArrowLeft className="mr-2 size-4" />
-        KEMBALI
-      </Button>
-
-      <div className="flex items-center gap-2">
-        <Button
-          asChild
-          type="button"
-          variant="ghost"
-          className="rounded-full"
-          style={{
-            fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-            fontSize: 13,
-          }}
-        >
-          <a href={cancelHref}>BATAL</a>
-        </Button>
+      {/* Footer actions */}
+      <div className="flex items-center justify-between gap-2 pt-3">
         <Button
           type="button"
-          onClick={onPrimary}
-          disabled={primaryDisabled}
+          variant="outline"
+          onClick={goBack}
           className="rounded-full"
-          style={{
-            background: primaryDisabled
-              ? "var(--nd-surface-raised)"
-              : "var(--nd-text-display)",
-            color: primaryDisabled
-              ? "var(--nd-text-disabled)"
-              : "var(--nd-black)",
-            fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-            fontSize: 13,
-          }}
         >
-          {primaryLabel}
+          <ArrowLeft className="mr-2 size-4" />
+          KEMBALI
         </Button>
+
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            className="rounded-full"
+            onClick={() => router.push("/data-management/list/odp")}
+          >
+            BATAL
+          </Button>
+          <Button
+            type="button"
+            onClick={
+              step === "template"
+                ? () => handleStepChange("upload")
+                : step === "upload"
+                  ? () => handleStepChange("preview")
+                  : step === "preview"
+                    ? () => handleStepChange("apply")
+                    : handleApply
+            }
+            disabled={
+              step === "upload"
+                ? false
+                : step === "preview"
+                  ? summary.valid === 0
+                  : step === "apply"
+                    ? applyState === "loading"
+                    : false
+            }
+            className="rounded-full"
+          >
+            {step === "template" && "LANJUT UNGGAH"}
+            {step === "upload" && "LIHAT VALIDASI"}
+            {step === "preview" && "LANJUT TERAPKAN"}
+            {step === "apply" && applyState === "loading"
+              ? "MENGIRIM..."
+              : step === "apply" && applyState === "success"
+                ? "BERHASIL"
+                : "TERAPKAN SEKARANG"}
+          </Button>
+        </div>
       </div>
+
+      {/* Prerequisite Notice Dialog */}
+      <OdpBulkImportNoticeDialog
+        open={noticeOpen}
+        onOpenChange={setNoticeOpen}
+        onProceed={proceedAfterNotice}
+        popCheck={popCheck}
+        isChecking={isCheckingPops}
+        onCheckPops={handleNoticeCheck}
+      />
     </div>
   );
 }
@@ -448,10 +484,10 @@ function parseCsv(text: string): Record<string, string>[] {
     .split(/\r?\n/)
     .filter((l) => l.trim().length > 0);
   if (lines.length <= 1) return [];
-  const headers = lines[0].split(",").map((h) => h.trim().replaceAll(`"`, ""));
+  const headers = lines[0].split(",").map((h) => h.trim().replaceAll('"', ""));
   const result: Record<string, string>[] = [];
   for (let i = 1; i < lines.length; i += 1) {
-    const values = splitCsvLine(lines[i]);
+    const values = lines[i].split(",").map((v) => v.trim().replaceAll('"', ""));
     const record: Record<string, string> = {};
     headers.forEach((header, idx) => {
       record[header] = values[idx] ?? "";
@@ -461,31 +497,9 @@ function parseCsv(text: string): Record<string, string>[] {
   return result;
 }
 
-function splitCsvLine(line: string): string[] {
-  const result: string[] = [];
-  let cur = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i += 1) {
-    const ch = line[i];
-    if (ch === `"` && line[i + 1] === `"` && inQuotes) {
-      cur += `"`;
-      i += 1;
-    } else if (ch === `"`) {
-      inQuotes = !inQuotes;
-    } else if (ch === "," && !inQuotes) {
-      result.push(cur);
-      cur = "";
-    } else {
-      cur += ch;
-    }
-  }
-  result.push(cur);
-  return result;
-}
-
 /**
  * Client-side row-level validator mirroring the 9 required ODP columns.
- * Returns errors[] (empty array when valid).
+ * Returns { valid: boolean, errors: string[] }.
  */
 function validateOdpRow(row: Record<string, string>): {
   valid: boolean;
