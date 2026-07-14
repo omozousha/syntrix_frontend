@@ -521,8 +521,8 @@ function validateOdpRow(row: Record<string, string>): {
   if (!deviceName.trim()) errors.push("device name wajib diisi");
 
   const status = (row["status"] ?? "").toLowerCase().trim();
-  if (!["installed", "planned", "maintenance"].includes(status)) {
-    errors.push("status harus installed/planned/maintenance");
+  if (!["draft", "installed", "active", "inactive", "maintenance", "retired"].includes(status)) {
+    errors.push("status harus draft/installed/active/inactive/maintenance/retired");
   }
 
   const longitude = Number(row["longitude"]);
