@@ -1126,45 +1126,46 @@ async function loadRegionsCatalog(
     return regionsCatalogCache.value;
   }
 
+  const collected: Array<{ id: string; region_name: string; code: string }> = [];
+
   try {
-    const collected: Array<{ id: string; region_name: string; code: string }> = [];
     let page = 1;
     const pageSize = 200;
 
     // Drain the paginated regions list so very large region catalogs are
-    // fully represented in the cache (one-shot fetch can be truncated by the
-    // default page size on the backend).
+    // fully represented in the cache. The production endpoint returns the
+    // payload as `data: Array<Region>` (no `items` wrapper) but earlier
+    // environments used `{ data: { items: ... } }`. Accept both.
+    const collectFromPage = (input: unknown) => {
+      const arr = Array.isArray(input) ? input : Array.isArray((input as { items?: unknown[] })?.items) ? (input as { items: unknown[] }).items : [];
+      for (const raw of arr as Array<{ id?: unknown; region_name?: unknown; region_code?: unknown; region_id?: unknown }>) {
+        if (!raw?.id || !raw?.region_name) continue;
+        collected.push({
+          id: String(raw.id),
+          region_name: String(raw.region_name || ""),
+          code: String(raw.region_code || ""),
+        });
+      }
+      return Array.isArray(arr) ? arr.length : 0;
+    };
+
     while (page <= 25) {
       const response = await apiFetch<{
-        data?: { items?: Array<{ id?: string; region_name?: string; region_code?: string }> };
+        data?: { items?: unknown[] } | unknown[];
+        items?: unknown[];
       }>(`/regions?page=${page}&limit=${pageSize}`, { token });
 
-      const items = (response?.data?.items || []) as Array<{
-        id?: string;
-        region_name?: string;
-        region_code?: string;
-      }>;
-
-      const normalized = items
-        .filter((r) => r.id && r.region_name)
-        .map((r) => ({
-          id: String(r.id),
-          region_name: String(r.region_name || ""),
-          code: String(r.region_code || ""),
-        }));
-
-      collected.push(...normalized);
-
-      if (normalized.length < pageSize) break;
+      const got = collectFromPage(response?.data);
+      if (got < pageSize) break;
       page += 1;
     }
-
-    regionsCatalogCache.token = token;
-    regionsCatalogCache.value = collected;
-    return collected;
   } catch {
     return null;
   }
+
+  regionsCatalogCache.token = token;
+  regionsCatalogCache.value = collected;
+  return collected;
 }
 
 function getUserScopeRegionIds(
