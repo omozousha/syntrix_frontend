@@ -23,10 +23,10 @@ export const ODP_TEMPLATE_COLUMNS = [
 ] as const;
 
 const EXAMPLE_ROW_1: Record<string, string> = {
-  "device name": "ODP-JKT-001",
+  "device name": "ODP-JBD-001",
   "device type": "ODP",
   "status": "installed",
-  "region": "DKI Jakarta",
+  "region": "Jabodebek",
   "POP": "INV-POP-S89P4U2",
   "longitude": "106.84513",
   "latitude": "-6.21462",
@@ -35,10 +35,10 @@ const EXAMPLE_ROW_1: Record<string, string> = {
 };
 
 const EXAMPLE_ROW_2: Record<string, string> = {
-  "device name": "ODP-JKT-002",
+  "device name": "ODP-JBD-002",
   "device type": "ODP",
   "status": "installed",
-  "region": "DKI Jakarta",
+  "region": "Jabodebek",
   "POP": "Bintaro",
   "longitude": "106.85120",
   "latitude": "-6.21800",
@@ -109,7 +109,7 @@ export function ImportTemplateDownload({
     ODP_TEMPLATE_COLUMNS.forEach((col) => {
       let desc = "Wajib diisi sesuai contoh di sheet 'ODP'";
       if (col === "region") {
-        desc = "Wajib diisi dengan nama region lengkap persis sama dengan master di database (mis. DKI Jakarta, Jawa Barat, Banten)";
+        desc = "Wajib diisi dengan nama region lengkap persis sama dengan master di database (Jabodebek, Jawa Barat, Banten, Jawa Tengah, Jawa Timur, Bali, Sulawesi)";
       } else if (col === "POP") {
         desc = "Wajib diisi salah satu — kode POP 3 huruf (contoh: CBN), nama POP (contoh: Bintaro), atau ID POP ber-prefix INV-POP- (contoh: INV-POP-S89P4U2)";
       }
