@@ -26,8 +26,8 @@ const EXAMPLE_ROW_1: Record<string, string> = {
   "device name": "ODP-JKT-001",
   "device type": "ODP",
   "status": "installed",
-  "region": "REG-000005",
-  "POP": "POP-JKT-01",
+  "region": "DKI Jakarta",
+  "POP": "INV-POP-S89P4U2",
   "longitude": "106.84513",
   "latitude": "-6.21462",
   "kapasitas odp": "8",
@@ -38,8 +38,8 @@ const EXAMPLE_ROW_2: Record<string, string> = {
   "device name": "ODP-JKT-002",
   "device type": "ODP",
   "status": "installed",
-  "region": "REG-000005",
-  "POP": "POP-JKT-01",
+  "region": "DKI Jakarta",
+  "POP": "Bintaro",
   "longitude": "106.85120",
   "latitude": "-6.21800",
   "kapasitas odp": "16",
@@ -49,9 +49,9 @@ const EXAMPLE_ROW_2: Record<string, string> = {
 const EXAMPLE_ROW_3: Record<string, string> = {
   "device name": "ODP-BDG-001",
   "device type": "ODP",
-  "status": "planned",
-  "region": "REG-000006",
-  "POP": "POP-BDG-03",
+  "status": "draft",
+  "region": "Jawa Barat",
+  "POP": "CBN",
   "longitude": "107.61912",
   "latitude": "-6.90389",
   "kapasitas odp": "8",
@@ -107,7 +107,13 @@ export function ImportTemplateDownload({
       [""],
     ];
     ODP_TEMPLATE_COLUMNS.forEach((col) => {
-      rows.push([col, "Wajib diisi sesuai contoh di sheet 'ODP'"]);
+      let desc = "Wajib diisi sesuai contoh di sheet 'ODP'";
+      if (col === "region") {
+        desc = "Wajib diisi dengan nama region lengkap persis sama dengan master di database (mis. DKI Jakarta, Jawa Barat, Banten)";
+      } else if (col === "POP") {
+        desc = "Wajib diisi salah satu — kode POP 3 huruf (contoh: CBN), nama POP (contoh: Bintaro), atau ID POP ber-prefix INV-POP- (contoh: INV-POP-S89P4U2)";
+      }
+      rows.push([col, desc]);
     });
     return rows;
   }
@@ -120,7 +126,7 @@ export function ImportTemplateDownload({
       ["device name wajib", "Kolom device name wajib diisi"],
       ["device name unik per region", "Nama ODP sudah digunakan di region ini"],
       ["device type wajib ODP", "device type harus ODP"],
-      ["status valid (installed / planned / maintenance)", "Status tidak valid"],
+      ["status valid (draft / installed / active / inactive / maintenance / retired)", "Status tidak valid"],
       ["region harus valid", "Region tidak ditemukan"],
       ["POP harus valid di region yang sama", "POP tidak valid untuk region"],
       ["longitude -180..180", "Longitude di luar range"],

@@ -236,64 +236,32 @@ export default function OdpBulkImportPage() {
     const role = session?.me?.role;
 
     if (regionsList && allowedRegionIds !== null) {
-      const buildLower = (value: string) => String(value || "").trim().toLowerCase();
+      // Strict canonical lookup: the only acceptable values per row are the
+      // canonical region_name (case-insensitive), the region_code, or the
+      // UUID. Operator must use the registered region name as printed in the
+      // master list. No fuzzy substring or alias map is used here — striktur
+      // ensures creation copy stays stable across deployments and regions
+      // that contain provincial substrings cannot leak across admin scopes.
+      const lowerName = new Map<string, { id: string; rawName: string }>();
+      const lowerCode = new Map<string, { id: string; rawName: string }>();
+      const lowerId = new Map<string, { id: string; rawName: string }>();
+      for (const r of regionsList) {
+        const nameKey = r.region_name.trim().toLowerCase();
+        if (nameKey) lowerName.set(nameKey, { id: r.id, rawName: r.region_name });
+        const codeKey = r.code.trim().toLowerCase();
+        if (codeKey) lowerCode.set(codeKey, { id: r.id, rawName: r.region_name });
+        lowerId.set(r.id.trim().toLowerCase(), { id: r.id, rawName: r.region_name });
+      }
 
-      // Known alias → canonical region_name so case-insensitive, with-space
-      // and abbreviated variants can be resolved without depending on the
-      // backend's normalisation layer handle every rarely-used spelling.
-      const REGION_ALIASES: Record<string, string> = {
-        "dki": "dki jakarta",
-        "dki jakarta": "dki jakarta",
-        "jakarta": "dki jakarta",
-        "jabodetabek": "jabodetabek",
-        "jabodebek": "jabodetabek",
-        "jabar": "jawa barat",
-        "jawa barat": "jawa barat",
-        "west java": "jawa barat",
-        "jateng": "jawa tengah",
-        "jawa tengah": "jawa tengah",
-        "central java": "jawa tengah",
-        "jatim": "jawa timur",
-        "jawa timur": "jawa timur",
-        "east java": "jawa timur",
-        "banten": "banten",
-        "yogyakarta": "di yogyakarta",
-        "di yogyakarta": "di yogyakarta",
-        "diy": "di yogyakarta",
-        "jogja": "di yogyakarta",
-      };
-
-      const canonIndex = new Map<string, Array<{ id: string; rawName: string }>>(
-        regionsList.map((r) => [buildLower(r.region_name), [{ id: r.id, rawName: r.region_name }]]),
-      );
-      regionsList.forEach((r) => {
-        const key = buildLower(r.code);
-        if (key && !canonIndex.has(key)) canonIndex.set(key, []);
-        canonIndex.get(key)?.push({ id: r.id, rawName: r.region_name });
-      });
-
-      const resolveCanonicalName = (raw: string): { id: string; rawName: string } | null => {
-        const original = buildLower(raw);
-        if (!original) return null;
-        const alias = REGION_ALIASES[original] || original;
-
-        for (const candidate of [alias, alias.replace(/\s+/g, " "), original.replace(/\s+/g, " ")]) {
-          const hits = canonIndex.get(candidate);
-          if (hits && hits.length) return hits[0];
-        }
-        // Fuzzy fallback: substring match against canonical names so operators
-        // can use slightly different but obvious spellings (e.g. "JABAR" or
-        // "Jawa-Barat"). Only used when no exact match is found.
-        for (const [canonicalKey, entries] of canonIndex.entries()) {
-          if (canonicalKey.includes(alias) || alias.includes(canonicalKey)) {
-            return entries[0];
-          }
-        }
-        return null;
-      };
-
-      const regionLookup = (raw: string): string | null => {
-        return resolveCanonicalName(raw)?.id ?? null;
+      const regionLookup = (raw: string): { id: string; rawName: string } | null => {
+        const key = String(raw || '').trim().toLowerCase();
+        if (!key) return null;
+        return (
+          lowerName.get(key) ||
+          lowerCode.get(key) ||
+          lowerId.get(key) ||
+          null
+        );
       };
 
       const uniqueRegionIds = new Set<string>();
@@ -303,11 +271,21 @@ export default function OdpBulkImportPage() {
         const rawRegion = String(row.data?.region ?? '').trim();
         if (!rawRegion) return row;
 
-        const regionId = regionLookup(rawRegion);
-        if (!regionId) {
+        const resolved = regionLookup(rawRegion);
+        if (!resolved) {
           unknownRegions.add(rawRegion);
-          return row;
+          return {
+            ...row,
+            valid: false,
+            errors: Array.from(
+              new Set([
+                ...row.errors,
+                `region "${rawRegion}" tidak terdaftar di master regions`,
+              ]),
+            ),
+          };
         }
+        const regionId = resolved.id;
 
         uniqueRegionIds.add(regionId);
 
@@ -573,7 +551,7 @@ export default function OdpBulkImportPage() {
                 </div>
                 <div className="p-2 border border-border bg-card rounded">
                   <span className="text-primary font-bold">region</span>
-                  <p className="text-muted-foreground text-[10px] mt-1">Nama region lengkap (contoh: Jabodebek)</p>
+                  <p className="text-muted-foreground text-[10px] mt-1">Nama region lengkap (harus persis sama dengan master di database)</p>
                 </div>
                 <div className="p-2 border border-border bg-card rounded">
                   <span className="text-primary font-bold">POP</span>
