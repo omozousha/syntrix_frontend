@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, CircleDot } from "lucide-react";
+import { CheckCircle2, AlertCircle, CircleDot, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ImportPreviewRow = {
@@ -22,18 +22,67 @@ export type ImportPreviewTableProps = {
 /**
  * Compact preview table for import rows.
  * 
- * - Header: small uppercase labels
+ * - Header: small uppercase labels with sortable columns
  * - Row: monospace numeric / value
  * - Status column uses Badge with semantic colors (success/warning/destructive)
  * - 50-row default limit (current spec); user sees summary for larger batches
+ * - Sortable headers with visual indicators
  */
 export function ImportPreviewTable({
   rows,
   columns,
   maxRows = 50,
 }: ImportPreviewTableProps) {
-  const visibleRows = rows.slice(0, maxRows);
+  const [sortConfig, setSortConfig] = React.useState<{
+    key: string | null;
+    direction: "asc" | "desc";
+  }>({ key: null, direction: "asc" });
+
+  const visibleRows = React.useMemo(() => {
+    let sortedRows = rows.slice(0, maxRows);
+    
+    if (sortConfig.key) {
+      const sortKey = sortConfig.key;
+      const direction = sortConfig.direction === "asc" ? 1 : -1;
+      sortedRows = [...sortedRows].sort((a, b) => {
+        const aVal = a.data?.[sortKey] ?? "";
+        const bVal = b.data?.[sortKey] ?? "";
+
+        // Try numeric comparison first
+        const aNum = Number(aVal);
+        const bNum = Number(bVal);
+
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return (aNum - bNum) * direction;
+        }
+        
+        // Fallback to locale string comparison
+        return aVal.localeCompare(bVal, undefined, { numeric: true, sensitivity: 'base' }) * direction;
+      });
+    }
+    
+    return sortedRows;
+  }, [rows, maxRows, sortConfig]);
+
   const overflow = rows.length - visibleRows.length;
+
+  const handleSort = (key: string) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortConfig.key !== column) return (
+      <ChevronUp className="size-3 text-muted-foreground/30" />
+    );
+    return sortConfig.direction === "asc" ? (
+      <ChevronUp className="size-3 text-muted-foreground" />
+    ) : (
+      <ChevronDown className="size-3 text-muted-foreground" />
+    );
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -42,7 +91,9 @@ export function ImportPreviewTable({
           PRATINJAU {rows.length ? `(${rows.length} baris)` : ""}
         </span>
         {overflow > 0 ? (
-          <span className="text-xs text-muted-foreground uppercase tracking-wider font-mono">
+          <span
+            className="text-xs text-muted-foreground uppercase tracking-wider font-mono"
+          >
             +{overflow} BARIS TERSEMBUNYI (HANYA 50 PERTAMA)
           </span>
         ) : null}
@@ -61,10 +112,16 @@ export function ImportPreviewTable({
                 </span>
               </th>
               {columns.map((col) => (
-                <th key={col} className="px-3 py-2 text-left">
+                <th
+                  key={col}
+                  className="px-3 py-2 text-left cursor-pointer select-none hover:bg-muted/50 transition-colors flex items-center gap-1"
+                  style={{ userSelect: "none" }}
+                  onClick={() => handleSort(col)}
+                >
                   <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
                     {col}
                   </span>
+                  {renderSortIcon(col)}
                 </th>
               ))}
               <th className="px-3 py-2 text-left" style={{ width: 120 }}>
