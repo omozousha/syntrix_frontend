@@ -737,7 +737,15 @@ export default function OdpBulkImportPage() {
               {uploadFile && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
                   <span>Berkas: <strong>{filename}</strong></span>
-                  <Button variant="outline" size="sm" onClick={removeFile} className="h-7 text-[10px]">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      removeFile();
+                      setStep("upload");
+                    }}
+                    className="h-7 text-[10px]"
+                  >
                     GANTI FILE
                   </Button>
                 </div>
@@ -771,7 +779,7 @@ export default function OdpBulkImportPage() {
             type="button"
             variant="ghost"
             className="rounded-full"
-            onClick={() => router.push("/data-management/list/odp")}
+            onClick={() => router.push("/data-management")}
           >
             BATAL
           </Button>
