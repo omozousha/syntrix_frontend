@@ -199,7 +199,7 @@ export function OdpBulkImportNoticeDialog({
             <Button
               type="button"
               onClick={handleProceed}
-              disabled={!popCheck.hasPop || isChecking}
+              disabled={isChecking}
               className="w-full"
             >
               Lanjutkan ke Import
@@ -223,14 +223,16 @@ export function OdpBulkImportNoticeDialog({
               )}
             </Button>
           )}
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => handleDismiss(true)}
-            className="w-full"
-          >
-            Tutup
-          </Button>
+          {!popCheck?.hasPop && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => handleDismiss(true)}
+              className="w-full"
+            >
+              Tutup
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

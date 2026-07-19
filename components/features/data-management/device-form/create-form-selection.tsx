@@ -23,6 +23,9 @@ type TenantOption = { id: string; tenant_name: string; tenant_code?: string | nu
 type RouteTypeOption = { id: string; route_type_name: string; route_type_code?: string | null };
 
 type CableTypeOption = { id: string; cable_type_code: string; cable_type_name: string };
+type TopologyDeviceOption = { id: string; device_name: string; device_type_key: string };
+type TopologyPortOption = { id: string; port_label?: string | null; port_index: number; status: string };
+type CableConnectionDraft = { route_type: string; cable_type: string; cable_length_m: string; route_name: string };
 
 export type CreateFormSelectionProps = {
   deviceTypeKey: string;
@@ -37,6 +40,13 @@ export type CreateFormSelectionProps = {
   manufacturers: ManufacturerOption[];
   brands: BrandOption[];
   assetModels: AssetModelOption[];
+  topologyFrontDevices?: TopologyDeviceOption[];
+  topologyRearDevices?: TopologyDeviceOption[];
+  frontDevicePorts?: TopologyPortOption[];
+  rearDevicePorts?: TopologyPortOption[];
+  loadingTopology?: boolean;
+  cableConnections?: CableConnectionDraft[];
+  onCableConnectionsChange?: (next: CableConnectionDraft[]) => void;
   onChange: (patch: Record<string, string>) => void;
   onPopChange: (popId: string) => void;
 };
@@ -54,6 +64,13 @@ export function CreateFormSelection({
   manufacturers,
   brands,
   assetModels,
+  topologyFrontDevices = [],
+  topologyRearDevices = [],
+  frontDevicePorts = [],
+  rearDevicePorts = [],
+  loadingTopology = false,
+  cableConnections = [],
+  onCableConnectionsChange,
   onChange,
   onPopChange,
 }: CreateFormSelectionProps) {
@@ -68,9 +85,18 @@ export function CreateFormSelection({
         installationTypes={installationTypes}
         tenants={tenants}
         projects={projects}
+        routeTypes={routeTypes}
+        cableTypes={cableTypes}
         manufacturers={manufacturers}
         brands={brands}
         assetModels={assetModels}
+        topologyFrontDevices={topologyFrontDevices}
+        topologyRearDevices={topologyRearDevices}
+        frontDevicePorts={frontDevicePorts}
+        rearDevicePorts={rearDevicePorts}
+        loadingTopology={loadingTopology}
+        cableConnections={cableConnections}
+        onCableConnectionsChange={onCableConnectionsChange}
         onChange={onChange}
         onPopChange={onPopChange}
       />
@@ -89,6 +115,9 @@ export function CreateFormSelection({
         manufacturers={manufacturers}
         brands={brands}
         assetModels={assetModels}
+        topologyFrontDevices={topologyFrontDevices}
+        frontDevicePorts={frontDevicePorts}
+        loadingTopology={loadingTopology}
         onChange={onChange}
         onPopChange={onPopChange}
       />
@@ -109,6 +138,11 @@ export function CreateFormSelection({
         manufacturers={manufacturers}
         brands={brands}
         assetModels={assetModels}
+        topologyFrontDevices={topologyFrontDevices}
+        topologyRearDevices={topologyRearDevices}
+        frontDevicePorts={frontDevicePorts}
+        rearDevicePorts={rearDevicePorts}
+        loadingTopology={loadingTopology}
         onChange={onChange}
         onPopChange={onPopChange}
       />
@@ -127,6 +161,11 @@ export function CreateFormSelection({
       manufacturers={manufacturers}
       brands={brands}
       assetModels={assetModels}
+      topologyFrontDevices={topologyFrontDevices}
+      topologyRearDevices={topologyRearDevices}
+      frontDevicePorts={frontDevicePorts}
+      rearDevicePorts={rearDevicePorts}
+      loadingTopology={loadingTopology}
       onChange={onChange}
       onPopChange={onPopChange}
     />

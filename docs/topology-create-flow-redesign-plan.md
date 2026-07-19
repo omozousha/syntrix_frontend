@@ -694,11 +694,11 @@ OLT dan SWITCH adalah **active devices** — berbeda fundamental dengan OTB/ODC/
 | File | Perubahan | Status |
 |:-----|:----------|:------:|
 | `app/(app)/data-management/create/page.tsx` | Tambah state topology + useEffect fetch devices by POP + 5 section Relasi Topologi (OTB, CABLE, ODC, JC, ODP) + cableConnections state + payload builder | ✅ **SELESAI** |
-| `components/features/data-management/device-form/create/generic-device-create.tsx` | Hapus field port usage dari type + props | ⬜ Belum |
-| `components/features/data-management/device-form/create/odc-device-create.tsx` | Hapus field port usage; tambah front port + cable connections (multiple) | ⬜ Belum |
-| `components/features/data-management/device-form/create/odp-device-create.tsx` | Hapus field port usage; tambah front port combobox | ⬜ Belum |
-| `components/features/data-management/device-form/create/cable-device-create.tsx` | Hapus used_core; tambah front/rear port | ⬜ Belum |
-| `components/features/data-management/device-form/create-form-selection.tsx` | Update props — tambah front/rear port callbacks | ⬜ Belum |
+| `components/features/data-management/device-form/create/generic-device-create.tsx` | Hapus field port usage dari type + props; tambah relasi OTB/JC | ✅ **SELESAI (2026-07-17)** |
+| `components/features/data-management/device-form/create/odc-device-create.tsx` | Hapus field port usage; tambah front port + cable connections (multiple) | ✅ **SELESAI (2026-07-17)** |
+| `components/features/data-management/device-form/create/odp-device-create.tsx` | Hapus field port usage; tambah front port combobox | ✅ **SELESAI (2026-07-17)** |
+| `components/features/data-management/device-form/create/cable-device-create.tsx` | Hapus used_core; tambah front/rear port | ✅ **SELESAI (2026-07-17)** |
+| `components/features/data-management/device-form/create-form-selection.tsx` | Update props — tambah front/rear port callbacks + cableConnections plumbing | ✅ **SELESAI (2026-07-17)** |
 
 ### Frontend — Fase 2 (Belum Dimulai)
 
@@ -710,7 +710,7 @@ OLT dan SWITCH adalah **active devices** — berbeda fundamental dengan OTB/ODC/
 | `components/features/data-management/device-detail/port-tray-badge.tsx` | **BARU** — badge ringkasan per tray | ✅ **SELESAI** |
 | `components/features/data-management/device-detail/port-tray-types.ts` | **BARU** — types + FIBER_COLORS + generateTrayLayout | ✅ **SELESAI** |
 | `components/features/data-management/device-detail/index.ts` | Update exports — Fase 2a components | ✅ **SELESAI** |
-| `components/features/data-management/device-detail/device-form-selection.tsx` | Update — integrasi tray ke detail forms (Fase 2b) | ⬜ Belum |
+| `components/features/data-management/device-detail/device-form-selection.tsx` | Rekonsiliasi dokumentasi — integrasi tray Fase 2b sudah aktif di `[slug]/[id]/page.tsx` (bukan di selector ini) | ✅ **REKONSILIASI SELESAI (2026-07-19)** |
 
 ### Endpoint Backend
 
