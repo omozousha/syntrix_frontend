@@ -641,7 +641,7 @@ export default function DataManagementListPage() {
     if (category.resource === "customers") return [selectAllHeader, "CID", "Name", "Service", "POP", "Status", "Updated"];
     if (category.resource === "routes") return [selectAllHeader, "Route ID", "Route Name", "Region", "POP", "Status", "Updated"];
     if (category.resource === "regions") return [selectAllHeader, "Region ID", "Inventory Code", "Region Name", "Color", "Updated"];
-    if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Inventory Code", "Asset Group", "Status", "Updated"];
+    if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Topology Role", "Layout", "Assignable", "Status", "Updated"];
     if (category.resource === "popTypes") return [selectAllHeader, "Code", "POP Type", "Status", "Updated"];
     if (category.resource === "routeTypes") return [selectAllHeader, "Code", "Route Type", "Status", "Updated"];
     if (category.resource === "cableTypes") return [selectAllHeader, "Code", "Cable Type", "Description", "Status", "Updated"];
@@ -771,8 +771,9 @@ export default function DataManagementListPage() {
           renderDeviceIconCell(pick(item, ["icon_name"])),
           pick(item, ["device_type_key"]),
           withArchivedLabel(item, pick(item, ["device_type_name"])),
-          pick(item, ["inventory_type_code"]),
-          pick(item, ["asset_group"]),
+          pick(item, ["topology_role"]),
+          pick(item, ["layout_type"]),
+          pick(item, ["is_assignable"]),
           pick(item, ["is_active"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -1683,9 +1684,45 @@ function renderCreateFields(
             options={[
               { value: "active", label: "active" },
               { value: "passive", label: "passive" },
-              { value: "cme", label: "CME" },
-              { value: "building", label: "Building" },
             ]}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Topology Role</Label>
+          <Combobox
+            value={form.topology_role || "termination_panel"}
+            onValueChange={(value) => setValue("topology_role", value)}
+            options={[
+              { value: "source_active", label: "source_active" },
+              { value: "termination_panel", label: "termination_panel" },
+              { value: "distribution_point", label: "distribution_point" },
+              { value: "access_point", label: "access_point" },
+              { value: "splice_point", label: "splice_point" },
+              { value: "physical_cable", label: "physical_cable" },
+              { value: "customer_endpoint", label: "customer_endpoint" },
+              { value: "network_active", label: "network_active" },
+              { value: "civil_structure", label: "civil_structure" },
+            ]}
+            placeholder="Pilih topology role"
+            searchPlaceholder="Cari role..."
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Layout Type</Label>
+          <Combobox
+            value={form.layout_type || "summary_only"}
+            onValueChange={(value) => setValue("layout_type", value)}
+            options={[
+              { value: "tray", label: "tray" },
+              { value: "tube", label: "tube" },
+              { value: "core_grid", label: "core_grid" },
+              { value: "odp_operations", label: "odp_operations" },
+              { value: "olt_slot", label: "olt_slot" },
+              { value: "switch_grid", label: "switch_grid" },
+              { value: "summary_only", label: "summary_only" },
+            ]}
+            placeholder="Pilih layout type"
+            searchPlaceholder="Cari layout..."
           />
         </div>
         <div className="space-y-1.5">
@@ -1706,6 +1743,70 @@ function renderCreateFields(
           />
         </div>
         <div className="space-y-1.5">
+          <Label>Default Front Label</Label>
+          <Input value={form.default_front_label || ""} onChange={(e) => setValue("default_front_label", e.target.value)} placeholder="Contoh: Hulu" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Default Rear Label</Label>
+          <Input value={form.default_rear_label || ""} onChange={(e) => setValue("default_rear_label", e.target.value)} placeholder="Contoh: Hilir" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Is Passive</Label>
+          <Combobox
+            value={form.is_passive || "false"}
+            onValueChange={(value) => setValue("is_passive", value)}
+            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Is Active Device</Label>
+          <Combobox
+            value={form.is_active_device || "false"}
+            onValueChange={(value) => setValue("is_active_device", value)}
+            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Supports Ports</Label>
+          <Combobox
+            value={form.supports_ports || "false"}
+            onValueChange={(value) => setValue("supports_ports", value)}
+            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Supports Splitter</Label>
+          <Combobox
+            value={form.supports_splitter || "false"}
+            onValueChange={(value) => setValue("supports_splitter", value)}
+            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Supports Core Management</Label>
+          <Combobox
+            value={form.supports_core_management || "false"}
+            onValueChange={(value) => setValue("supports_core_management", value)}
+            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Supports Joint Closure</Label>
+          <Combobox
+            value={form.supports_joint_closure || "false"}
+            onValueChange={(value) => setValue("supports_joint_closure", value)}
+            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Is Assignable</Label>
+          <Combobox
+            value={form.is_assignable || "false"}
+            onValueChange={(value) => setValue("is_assignable", value)}
+            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
+          />
+        </div>
+        <div className="space-y-1.5 md:col-span-2">
           <Label>Description</Label>
           <Input
             value={form.description || ""}
@@ -2190,7 +2291,7 @@ function renderCreateFields(
 }
 
 function getCreateDefaults(resource: string): Record<string, string> {
-  if (resource === "deviceTypes") return { asset_group: "active", icon_name: "HardDrive", is_active: "true", sort_order: "0" };
+  if (resource === "deviceTypes") return { asset_group: "active", icon_name: "HardDrive", topology_role: "termination_panel", is_passive: "false", is_active_device: "false", supports_ports: "false", supports_splitter: "false", supports_core_management: "false", supports_joint_closure: "false", layout_type: "summary_only", default_front_label: "Hulu", default_rear_label: "Hilir", is_assignable: "false", is_active: "true", sort_order: "0" };
   if (resource === "popTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "routeTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "cableTypes") return { is_active: "true", sort_order: "0" };
@@ -2405,6 +2506,17 @@ function buildEditFormFromItem(resource: string, item: GenericItem): Record<stri
       device_type_name: read("device_type_name"),
       asset_group: read("asset_group") || "active",
       icon_name: read("icon_name") || "HardDrive",
+      topology_role: read("topology_role") || "termination_panel",
+      is_passive: readBool("is_passive", false),
+      is_active_device: readBool("is_active_device", false),
+      supports_ports: readBool("supports_ports", false),
+      supports_splitter: readBool("supports_splitter", false),
+      supports_core_management: readBool("supports_core_management", false),
+      supports_joint_closure: readBool("supports_joint_closure", false),
+      layout_type: read("layout_type") || "summary_only",
+      default_front_label: read("default_front_label") || "Hulu",
+      default_rear_label: read("default_rear_label") || "Hilir",
+      is_assignable: readBool("is_assignable", false),
       description: read("description"),
       sort_order: read("sort_order") || "0",
       is_active: readBool("is_active", true),
@@ -2570,6 +2682,17 @@ function buildCreatePayload(resource: string, form: Record<string, string>) {
     assign("device_type_name");
     assign("asset_group");
     assign("icon_name");
+    assign("topology_role");
+    payload.is_passive = (trim("is_passive") || "false") === "true";
+    payload.is_active_device = (trim("is_active_device") || "false") === "true";
+    payload.supports_ports = (trim("supports_ports") || "false") === "true";
+    payload.supports_splitter = (trim("supports_splitter") || "false") === "true";
+    payload.supports_core_management = (trim("supports_core_management") || "false") === "true";
+    payload.supports_joint_closure = (trim("supports_joint_closure") || "false") === "true";
+    assign("layout_type");
+    assign("default_front_label");
+    assign("default_rear_label");
+    payload.is_assignable = (trim("is_assignable") || "false") === "true";
     assign("description");
     payload.sort_order = Number(trim("sort_order") || "0");
     payload.is_active = (trim("is_active") || "true") !== "false";
