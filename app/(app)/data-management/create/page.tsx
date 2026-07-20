@@ -99,6 +99,7 @@ type CustomerOption = {
 };
 type PopTypeOption = { id: string; pop_type_name: string; pop_type_code?: string | null };
 type RouteTypeOption = { id: string; route_type_name: string; route_type_code?: string | null };
+type CableTypeMasterOption = { id: string; cable_type_code: string; cable_type_name: string; cable_role?: string | null; core_count?: number | null; attenuation_1310_db_per_km?: number | null; attenuation_1490_db_per_km?: number | null; attenuation_1550_db_per_km?: number | null };
 type ProvinceOption = { id: string; province_name: string };
 type CityOption = { id: string; city_name: string; province_id?: string | null };
 type ManufacturerOption = { id: string; manufacturer_name: string; manufacturer_code?: string | null };
@@ -114,6 +115,29 @@ type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
 type ServiceTypeOption = { id: string; service_type_name: string; service_type_code?: string | null };
 type TenantOption = { id: string; tenant_name: string; tenant_code?: string | null };
+type DeviceTypeMasterOption = {
+  id: string;
+  device_type_key: string;
+  device_type_name?: string | null;
+  supports_ports?: boolean | null;
+  supports_splitter?: boolean | null;
+  supports_core_management?: boolean | null;
+  supports_joint_closure?: boolean | null;
+  is_assignable?: boolean | null;
+  default_front_label?: string | null;
+  default_rear_label?: string | null;
+  topology_role?: string | null;
+  layout_type?: string | null;
+};
+type TopologyRelationRuleOption = {
+  id: string;
+  source_device_type_key: string;
+  direction: 'front' | 'rear';
+  allowed_peer_device_type_key: string;
+  requires_same_pop?: boolean | null;
+  requires_same_project?: boolean | null;
+  is_active?: boolean | null;
+};
 type SplitterProfileOption = {
   id: string;
   ratio_label: string;
@@ -204,7 +228,7 @@ export default function CreateDataManagementPage() {
   const [autoFillNotice, setAutoFillNotice] = useState("");
   const [popTypes, setPopTypes] = useState<PopTypeOption[]>([]);
   const [routeTypes, setRouteTypes] = useState<RouteTypeOption[]>([]);
-  const [cableTypes, setCableTypes] = useState<Array<{ id: string; cable_type_code: string; cable_type_name: string }>>([]);
+  const [cableTypes, setCableTypes] = useState<CableTypeMasterOption[]>([]);
   const [coreCapacities, setCoreCapacities] = useState<Array<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>>([]);
   const [deviceCoreCapacities, setDeviceCoreCapacities] = useState<Array<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>>([]);
   const [provinces, setProvinces] = useState<ProvinceOption[]>([]);
@@ -212,6 +236,8 @@ export default function CreateDataManagementPage() {
   const [manufacturers, setManufacturers] = useState<ManufacturerOption[]>([]);
   const [brands, setBrands] = useState<BrandOption[]>([]);
   const [assetModels, setAssetModels] = useState<AssetModelOption[]>([]);
+  const [deviceTypeMasters, setDeviceTypeMasters] = useState<DeviceTypeMasterOption[]>([]);
+  const [topologyRelationRules, setTopologyRelationRules] = useState<TopologyRelationRuleOption[]>([]);
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeOption[]>([]);
@@ -324,10 +350,38 @@ export default function CreateDataManagementPage() {
   );
   const isFixedRegionRole = me.role === "user_all_region" || me.role === "user_region";
   const selectedRegionLabel = regions.find((region) => region.id === form.region_id)?.region_name || "-";
-  const hasCoreCapacities = isDevice && (form.device_type_key === "OTB" || form.device_type_key === "ODC" || form.device_type_key === "JC" || form.device_type_key === "CABLE");
-  const isCableDevice = isDevice && form.device_type_key === "CABLE";
-  const isOntDevice = isDevice && form.device_type_key === "ONT";
+  const selectedDeviceTypeMaster = useMemo(
+    () => deviceTypeMasters.find((item) => item.device_type_key === form.device_type_key) || null,
+    [deviceTypeMasters, form.device_type_key],
+  );
+  const hasCoreCapacities = isDevice && (
+    selectedDeviceTypeMaster?.supports_core_management ?? (form.device_type_key === "OTB" || form.device_type_key === "ODC" || form.device_type_key === "JC" || form.device_type_key === "CABLE")
+  );
+  const isCableDevice = isDevice && ((selectedDeviceTypeMaster?.topology_role === "physical_cable") || form.device_type_key === "CABLE");
+  const isOntDevice = isDevice && ((selectedDeviceTypeMaster?.topology_role === "customer_endpoint") || form.device_type_key === "ONT");
   const hasCustomerAutoFill = isOntDevice && Boolean(form.customer_id);
+  const frontRelationLabel = selectedDeviceTypeMaster?.default_front_label || "Hulu";
+  const rearRelationLabel = selectedDeviceTypeMaster?.default_rear_label || "Hilir";
+
+  function getActiveRelationRules(sourceDeviceTypeKey: string, direction: "front" | "rear") {
+    const source = String(sourceDeviceTypeKey || '').toUpperCase();
+    return topologyRelationRules.filter(
+      (rule) =>
+        String(rule.source_device_type_key || '').toUpperCase() === source &&
+        rule.direction === direction &&
+        rule.is_active !== false,
+    );
+  }
+
+  function getRelationRulePeerTypeKeys(sourceDeviceTypeKey: string, direction: "front" | "rear") {
+    return Array.from(
+      new Set(
+        getActiveRelationRules(sourceDeviceTypeKey, direction)
+          .map((rule) => String(rule.allowed_peer_device_type_key || '').toUpperCase())
+          .filter(Boolean),
+      ),
+    );
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -340,14 +394,14 @@ export default function CreateDataManagementPage() {
         const needsCustomerMasterData = isCustomer;
         const needsTenantMasterData = isDevice || isPop;
 
-        const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, cableTypeRes, coreCapacityRes, deviceCoreCapacityRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, odpTypesRes, installationTypesRes, serviceTypesRes, tenantsRes, splitterProfilesRes] = await Promise.all([
+        const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, cableTypeRes, coreCapacityRes, deviceCoreCapacityRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, deviceTypesRes, topologyRelationRulesRes, odpTypesRes, installationTypesRes, serviceTypesRes, tenantsRes, splitterProfilesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
           optionalPaginatedRequest<PopOption>(needsPops, () => apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token })),
           optionalPaginatedRequest<ProjectOption>(needsProjects, () => apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token })),
           emptyPaginatedResponse<CustomerOption>(),
           optionalPaginatedRequest<PopTypeOption>(isPop, () => apiFetch<PaginatedResponse<PopTypeOption>>("/popTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<RouteTypeOption>(deviceType === "CABLE" || deviceType === "ODC", () => apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token })),
-          optionalPaginatedRequest<{ id: string; cable_type_code: string; cable_type_name: string }>(deviceType === "CABLE" || deviceType === "ODC", () => apiFetch<PaginatedResponse<{ id: string; cable_type_code: string; cable_type_name: string }>>("/cableTypes?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<CableTypeMasterOption>(deviceType === "CABLE" || deviceType === "ODC", () => apiFetch<PaginatedResponse<CableTypeMasterOption>>("/cableTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>(deviceType === "CABLE", () => apiFetch<PaginatedResponse<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>>("/coreCapacities?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>(hasCoreCapacities, () => apiFetch<PaginatedResponse<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>>("/deviceCoreCapacities?page=1&limit=200&is_active=true", { token })),
           apiFetch<PaginatedResponse<ProvinceOption>>("/provinces?page=1&limit=500&is_active=true", { token }),
@@ -355,6 +409,8 @@ export default function CreateDataManagementPage() {
           optionalPaginatedRequest<ManufacturerOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<ManufacturerOption>>("/manufacturers?page=1&limit=500", { token })),
           optionalPaginatedRequest<BrandOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<BrandOption>>("/brands?page=1&limit=500", { token })),
           optionalPaginatedRequest<AssetModelOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<AssetModelOption>>("/assetModels?page=1&limit=1000", { token })),
+          optionalPaginatedRequest<DeviceTypeMasterOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<DeviceTypeMasterOption>>("/deviceTypes?page=1&limit=300&is_active=true", { token })),
+          optionalPaginatedRequest<TopologyRelationRuleOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<TopologyRelationRuleOption>>("/topologyRelationRules?page=1&limit=500&is_active=true", { token })),
           optionalPaginatedRequest<OdpTypeOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<OdpTypeOption>>("/odpTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<InstallationTypeOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<ServiceTypeOption>(needsCustomerMasterData, () => apiFetch<PaginatedResponse<ServiceTypeOption>>("/serviceTypes?page=1&limit=200&is_active=true", { token })),
@@ -383,6 +439,8 @@ export default function CreateDataManagementPage() {
         setManufacturers(manufacturersRes.data || []);
         setBrands(brandsRes.data || []);
         setAssetModels(modelsRes.data || []);
+        setDeviceTypeMasters(deviceTypesRes.data || []);
+        setTopologyRelationRules(topologyRelationRulesRes.data || []);
         setOdpTypes(odpTypesRes.data || []);
         setInstallationTypes(installationTypesRes.data || []);
         setServiceTypes(serviceTypesRes.data || []);
@@ -406,7 +464,27 @@ export default function CreateDataManagementPage() {
     };
   }, [token, me.role, scopeRegionIds, deviceType, isCustomer, isDevice, isPop, isProject]);
 
-  const needsTopology = isDevice && (form.device_type_key === "OTB" || form.device_type_key === "ODC" || form.device_type_key === "CABLE" || form.device_type_key === "JC" || form.device_type_key === "ODP");
+  useEffect(() => {
+    if (form.device_type_key !== "CABLE") return;
+    if (!form.cable_type) return;
+    const selectedCableType = cableTypes.find((item) => item.cable_type_name === form.cable_type || item.cable_type_code === form.cable_type);
+    if (!selectedCableType) return;
+    setForm((prev) => {
+      const next = { ...prev };
+      if (!prev.capacity_core && selectedCableType.core_count != null) {
+        next.capacity_core = String(selectedCableType.core_count);
+      }
+      if (!prev.route_type && selectedCableType.cable_role) {
+        next.route_type = selectedCableType.cable_role;
+      }
+      return next;
+    });
+  }, [form.device_type_key, form.cable_type, cableTypes]);
+
+  const needsTopology = isDevice && (
+    selectedDeviceTypeMaster?.is_assignable ??
+    (form.device_type_key === "OTB" || form.device_type_key === "ODC" || form.device_type_key === "CABLE" || form.device_type_key === "JC" || form.device_type_key === "ODP")
+  );
 
   // ── Fetch topology device candidates by POP ────────────────────────────
   useEffect(() => {
@@ -423,76 +501,36 @@ export default function CreateDataManagementPage() {
 
     async function loadTopologyDevices() {
       try {
-        // Backend pakai _eq (single value), jadi fetch per device type & combine
-        async function loadFront() {
-          if (form.device_type_key === "OTB") {
-            const [oltRes, switchRes] = await Promise.all([
-              apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
-                `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=OLT`,
+        async function loadByRules(direction: "front" | "rear") {
+          const rules = getActiveRelationRules(form.device_type_key, direction);
+          if (!rules.length) return [];
+          const responses = await Promise.all(
+            rules.map((rule) => {
+              const params = new URLSearchParams({ page: "1", limit: "200", status: "active", device_type_key: String(rule.allowed_peer_device_type_key || '').toUpperCase() });
+              if (rule.requires_same_pop !== false && form.pop_id) {
+                params.set("pop_id", form.pop_id);
+              }
+              return apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string; project_id?: string | null }>>(
+                `/devices?${params.toString()}`,
                 { token },
-              ),
-              apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
-                `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=SWITCH`,
-                { token },
-              ),
-            ]);
-            return [...(oltRes.data || []), ...(switchRes.data || [])];
-          }
-          if (form.device_type_key === "ODC" || form.device_type_key === "CABLE" || form.device_type_key === "JC") {
-            const otbRes = await apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
-              `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=OTB`,
-              { token },
-            );
-            return otbRes.data || [];
-          }
-          if (form.device_type_key === "ODP") {
-            const odcRes = await apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
-              `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=ODC`,
-              { token },
-            );
-            return odcRes.data || [];
-          }
-          return [];
+              ).catch(() => ({ data: [] } as unknown as PaginatedResponse<{ id: string; device_name: string; device_type_key: string; project_id?: string | null }>));
+            }),
+          );
+          const combined = responses.flatMap((res, index) => {
+            const rule = rules[index];
+            const rows = res.data || [];
+            if (rule.requires_same_project && form.project_id) {
+              return rows.filter((row) => !row.project_id || row.project_id === form.project_id);
+            }
+            return rows;
+          });
+          return Array.from(new Map(combined.map((row) => [row.id, row])).values());
         }
 
-        async function loadRear() {
-          if (form.device_type_key === "OTB" || form.device_type_key === "CABLE") {
-            const [odcRes, jcRes] = await Promise.all([
-              apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
-                `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=ODC`,
-                { token },
-              ),
-              apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
-                `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=JC`,
-                { token },
-              ),
-            ]);
-            return [...(odcRes.data || []), ...(jcRes.data || [])];
-          }
-          if (form.device_type_key === "ODC") {
-            const odpRes = await apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
-              `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=ODP`,
-              { token },
-            );
-            return odpRes.data || [];
-          }
-          if (form.device_type_key === "JC") {
-            const [hhRes, mhRes] = await Promise.all([
-              apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
-                `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=HH`,
-                { token },
-              ),
-              apiFetch<PaginatedResponse<{ id: string; device_name: string; device_type_key: string }>>(
-                `/devices?pop_id=${form.pop_id}&limit=200&status=active&device_type_key=MH`,
-                { token },
-              ),
-            ]);
-            return [...(hhRes.data || []), ...(mhRes.data || [])];
-          }
-          return [];
-        }
-
-        const [frontDevices, rearDevices] = await Promise.all([loadFront(), loadRear()]);
+        const [frontDevices, rearDevices] = await Promise.all([
+          loadByRules("front"),
+          loadByRules("rear"),
+        ]);
         if (!cancelled) {
           setTopologyFrontDevices(frontDevices);
           setTopologyRearDevices(rearDevices);
@@ -666,9 +704,15 @@ export default function CreateDataManagementPage() {
     };
   }, [token, isPop, isDevice, form.region_id, form.pop_type, form.device_type_key]);
 
-  const showCoreFields = isDevice && CORE_TYPES.has(form.device_type_key);
-  const showPortFields = isDevice && PORT_TYPES.has(form.device_type_key) && !["ONT", "OLT", "SWITCH", "ROUTER"].includes(form.device_type_key);
-  const showSplitterField = isDevice && (form.device_type_key === "ODP" || form.device_type_key === "ODC");
+  const showCoreFields = isDevice && (
+    selectedDeviceTypeMaster?.supports_core_management ?? CORE_TYPES.has(form.device_type_key)
+  );
+  const showPortFields = isDevice && (
+    selectedDeviceTypeMaster?.supports_splitter ?? (PORT_TYPES.has(form.device_type_key) && !["ONT", "OLT", "SWITCH", "ROUTER"].includes(form.device_type_key))
+  );
+  const showSplitterField = isDevice && (
+    selectedDeviceTypeMaster?.supports_splitter ?? (form.device_type_key === "ODP" || form.device_type_key === "ODC")
+  );
   const selectedSplitterProfile = useMemo(
     () => splitterProfiles.find((item) => item.ratio_label === form.splitter_ratio) || null,
     [splitterProfiles, form.splitter_ratio],
@@ -1272,6 +1316,8 @@ export default function CreateDataManagementPage() {
                     frontDevicePorts={frontDevicePorts}
                     rearDevicePorts={rearDevicePorts}
                     loadingTopology={loadingTopology}
+                    frontRelationLabel={frontRelationLabel}
+                    rearRelationLabel={rearRelationLabel}
                     cableConnections={cableConnections}
                     onCableConnectionsChange={setCableConnections}
                     onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}

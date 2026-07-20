@@ -52,6 +52,8 @@ export function GenericDeviceCreate({
   frontDevicePorts = [],
   rearDevicePorts = [],
   loadingTopology = false,
+  frontRelationLabel = "Hulu",
+  rearRelationLabel = "Hilir",
   onChange,
   onPopChange,
 }: {
@@ -69,6 +71,8 @@ export function GenericDeviceCreate({
   frontDevicePorts?: TopologyPortOption[];
   rearDevicePorts?: TopologyPortOption[];
   loadingTopology?: boolean;
+  frontRelationLabel?: string;
+  rearRelationLabel?: string;
   onChange: (patch: Record<string, string>) => void;
   onPopChange: (popId: string) => void;
 }) {
@@ -93,7 +97,7 @@ export function GenericDeviceCreate({
             Relasi Topologi
           </div>
           <div className="space-y-1.5">
-            <FieldLabel label="Front Port (Hulu)" tooltip="Pilih perangkat OLT/SWITCH di POP yang sama sebagai sumber koneksi hulu." />
+            <FieldLabel label={`Front Port (${frontRelationLabel})`} tooltip="Pilih perangkat OLT/SWITCH di POP yang sama sebagai sumber koneksi hulu." />
             <Combobox
               value={values.front_device_id || "__none__"}
               onValueChange={(v) => {
@@ -110,7 +114,7 @@ export function GenericDeviceCreate({
             />
           </div>
           <div className="space-y-1.5">
-            <FieldLabel label="Port Hulu" tooltip="Pilih port idle dari device hulu yang terpilih." />
+            <FieldLabel label={`Port ${frontRelationLabel}`} tooltip="Pilih port idle dari device hulu yang terpilih." />
             <Combobox
               value={values.front_port_id || "__none__"}
               onValueChange={(v) => onChange({ front_port_id: v === "__none__" ? "" : v })}
@@ -124,7 +128,7 @@ export function GenericDeviceCreate({
             />
           </div>
           <div className="space-y-1.5">
-            <FieldLabel label="Rear Port (Hilir)" tooltip="Pilih perangkat ODC/JC di POP yang sama sebagai tujuan koneksi hilir." />
+            <FieldLabel label={`Rear Port (${rearRelationLabel})`} tooltip="Pilih perangkat ODC/JC di POP yang sama sebagai tujuan koneksi hilir." />
             <Combobox
               value={values.rear_device_id || "__none__"}
               onValueChange={(v) => {
@@ -141,7 +145,7 @@ export function GenericDeviceCreate({
             />
           </div>
           <div className="space-y-1.5">
-            <FieldLabel label="Port Hilir" tooltip="Pilih port idle dari device hilir yang terpilih." />
+            <FieldLabel label={`Port ${rearRelationLabel}`} tooltip="Pilih port idle dari device hilir yang terpilih." />
             <Combobox
               value={values.rear_port_id || "__none__"}
               onValueChange={(v) => onChange({ rear_port_id: v === "__none__" ? "" : v })}
@@ -163,7 +167,7 @@ export function GenericDeviceCreate({
             Relasi Topologi
           </div>
           <div className="space-y-1.5">
-            <FieldLabel label="Front Port (OTB)" tooltip="Pilih perangkat OTB di POP yang sama sebagai sumber koneksi hulu." />
+            <FieldLabel label={`Front Port (${frontRelationLabel})`} tooltip="Pilih perangkat OTB di POP yang sama sebagai sumber koneksi hulu." />
             <Combobox
               value={values.front_device_id || "__none__"}
               onValueChange={(v) => {
@@ -194,7 +198,7 @@ export function GenericDeviceCreate({
             />
           </div>
           <div className="space-y-1.5">
-            <FieldLabel label="Rear Port (HH/MH, opsional)" tooltip="Pilih perangkat HH/MH di POP yang sama sebagai tujuan koneksi hilir." />
+            <FieldLabel label={`Rear Port (${rearRelationLabel}, opsional)`} tooltip="Pilih perangkat HH/MH di POP yang sama sebagai tujuan koneksi hilir." />
             <Combobox
               value={values.rear_device_id || "__none__"}
               onValueChange={(v) => {

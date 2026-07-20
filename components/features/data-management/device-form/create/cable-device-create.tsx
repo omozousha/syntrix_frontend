@@ -63,6 +63,8 @@ export function CableDeviceCreate({
   frontDevicePorts = [],
   rearDevicePorts = [],
   loadingTopology = false,
+  frontRelationLabel = "Hulu",
+  rearRelationLabel = "Hilir",
   onChange,
   onPopChange,
 }: {
@@ -82,6 +84,8 @@ export function CableDeviceCreate({
   frontDevicePorts?: TopologyPortOption[];
   rearDevicePorts?: TopologyPortOption[];
   loadingTopology?: boolean;
+  frontRelationLabel?: string;
+  rearRelationLabel?: string;
   onChange: (patch: Record<string, string>) => void;
   onPopChange: (popId: string) => void;
 }) {
@@ -197,7 +201,7 @@ export function CableDeviceCreate({
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label="Front Port (OTB)" tooltip="Pilih perangkat OTB di POP yang sama sebagai sumber koneksi hulu (feeder/backbone)." />
+        <FieldLabel label={`Front Port (${frontRelationLabel})`} tooltip="Pilih perangkat OTB di POP yang sama sebagai sumber koneksi hulu (feeder/backbone)." />
         <Combobox
           value={values.front_device_id || "__none__"}
           onValueChange={(v) => {
@@ -229,7 +233,7 @@ export function CableDeviceCreate({
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label="Rear Port (ODC/JC)" tooltip="Pilih perangkat ODC atau JC di POP yang sama sebagai tujuan koneksi hilir kabel." />
+        <FieldLabel label={`Rear Port (${rearRelationLabel})`} tooltip="Pilih perangkat ODC atau JC di POP yang sama sebagai tujuan koneksi hilir kabel." />
         <Combobox
           value={values.rear_device_id || "__none__"}
           onValueChange={(v) => {

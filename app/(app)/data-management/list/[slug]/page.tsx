@@ -642,6 +642,8 @@ export default function DataManagementListPage() {
     if (category.resource === "routes") return [selectAllHeader, "Route ID", "Route Name", "Region", "POP", "Status", "Updated"];
     if (category.resource === "regions") return [selectAllHeader, "Region ID", "Inventory Code", "Region Name", "Color", "Updated"];
     if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Topology Role", "Layout", "Assignable", "Status", "Updated"];
+    if (category.resource === "topologyRelationRules") return [selectAllHeader, "Source", "Direction", "Allowed Peer", "Role", "Same POP", "Required on Create", "Status", "Updated"];
+    if (category.resource === "linkBudgetParameters") return [selectAllHeader, "Key", "Label", "Value", "Unit", "Status", "Updated"];
     if (category.resource === "popTypes") return [selectAllHeader, "Code", "POP Type", "Status", "Updated"];
     if (category.resource === "routeTypes") return [selectAllHeader, "Code", "Route Type", "Status", "Updated"];
     if (category.resource === "cableTypes") return [selectAllHeader, "Code", "Cable Type", "Description", "Status", "Updated"];
@@ -778,6 +780,30 @@ export default function DataManagementListPage() {
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
       }
+      if (category.resource === "topologyRelationRules") {
+        return [
+          selectCell,
+          pick(item, ["source_device_type_key"]),
+          pick(item, ["direction"]),
+          pick(item, ["allowed_peer_device_type_key"]),
+          pick(item, ["connection_role"]),
+          pick(item, ["requires_same_pop"]),
+          pick(item, ["is_required_on_create"]),
+          pick(item, ["is_active"]),
+          formatDateTime(pick(item, ["updated_at", "created_at"])),
+        ];
+      }
+      if (category.resource === "linkBudgetParameters") {
+        return [
+          selectCell,
+          pick(item, ["parameter_key"]),
+          withArchivedLabel(item, pick(item, ["parameter_label"])),
+          pick(item, ["parameter_value"]),
+          pick(item, ["unit"]),
+          pick(item, ["is_active"]),
+          formatDateTime(pick(item, ["updated_at", "created_at"])),
+        ];
+      }
       if (category.resource === "popTypes") {
         return [
           selectCell,
@@ -801,7 +827,9 @@ export default function DataManagementListPage() {
           selectCell,
           pick(item, ["cable_type_code"]),
           withArchivedLabel(item, pick(item, ["cable_type_name"])),
-          pick(item, ["description"]),
+          pick(item, ["cable_role"]),
+          pick(item, ["core_count"]),
+          pick(item, ["attenuation_1310_db_per_km"]),
           pick(item, ["is_active"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -1818,6 +1846,76 @@ function renderCreateFields(
     );
   }
 
+  if (resource === "topologyRelationRules") {
+    return (
+      <>
+        <div className="space-y-1.5">
+          <Label>Source Device Type Key *</Label>
+          <Input value={form.source_device_type_key || ""} onChange={(e) => setValue("source_device_type_key", e.target.value.toUpperCase())} placeholder="Contoh: ODC" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Direction *</Label>
+          <Combobox value={form.direction || "front"} onValueChange={(value) => setValue("direction", value)} options={[{ value: "front", label: "front" }, { value: "rear", label: "rear" }]} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Allowed Peer Device Type Key *</Label>
+          <Input value={form.allowed_peer_device_type_key || ""} onChange={(e) => setValue("allowed_peer_device_type_key", e.target.value.toUpperCase())} placeholder="Contoh: ODP" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Connection Role</Label>
+          <Combobox value={form.connection_role || "physical_fiber"} onValueChange={(value) => setValue("connection_role", value)} options={[{ value: "uplink", label: "uplink" }, { value: "feeder", label: "feeder" }, { value: "distribution", label: "distribution" }, { value: "branch", label: "branch" }, { value: "drop", label: "drop" }, { value: "physical_fiber", label: "physical_fiber" }]} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Route Type</Label>
+          <Input value={form.route_type || ""} onChange={(e) => setValue("route_type", e.target.value)} placeholder="Contoh: distribution" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Requires Same POP</Label>
+          <Combobox value={form.requires_same_pop || "true"} onValueChange={(value) => setValue("requires_same_pop", value)} options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Requires Same Project</Label>
+          <Combobox value={form.requires_same_project || "false"} onValueChange={(value) => setValue("requires_same_project", value)} options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Required on Create</Label>
+          <Combobox value={form.is_required_on_create || "false"} onValueChange={(value) => setValue("is_required_on_create", value)} options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Description</Label>
+          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi aturan topology" />
+        </div>
+      </>
+    );
+  }
+
+  if (resource === "linkBudgetParameters") {
+    return (
+      <>
+        <div className="space-y-1.5">
+          <Label>Parameter Key *</Label>
+          <Input value={form.parameter_key || ""} onChange={(e) => setValue("parameter_key", e.target.value)} placeholder="Contoh: engineering_margin" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Parameter Label *</Label>
+          <Input value={form.parameter_label || ""} onChange={(e) => setValue("parameter_label", e.target.value)} placeholder="Contoh: Default engineering margin" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Parameter Value *</Label>
+          <Input type="number" step="0.001" min={0} value={form.parameter_value || ""} onChange={(e) => setValue("parameter_value", e.target.value)} placeholder="Contoh: 3.0" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Unit</Label>
+          <Input value={form.unit || "dB"} onChange={(e) => setValue("unit", e.target.value)} placeholder="dB" />
+        </div>
+        <div className="space-y-1.5 md:col-span-2">
+          <Label>Description</Label>
+          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi parameter" />
+        </div>
+      </>
+    );
+  }
+
   if (resource === "popTypes") {
     return (
       <>
@@ -1860,6 +1958,26 @@ function renderCreateFields(
           <Input value={form.cable_type_code || ""} onChange={(e) => setValue("cable_type_code", e.target.value.toUpperCase())} placeholder="Contoh: SM" />
         </div>
         <div className="space-y-1.5">
+          <Label>Cable Role</Label>
+          <Combobox value={form.cable_role || "distribution"} onValueChange={(value) => setValue("cable_role", value)} options={[{ value: "feeder", label: "feeder" }, { value: "distribution", label: "distribution" }, { value: "branch", label: "branch" }, { value: "drop", label: "drop" }]} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Core Count</Label>
+          <Input type="number" min={0} value={form.core_count || ""} onChange={(e) => setValue("core_count", e.target.value)} placeholder="Contoh: 24" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Attenuation 1310 (dB/km)</Label>
+          <Input type="number" step="0.001" min={0} value={form.attenuation_1310_db_per_km || "0.35"} onChange={(e) => setValue("attenuation_1310_db_per_km", e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Attenuation 1490 (dB/km)</Label>
+          <Input type="number" step="0.001" min={0} value={form.attenuation_1490_db_per_km || "0.25"} onChange={(e) => setValue("attenuation_1490_db_per_km", e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Attenuation 1550 (dB/km)</Label>
+          <Input type="number" step="0.001" min={0} value={form.attenuation_1550_db_per_km || "0.25"} onChange={(e) => setValue("attenuation_1550_db_per_km", e.target.value)} />
+        </div>
+        <div className="space-y-1.5 md:col-span-2">
           <Label>Description</Label>
           <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi tipe kabel" />
         </div>
@@ -2292,9 +2410,11 @@ function renderCreateFields(
 
 function getCreateDefaults(resource: string): Record<string, string> {
   if (resource === "deviceTypes") return { asset_group: "active", icon_name: "HardDrive", topology_role: "termination_panel", is_passive: "false", is_active_device: "false", supports_ports: "false", supports_splitter: "false", supports_core_management: "false", supports_joint_closure: "false", layout_type: "summary_only", default_front_label: "Hulu", default_rear_label: "Hilir", is_assignable: "false", is_active: "true", sort_order: "0" };
+  if (resource === "topologyRelationRules") return { direction: "front", connection_role: "physical_fiber", requires_same_pop: "true", requires_same_project: "false", is_required_on_create: "false", is_active: "true", sort_order: "0" };
+  if (resource === "linkBudgetParameters") return { unit: "dB", is_active: "true", sort_order: "0" };
   if (resource === "popTypes") return { is_active: "true", sort_order: "0" };
   if (resource === "routeTypes") return { is_active: "true", sort_order: "0" };
-  if (resource === "cableTypes") return { is_active: "true", sort_order: "0" };
+  if (resource === "cableTypes") return { cable_role: "distribution", attenuation_1310_db_per_km: "0.35", attenuation_1490_db_per_km: "0.25", attenuation_1550_db_per_km: "0.25", is_active: "true", sort_order: "0" };
   if (resource === "coreCapacities") return { is_active: "true", sort_order: "0", allowed_route_type_keys: "[]" };
   if (resource === "deviceCoreCapacities") return { is_active: "true", sort_order: "0", allowed_device_type_keys: "[]" };
   if (resource === "odpTypes") return { is_active: "true", sort_order: "0" };
@@ -2522,6 +2642,32 @@ function buildEditFormFromItem(resource: string, item: GenericItem): Record<stri
       is_active: readBool("is_active", true),
     };
   }
+  if (resource === "topologyRelationRules") {
+    return {
+      source_device_type_key: read("source_device_type_key"),
+      direction: read("direction") || "front",
+      allowed_peer_device_type_key: read("allowed_peer_device_type_key"),
+      connection_role: read("connection_role") || "physical_fiber",
+      route_type: read("route_type"),
+      requires_same_pop: readBool("requires_same_pop", true),
+      requires_same_project: readBool("requires_same_project", false),
+      is_required_on_create: readBool("is_required_on_create", false),
+      description: read("description"),
+      sort_order: read("sort_order") || "0",
+      is_active: readBool("is_active", true),
+    };
+  }
+  if (resource === "linkBudgetParameters") {
+    return {
+      parameter_key: read("parameter_key"),
+      parameter_label: read("parameter_label"),
+      parameter_value: read("parameter_value"),
+      unit: read("unit") || "dB",
+      description: read("description"),
+      sort_order: read("sort_order") || "0",
+      is_active: readBool("is_active", true),
+    };
+  }
   if (resource === "popTypes") {
     return {
       pop_type_name: read("pop_type_name"),
@@ -2542,8 +2688,13 @@ function buildEditFormFromItem(resource: string, item: GenericItem): Record<stri
   }
   if (resource === "cableTypes") {
     return {
-      cable_type_name: read("cable_type_name"),
       cable_type_code: read("cable_type_code"),
+      cable_type_name: read("cable_type_name"),
+      cable_role: read("cable_role") || "distribution",
+      core_count: read("core_count"),
+      attenuation_1310_db_per_km: read("attenuation_1310_db_per_km") || "0.35",
+      attenuation_1490_db_per_km: read("attenuation_1490_db_per_km") || "0.25",
+      attenuation_1550_db_per_km: read("attenuation_1550_db_per_km") || "0.25",
       description: read("description"),
       sort_order: read("sort_order") || "0",
       is_active: readBool("is_active", true),
@@ -2698,6 +2849,32 @@ function buildCreatePayload(resource: string, form: Record<string, string>) {
     payload.is_active = (trim("is_active") || "true") !== "false";
     return payload;
   }
+  if (resource === "topologyRelationRules") {
+    if (!trim("source_device_type_key") || !trim("direction") || !trim("allowed_peer_device_type_key")) return null;
+    assign("source_device_type_key");
+    assign("direction");
+    assign("allowed_peer_device_type_key");
+    assign("connection_role");
+    assign("route_type");
+    payload.requires_same_pop = (trim("requires_same_pop") || "true") === "true";
+    payload.requires_same_project = (trim("requires_same_project") || "false") === "true";
+    payload.is_required_on_create = (trim("is_required_on_create") || "false") === "true";
+    assign("description");
+    payload.sort_order = Number(trim("sort_order") || "0");
+    payload.is_active = (trim("is_active") || "true") !== "false";
+    return payload;
+  }
+  if (resource === "linkBudgetParameters") {
+    if (!trim("parameter_key") || !trim("parameter_label") || !trim("parameter_value")) return null;
+    assign("parameter_key");
+    assign("parameter_label");
+    if (trim("parameter_value")) payload.parameter_value = Number(trim("parameter_value"));
+    assign("unit");
+    assign("description");
+    payload.sort_order = Number(trim("sort_order") || "0");
+    payload.is_active = (trim("is_active") || "true") !== "false";
+    return payload;
+  }
   if (resource === "popTypes") {
     if (!trim("pop_type_name")) return null;
     assign("pop_type_name");
@@ -2720,6 +2897,11 @@ function buildCreatePayload(resource: string, form: Record<string, string>) {
     if (!trim("cable_type_name")) return null;
     assign("cable_type_name");
     assign("cable_type_code");
+    assign("cable_role");
+    if (trim("core_count")) payload.core_count = Number(trim("core_count"));
+    if (trim("attenuation_1310_db_per_km")) payload.attenuation_1310_db_per_km = Number(trim("attenuation_1310_db_per_km"));
+    if (trim("attenuation_1490_db_per_km")) payload.attenuation_1490_db_per_km = Number(trim("attenuation_1490_db_per_km"));
+    if (trim("attenuation_1550_db_per_km")) payload.attenuation_1550_db_per_km = Number(trim("attenuation_1550_db_per_km"));
     assign("description");
     payload.sort_order = Number(trim("sort_order") || "0");
     payload.is_active = (trim("is_active") || "true") !== "false";
@@ -3078,11 +3260,11 @@ function canWriteResource(role: string, resource: string) {
 }
 
 function supportsIsActiveResource(resource: string) {
-  return ["deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "splitterProfiles", "cableTypes", "coreCapacities", "deviceCoreCapacities", "provinces", "cities"].includes(resource);
+  return ["deviceTypes", "topologyRelationRules", "linkBudgetParameters", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "splitterProfiles", "cableTypes", "coreCapacities", "deviceCoreCapacities", "provinces", "cities"].includes(resource);
 }
 
 function supportsSoftDeleteResource(resource: string) {
-  return ["regions", "deviceTypes", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "manufacturers", "brands", "assetModels", "cableTypes", "coreCapacities", "deviceCoreCapacities", "provinces", "cities"].includes(resource);
+  return ["regions", "deviceTypes", "topologyRelationRules", "linkBudgetParameters", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "manufacturers", "brands", "assetModels", "cableTypes", "coreCapacities", "deviceCoreCapacities", "provinces", "cities"].includes(resource);
 }
 
 function supportsPopFilterResource(resource: string) {

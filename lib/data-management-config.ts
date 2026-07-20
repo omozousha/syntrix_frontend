@@ -11,6 +11,8 @@ export type DataCategory = {
     | "projects"
     | "regions"
     | "deviceTypes"
+    | "topologyRelationRules"
+    | "linkBudgetParameters"
     | "popTypes"
     | "routeTypes"
     | "odpTypes"
@@ -50,6 +52,8 @@ export const DATA_CATEGORIES: DataCategory[] = [
 
   { slug: "master-regions", label: "Regions", description: "Master region", resource: "regions", group: "master" },
   { slug: "master-device-types", label: "Device Types", description: "Master tipe perangkat", resource: "deviceTypes", group: "master" },
+  { slug: "master-topology-relation-rules", label: "Topology Relation Rules", description: "Master aturan peer topology front/rear", resource: "topologyRelationRules", group: "master" },
+  { slug: "master-link-budget-parameters", label: "Link Budget Parameters", description: "Master konstanta dan threshold link budget", resource: "linkBudgetParameters", group: "master" },
   { slug: "master-pop-types", label: "POP Types", description: "Master tipe POP", resource: "popTypes", group: "master" },
   { slug: "master-route-types", label: "Route Types", description: "Master tipe route", resource: "routeTypes", group: "master" },
   { slug: "master-odp-types", label: "ODP Types", description: "Master tipe ODP", resource: "odpTypes", group: "master" },

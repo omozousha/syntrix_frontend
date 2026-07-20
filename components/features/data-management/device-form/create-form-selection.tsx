@@ -45,6 +45,8 @@ export type CreateFormSelectionProps = {
   frontDevicePorts?: TopologyPortOption[];
   rearDevicePorts?: TopologyPortOption[];
   loadingTopology?: boolean;
+  frontRelationLabel?: string;
+  rearRelationLabel?: string;
   cableConnections?: CableConnectionDraft[];
   onCableConnectionsChange?: (next: CableConnectionDraft[]) => void;
   onChange: (patch: Record<string, string>) => void;
@@ -69,6 +71,8 @@ export function CreateFormSelection({
   frontDevicePorts = [],
   rearDevicePorts = [],
   loadingTopology = false,
+  frontRelationLabel = "Hulu",
+  rearRelationLabel = "Hilir",
   cableConnections = [],
   onCableConnectionsChange,
   onChange,
@@ -95,6 +99,8 @@ export function CreateFormSelection({
         frontDevicePorts={frontDevicePorts}
         rearDevicePorts={rearDevicePorts}
         loadingTopology={loadingTopology}
+        frontRelationLabel={frontRelationLabel}
+        rearRelationLabel={rearRelationLabel}
         cableConnections={cableConnections}
         onCableConnectionsChange={onCableConnectionsChange}
         onChange={onChange}
@@ -118,6 +124,8 @@ export function CreateFormSelection({
         topologyFrontDevices={topologyFrontDevices}
         frontDevicePorts={frontDevicePorts}
         loadingTopology={loadingTopology}
+        frontRelationLabel={frontRelationLabel}
+        rearRelationLabel={rearRelationLabel}
         onChange={onChange}
         onPopChange={onPopChange}
       />
@@ -143,6 +151,8 @@ export function CreateFormSelection({
         frontDevicePorts={frontDevicePorts}
         rearDevicePorts={rearDevicePorts}
         loadingTopology={loadingTopology}
+        frontRelationLabel={frontRelationLabel}
+        rearRelationLabel={rearRelationLabel}
         onChange={onChange}
         onPopChange={onPopChange}
       />
@@ -164,9 +174,11 @@ export function CreateFormSelection({
       topologyFrontDevices={topologyFrontDevices}
       topologyRearDevices={topologyRearDevices}
       frontDevicePorts={frontDevicePorts}
-      rearDevicePorts={rearDevicePorts}
-      loadingTopology={loadingTopology}
-      onChange={onChange}
+        rearDevicePorts={rearDevicePorts}
+        loadingTopology={loadingTopology}
+        frontRelationLabel={frontRelationLabel}
+        rearRelationLabel={rearRelationLabel}
+        onChange={onChange}
       onPopChange={onPopChange}
     />
   );

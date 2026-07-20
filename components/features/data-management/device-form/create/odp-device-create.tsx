@@ -55,6 +55,8 @@ export function OdpDeviceCreate({
   topologyFrontDevices = [],
   frontDevicePorts = [],
   loadingTopology = false,
+  frontRelationLabel = "Hulu",
+  rearRelationLabel = "Hilir",
   onChange,
   onPopChange,
 }: {
@@ -70,6 +72,8 @@ export function OdpDeviceCreate({
   topologyFrontDevices?: TopologyDeviceOption[];
   frontDevicePorts?: TopologyPortOption[];
   loadingTopology?: boolean;
+  frontRelationLabel?: string;
+  rearRelationLabel?: string;
   onChange: (patch: Record<string, string>) => void;
   onPopChange: (popId: string) => void;
 }) {
@@ -91,7 +95,7 @@ export function OdpDeviceCreate({
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label="Front Port (ODC)" tooltip="Pilih perangkat ODC di POP yang sama sebagai sumber koneksi hulu." />
+        <FieldLabel label={`Front Port (${frontRelationLabel})`} tooltip="Pilih perangkat ODC di POP yang sama sebagai sumber koneksi hulu." />
         <Combobox
           value={values.front_device_id || "__none__"}
           onValueChange={(v) => {

@@ -271,6 +271,26 @@ type SplitterProfileOption = {
   allowed_device_type_keys?: string[] | null;
   is_active?: boolean | null;
 };
+type TopologyRelationRuleOption = {
+  id: string;
+  source_device_type_key: string;
+  direction: 'front' | 'rear';
+  allowed_peer_device_type_key: string;
+  requires_same_pop?: boolean | null;
+  requires_same_project?: boolean | null;
+  is_active?: boolean | null;
+};
+type DeviceTypeMasterOption = {
+  id: string;
+  device_type_key: string;
+  layout_type?: string | null;
+  default_front_label?: string | null;
+  default_rear_label?: string | null;
+  topology_role?: string | null;
+  supports_ports?: boolean | null;
+  supports_core_management?: boolean | null;
+  is_assignable?: boolean | null;
+};
 type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
 type TenantOption = { id: string; tenant_name: string; tenant_code?: string | null };
@@ -532,6 +552,8 @@ export default function DataManagementDetailPage() {
   const [projectRelationDevices, setProjectRelationDevices] = useState<ProjectAssetItem[]>([]);
   const [loadingProjectAssets, setLoadingProjectAssets] = useState(false);
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
+  const [deviceTypeMasters, setDeviceTypeMasters] = useState<DeviceTypeMasterOption[]>([]);
+  const [topologyRelationRules, setTopologyRelationRules] = useState<TopologyRelationRuleOption[]>([]);
   const [deviceCoreCapacities, setDeviceCoreCapacities] = useState<Array<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>>([]);
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
@@ -628,15 +650,28 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   const canOpenTopology = me.role === "admin" || me.role === "user_all_region";
   const canOpenAsBuilt = me.role === "admin" || me.role === "user_all_region";
   const editable = canEditAsset && (category?.resource === "pops" || category?.resource === "devices");
-  const isOdpDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "ODP";
-  const isOdcDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "ODC";
-  const isOtbDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "OTB";
-  const isOntDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "ONT";
-  const isJcDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "JC";
-  const isOltDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "OLT";
-  const isSwitchDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "SWITCH";
-  const isCableDevice = category?.resource === "devices" && valueOf(item?.device_type_key).toUpperCase() === "CABLE";
-  const showPortTray = isOtbDevice || isOdcDevice || isJcDevice || isCableDevice;
+  const currentDeviceTypeKey = valueOf(item?.device_type_key).toUpperCase();
+  const selectedDeviceTypeMaster = deviceTypeMasters.find((d) => d.device_type_key === currentDeviceTypeKey) || null;
+  const resolvedLayoutType = selectedDeviceTypeMaster?.layout_type || (
+    currentDeviceTypeKey === "OTB" ? "tray" :
+    currentDeviceTypeKey === "ODC" ? "tube" :
+    currentDeviceTypeKey === "JC" ? "tube" :
+    currentDeviceTypeKey === "CABLE" ? "core_grid" :
+    currentDeviceTypeKey === "ODP" ? "odp_operations" :
+    currentDeviceTypeKey === "OLT" ? "olt_slot" :
+    currentDeviceTypeKey === "SWITCH" ? "switch_grid" :
+    currentDeviceTypeKey === "ONT" ? "summary_only" :
+    "summary_only"
+  );
+  const isOdpDevice = category?.resource === "devices" && currentDeviceTypeKey === "ODP";
+  const isOdcDevice = category?.resource === "devices" && currentDeviceTypeKey === "ODC";
+  const isOtbDevice = category?.resource === "devices" && currentDeviceTypeKey === "OTB";
+  const isOntDevice = category?.resource === "devices" && currentDeviceTypeKey === "ONT";
+  const isJcDevice = category?.resource === "devices" && currentDeviceTypeKey === "JC";
+  const isOltDevice = category?.resource === "devices" && currentDeviceTypeKey === "OLT";
+  const isSwitchDevice = category?.resource === "devices" && currentDeviceTypeKey === "SWITCH";
+  const isCableDevice = category?.resource === "devices" && currentDeviceTypeKey === "CABLE";
+  const showPortTray = ["tray", "tube", "core_grid"].includes(resolvedLayoutType);
   const showServicePortRelations = category?.resource === "customers" || isOntDevice;
   const backToListHref = category
     ? `/data-management/list/${category.slug}${queryString ? `?${queryString}` : ""}`
@@ -1028,6 +1063,8 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   useEffect(() => {
     if (!token) {
       setSplitterProfiles([]);
+      setDeviceTypeMasters([]);
+      setTopologyRelationRules([]);
       setOdpTypes([]);
       setInstallationTypes([]);
       setTenants([]);
@@ -1036,8 +1073,10 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     let cancelled = false;
     async function loadDeviceMasterData() {
       try {
-        const [splitterResponse, odpTypesResponse, installationTypesResponse, tenantsResponse, deviceCoreCapacitiesResponse] = await Promise.allSettled([
+        const [splitterResponse, deviceTypesResponse, topologyRelationRulesResponse, odpTypesResponse, installationTypesResponse, tenantsResponse, deviceCoreCapacitiesResponse] = await Promise.allSettled([
           apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token }),
+          apiFetch<PaginatedResponse<DeviceTypeMasterOption>>("/deviceTypes?page=1&limit=300&is_active=true", { token }),
+          apiFetch<PaginatedResponse<TopologyRelationRuleOption>>("/topologyRelationRules?page=1&limit=500&is_active=true", { token }),
           apiFetch<PaginatedResponse<OdpTypeOption>>("/odpTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<TenantOption>>("/tenants?page=1&limit=200&is_active=true", { token }),
@@ -1045,6 +1084,8 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         ]);
         if (cancelled) return;
         setSplitterProfiles(splitterResponse.status === "fulfilled" ? splitterResponse.value.data || [] : []);
+        setDeviceTypeMasters(deviceTypesResponse.status === "fulfilled" ? deviceTypesResponse.value.data || [] : []);
+        setTopologyRelationRules(topologyRelationRulesResponse.status === "fulfilled" ? topologyRelationRulesResponse.value.data || [] : []);
         setOdpTypes(odpTypesResponse.status === "fulfilled" ? odpTypesResponse.value.data || [] : []);
         setInstallationTypes(installationTypesResponse.status === "fulfilled" ? installationTypesResponse.value.data || [] : []);
         setTenants(tenantsResponse.status === "fulfilled" ? tenantsResponse.value.data || [] : []);
@@ -2141,40 +2182,57 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
 
   
   // ── Fase 2b — Port Tray Handlers
+  function getActiveRelationRules(deviceTypeKey: string, direction: string) {
+    const currentType = String(deviceTypeKey || '').toUpperCase();
+    return topologyRelationRules.filter(
+      (rule) =>
+        String(rule.source_device_type_key || '').toUpperCase() === currentType &&
+        String(rule.direction || '').toLowerCase() === direction &&
+        rule.is_active !== false,
+    );
+  }
+
   function getPeerDeviceTypes(deviceTypeKey: string, direction: string): string[] {
-    // Map device type to valid peer device types for front/rear
-    const peerMap: Record<string, { front: string[]; rear: string[] }> = {
-      OTB: { front: ["OLT", "SWITCH"], rear: ["ODC", "JC"] },
-      ODC: { front: ["OTB"], rear: ["ODP"] },
-      JC:  { front: ["OTB"], rear: ["HH", "MH"] },
-    };
-    const config = peerMap[deviceTypeKey];
-    if (!config) return [];
-    return direction === "front" ? config.front : config.rear;
+    const relationRuleTypes = getActiveRelationRules(deviceTypeKey, direction)
+      .map((rule) => String(rule.allowed_peer_device_type_key || '').toUpperCase())
+      .filter(Boolean);
+
+    return Array.from(new Set(relationRuleTypes));
   }
 
   async function loadPeerDevices(
     port: DevicePort,
     direction: string,
     signal: AbortSignal | undefined,
-  ): Promise<Array<{ id: string; device_name?: string | null; device_id?: string | null }>> {
+  ): Promise<Array<{ id: string; device_name?: string | null; device_id?: string | null; project_id?: string | null }>> {
     if (!item || !token) return [];
     const popId = valueOf(item.pop_id);
-    if (!popId) return [];
+    const projectId = valueOf(item.project_id);
     const deviceTypeKey = valueOf(item.device_type_key).toUpperCase();
-    const deviceTypes = getPeerDeviceTypes(deviceTypeKey, direction);
-    if (!deviceTypes.length) return [];
+    const rules = getActiveRelationRules(deviceTypeKey, direction);
+    if (!rules.length) return [];
     try {
-      const params = new URLSearchParams({ page: "1", limit: "500", pop_id: popId, status: "active" });
-      const promises = deviceTypes.map(dt =>
-        apiFetch<{ data: Array<{ id: string; device_name?: string | null; device_id?: string | null }> }>(
-          "/devices?" + params.toString() + "&device_type_key=" + dt, { token }
-        ).catch(() => ({ data: [] }))
-      );
+      const promises = rules.map((rule) => {
+        const params = new URLSearchParams({ page: "1", limit: "500", status: "active", device_type_key: String(rule.allowed_peer_device_type_key || '').toUpperCase() });
+        if (rule.requires_same_pop !== false && popId) {
+          params.set("pop_id", popId);
+        }
+        return apiFetch<{ data: Array<{ id: string; device_name?: string | null; device_id?: string | null; project_id?: string | null }> }>(
+          "/devices?" + params.toString(),
+          { token }
+        ).catch(() => ({ data: [] }));
+      });
       const results = await Promise.all(promises);
       if (signal?.aborted) return [];
-      const allDevices = results.flatMap(r => r.data || []);
-      return allDevices;
+      const allDevices = results.flatMap((r, index) => {
+        const rule = rules[index];
+        const rows = r.data || [];
+        if (rule.requires_same_project && projectId) {
+          return rows.filter((row) => !row.project_id || row.project_id === projectId);
+        }
+        return rows;
+      });
+      return Array.from(new Map(allDevices.map((row) => [row.id, row])).values());
     } catch { return []; }
   }
 
@@ -2414,8 +2472,8 @@ if (!category) {
                         </Button>
                       </CollapsibleTrigger>
                     ) : null}
-                  {/* SWITCH: Port grid layout (active device) */}
-                  {isSwitchDevice ? (
+                  {/* SWITCH-style grid layout (driven by layout_type) */}
+                  {resolvedLayoutType === "switch_grid" ? (
                     <SwitchPortContainer
                       devicePorts={odpPorts}
                       connections={devicePortConnections}
@@ -2531,8 +2589,8 @@ if (!category) {
                     <DeviceTopologyChainVisualizer deviceId={item.id} token={token} />
                   )}
                   <DeviceLinkBudgetSection deviceId={item.id} regionId={valueOf(item.region_id)} token={token} />
-                  {/* OLT: Line card layout (active device) */}
-                  {isOltDevice ? (
+                  {/* OLT-style slot layout (driven by layout_type) */}
+                  {resolvedLayoutType === "olt_slot" ? (
                     <OltPortContainer
                       devicePorts={odpPorts}
                       connections={devicePortConnections}

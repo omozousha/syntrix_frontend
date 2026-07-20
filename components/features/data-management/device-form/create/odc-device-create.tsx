@@ -57,6 +57,8 @@ export function OdcDeviceCreate({
   frontDevicePorts = [],
   rearDevicePorts = [],
   loadingTopology = false,
+  frontRelationLabel = "Hulu",
+  rearRelationLabel = "Hilir",
   cableConnections = [],
   onCableConnectionsChange,
   onChange,
@@ -78,6 +80,8 @@ export function OdcDeviceCreate({
   frontDevicePorts?: TopologyPortOption[];
   rearDevicePorts?: TopologyPortOption[];
   loadingTopology?: boolean;
+  frontRelationLabel?: string;
+  rearRelationLabel?: string;
   cableConnections?: CableConnectionDraft[];
   onCableConnectionsChange?: (next: CableConnectionDraft[]) => void;
   onChange: (patch: Record<string, string>) => void;
@@ -101,7 +105,7 @@ export function OdcDeviceCreate({
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label="Front Port (OTB)" tooltip="Pilih perangkat OTB di POP yang sama sebagai sumber koneksi hulu (feeder)." />
+        <FieldLabel label={`Front Port (${frontRelationLabel})`} tooltip="Pilih perangkat OTB di POP yang sama sebagai sumber koneksi hulu (feeder)." />
         <Combobox
           value={values.front_device_id || "__none__"}
           onValueChange={(v) => {
@@ -214,7 +218,7 @@ export function OdcDeviceCreate({
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label="Rear Port (ODP, opsional)" tooltip="Pilih perangkat ODP di POP yang sama sebagai tujuan koneksi hilir. Detail relasi bisa diatur di detail device ODC." />
+        <FieldLabel label={`Rear Port (${rearRelationLabel}, opsional)`} tooltip="Pilih perangkat ODP di POP yang sama sebagai tujuan koneksi hilir. Detail relasi bisa diatur di detail device ODC." />
         <Combobox
           value={values.rear_device_id || "__none__"}
           onValueChange={(v) => {
