@@ -110,6 +110,8 @@ type AssetModelOption = {
   model_code?: string | null;
   brand_id?: string | null;
   manufacturer_id?: string | null;
+  capacity_core?: number | null;
+  total_ports?: number | null;
 };
 type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
@@ -480,6 +482,22 @@ export default function CreateDataManagementPage() {
       return next;
     });
   }, [form.device_type_key, form.cable_type, cableTypes]);
+
+  useEffect(() => {
+    if (!form.model_id) return;
+    const selectedModel = assetModels.find((m) => m.id === form.model_id);
+    if (!selectedModel) return;
+    setForm((prev) => {
+      const next = { ...prev };
+      if (!prev.capacity_core && selectedModel.capacity_core != null) {
+        next.capacity_core = String(selectedModel.capacity_core);
+      }
+      if (!prev.total_ports && selectedModel.total_ports != null) {
+        next.total_ports = String(selectedModel.total_ports);
+      }
+      return next;
+    });
+  }, [form.model_id, assetModels]);
 
   const needsTopology = isDevice && (
     selectedDeviceTypeMaster?.is_assignable ??

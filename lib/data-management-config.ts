@@ -24,6 +24,7 @@ export type DataCategory = {
     | "assetModels"
     | "splitterProfiles"
     | "cableTypes"
+    | "closureTypes"
     | "coreCapacities"
     | "deviceCoreCapacities"
     | "provinces"
@@ -64,6 +65,7 @@ export const DATA_CATEGORIES: DataCategory[] = [
   { slug: "master-brands", label: "Brands", description: "Master brand", resource: "brands", group: "master" },
   { slug: "master-models", label: "Models", description: "Master model perangkat", resource: "assetModels", group: "master" },
   { slug: "master-cable-types", label: "Cable Types", description: "Master tipe kabel fiber optik", resource: "cableTypes", group: "master" },
+  { slug: "master-closure-types", label: "Closure Types", description: "Master tipe joint closure (kapasitas dan kapabilitas)", resource: "closureTypes", group: "master" },
   { slug: "master-core-capacities", label: "Core Capacities Cable", description: "Master kapasitas core kabel fiber optik", resource: "coreCapacities", group: "master" },
   { slug: "master-device-core-capacities", label: "Core Capacities Passive Device", description: "Master kapasitas core perangkat pasif (OTB, ODC, JC)", resource: "deviceCoreCapacities", group: "master" },
   { slug: "master-splitter-profiles", label: "Splitter Profiles", description: "Master rasio splitter", resource: "splitterProfiles", group: "master" },
