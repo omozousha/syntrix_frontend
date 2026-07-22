@@ -17,11 +17,13 @@ import {
 import { JcTopologySection } from "./sections/index";
 
 type DeviceCoreCapacityOption = { core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null };
+type ClosureTypeOption = { id: string; closure_type_name: string; closure_type_code?: string | null; max_core_capacity?: number | null; max_splice_capacity?: number | null; supports_pass_through?: boolean | null; supports_branching?: boolean | null };
 
 export type JcDeviceFormProps = DefaultInfoSectionProps & {
   splitterProfiles: SplitterProfileOption[];
   topologyLookup?: TopologySectionProps["topologyLookup"];
   deviceCoreCapacities?: DeviceCoreCapacityOption[];
+  closureTypes?: ClosureTypeOption[];
 };
 
 export function JcDeviceForm(props: JcDeviceFormProps) {
@@ -32,6 +34,9 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
   };
 
   const lookup = props.topologyLookup || emptyTopologyLookup();
+  const closureTypes = props.closureTypes || [];
+
+  const selectedClosureType = closureTypes.find((c) => c.id === props.form.closure_type_id) || null;
 
   const filteredJcCoreCapacities = (props.deviceCoreCapacities || []).filter((item) => {
     const allowedKeys = item.allowed_device_type_keys || [];
@@ -72,6 +77,30 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
           <CardTitle className="text-sm">{technicalCopy.title}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
+          <ComboboxField
+            label="Tipe Joint Closure"
+            value={props.form.closure_type_id || "__none__"}
+            onValueChange={(value) =>
+              props.onChange((prev) => ({ ...prev, closure_type_id: value === "__none__" ? "" : value }))
+            }
+            disabled={!props.editing}
+            searchPlaceholder="Cari tipe closure..."
+            options={[
+              { value: "__none__", label: "Pilih tipe closure" },
+              ...closureTypes.map((c) => ({
+                value: c.id,
+                label: [c.closure_type_name, c.closure_type_code].filter(Boolean).join(" — "),
+              })),
+            ]}
+          />
+          {selectedClosureType ? (
+            <p className="col-span-full text-xs text-muted-foreground">
+              Kapasitas: <span className="font-medium text-foreground">{selectedClosureType.max_core_capacity ?? "—"} core</span>
+              {" · "}Splice: <span className="font-medium text-foreground">{selectedClosureType.max_splice_capacity ?? "—"}</span>
+              {" · "}Pass-through: <span className="font-medium text-foreground">{selectedClosureType.supports_pass_through ? "Ya" : "Tidak"}</span>
+              {" · "}Branching: <span className="font-medium text-foreground">{selectedClosureType.supports_branching ? "Ya" : "Tidak"}</span>
+            </p>
+          ) : null}
           <ComboboxField
             label={technicalCopy.coreCapacityLabel || "Capacity Core"}
             value={props.form.capacity_core || "__none__"}

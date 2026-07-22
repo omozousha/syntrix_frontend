@@ -51,6 +51,7 @@ export type DeviceFormSelectionProps = {
   routeTypes?: Array<{ id: string; route_type_code?: string | null; route_type_name: string }>;
   coreCapacities?: Array<{ core_capacity_value: number; label: string }>;
   deviceCoreCapacities?: Array<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>;
+  closureTypes?: Array<{ id: string; closure_type_name: string; closure_type_code?: string | null; max_core_capacity?: number | null; max_splice_capacity?: number | null; supports_pass_through?: boolean | null; supports_branching?: boolean | null }>;
   // ODC chain summary props
   odcChainSummary?: OdcDeviceFormProps["odcChainSummary"];
   odcChainLoading?: boolean;
@@ -184,6 +185,7 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
         cities={props.cities}
         topologyLookup={topologyLookup}
         deviceCoreCapacities={props.deviceCoreCapacities}
+        closureTypes={props.closureTypes}
       />
     );
   }

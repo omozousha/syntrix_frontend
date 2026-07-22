@@ -552,6 +552,7 @@ export default function DataManagementDetailPage() {
   const [projectRelationDevices, setProjectRelationDevices] = useState<ProjectAssetItem[]>([]);
   const [loadingProjectAssets, setLoadingProjectAssets] = useState(false);
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
+  const [closureTypes, setClosureTypes] = useState<Array<{ id: string; closure_type_name: string; closure_type_code?: string | null; max_core_capacity?: number | null; max_splice_capacity?: number | null; supports_pass_through?: boolean | null; supports_branching?: boolean | null }>>([]);
   const [deviceTypeMasters, setDeviceTypeMasters] = useState<DeviceTypeMasterOption[]>([]);
   const [topologyRelationRules, setTopologyRelationRules] = useState<TopologyRelationRuleOption[]>([]);
   const [deviceCoreCapacities, setDeviceCoreCapacities] = useState<Array<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>>([]);
@@ -1073,7 +1074,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     let cancelled = false;
     async function loadDeviceMasterData() {
       try {
-        const [splitterResponse, deviceTypesResponse, topologyRelationRulesResponse, odpTypesResponse, installationTypesResponse, tenantsResponse, deviceCoreCapacitiesResponse] = await Promise.allSettled([
+        const [splitterResponse, deviceTypesResponse, topologyRelationRulesResponse, odpTypesResponse, installationTypesResponse, tenantsResponse, deviceCoreCapacitiesResponse, closureTypesResponse] = await Promise.allSettled([
           apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<DeviceTypeMasterOption>>("/deviceTypes?page=1&limit=300&is_active=true", { token }),
           apiFetch<PaginatedResponse<TopologyRelationRuleOption>>("/topologyRelationRules?page=1&limit=500&is_active=true", { token }),
@@ -1081,6 +1082,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           apiFetch<PaginatedResponse<InstallationTypeOption>>("/installationTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<TenantOption>>("/tenants?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>>("/deviceCoreCapacities?page=1&limit=200&is_active=true", { token }),
+          apiFetch<PaginatedResponse<{ id: string; closure_type_name: string; closure_type_code?: string | null; max_core_capacity?: number | null; max_splice_capacity?: number | null; supports_pass_through?: boolean | null; supports_branching?: boolean | null }>>("/closureTypes?page=1&limit=200&is_active=true", { token }),
         ]);
         if (cancelled) return;
         setSplitterProfiles(splitterResponse.status === "fulfilled" ? splitterResponse.value.data || [] : []);
@@ -1090,6 +1092,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         setInstallationTypes(installationTypesResponse.status === "fulfilled" ? installationTypesResponse.value.data || [] : []);
         setTenants(tenantsResponse.status === "fulfilled" ? tenantsResponse.value.data || [] : []);
         setDeviceCoreCapacities(deviceCoreCapacitiesResponse.status === "fulfilled" ? deviceCoreCapacitiesResponse.value.data || [] : []);
+        setClosureTypes(closureTypesResponse.status === "fulfilled" ? closureTypesResponse.value.data || [] : []);
       } catch {
         if (cancelled) return;
         setSplitterProfiles([]);
@@ -2553,6 +2556,7 @@ if (!category) {
                   coreCapacities={[]}
                   cableTypes={[]}
                   deviceCoreCapacities={deviceCoreCapacities}
+                  closureTypes={closureTypes}
                   odcChainSummary={isOdcDevice ? odcChainSummary : undefined}
                   odcChainLoading={isOdcDevice ? loadingOdcChainSummary : undefined}
                   otbChainSummary={isOtbDevice ? otbChainSummary : undefined}
