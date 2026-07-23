@@ -40,7 +40,7 @@ export function OdpCreateModeDialog({
     if (onSingleMode) {
       onSingleMode();
     } else {
-      router.push("/data-management/create?device_type_key=ODP");
+      router.push("/data-management/create?kind=device&type=ODP");
     }
     onOpenChange(false);
   }
