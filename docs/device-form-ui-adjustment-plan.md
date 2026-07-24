@@ -178,7 +178,7 @@
 
 ```
 Item #1 ──▶ Item #4 ──▶ Item #2 ──▶ Item #3 ──▶ Item #5 ──▶ Item #6
-  ✅ done    ✅ done      ⬜ next     ⬜          ⬜          ⬜
+  ✅ done    ✅ done      ✅ done      ✅ done      ✅ done      ⬜ next
   (bug fix)   (UX)       (cosmetic)   (validation) (cosmetic) (investigasi)
 ```
 
