@@ -79,6 +79,7 @@ export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopolog
   const otbNodes = graph.nodes.filter((n) => n.device_type_key === "OTB");
   const odcNodes = graph.nodes.filter((n) => n.device_type_key === "ODC");
   const odpNodes = graph.nodes.filter((n) => n.device_type_key === "ODP");
+  const ontNodes = graph.nodes.filter((n) => n.device_type_key === "ONT");
 
   const totalConnected = graph.nodes.length;
 
@@ -151,7 +152,7 @@ export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopolog
         </Button>
       </CardHeader>
       <CardContent className="p-4 bg-gradient-to-br from-background to-muted/10">
-        <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+        <div className="relative grid grid-cols-1 md:grid-cols-4 gap-6 items-stretch">
           
           {/* COLUMN 1: OTB (Uplink / Source) */}
           <div className="space-y-3 flex flex-col justify-center border rounded-lg p-3 bg-card/60 backdrop-blur-xs min-h-[150px]">
@@ -283,6 +284,56 @@ export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopolog
             )}
           </div>
 
+          {/* COLUMN 4: ONT (Drop / Customer) */}
+          <div className="space-y-3 flex flex-col justify-center border rounded-lg p-3 bg-card/60 backdrop-blur-xs min-h-[150px] relative">
+
+            {graph.edges.some((e) => e.connection_type === "drop") && (
+              <div className="hidden md:flex absolute -left-[14px] top-1/2 -translate-y-1/2 z-10 bg-primary/10 border border-primary/20 rounded-full p-1.5 shadow-xs text-primary">
+                <Cable className="size-3.5" />
+              </div>
+            )}
+
+            <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5 mb-1">
+              <Network className="size-3 text-purple-500" /> Drop (ONT)
+            </span>
+            {ontNodes.length === 0 ? (
+              <div className="text-xs text-muted-foreground italic text-center p-4">Tidak ada ONT terhubung</div>
+            ) : (
+              <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+                {ontNodes.map((node) => {
+                  const edge = graph.edges.find((e) => e.to_device_id === node.id);
+                  return (
+                    <div key={node.id} className="group space-y-1">
+                      {edge && (
+                        <div className="block md:hidden border-l-2 border-dashed border-primary/30 pl-3 py-1 my-1">
+                          <div className="text-[9px] text-muted-foreground flex items-center gap-1 font-medium">
+                            <Cable className="size-3 text-primary" />
+                            <span>{edge.labels?.cable || "Drop Cable"}</span>
+                            {edge.labels?.core_range && <span className="bg-primary/5 px-1 rounded text-primary">Core {edge.labels.core_range}</span>}
+                          </div>
+                        </div>
+                      )}
+                      <Link href={`/data-management/list/devices/${node.id}`}>
+                        <div className={`p-2.5 rounded-lg border bg-background hover:border-primary hover:shadow-xs transition duration-200 cursor-pointer ${node.id === deviceId ? "ring-2 ring-primary/20 border-primary bg-primary/5" : ""}`}>
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="text-xs font-semibold truncate group-hover:text-primary transition">
+                              {node.device_name || node.device_id}
+                            </span>
+                            <Badge variant="outline" className="text-[9px] px-1 bg-purple-50 text-purple-700 border-purple-200">ONT</Badge>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground flex justify-between">
+                            <span>Status: {node.status}</span>
+                            <span className="truncate max-w-[80px] text-right">{node.device_id}</span>
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
         </div>
 
         {/* Desktop connection info overlay labels footer */}
@@ -311,6 +362,23 @@ export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopolog
                   </span>
                 ))}
               {graph.edges.filter((e) => e.connection_type === "distribution" || e.connection_type === "downstream").length > 3 && (
+                <span className="px-1 text-[10px] self-center">...</span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 justify-center bg-muted/40 p-2 rounded-lg">
+            <ArrowRight className="size-3 text-primary shrink-0" />
+            <span className="font-semibold text-foreground">ODP ➜ ONT:</span>
+            <div className="flex flex-wrap gap-1">
+              {graph.edges
+                .filter((e) => e.connection_type === "drop")
+                .slice(0, 3)
+                .map((edge) => (
+                  <span key={edge.id} className="bg-background px-1.5 py-0.5 rounded border text-[10px]">
+                    {edge.labels?.cable || "Drop"}
+                  </span>
+                ))}
+              {graph.edges.filter((e) => e.connection_type === "drop").length > 3 && (
                 <span className="px-1 text-[10px] self-center">...</span>
               )}
             </div>

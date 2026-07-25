@@ -1964,6 +1964,60 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     setError("");
     setMessage("");
     try {
+      if (changes.ont_device_id !== undefined) {
+        const newOnt = changes.ont_device_id;
+        const newCustomer = changes.customer_id !== undefined ? changes.customer_id : port.customer_id;
+        const odpPortId = port.id;
+        let result: { data?: { odp_port_id?: string; ont_port_id?: string; ont_device_id?: string | null } };
+        if (newOnt) {
+          result = await apiFetch<{ data: { odp_port_id: string; ont_port_id: string; ont_device_id: string } }>(
+            `/devices/${odpPortId}/assign-ont`,
+            {
+              method: "POST",
+              token,
+              body: JSON.stringify({ ont_device_id: newOnt, customer_id: newCustomer || null }),
+            },
+          );
+        } else {
+          result = await apiFetch<{ data: { odp_port_id: string; ont_port_id: string; ont_device_id: null } }>(
+            `/devices/${odpPortId}/disconnect-ont`,
+            { method: "POST", token, body: JSON.stringify({}) },
+          );
+        }
+        const odpPayload: Record<string, unknown> = {};
+        if (changes.notes !== undefined) odpPayload.notes = changes.notes || null;
+        if (changes.port_label !== undefined) odpPayload.port_label = changes.port_label || null;
+        if (changes.occupied_at !== undefined) odpPayload.occupied_at = changes.occupied_at || null;
+        if (Object.keys(odpPayload).length > 0) {
+          const fallback = await apiFetch<{ data: DevicePort }>(`/devicePorts/${port.id}`, {
+            method: "PATCH",
+            token,
+            body: JSON.stringify(odpPayload),
+          });
+          if (fallback.data) {
+            setOdpPorts((prev) =>
+              prev
+                .map((item) => (item.id === port.id ? { ...item, ...fallback.data } : item))
+                .sort((a, b) => Number(a.port_index) - Number(b.port_index)),
+            );
+          }
+        }
+        const refreshed = await apiFetch<{ data: DevicePort }>(`/devicePorts/${port.id}`, { token });
+        if (refreshed.data) {
+          setOdpPorts((prev) =>
+            prev
+              .map((item) => (item.id === port.id ? { ...item, ...refreshed.data } : item))
+              .sort((a, b) => Number(a.port_index) - Number(b.port_index)),
+          );
+        }
+        setMessage(
+          newOnt
+            ? `ONT berhasil di-assign ke port ${port.port_label || port.port_index}.`
+            : `ONT berhasil di-disconnect dari port ${port.port_label || port.port_index}.`,
+        );
+        return;
+      }
+
       const payload: Record<string, unknown> = {};
       if (changes.status !== undefined) payload.status = changes.status;
       if (changes.notes !== undefined) payload.notes = changes.notes || null;
