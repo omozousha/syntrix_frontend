@@ -1696,11 +1696,17 @@ function renderCreateFields(
   }
 
   if (resource === "deviceTypes") {
+    const isEdit = Boolean(form.id);
     return (
       <>
         <div className="space-y-1.5">
           <Label>Device Type Key *</Label>
           <Input value={form.device_type_key || ""} onChange={(e) => setValue("device_type_key", e.target.value.toUpperCase())} placeholder="Contoh: OLT" />
+          {isEdit && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              ⚠ Mengubah Type Key akan memengaruhi device yang sudah ada. Pastikan tidak ada device yang masih memakai key lama.
+            </p>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label>Device Type Name *</Label>
@@ -1757,9 +1763,14 @@ function renderCreateFields(
         </div>
         <div className="space-y-1.5">
           <Label>Inventory Type Code</Label>
-          <Input value={form.inventory_type_code || "Otomatis"} disabled />
+          <Input
+            value={form.inventory_type_code || ""}
+            onChange={(e) => setValue("inventory_type_code", e.target.value)}
+            placeholder={isEdit ? "Kosongkan untuk auto-assign" : "Otomatis"}
+            disabled={!isEdit}
+          />
           <p className="text-xs text-muted-foreground">
-            Diisi otomatis dari nomor tipe perangkat berikutnya yang belum dipakai.
+            {isEdit ? "Kosongkan untuk auto-assign, atau isi 3 digit angka (contoh: 001)." : "Diisi otomatis dari nomor tipe perangkat berikutnya yang belum dipakai."}
           </p>
         </div>
         <div className="space-y-1.5">
@@ -2624,6 +2635,7 @@ function buildEditFormFromItem(resource: string, item: GenericItem): Record<stri
   }
   if (resource === "deviceTypes") {
     return {
+      id: read("id"),
       device_type_key: read("device_type_key"),
       device_type_name: read("device_type_name"),
       asset_group: read("asset_group") || "active",
@@ -2640,6 +2652,7 @@ function buildEditFormFromItem(resource: string, item: GenericItem): Record<stri
       default_rear_label: read("default_rear_label") || "Hilir",
       is_assignable: readBool("is_assignable", false),
       description: read("description"),
+      inventory_type_code: read("inventory_type_code"),
       sort_order: read("sort_order") || "0",
       is_active: readBool("is_active", true),
     };
@@ -2847,6 +2860,7 @@ function buildCreatePayload(resource: string, form: Record<string, string>) {
     assign("default_rear_label");
     payload.is_assignable = (trim("is_assignable") || "false") === "true";
     assign("description");
+    assign("inventory_type_code");
     payload.sort_order = Number(trim("sort_order") || "0");
     payload.is_active = (trim("is_active") || "true") !== "false";
     return payload;
