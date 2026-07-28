@@ -24,25 +24,21 @@ type SummaryBySlug = Record<string, number>;
 const MASTER_SECTIONS: MasterDataSectionConfig[] = [
   {
     title: "Referensi Topologi",
-    description: "Standardisasi struktur region, klasifikasi POP, tipe route, dan layanan customer.",
     icon: Network,
     slugs: ["master-regions", "master-pop-types", "master-route-types", "master-service-types"],
   },
   {
     title: "Referensi Perangkat",
-    description: "Referensi tipe perangkat, ODP, instalasi, model, dan splitter sebagai fondasi inventaris.",
     icon: Boxes,
     slugs: ["master-device-types", "master-odp-types", "master-cable-types", "master-closure-types", "master-core-capacities", "master-device-core-capacities", "master-installation-types", "master-models", "master-splitter-profiles"],
   },
   {
     title: "Referensi Vendor & Tenant",
-    description: "Master tenant, manufacturer, dan brand untuk memastikan naming kepemilikan serta vendor konsisten.",
     icon: Building2,
     slugs: ["master-tenants", "master-manufacturers", "master-brands"],
   },
   {
     title: "Referensi Lokasi",
-    description: "Master provinsi dan kota/kabupaten untuk normalisasi data lokasi.",
     icon: MapPinned,
     slugs: ["master-provinces", "master-cities"],
   },
