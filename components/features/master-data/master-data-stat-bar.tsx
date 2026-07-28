@@ -1,6 +1,7 @@
 "use client";
 
 import { BookMarked, Boxes, Network, Workflow } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 type MasterDataStatBarProps = {
   totalCategories: number;
@@ -10,29 +11,25 @@ type MasterDataStatBarProps = {
 const STAT_ITEMS = [
   {
     key: "catalogs",
-    label: "Total Master Data",
-    hint: "Jenis referensi",
+    label: "Jenis Referensi",
     icon: Workflow,
     value: (props: MasterDataStatBarProps) => props.totalCategories,
   },
   {
     key: "items",
-    label: "Total Data",
-    hint: "Seluruh item master",
+    label: "Total Item",
     icon: Boxes,
     value: (props: MasterDataStatBarProps) => props.totalItems,
   },
   {
     key: "groups",
-    label: "Kelompok Data",
-    hint: "Topologi, perangkat, vendor, lokasi",
+    label: "Kelompok",
     icon: Network,
     value: () => 4,
   },
   {
     key: "access",
-    label: "Akses Kelola",
-    hint: "Hak perubahan data",
+    label: "Akses",
     icon: BookMarked,
     value: () => "Admin",
   },
@@ -40,22 +37,21 @@ const STAT_ITEMS = [
 
 export function MasterDataStatBar(props: MasterDataStatBarProps) {
   return (
-    <div className="-mx-1 overflow-x-auto px-1 pb-1">
-      <div className="grid min-w-[720px] grid-cols-4 gap-2 sm:min-w-0">
-        {STAT_ITEMS.map((item) => {
-          const Icon = item.icon;
-          return (
-            <div key={item.key} className="rounded-md border bg-background/85 px-3 py-2 shadow-none">
-              <div className="flex items-center justify-between gap-3 text-muted-foreground">
-                <span className="truncate text-[11px] font-medium uppercase tracking-wide">{item.label}</span>
-                <Icon className="size-4 shrink-0" />
-              </div>
-              <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{item.value(props)}</p>
-              <p className="truncate text-[11px] text-muted-foreground">{item.hint}</p>
+    <div className="grid grid-cols-4 gap-2 sm:gap-3">
+      {STAT_ITEMS.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Card key={item.key} className="flex items-center gap-1.5 p-2 shadow-none sm:gap-2 sm:p-2.5">
+            <div className="rounded-md bg-muted p-1.5">
+              <Icon className="size-3.5 text-muted-foreground sm:size-4" />
             </div>
-          );
-        })}
-      </div>
+            <div className="min-w-0">
+              <p className="text-lg font-semibold tabular-nums leading-none sm:text-xl">{item.value(props)}</p>
+              <p className="truncate text-[10px] text-muted-foreground sm:text-[11px]">{item.label}</p>
+            </div>
+          </Card>
+        );
+      })}
     </div>
   );
 }
