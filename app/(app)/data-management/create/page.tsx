@@ -1382,7 +1382,8 @@ export default function CreateDataManagementPage() {
                   value={form.pop_id || "__none__"}
                   onValueChange={(value) => {
                     const newPopId = value === "__none__" ? "" : value;
-                    if (newPopId) {
+                    const skipAutoFill = selectedDeviceTypeMaster?.asset_group === 'passive' || form.device_type_key === 'ONT';
+                    if (newPopId && !skipAutoFill) {
                       const selectedPop = pops.find((p) => p.id === newPopId);
                       if (selectedPop && (selectedPop.address || selectedPop.city || selectedPop.province)) {
                         setForm((p) => ({
