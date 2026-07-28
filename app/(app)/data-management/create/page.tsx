@@ -865,7 +865,6 @@ export default function CreateDataManagementPage() {
     const identitasMissing: string[] = [];
     if (!form.device_name) identitasMissing.push("Device Name");
     if (!form.region_id) identitasMissing.push("Region");
-    if (!form.project_id) identitasMissing.push("Project");
     if (!form.pop_id) identitasMissing.push("POP");
     if (form.device_type_key === "ODP") {
       if (!form.odp_type) identitasMissing.push("Tipe ODP");
@@ -1148,9 +1147,6 @@ export default function CreateDataManagementPage() {
             : "Device Name, Device Type, dan Region wajib diisi.",
         );
       }
-      if (!form.project_id) {
-        throw new Error("Project wajib dipilih.");
-      }
       if (!form.pop_id) {
         throw new Error("POP wajib dipilih.");
       }
@@ -1360,7 +1356,7 @@ export default function CreateDataManagementPage() {
               </div>
 
               <div className="space-y-1.5">
-                <FieldLabel label="Project" tooltip="Hubungkan device ke project." required />
+                <FieldLabel label="Project (opsional)" tooltip="Hubungkan device ke project." />
                 <Combobox
                   value={form.project_id || "__none__"}
                   onValueChange={(value) => setForm((p) => ({ ...p, project_id: value === "__none__" ? "" : value }))}
