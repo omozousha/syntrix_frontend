@@ -1716,7 +1716,10 @@ function renderCreateFields(
           <Label>Asset Group *</Label>
           <Combobox
             value={form.asset_group || "active"}
-            onValueChange={(value) => setValue("asset_group", value)}
+            onValueChange={(value) => {
+              setValue("asset_group", value);
+              setValue("is_passive", value === "passive" ? "true" : "false");
+            }}
             options={[
               { value: "active", label: "active" },
               { value: "passive", label: "passive" },
@@ -2849,7 +2852,7 @@ function buildCreatePayload(resource: string, form: Record<string, string>) {
     assign("asset_group");
     assign("icon_name");
     assign("topology_role");
-    payload.is_passive = (trim("is_passive") || "false") === "true";
+    payload.is_passive = payload.asset_group === 'passive';
     payload.is_active_device = (trim("is_active_device") || "false") === "true";
     payload.supports_ports = (trim("supports_ports") || "false") === "true";
     payload.supports_splitter = (trim("supports_splitter") || "false") === "true";
