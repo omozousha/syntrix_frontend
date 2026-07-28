@@ -20,6 +20,8 @@ import {
   DeviceTechnicalSummarySection,
   DeviceValidationHistorySection,
   GenericDeviceRawSection,
+  OdcDistributionCablesSection,
+  OdpFrontReassignDialog,
   OdpCoreChainSummarySection,
   OdpOperationsShell,
   OdpPortMetrics,
@@ -2650,6 +2652,7 @@ if (!category) {
                     topologySummary={deviceTopologySummary}
                     loading={loadingOdpPorts}
                   />
+                  {isOdcDevice && <OdcDistributionCablesSection deviceId={item.id} token={token} />}
                   {(isOdcDevice || isOtbDevice) && (
                     <DeviceTopologyChainVisualizer deviceId={item.id} token={token} />
                   )}
@@ -2786,6 +2789,13 @@ if (!category) {
               </CollapsibleContent>
               </Card>
             </Collapsible>
+            {isOdpDevice && odpPorts.length > 0 && (
+              <OdpFrontReassignDialog
+                odpDeviceId={item.id}
+                odpPortId={odpPorts[0].id}
+                token={token}
+              />
+            )}
             {isOdpDevice ? (
               <OdpOperationsPanel
                 device={item}
@@ -4113,6 +4123,7 @@ function buildEditableForm(item: GenericItem, resource: string, topologySummary?
       device_id: valueOf(item.device_id),
       device_code: valueOf(item.device_code),
       device_name: valueOf(item.device_name),
+      device_name_alias: valueOf(item.device_name_alias),
       device_type_key: valueOf(item.device_type_key),
       asset_group: valueOf(item.asset_group),
       status: valueOf(item.status, "draft"),

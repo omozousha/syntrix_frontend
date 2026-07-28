@@ -69,6 +69,12 @@ export {
   groupPortsByTray,
 } from "@/components/features/data-management/device-detail/port-tray-types";
 
+// ODC Distribution Cables
+export { OdcDistributionCablesSection } from "@/components/features/data-management/device-detail/odc-distribution-cables-section";
+
+// ODP Front Reassign
+export { OdpFrontReassignDialog } from "@/components/features/data-management/device-detail/odp-front-reassign-dialog";
+
 // ── Fase 2g — Active Device (OLT/SWITCH) ────────────────────────────────
 export { OltPortContainer } from "@/components/features/data-management/device-detail/olt-port-container";
 export { OltPortCard } from "@/components/features/data-management/device-detail/olt-port-card";

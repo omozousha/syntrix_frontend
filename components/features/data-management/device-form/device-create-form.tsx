@@ -42,30 +42,22 @@ export type DeviceCreateFormValues = {
   device_name: string;
   odp_type: string;
   installation_type: string;
-  pop_id: string;
   region_id: string;
   tenant_id: string;
-  project_id: string;
 };
 
 export function DeviceCreateForm({
   values,
-  pops,
   odpTypes,
   installationTypes,
   tenants,
-  projects,
   onChange,
-  onPopChange,
 }: {
   values: DeviceCreateFormValues;
-  pops: PopOption[];
   odpTypes: OdpTypeOption[];
   installationTypes: InstallationTypeOption[];
   tenants: TenantOption[];
-  projects: ProjectOption[];
   onChange: (patch: Partial<DeviceCreateFormValues>) => void;
-  onPopChange: (popId: string) => void;
 }) {
   const isOdp = values.device_type_key === "ODP";
 
@@ -83,16 +75,6 @@ export function DeviceCreateForm({
       value: item.installation_type_name,
       label: [item.installation_type_name, item.installation_type_code].filter(Boolean).join(" - "),
     })),
-  ];
-
-  const popOptions: ComboboxOption[] = [
-    { value: "__none__", label: "Pilih POP" },
-    ...pops
-      .filter((pop) => !values.region_id || pop.region_id === values.region_id)
-      .map((pop) => ({
-        value: pop.id,
-        label: `${pop.pop_name} (${pop.pop_code})`,
-      })),
   ];
 
   const tenantOptions: ComboboxOption[] = [
@@ -135,35 +117,6 @@ export function DeviceCreateForm({
           </div>
         </>
       ) : null}
-      <div className="space-y-1.5">
-        <FieldLabel label="POP" tooltip="POP adalah lokasi fisik perangkat. Setiap device wajib ditempatkan di POP." required />
-        <Combobox
-          value={values.pop_id || "__none__"}
-          onValueChange={(value) => onPopChange(value === "__none__" ? "" : value)}
-          options={popOptions}
-          placeholder="Pilih POP"
-          searchPlaceholder="Cari POP..."
-        />
-      </div>
-      <div className="space-y-1.5">
-        <FieldLabel label="Project (opsional)" tooltip="Hubungkan device ke project untuk konteks asset capitalization." />
-        <Combobox
-          value={values.project_id || "__none__"}
-          onValueChange={(value) => onChange({ project_id: value === "__none__" ? "" : value })}
-          options={[
-            { value: "__none__", label: "Pilih Project (Opsional)" },
-            ...projects
-              .filter((project) => !values.region_id || !project.region_id || project.region_id === values.region_id)
-              .filter((project) => !values.pop_id || !project.pop_id || project.pop_id === values.pop_id)
-              .map((project) => ({
-                value: project.id,
-                label: [project.project_name, project.project_code].filter(Boolean).join(" | ") || "Project tidak tersedia",
-              })),
-          ]}
-          placeholder="Pilih project"
-          searchPlaceholder="Cari project..."
-        />
-      </div>
       <div className="space-y-1.5">
         <FieldLabel label="Tenant" tooltip="Pilih tenant perangkat dari master data." />
         <Combobox

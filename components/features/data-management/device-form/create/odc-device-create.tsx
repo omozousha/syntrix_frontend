@@ -42,11 +42,9 @@ export type OdcCreateFormValues = {
 
 export function OdcDeviceCreate({
   values,
-  pops,
   odpTypes,
   installationTypes,
   tenants,
-  projects,
   routeTypes,
   cableTypes = [],
   manufacturers,
@@ -62,15 +60,12 @@ export function OdcDeviceCreate({
   cableConnections = [],
   onCableConnectionsChange,
   onChange,
-  onPopChange,
-}: {
+  }: {
   values: OdcCreateFormValues;
-  pops: PopOption[];
-  odpTypes: OdpTypeOption[];
+odpTypes: OdpTypeOption[];
   installationTypes: InstallationTypeOption[];
   tenants: TenantOption[];
-  projects: ProjectOption[];
-  routeTypes: RouteTypeOption[];
+routeTypes: RouteTypeOption[];
   cableTypes?: CableTypeOption[];
   manufacturers: ManufacturerOption[];
   brands: BrandOption[];
@@ -85,19 +80,15 @@ export function OdcDeviceCreate({
   cableConnections?: CableConnectionDraft[];
   onCableConnectionsChange?: (next: CableConnectionDraft[]) => void;
   onChange: (patch: Record<string, string>) => void;
-  onPopChange: (popId: string) => void;
 }) {
   return (
     <>
       <DeviceCreateForm
         values={values}
-        pops={pops}
         odpTypes={odpTypes}
         installationTypes={installationTypes}
         tenants={tenants}
-        projects={projects}
         onChange={onChange}
-        onPopChange={onPopChange}
       />
 
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border bg-muted/40 px-3 py-1.5">

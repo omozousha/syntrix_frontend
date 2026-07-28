@@ -30,11 +30,9 @@ type CableConnectionDraft = { route_type: string; cable_type: string; cable_leng
 export type CreateFormSelectionProps = {
   deviceTypeKey: string;
   values: Record<string, string>;
-  pops: PopOption[];
   odpTypes: OdpTypeOption[];
   installationTypes: InstallationTypeOption[];
   tenants: TenantOption[];
-  projects: ProjectOption[];
   routeTypes: RouteTypeOption[];
   cableTypes?: CableTypeOption[];
   manufacturers: ManufacturerOption[];
@@ -50,17 +48,14 @@ export type CreateFormSelectionProps = {
   cableConnections?: CableConnectionDraft[];
   onCableConnectionsChange?: (next: CableConnectionDraft[]) => void;
   onChange: (patch: Record<string, string>) => void;
-  onPopChange: (popId: string) => void;
 };
 
 export function CreateFormSelection({
   deviceTypeKey,
   values,
-  pops,
   odpTypes,
   installationTypes,
   tenants,
-  projects,
   routeTypes,
   cableTypes,
   manufacturers,
@@ -76,7 +71,6 @@ export function CreateFormSelection({
   cableConnections = [],
   onCableConnectionsChange,
   onChange,
-  onPopChange,
 }: CreateFormSelectionProps) {
   const dtk = deviceTypeKey.toUpperCase();
 
@@ -84,11 +78,9 @@ export function CreateFormSelection({
     return (
       <OdcDeviceCreate
         values={values as OdcCreateFormValues}
-        pops={pops}
         odpTypes={odpTypes}
         installationTypes={installationTypes}
         tenants={tenants}
-        projects={projects}
         routeTypes={routeTypes}
         cableTypes={cableTypes}
         manufacturers={manufacturers}
@@ -104,7 +96,6 @@ export function CreateFormSelection({
         cableConnections={cableConnections}
         onCableConnectionsChange={onCableConnectionsChange}
         onChange={onChange}
-        onPopChange={onPopChange}
       />
     );
   }
@@ -113,11 +104,9 @@ export function CreateFormSelection({
     return (
       <OdpDeviceCreate
         values={values as OdpCreateFormValues}
-        pops={pops}
         odpTypes={odpTypes}
         installationTypes={installationTypes}
         tenants={tenants}
-        projects={projects}
         manufacturers={manufacturers}
         brands={brands}
         assetModels={assetModels}
@@ -127,7 +116,6 @@ export function CreateFormSelection({
         frontRelationLabel={frontRelationLabel}
         rearRelationLabel={rearRelationLabel}
         onChange={onChange}
-        onPopChange={onPopChange}
       />
     );
   }
@@ -136,11 +124,9 @@ export function CreateFormSelection({
     return (
       <CableDeviceCreate
         values={values as CableCreateFormValues}
-        pops={pops}
         odpTypes={odpTypes}
         installationTypes={installationTypes}
         tenants={tenants}
-        projects={projects}
         routeTypes={routeTypes}
         cableTypes={cableTypes}
         manufacturers={manufacturers}
@@ -154,7 +140,6 @@ export function CreateFormSelection({
         frontRelationLabel={frontRelationLabel}
         rearRelationLabel={rearRelationLabel}
         onChange={onChange}
-        onPopChange={onPopChange}
       />
     );
   }
@@ -163,23 +148,20 @@ export function CreateFormSelection({
   return (
     <GenericDeviceCreate
       values={values as GenericCreateFormValues}
-      pops={pops}
       odpTypes={odpTypes}
       installationTypes={installationTypes}
       tenants={tenants}
-      projects={projects}
       manufacturers={manufacturers}
       brands={brands}
       assetModels={assetModels}
       topologyFrontDevices={topologyFrontDevices}
       topologyRearDevices={topologyRearDevices}
       frontDevicePorts={frontDevicePorts}
-        rearDevicePorts={rearDevicePorts}
-        loadingTopology={loadingTopology}
-        frontRelationLabel={frontRelationLabel}
-        rearRelationLabel={rearRelationLabel}
-        onChange={onChange}
-      onPopChange={onPopChange}
+      rearDevicePorts={rearDevicePorts}
+      loadingTopology={loadingTopology}
+      frontRelationLabel={frontRelationLabel}
+      rearRelationLabel={rearRelationLabel}
+      onChange={onChange}
     />
   );
 }

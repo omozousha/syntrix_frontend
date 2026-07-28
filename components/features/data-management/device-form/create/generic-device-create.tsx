@@ -39,11 +39,9 @@ export type GenericCreateFormValues = {
 
 export function GenericDeviceCreate({
   values,
-  pops,
   odpTypes,
   installationTypes,
   tenants,
-  projects,
   manufacturers,
   brands,
   assetModels,
@@ -55,15 +53,12 @@ export function GenericDeviceCreate({
   frontRelationLabel = "Hulu",
   rearRelationLabel = "Hilir",
   onChange,
-  onPopChange,
-}: {
+  }: {
   values: GenericCreateFormValues;
-  pops: PopOption[];
-  odpTypes: OdpTypeOption[];
+odpTypes: OdpTypeOption[];
   installationTypes: InstallationTypeOption[];
   tenants: TenantOption[];
-  projects: ProjectOption[];
-  manufacturers: ManufacturerOption[];
+manufacturers: ManufacturerOption[];
   brands: BrandOption[];
   assetModels: AssetModelOption[];
   topologyFrontDevices?: TopologyDeviceOption[];
@@ -74,7 +69,6 @@ export function GenericDeviceCreate({
   frontRelationLabel?: string;
   rearRelationLabel?: string;
   onChange: (patch: Record<string, string>) => void;
-  onPopChange: (popId: string) => void;
 }) {
   const isMinimal = NO_TECH_TYPES.has(values.device_type_key);
 
@@ -82,13 +76,10 @@ export function GenericDeviceCreate({
     <>
       <DeviceCreateForm
         values={values}
-        pops={pops}
         odpTypes={odpTypes}
         installationTypes={installationTypes}
         tenants={tenants}
-        projects={projects}
         onChange={onChange}
-        onPopChange={onPopChange}
       />
 
       {values.device_type_key === "OTB" ? (

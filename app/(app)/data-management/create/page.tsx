@@ -299,6 +299,7 @@ export default function CreateDataManagementPage() {
       longitude: "",
       latitude: "",
       device_name: "",
+    device_name_alias: "",
       device_type_key: initialDeviceType,
       asset_group: passive ? "passive" : "active",
       installation_date: "",
@@ -1163,6 +1164,7 @@ export default function CreateDataManagementPage() {
         brand_id: nullIfEmpty(form.brand_id),
         model_id: nullIfEmpty(form.model_id),
         serial_number: nullIfEmpty(form.serial_number),
+        device_name_alias: nullIfEmpty(form.device_name_alias),
         status: form.status,
         installation_date: nullIfEmpty(form.installation_date),
         validation_status: "unvalidated",
@@ -1217,15 +1219,8 @@ export default function CreateDataManagementPage() {
       if (form.rear_device_id) payload.rear_device_id = form.rear_device_id;
       if (form.rear_port_id) payload.rear_port_id = form.rear_port_id;
 
-      // Cable connections array (ODC distribution cables)
-      if (cableConnections.length > 0) {
-        payload.cable_connections = cableConnections.map((conn) => ({
-          route_type: conn.route_type || null,
-          cable_type: conn.cable_type || null,
-          cable_length_m: numberOrNull(conn.cable_length_m),
-          route_name: conn.route_name || null,
-        }));
-      }
+      // Cable connections — post to odcDistributionCables after device created
+      const pendingCables = form.device_type_key === "ODC" ? cableConnections : [];
 
       // Per-type extra fields
       if (form.device_type_key === "OLT" || form.device_type_key === "ONT" || form.device_type_key === "SWITCH" || form.device_type_key === "ROUTER") {
@@ -1255,6 +1250,29 @@ export default function CreateDataManagementPage() {
         const requestId = getApprovalRequestId(createdDevice.data);
         openApprovalNotice("Device", requestId, buildListTarget(`/data-management/list/${deviceTypeKeyToSlug(form.device_type_key)}`, form.region_id));
         return;
+      }
+
+      // Post-create: save distribution cables for ODC
+      if (pendingCables.length > 0) {
+        const deviceId = (createdDevice as any).data?.id || (createdDevice as any).data?.data?.id;
+        if (deviceId) {
+          const cablesPayload = pendingCables.map((cable, idx) => ({
+            odc_device_id: deviceId,
+            region_id: form.region_id,
+            route_type: nullIfEmpty(cable.route_type),
+            cable_type: nullIfEmpty(cable.cable_type),
+            cable_length_m: numberOrNull(cable.cable_length_m),
+            route_name: nullIfEmpty(cable.route_name),
+            sort_order: idx,
+          }));
+          for (const cable of cablesPayload) {
+            await apiFetch("/odcDistributionCables", {
+              method: "POST",
+              token,
+              body: JSON.stringify(cable),
+            }).catch(() => {});
+          }
+        }
       }
 
       setCreateResponseDialog({
@@ -1360,11 +1378,9 @@ export default function CreateDataManagementPage() {
                   <CreateFormSelection
                     deviceTypeKey={form.device_type_key}
                     values={form}
-                    pops={pops}
                     odpTypes={odpTypes}
                     installationTypes={installationTypes}
                     tenants={tenants}
-                    projects={projects}
                     routeTypes={routeTypes}
                     cableTypes={cableTypes}
                     manufacturers={manufacturers}
@@ -1380,31 +1396,6 @@ export default function CreateDataManagementPage() {
                     cableConnections={cableConnections}
                     onCableConnectionsChange={setCableConnections}
                     onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-                    onPopChange={(nextPopId) => {
-                      if (form.customer_id && form.pop_id !== nextPopId) {
-                        setAutoFillNotice("Customer reference dikosongkan karena POP berubah. Pilih customer dari POP baru untuk mengisi ulang data lokasi.");
-                      }
-                      if (nextPopId) {
-                        const selectedPop = pops.find((p) => p.id === nextPopId);
-                        if (selectedPop && (selectedPop.address || selectedPop.city || selectedPop.province)) {
-                          setForm((p) => ({
-                            ...p,
-                            pop_id: nextPopId,
-                            customer_id: "",
-                            address: selectedPop.address || p.address,
-                            city: selectedPop.city || p.city,
-                            city_id: selectedPop.city_id || p.city_id,
-                            province: selectedPop.province || p.province,
-                            province_id: selectedPop.province_id || p.province_id,
-                            longitude: selectedPop.longitude != null ? String(selectedPop.longitude) : p.longitude,
-                            latitude: selectedPop.latitude != null ? String(selectedPop.latitude) : p.latitude,
-                          }));
-                          setAutoFillNotice("Lokasi otomatis terisi dari data POP. Review dan koreksi bila diperlukan sebelum menyimpan.");
-                          return;
-                        }
-                      }
-                      setForm((p) => ({ ...p, pop_id: nextPopId, customer_id: "" }));
-                    }}
                   />
                   {isOntDevice ? (
                     <div className="space-y-1.5 col-span-full md:col-span-2 xl:col-span-3">
@@ -1710,40 +1701,40 @@ export default function CreateDataManagementPage() {
                 />
               ) : null}
               {isProject ? (
-                <ProjectCreateForm
-                  values={{
-                    project_name: form.project_name,
-                    vendor_name: form.vendor_name,
-                    bast_number: form.bast_number,
-                    spk_number: form.spk_number,
-                    pop_id: form.pop_id,
-                    region_id: form.region_id,
-                    project_description: form.project_description,
-                    start_date: form.start_date,
-                    end_date: form.end_date,
-                    budget_value: form.budget_value,
-                  }}
-                  pops={pops}
-                  sectionSpanClass={sectionSpanClass}
-                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-                />
+                  <ProjectCreateForm
+                    values={{
+                      project_name: form.project_name,
+                      vendor_name: form.vendor_name,
+                      bast_number: form.bast_number,
+                      spk_number: form.spk_number,
+                      pop_id: form.pop_id,
+                      region_id: form.region_id,
+                      project_description: form.project_description,
+                      start_date: form.start_date,
+                      end_date: form.end_date,
+                      budget_value: form.budget_value,
+                    }}
+                    pops={pops}
+                    sectionSpanClass={sectionSpanClass}
+                    onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+                  />
               ) : null}
               {isCustomer ? (
-                <CustomerCreateForm
-                  values={{
-                    customer_name: form.customer_name,
-                    customer_number: form.customer_number,
-                    service_type_id: form.service_type_id,
-                    service_type: form.service_type,
-                    pop_id: form.pop_id,
-                    customer_project_id: form.customer_project_id,
-                    region_id: form.region_id,
-                  }}
-                  serviceTypes={serviceTypes}
-                  pops={pops}
-                  projects={projects}
-                  onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
-                />
+                  <CustomerCreateForm
+                    values={{
+                      customer_name: form.customer_name,
+                      customer_number: form.customer_number,
+                      service_type_id: form.service_type_id,
+                      service_type: form.service_type,
+                      pop_id: form.pop_id,
+                      customer_project_id: form.customer_project_id,
+                      region_id: form.region_id,
+                    }}
+                    pops={pops}
+                    projects={projects}
+                    serviceTypes={serviceTypes}
+                    onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
+                  />
               ) : null}
               <div className="space-y-1.5">
                 <FieldLabel label="Region" tooltip={isFixedRegionRole ? "Region terkunci mengikuti scope akun." : "Region wajib dipilih."} />

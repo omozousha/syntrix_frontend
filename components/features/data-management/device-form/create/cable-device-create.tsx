@@ -48,11 +48,9 @@ export type CableCreateFormValues = {
 
 export function CableDeviceCreate({
   values,
-  pops,
   odpTypes,
   installationTypes,
   tenants,
-  projects,
   manufacturers,
   brands,
   assetModels,
@@ -66,15 +64,12 @@ export function CableDeviceCreate({
   frontRelationLabel = "Hulu",
   rearRelationLabel = "Hilir",
   onChange,
-  onPopChange,
-}: {
+  }: {
   values: CableCreateFormValues;
-  pops: PopOption[];
-  odpTypes: OdpTypeOption[];
+odpTypes: OdpTypeOption[];
   installationTypes: InstallationTypeOption[];
   tenants: TenantOption[];
-  projects: ProjectOption[];
-  routeTypes: RouteTypeOption[];
+routeTypes: RouteTypeOption[];
   cableTypes?: CableTypeOption[];
   manufacturers: ManufacturerOption[];
   brands: BrandOption[];
@@ -87,20 +82,16 @@ export function CableDeviceCreate({
   frontRelationLabel?: string;
   rearRelationLabel?: string;
   onChange: (patch: Record<string, string>) => void;
-  onPopChange: (popId: string) => void;
 }) {
   return (
     <>
       {/* ═══ 1. INFORMASI DEVICE + AFILIASI JARINGAN ═══ */}
       <DeviceCreateForm
         values={values}
-        pops={pops}
         odpTypes={odpTypes}
         installationTypes={installationTypes}
         tenants={tenants}
-        projects={projects}
         onChange={onChange}
-        onPopChange={onPopChange}
       />
 
       {/* ═══ 2. INFORMASI ROUTE ═══ */}
