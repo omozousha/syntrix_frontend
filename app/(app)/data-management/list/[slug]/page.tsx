@@ -1716,10 +1716,7 @@ function renderCreateFields(
           <Label>Asset Group *</Label>
           <Combobox
             value={form.asset_group || "active"}
-            onValueChange={(value) => {
-              setValue("asset_group", value);
-              setValue("is_passive", value === "passive" ? "true" : "false");
-            }}
+            onValueChange={(value) => setValue("asset_group", value)}
             options={[
               { value: "active", label: "active" },
               { value: "passive", label: "passive" },
@@ -1793,22 +1790,6 @@ function renderCreateFields(
         <div className="space-y-1.5">
           <Label>Default Rear Label</Label>
           <Input value={form.default_rear_label || ""} onChange={(e) => setValue("default_rear_label", e.target.value)} placeholder="Contoh: Hilir" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Is Passive</Label>
-          <Combobox
-            value={form.is_passive || "false"}
-            onValueChange={(value) => setValue("is_passive", value)}
-            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Is Active Device</Label>
-          <Combobox
-            value={form.is_active_device || "false"}
-            onValueChange={(value) => setValue("is_active_device", value)}
-            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
-          />
         </div>
         <div className="space-y-1.5">
           <Label>Supports Ports</Label>
@@ -2425,7 +2406,7 @@ function renderCreateFields(
 }
 
 function getCreateDefaults(resource: string): Record<string, string> {
-  if (resource === "deviceTypes") return { asset_group: "active", icon_name: "HardDrive", topology_role: "termination_panel", is_passive: "false", is_active_device: "false", supports_ports: "false", supports_splitter: "false", supports_core_management: "false", supports_joint_closure: "false", layout_type: "summary_only", default_front_label: "Hulu", default_rear_label: "Hilir", is_assignable: "false", is_active: "true", sort_order: "0" };
+  if (resource === "deviceTypes") return { asset_group: "active", icon_name: "HardDrive", topology_role: "termination_panel", supports_ports: "false", supports_splitter: "false", supports_core_management: "false", supports_joint_closure: "false", layout_type: "summary_only", default_front_label: "Hulu", default_rear_label: "Hilir", is_assignable: "false", is_active: "true", sort_order: "0" };
   if (resource === "topologyRelationRules") return { direction: "front", connection_role: "physical_fiber", requires_same_pop: "true", requires_same_project: "false", is_required_on_create: "false", is_active: "true", sort_order: "0" };
   if (resource === "linkBudgetParameters") return { unit: "dB", is_active: "true", sort_order: "0" };
   if (resource === "popTypes") return { is_active: "true", sort_order: "0" };
