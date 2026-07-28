@@ -121,6 +121,7 @@ type DeviceTypeMasterOption = {
   id: string;
   device_type_key: string;
   device_type_name?: string | null;
+  asset_group?: string | null;
   supports_ports?: boolean | null;
   supports_splitter?: boolean | null;
   supports_core_management?: boolean | null;
@@ -1157,7 +1158,7 @@ export default function CreateDataManagementPage() {
       const payload: Record<string, unknown> = {
         device_name: normalizeDeviceName(form.device_name) || null,
         device_type_key: form.device_type_key,
-        asset_group: PASSIVE_TYPES.has(form.device_type_key) ? "passive" : "active",
+        asset_group: selectedDeviceTypeMaster?.asset_group || (PASSIVE_TYPES.has(form.device_type_key) ? "passive" : "active"),
         region_id: form.region_id,
         pop_id: nullIfEmpty(form.pop_id),
         project_id: nullIfEmpty(form.project_id),
