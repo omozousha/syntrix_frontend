@@ -641,7 +641,7 @@ export default function DataManagementListPage() {
     if (category.resource === "customers") return [selectAllHeader, "CID", "Name", "Service", "POP", "Status", "Updated"];
     if (category.resource === "routes") return [selectAllHeader, "Route ID", "Route Name", "Region", "POP", "Status", "Updated"];
     if (category.resource === "regions") return [selectAllHeader, "Region ID", "Inventory Code", "Region Name", "Color", "Updated"];
-    if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Topology Role", "Layout", "Assignable", "Status", "Updated"];
+    if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Group", "Topology Role", "Layout", "Assignable", "Device Count", "Status", "Updated"];
     if (category.resource === "topologyRelationRules") return [selectAllHeader, "Source", "Direction", "Allowed Peer", "Role", "Same POP", "Required on Create", "Status", "Updated"];
     if (category.resource === "linkBudgetParameters") return [selectAllHeader, "Key", "Label", "Value", "Unit", "Status", "Updated"];
     if (category.resource === "popTypes") return [selectAllHeader, "Code", "POP Type", "Status", "Updated"];
@@ -773,9 +773,11 @@ export default function DataManagementListPage() {
           renderDeviceIconCell(pick(item, ["icon_name"])),
           pick(item, ["device_type_key"]),
           withArchivedLabel(item, pick(item, ["device_type_name"])),
+          pick(item, ["asset_group"]),
           pick(item, ["topology_role"]),
           pick(item, ["layout_type"]),
           pick(item, ["is_assignable"]),
+          pick(item, ["device_count"]),
           pick(item, ["is_active"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
