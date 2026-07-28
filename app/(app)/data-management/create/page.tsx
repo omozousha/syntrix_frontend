@@ -864,8 +864,9 @@ export default function CreateDataManagementPage() {
     // Identitas & Relasi fields
     const identitasMissing: string[] = [];
     if (!form.device_name) identitasMissing.push("Device Name");
-    if (!form.pop_id) identitasMissing.push("POP");
     if (!form.region_id) identitasMissing.push("Region");
+    if (!form.project_id) identitasMissing.push("Project");
+    if (!form.pop_id) identitasMissing.push("POP");
     if (form.device_type_key === "ODP") {
       if (!form.odp_type) identitasMissing.push("Tipe ODP");
       if (!form.installation_type) identitasMissing.push("Jenis Instalasi");
@@ -1147,6 +1148,12 @@ export default function CreateDataManagementPage() {
             : "Device Name, Device Type, dan Region wajib diisi.",
         );
       }
+      if (!form.project_id) {
+        throw new Error("Project wajib dipilih.");
+      }
+      if (!form.pop_id) {
+        throw new Error("POP wajib dipilih.");
+      }
       if (form.device_type_key === "ODP" && (!form.odp_type || !form.installation_type)) {
         throw new Error("Tipe ODP dan Jenis Instalasi wajib dipilih.");
       }
@@ -1317,6 +1324,124 @@ export default function CreateDataManagementPage() {
 
       <CreateFormStatusAlerts errorMessage={errorMessage} successMessage={successMessage} />
 
+      {/* ── Prerequisite: Region → Project → POP (Device only, sebelum tabs) ── */}
+      {isDevice ? (
+        <Card>
+          <CardContent className="space-y-3 pt-4">
+            <div className={`${sectionLabelClass}`}>Lokasi & Project</div>
+            <div className={formGridClass}>
+              <div className="space-y-1.5">
+                <FieldLabel label="Region" tooltip={isFixedRegionRole ? "Region terkunci mengikuti scope akun." : "Region wajib dipilih."} required />
+                {isFixedRegionRole ? (
+                  <Input value={selectedRegionLabel} disabled />
+                ) : (
+                  <Combobox
+                    value={form.region_id || "__none__"}
+                    onValueChange={(v) => {
+                      const regionId = v === "__none__" ? "" : v;
+                      setForm((p) => ({
+                        ...p,
+                        region_id: regionId,
+                        pop_id: "",
+                        project_id: "",
+                      }));
+                    }}
+                    options={toOptions([
+                      { value: "__none__", label: "Pilih region" },
+                      ...regions.map((region) => ({
+                        value: region.id,
+                        label: region.region_name,
+                      })),
+                    ])}
+                    placeholder="Pilih region"
+                    searchPlaceholder="Cari region..."
+                  />
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <FieldLabel label="Project" tooltip="Hubungkan device ke project." required />
+                <Combobox
+                  value={form.project_id || "__none__"}
+                  onValueChange={(value) => setForm((p) => ({ ...p, project_id: value === "__none__" ? "" : value }))}
+                  options={toOptions([
+                    { value: "__none__", label: form.region_id ? "Pilih Project" : "Pilih region terlebih dahulu" },
+                    ...projects
+                      .filter((project) => !form.region_id || !project.region_id || project.region_id === form.region_id)
+                      .map((project) => ({
+                        value: project.id,
+                        label: [project.project_name, project.project_code].filter(Boolean).join(" | "),
+                      })),
+                  ])}
+                  placeholder={form.region_id ? "Pilih project" : "Pilih region terlebih dahulu"}
+                  searchPlaceholder="Cari project..."
+                  disabled={!form.region_id}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <FieldLabel label="POP" tooltip="POP adalah lokasi fisik perangkat. Pilih region dan project terlebih dahulu." required />
+                <Combobox
+                  value={form.pop_id || "__none__"}
+                  onValueChange={(value) => {
+                    const newPopId = value === "__none__" ? "" : value;
+                    if (newPopId) {
+                      const selectedPop = pops.find((p) => p.id === newPopId);
+                      if (selectedPop && (selectedPop.address || selectedPop.city || selectedPop.province)) {
+                        setForm((p) => ({
+                          ...p,
+                          pop_id: newPopId,
+                          customer_id: "",
+                          address: selectedPop.address || p.address,
+                          city: selectedPop.city || p.city,
+                          city_id: selectedPop.city_id || p.city_id,
+                          province: selectedPop.province || p.province,
+                          province_id: selectedPop.province_id || p.province_id,
+                          longitude: selectedPop.longitude != null ? String(selectedPop.longitude) : p.longitude,
+                          latitude: selectedPop.latitude != null ? String(selectedPop.latitude) : p.latitude,
+                        }));
+                        setAutoFillNotice("Lokasi otomatis terisi dari data POP.");
+                        return;
+                      }
+                    }
+                    setForm((p) => ({ ...p, pop_id: newPopId, customer_id: "" }));
+                  }}
+                  options={toOptions([
+                    { value: "__none__", label: form.region_id ? "Pilih POP" : "Pilih region terlebih dahulu" },
+                    ...pops
+                      .filter((pop) => !form.region_id || pop.region_id === form.region_id)
+                      .map((pop) => ({
+                        value: pop.id,
+                        label: `${pop.pop_name} (${pop.pop_code})`,
+                      })),
+                  ])}
+                  placeholder={form.region_id ? "Pilih POP" : "Pilih region terlebih dahulu"}
+                  searchPlaceholder="Cari POP..."
+                  disabled={!form.region_id}
+                />
+              </div>
+
+              <Field
+                label="Nama Perangkat Baru (opsional)"
+                value={form.device_name_alias}
+                onChange={(v) => setForm((p) => ({ ...p, device_name_alias: v }))}
+                placeholder="Alias atau nama alternatif"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {autoFillNotice ? (
+        <Alert className="border-blue-200 bg-blue-50/70 py-2 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-100">
+          <AlertTitle className="flex items-center gap-2 text-xs">
+            <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal">Auto-fill</Badge>
+            Review data otomatis
+          </AlertTitle>
+          <AlertDescription className="text-xs">{autoFillNotice}</AlertDescription>
+        </Alert>
+      ) : null}
+
       <Card>
         <CreateFormCardHeader flags={{ isPop, isProject, isCustomer }} />
         <CardContent className="space-y-5">
@@ -1330,7 +1455,7 @@ export default function CreateDataManagementPage() {
             </div>
           ) : null}
 
-          {isDevice ? (
+          {isDevice && form.region_id ? (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <div className="flex items-center gap-2 mb-4 overflow-x-auto">
                 <TabsList>
