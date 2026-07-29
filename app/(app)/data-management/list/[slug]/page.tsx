@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -65,6 +65,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { buildCategoryApiPath, getCategoryBySlug } from "@/lib/data-management-config";
+import { MASTER_DATA_FORM_CONFIG } from "@/lib/master-data-form-config";
+import { MasterDataFormFields, type LookupOptions } from "@/components/features/master-data/master-data-form-renderer";
 import { buildDeviceListDisplay, type DeviceListLookupMaps } from "@/lib/display-adapters/device-list-display-adapter";
 import { buildDeviceQrHref, drawQrLabelPdf, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
@@ -124,6 +126,58 @@ function getDeviceIcon(iconName?: string | null) {
   return DEVICE_ICON_MAP[iconName || ""] || HardDrive;
 }
 
+function renderMasterForm(
+  resource: string,
+  form: Record<string, string>,
+  setForm: (updater: (prev: Record<string, string>) => Record<string, string>) => void,
+  lookups: { manufacturers: LookupOption[]; brands: LookupOption[]; provinces: LookupOption[]; assetTypes: LookupOption[] },
+  _fieldErrors: Record<string, string>,
+  _setFieldError: (field: string, msg: string) => void,
+  _clearFieldError: (field: string) => void,
+  _onBlur: ((field: { key: string; isKeyField?: boolean }, value: string) => void) | undefined,
+  isEdit: boolean,
+  _rows: GenericItem[],
+  _currentEditId: string | undefined,
+) {
+  const config = MASTER_DATA_FORM_CONFIG[resource];
+  if (!config) return null;
+
+  const onBlurInternal = (field: { key: string; isKeyField?: boolean }, value: string) => {
+    if (_onBlur) _onBlur(field, value);
+    if (field.isKeyField && value.trim() && config.keyField) {
+      const match = _rows.find((item) => {
+        const itemVal = String(item[config.keyField ?? ""] ?? "").trim().toLowerCase();
+        const targetVal = value.trim().toLowerCase();
+        return itemVal === targetVal && item.id !== _currentEditId;
+      });
+      if (match) {
+        _setFieldError(field.key, `"${value.trim()}" sudah terdaftar. Gunakan nilai yang berbeda.`);
+      }
+    }
+  };
+
+  const lookupOptions: LookupOptions = {
+    manufacturers: lookups.manufacturers,
+    brands: lookups.brands,
+    provinces: lookups.provinces,
+    assetTypes: lookups.assetTypes,
+  };
+
+  return (
+    <MasterDataFormFields
+      fields={config.fields}
+      form={form}
+      setForm={setForm}
+      fieldErrors={_fieldErrors}
+      setFieldError={_setFieldError}
+      clearFieldError={_clearFieldError}
+      lookups={lookupOptions}
+      onBlur={onBlurInternal}
+      isEdit={isEdit}
+    />
+  );
+}
+
 export default function DataManagementListPage() {
   const router = useRouter();
   const params = useParams<{ slug: string }>();
@@ -141,6 +195,7 @@ export default function DataManagementListPage() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [provinceFilter, setProvinceFilter] = useState(searchParams.get("province_id") || "__all");
+  const [directionFilter, setDirectionFilter] = useState("__all");
   const [popFilterOptions, setPopFilterOptions] = useState<PopFilterOption[]>([]);
   const [popFilterLoading, setPopFilterLoading] = useState(true);
   const [projectFilterOptions, setProjectFilterOptions] = useState<ProjectFilterOption[]>([]);
@@ -163,6 +218,13 @@ export default function DataManagementListPage() {
   const [odpModeDialogOpen, setOdpModeDialogOpen] = useState(false);
   const [createForm, setCreateForm] = useState<Record<string, string>>({});
   const [createError, setCreateError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  function setFieldError(field: string, msg: string) {
+    setFieldErrors((prev) => ({ ...prev, [field]: msg }));
+  }
+  function clearFieldError(field: string) {
+    setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next; });
+  }
   const [downloadingQr, setDownloadingQr] = useState(false);
   const [lookupOptions, setLookupOptions] = useState<{
     manufacturers: LookupOption[];
@@ -181,7 +243,13 @@ export default function DataManagementListPage() {
     provinces: {},
     projects: {},
   });
+  const [usageCheck, setUsageCheck] = useState<{
+    total: number;
+    by_type: Record<string, { count: number; sample: Array<{ id: string; label: string }> }>;
+  } | null>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const forceDeleteRef = useRef(false);
 
   const regionScopeIds = useMemo(
     () =>
@@ -212,6 +280,27 @@ export default function DataManagementListPage() {
   const renameConfig = getRenameConfig(category?.resource || "");
   const createDefaults = useMemo(() => getCreateDefaults(category?.resource || ""), [category?.resource]);
   const [activeTab, setActiveTab] = useState<"list" | "quality">("list");
+  const handleFieldBlur = useCallback(
+    async (field: { key: string; isKeyField?: boolean }, value: string) => {
+      if (!field.isKeyField || !value.trim() || !category) return;
+      try {
+        const queryPath = `/${category.resource}?q=${encodeURIComponent(value.trim())}&limit=5`;
+        const res = await apiFetch<PaginatedResponse<GenericItem>>(queryPath, { token });
+        const match = (res.data || []).find((item) => {
+          const itemVal = String(item[field.key] ?? "").trim().toLowerCase();
+          const targetVal = value.trim().toLowerCase();
+          const currentEditingId = quickEditTarget?.id || undefined;
+          return itemVal === targetVal && item.id !== currentEditingId;
+        });
+        if (match) {
+          setFieldError(field.key, `"${value.trim()}" sudah terdaftar. Gunakan nilai yang berbeda.`);
+        }
+      } catch {
+        // Ignored on blur error
+      }
+    },
+    [category, token, quickEditTarget],
+  );
   const selectedPopLabel = useMemo(
     () => popFilterOptions.find((option) => option.id === popQueryParam)?.label || "",
     [popQueryParam, popFilterOptions],
@@ -238,7 +327,9 @@ export default function DataManagementListPage() {
     [popLabelById, relationMaps],
   );
   const filterGridClass =
-    supportsPopFilter || supportsProjectFilter
+    category?.resource === "topologyRelationRules"
+      ? "sm:grid-cols-4"
+      : supportsPopFilter || supportsProjectFilter
       ? "sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6"
       : category?.resource === "cities" || isSoftDeleteResource
       ? "sm:grid-cols-4"
@@ -278,6 +369,7 @@ export default function DataManagementListPage() {
     setSearch("");
     setSearchInput("");
     setProvinceFilter("__all");
+    setDirectionFilter("__all");
     setArchiveView("active");
     setSelectedIds(new Set());
     setPage(1);
@@ -321,6 +413,8 @@ export default function DataManagementListPage() {
         let path =
           activeCategory.resource === "cities" && provinceFilter !== "__all"
             ? `${basePath}&province_id=${encodeURIComponent(provinceFilter)}`
+            : activeCategory.resource === "topologyRelationRules" && directionFilter !== "__all"
+            ? `${basePath}&direction=${encodeURIComponent(directionFilter)}`
             : basePath;
         if (isSoftDeleteResource && archiveView !== "active") {
           path = `${path}&include_deleted=true`;
@@ -646,7 +740,8 @@ export default function DataManagementListPage() {
     if (category.resource === "linkBudgetParameters") return [selectAllHeader, "Key", "Label", "Value", "Unit", "Status", "Updated"];
     if (category.resource === "popTypes") return [selectAllHeader, "Code", "POP Type", "Status", "Updated"];
     if (category.resource === "routeTypes") return [selectAllHeader, "Code", "Route Type", "Status", "Updated"];
-    if (category.resource === "cableTypes") return [selectAllHeader, "Code", "Cable Type", "Description", "Status", "Updated"];
+    if (category.resource === "cableTypes") return [selectAllHeader, "Code", "Cable Type", "Role", "Core Count", "1310nm", "Status", "Updated"];
+    if (category.resource === "closureTypes") return [selectAllHeader, "Code", "Closure Type", "Max Core", "Environment", "Tray", "Status", "Updated"];
     if (category.resource === "coreCapacities") return [selectAllHeader, "Value", "Label", "Description", "Route Types", "Status", "Updated"];
     if (category.resource === "deviceCoreCapacities") return [selectAllHeader, "Value", "Label", "Description", "Device Types", "Status", "Updated"];
     if (category.resource === "odpTypes") return [selectAllHeader, "Code", "ODP Type", "Status", "Updated"];
@@ -893,6 +988,18 @@ export default function DataManagementListPage() {
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
       }
+      if (category.resource === "closureTypes") {
+        return [
+          selectCell,
+          pick(item, ["closure_type_code"]),
+          withArchivedLabel(item, pick(item, ["closure_type_name"])),
+          pick(item, ["max_core_capacity"]),
+          pick(item, ["environment_rating"]),
+          pick(item, ["tray_count"]),
+          pick(item, ["is_active"]),
+          formatDateTime(pick(item, ["updated_at", "created_at"])),
+        ];
+      }
       if (category.resource === "manufacturers") {
         return [
           selectCell,
@@ -1019,9 +1126,8 @@ export default function DataManagementListPage() {
     }
   }
 
-  async function submitDelete() {
+  async function doDelete() {
     if (!deleteTarget || !category) return;
-
     setActionLoading(true);
     setError("");
     setSuccess("");
@@ -1042,6 +1148,39 @@ export default function DataManagementListPage() {
     } finally {
       setActionLoading(false);
     }
+  }
+
+  async function forceDelete() {
+    forceDeleteRef.current = true;
+    setUsageCheck(null);
+    await doDelete();
+  }
+
+  async function submitDelete() {
+    if (!deleteTarget || !category) return;
+
+    if (category.group === "master" && !forceDeleteRef.current) {
+      setUsageLoading(true);
+      try {
+        const res = await apiFetch<{
+          data?: {
+            total: number;
+            by_type: Record<string, { count: number; sample: Array<{ id: string; label: string }> }>;
+          }
+        }>(`/${category.resource}/${deleteTarget.id}/usage-check`, { token });
+        if (res.data?.total && res.data.total > 0) {
+          setUsageCheck(res.data);
+          return;
+        }
+      } catch {
+        // ignore
+      } finally {
+        setUsageLoading(false);
+      }
+    }
+    forceDeleteRef.current = false;
+    setUsageCheck(null);
+    await doDelete();
   }
 
   function openQuickEdit(item: GenericItem) {
@@ -1316,6 +1455,7 @@ export default function DataManagementListPage() {
               provinceOptions={Object.entries(relationMaps.provinces)
                 .sort((a, b) => a[1].localeCompare(b[1], "id"))
                 .map(([id, name]) => ({ id, label: name }))}
+              directionFilter={directionFilter}
               supportsPopFilter={supportsPopFilter}
               popFilterValue={popQueryParam}
               popFilterLoading={popFilterLoading}
@@ -1331,6 +1471,12 @@ export default function DataManagementListPage() {
               onSearchInputChange={setSearchInput}
               onProvinceFilterChange={(value) => {
                 setProvinceFilter(value);
+                setPage(1);
+                setSearch("");
+                setSearchInput("");
+              }}
+              onDirectionFilterChange={(value) => {
+                setDirectionFilter(value);
                 setPage(1);
                 setSearch("");
                 setSearchInput("");
@@ -1544,6 +1690,43 @@ export default function DataManagementListPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Usage check warning dialog */}
+      <AlertDialog open={usageCheck !== null && usageCheck.total > 0} onOpenChange={(open) => !open && setUsageCheck(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Data Masih Digunakan</AlertDialogTitle>
+            <AlertDialogDescription>
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
+                <p className="font-medium text-amber-800">
+                  {usageCheck?.total} data masih menggunakan referensi ini
+                </p>
+                {usageCheck?.by_type ? Object.entries(usageCheck.by_type).map(([table, info]) => (
+                  <div key={table} className="mt-2">
+                    <p className="text-amber-700 font-medium">
+                      {table.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}: {info.count}
+                    </p>
+                    {info.sample.length > 0 && (
+                      <ul className="list-disc ml-4 text-amber-600">
+                        {info.sample.map((item: { id: string; label: string }) => (
+                          <li key={item.id}>{item.label}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )) : null}
+                <p className="mt-2 text-amber-700">Hapus tetap bisa dilakukan, namun data yang merujuk mungkin rusak atau kehilangan referensi.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setUsageCheck(null)}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void forceDelete()}>
+              Tetap Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1555,9 +1738,9 @@ export default function DataManagementListPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Batal</AlertDialogCancel>
-            <AlertDialogAction disabled={actionLoading} onClick={() => void submitDelete()}>
-              {actionLoading ? (isSoftDeleteResource ? "Mengarsipkan..." : "Menghapus...") : (isSoftDeleteResource ? "Arsipkan" : "Hapus")}
+            <AlertDialogCancel disabled={actionLoading || usageLoading}>Batal</AlertDialogCancel>
+            <AlertDialogAction disabled={actionLoading || usageLoading} onClick={() => void submitDelete()}>
+              {actionLoading ? (isSoftDeleteResource ? "Mengarsipkan..." : "Menghapus...") : usageLoading ? "Memeriksa referensi..." : (isSoftDeleteResource ? "Arsipkan" : "Hapus")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1596,7 +1779,8 @@ export default function DataManagementListPage() {
             <SheetTitle>Quick Edit {category.label}</SheetTitle>
             <SheetDescription>Ubah data langsung dari list tanpa pindah halaman.</SheetDescription>
           </SheetHeader>
-          <div className="grid gap-3 px-4">          {renderCreateFields(category.resource, quickEditForm, setQuickEditForm, lookupOptions)}
+          <div className="grid gap-3 px-4">
+            {renderMasterForm(category.resource, quickEditForm, setQuickEditForm, lookupOptions, fieldErrors, setFieldError, clearFieldError, handleFieldBlur, true, rows, quickEditTarget?.id)}
           {supportsIsActiveResource(category.resource) && category.resource !== "splitterProfiles" ? (
               <div className="space-y-1.5">
                 <Label>Status</Label>
@@ -1613,10 +1797,10 @@ export default function DataManagementListPage() {
             {quickEditError ? <p className="text-sm text-destructive">{quickEditError}</p> : null}
           </div>
           <SheetFooter className="mt-2 border-t">
-            <Button type="button" variant="outline" onClick={() => setQuickEditTarget(null)} disabled={actionLoading}>
+            <Button type="button" variant="outline" onClick={() => setQuickEditTarget(null)} disabled={actionLoading || Object.keys(fieldErrors).length > 0}>
               Batal
             </Button>
-            <Button type="button" onClick={() => void submitQuickEdit()} disabled={actionLoading}>
+            <Button type="button" onClick={() => void submitQuickEdit()} disabled={actionLoading || Object.keys(fieldErrors).length > 0}>
               {actionLoading ? "Menyimpan..." : "Simpan"}
             </Button>
           </SheetFooter>
@@ -1630,14 +1814,14 @@ export default function DataManagementListPage() {
             <SheetDescription>Tambahkan data master baru langsung dari halaman list.</SheetDescription>
           </SheetHeader>
           <div className="grid gap-3 px-4">
-            {renderCreateFields(category.resource, createForm, setCreateForm, lookupOptions)}
+            {renderMasterForm(category.resource, createForm, setCreateForm, lookupOptions, fieldErrors, setFieldError, clearFieldError, handleFieldBlur, false, rows, undefined)}
             {createError ? <p className="text-sm text-destructive">{createError}</p> : null}
           </div>
           <SheetFooter className="mt-2 border-t">
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={actionLoading}>
+            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={actionLoading || Object.keys(fieldErrors).length > 0}>
               Batal
             </Button>
-            <Button type="button" onClick={() => void submitCreate()} disabled={actionLoading}>
+            <Button type="button" onClick={() => void submitCreate()} disabled={actionLoading || Object.keys(fieldErrors).length > 0}>
               {actionLoading ? "Menyimpan..." : "Simpan"}
             </Button>
           </SheetFooter>

@@ -17,6 +17,7 @@ export function DataListFilterBar({
   searchInput,
   provinceFilter,
   provinceOptions,
+  directionFilter,
   supportsPopFilter,
   popFilterValue,
   popFilterLoading,
@@ -31,6 +32,7 @@ export function DataListFilterBar({
   limit,
   onSearchInputChange,
   onProvinceFilterChange,
+  onDirectionFilterChange,
   onPopFilterChange,
   onProjectFilterChange,
   onArchiveViewChange,
@@ -43,6 +45,7 @@ export function DataListFilterBar({
   searchInput: string;
   provinceFilter: string;
   provinceOptions: FilterOption[];
+  directionFilter: string;
   supportsPopFilter: boolean;
   popFilterValue: string;
   popFilterLoading: boolean;
@@ -57,6 +60,7 @@ export function DataListFilterBar({
   limit: number;
   onSearchInputChange: (value: string) => void;
   onProvinceFilterChange: (value: string) => void;
+  onDirectionFilterChange: (value: string) => void;
   onPopFilterChange: (value: string) => void;
   onProjectFilterChange: (value: string) => void;
   onArchiveViewChange: (value: ArchiveView) => void;
@@ -80,6 +84,18 @@ export function DataListFilterBar({
           options={[
             { value: "__all", label: "Semua province" },
             ...provinceOptions.map((option) => ({ value: option.id, label: option.label })),
+          ]}
+        />
+      ) : null}
+      {categoryResource === "topologyRelationRules" ? (
+        <Combobox
+          value={directionFilter}
+          onValueChange={onDirectionFilterChange}
+          placeholder="Filter Direction"
+          options={[
+            { value: "__all", label: "Semua direction" },
+            { value: "front", label: "front" },
+            { value: "rear", label: "rear" },
           ]}
         />
       ) : null}
