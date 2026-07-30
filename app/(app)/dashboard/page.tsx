@@ -6,6 +6,7 @@ import { Activity, AlertTriangle, CheckCircle2, ClipboardCheck, Database, MapPin
 import { DashboardActivityFeed, type DashboardActivityItem } from "@/components/dashboard/dashboard-activity-feed";
 import { DashboardBarChartCard, DashboardDonutChartCard, type DashboardChartDatum } from "@/components/dashboard/dashboard-chart-card";
 import { DashboardMetricCard } from "@/components/dashboard/dashboard-metric-card";
+import { DashboardMiniMap, type MapMarker } from "@/components/dashboard/dashboard-mini-map";
 import { DashboardTrendLine, type TrendDatum } from "@/components/dashboard/dashboard-trend-line";
 import { DashboardWorkQueue, type DashboardQueueItem } from "@/components/dashboard/dashboard-work-queue";
 import { AppLoading } from "@/components/app-loading-new";
@@ -40,6 +41,8 @@ type RegionItem = RegionsListResponse["data"][number];
 
 type PopItem = PopsListResponse["data"][number] & {
   updated_at?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
 };
 
 type DevicePortItem = {
@@ -330,12 +333,20 @@ function AssetOverviewDashboard({ data, loading }: { data: DashboardData; loadin
         />
       </div>
 
-      <DashboardTrendLine
-        title="Audit Activity Trend"
-        description="Tren aktivitas audit mingguan (7 hari terakhir)."
-        data={weeklyAuditTrend(data.auditLogs)}
-        loading={loading}
-      />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
+        <DashboardTrendLine
+          title="Audit Activity Trend"
+          description="Tren aktivitas audit mingguan (7 hari terakhir)."
+          data={weeklyAuditTrend(data.auditLogs)}
+          loading={loading}
+        />
+        <DashboardMiniMap
+          title="POP Location Map"
+          description="Lokasi POP pada scope dashboard."
+          markers={buildMapMarkers(data.pops, data.odpDevices)}
+          loading={loading}
+        />
+      </div>
     </>
   );
 }
@@ -819,9 +830,13 @@ async function fetchAllPaginated<T>(pathWithPage: string, token: string, limit =
 }
 
 function deviceTypeChart(items: DeviceItem[]): DashboardChartDatum[] {
+  const keyMap: Record<string, string> = {
+    OLT: "olt", OTB: "otb", ODC: "odc", ODP: "odp", JC: "jc", CABLE: "cable", ONT: "ont", SWITCH: "switch", ROUTER: "router",
+  };
   return countBy(items, (item) => valueText(item.device_type_key, "Unknown")).map((item) => ({
     ...item,
     color: deviceTypeColor(item.label),
+    href: keyMap[item.label] ? `/data-management/list/${keyMap[item.label]}` : undefined,
   }));
 }
 
@@ -849,19 +864,22 @@ function regionPopDistributionChart(regions: RegionItem[], pops: PopItem[]): Das
   return countBy(pops, (item) => regionMap.get(String(item.region_id || "")) || getRegionLabel({ fallback: item.region_id, optional: true }));
 }
 
-function popDeviceDistributionChart(pops: PopItem[], devices: DeviceItem[]): DashboardChartDatum[] {
+function popDeviceDistributionChart(pops: PopItem[], devices: DeviceItem[], regionSuffix = ""): DashboardChartDatum[] {
   const popMap = new Map(pops.map((pop) => [pop.id, getPopLabel({ relation: pop, fallback: pop.pop_code || pop.pop_id, optional: true })]));
-  return countBy(devices, (item) => popMap.get(String(item.pop_id || "")) || "No POP").slice(0, 8);
+  return countBy(devices, (item) => popMap.get(String(item.pop_id || "")) || "No POP").slice(0, 8).map((item) => ({
+    ...item,
+    href: "/data-management" + regionSuffix,
+  }));
 }
 
-function odpValidationChart(items: DeviceItem[], data: DashboardData): DashboardChartDatum[] {
+function odpValidationChart(items: DeviceItem[], data: DashboardData, regionSuffix = ""): DashboardChartDatum[] {
   const odpStats = getOdpStats(items);
   return [
-    { label: "Validated", value: odpStats.validated, color: "#16a34a" },
-    { label: "Unvalidated", value: odpStats.unvalidated, color: "#f59e0b" },
-    { label: "Pending Admin Region", value: data.adminregionRequests.length, color: "#2563eb" },
-    { label: "Pending Superadmin", value: data.superadminRequests.length, color: "#7c3aed" },
-    { label: "Rejected", value: data.rejectedAdminregion.length + data.rejectedSuperadmin.length, color: "#dc2626" },
+    { label: "Validated", value: odpStats.validated, color: "#16a34a", href: `/data-management/list/odp?status=validated${regionSuffix}` },
+    { label: "Unvalidated", value: odpStats.unvalidated, color: "#f59e0b", href: `/data-management/list/odp?status=unvalidated${regionSuffix}` },
+    { label: "Pending Admin Region", value: data.adminregionRequests.length, color: "#2563eb", href: "/requests" },
+    { label: "Pending Superadmin", value: data.superadminRequests.length, color: "#7c3aed", href: "/requests" },
+    { label: "Rejected", value: data.rejectedAdminregion.length + data.rejectedSuperadmin.length, color: "#dc2626", href: "/requests" },
   ];
 }
 
@@ -981,6 +999,23 @@ function weeklyAuditTrend(logs: AuditLogItem[]): TrendDatum[] {
     const day = String(d.getDate()).padStart(2, "0");
     return { label: `${month}/${day}`, value: weeks[k] };
   });
+}
+
+function buildMapMarkers(pops: PopItem[], odpDevices: DeviceItem[]): MapMarker[] {
+  const markers: MapMarker[] = [];
+  pops.forEach((pop) => {
+    const lat = Number(pop.latitude);
+    const lng = Number(pop.longitude);
+    if (!isFinite(lat) || !isFinite(lng)) return;
+    markers.push({
+      id: `pop:${pop.id}`,
+      lat,
+      lng,
+      label: pop.pop_name || pop.pop_id || pop.pop_code || "POP",
+      type: "pop",
+    });
+  });
+  return markers;
 }
 
 function isValidated(item: DeviceItem) {

@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
@@ -8,6 +10,7 @@ export type DashboardChartDatum = {
   label: string;
   value: number;
   color?: string;
+  href?: string;
 };
 
 const DEFAULT_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2", "#64748b"];
@@ -25,8 +28,17 @@ export function DashboardDonutChartCard({
   emptyLabel: string;
   loading?: boolean;
 }) {
+  const router = useRouter();
   const normalized = normalizeData(data);
   const total = normalized.reduce((sum, item) => sum + item.value, 0);
+
+  const handleClick = useCallback(
+    (_: unknown, index: number) => {
+      const target = normalized[index];
+      if (target?.href) router.push(target.href);
+    },
+    [normalized, router],
+  );
 
   return (
     <Card className="min-w-0">
@@ -53,14 +65,16 @@ export function DashboardDonutChartCard({
                     outerRadius={55}
                     paddingAngle={2}
                     dataKey="value"
+                    onClick={handleClick}
+                    style={{ cursor: (normalized.some((d) => d.href) ? "pointer" : "default") }}
                   >
                     {normalized.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ fontSize: '10px', borderRadius: '6px' }}
-                    itemStyle={{ padding: '0px' }}
+                  <Tooltip
+                    contentStyle={{ fontSize: "10px", borderRadius: "6px" }}
+                    itemStyle={{ padding: "0px" }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -94,6 +108,7 @@ export function DashboardBarChartCard({
   loading?: boolean;
   maxItems?: number;
 }) {
+  const router = useRouter();
   const normalized = normalizeData(data).slice(0, maxItems);
   const maxValue = Math.max(...normalized.map((item) => item.value), 0);
 
@@ -111,9 +126,19 @@ export function DashboardBarChartCard({
             const color = item.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
             const percent = Math.max((item.value / maxValue) * 100, 4);
             return (
-              <div key={item.label} className="space-y-1">
+              <div
+                key={item.label}
+                className="space-y-1"
+                onClick={() => item.href && router.push(item.href)}
+                role={item.href ? "button" : undefined}
+                tabIndex={item.href ? 0 : undefined}
+                onKeyDown={(e) => {
+                  if (item.href && (e.key === "Enter" || e.key === " ")) router.push(item.href);
+                }}
+                style={{ cursor: item.href ? "pointer" : "default" }}
+              >
                 <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="truncate font-medium">{item.label}</span>
+                  <span className={`truncate font-medium ${item.href ? "text-primary underline-offset-2 hover:underline" : ""}`}>{item.label}</span>
                   <span className="text-muted-foreground">{item.value}</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -131,16 +156,27 @@ export function DashboardBarChartCard({
 }
 
 function ChartLegend({ data, total }: { data: DashboardChartDatum[]; total: number }) {
+  const router = useRouter();
   return (
     <div className="space-y-1.5 overflow-auto max-h-[120px] pr-1">
       {data.map((item, index) => {
         const color = item.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
         const percent = total ? Math.round((item.value / total) * 100) : 0;
         return (
-          <div key={item.label} className="flex items-center justify-between gap-2 rounded-md border bg-background px-2 py-1 text-xs">
+          <div
+            key={item.label}
+            className="flex items-center justify-between gap-2 rounded-md border bg-background px-2 py-1 text-xs"
+            onClick={() => item.href && router.push(item.href)}
+            role={item.href ? "button" : undefined}
+            tabIndex={item.href ? 0 : undefined}
+            onKeyDown={(e) => {
+              if (item.href && (e.key === "Enter" || e.key === " ")) router.push(item.href);
+            }}
+            style={{ cursor: item.href ? "pointer" : "default" }}
+          >
             <div className="flex min-w-0 items-center gap-2">
               <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-              <span className="truncate">{item.label}</span>
+              <span className={`truncate ${item.href ? "text-primary hover:underline underline-offset-2" : ""}`}>{item.label}</span>
             </div>
             <span className="shrink-0 text-[10px] text-muted-foreground">{item.value} ({percent}%)</span>
           </div>
