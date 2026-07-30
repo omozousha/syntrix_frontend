@@ -311,7 +311,7 @@ function DashboardHeader({
   onRegionFilterChange?: (id: string) => void;
 }) {
   const copy = getRoleCopy(role);
-  const regionOptions = regions ? [{ value: "", label: "Semua region" }, ...regions.map((r) => ({ value: r.id, label: r.label }))] : [];
+  const regionOptions = regions ? [{ value: "__all__", label: "Semua region" }, ...regions.map((r) => ({ value: r.id, label: r.label }))] : [];
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 md:flex-row md:items-center md:justify-between">
       <div className="space-y-1">
@@ -324,7 +324,7 @@ function DashboardHeader({
       </div>
       <div className="flex items-center gap-2">
         {regions && onRegionFilterChange ? (
-          <Select value={regionFilter || ""} onValueChange={onRegionFilterChange}>
+          <Select value={regionFilter || "__all__"} onValueChange={(v) => onRegionFilterChange(v === "__all__" ? "" : v)}>
             <SelectTrigger className="h-9 w-[180px] text-sm">
               <SelectValue placeholder="Semua region" />
             </SelectTrigger>
