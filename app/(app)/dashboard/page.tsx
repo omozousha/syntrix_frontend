@@ -1044,7 +1044,7 @@ function buildMapMarkers(pops: PopItem[], odpDevices: DeviceItem[]): MapMarker[]
       id: `pop:${pop.id}`,
       lat,
       lng,
-      label: pop.pop_name || pop.pop_id || pop.pop_code || "POP",
+      label: pop.pop_name || pop.pop_code || getRegionLabel({ fallback: pop.region_id, optional: true }) || "POP",
       type: "pop",
     });
   });
