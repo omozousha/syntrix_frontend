@@ -823,14 +823,14 @@ function ValidationProgressCard({ odpStats, loading }: { odpStats: ReturnType<ty
 async function loadDashboardData(token: string, role: RoleKey, regionId: string, userRegionScope?: string[]): Promise<DashboardData> {
   const suffix = regionId ? `&region_id=${encodeURIComponent(regionId)}` : "";
   const scopeRegionIds = userRegionScope || [];
-  const DASHBOARD_LIMIT = 5000;
+  const DASHBOARD_BATCH_LIMIT = 500;
   const [summary, regions, pops, devices, odpDevices, ports, adminregionRequests, superadminRequests, rejectedAdminregion, rejectedSuperadmin, evidenceMissing, auditLogs] = await Promise.all([
     safeFetch<DashboardSummaryResponse>("/dashboard/summary", token),
-    safeFetch<PaginatedResponse<RegionItem>>(`/regions?page=1&limit=${DASHBOARD_LIMIT}`, token),
-    safeFetch<PaginatedResponse<PopItem>>(`/pops?page=1&limit=${DASHBOARD_LIMIT}${suffix}`, token),
-    safeFetch<PaginatedResponse<DeviceItem>>(`/devices?page=1&limit=${DASHBOARD_LIMIT}${suffix}`, token),
-    safeFetch<PaginatedResponse<DeviceItem>>(`/devices?page=1&limit=${DASHBOARD_LIMIT}&device_type_key=ODP${suffix}`, token),
-    safeFetch<PaginatedResponse<DevicePortItem>>(`/devicePorts?page=1&limit=${DASHBOARD_LIMIT}${suffix}`, token),
+    safeFetch<PaginatedResponse<RegionItem>>(`/regions?page=1&limit=200`, token),
+    fetchAllPaginated<PopItem>(`/pops?page=1&limit=${DASHBOARD_BATCH_LIMIT}${suffix}`, token, DASHBOARD_BATCH_LIMIT),
+    fetchAllPaginated<DeviceItem>(`/devices?page=1&limit=${DASHBOARD_BATCH_LIMIT}${suffix}`, token, DASHBOARD_BATCH_LIMIT),
+    fetchAllPaginated<DeviceItem>(`/devices?page=1&limit=${DASHBOARD_BATCH_LIMIT}&device_type_key=ODP${suffix}`, token, DASHBOARD_BATCH_LIMIT),
+    fetchAllPaginated<DevicePortItem>(`/devicePorts?page=1&limit=${DASHBOARD_BATCH_LIMIT}${suffix}`, token, DASHBOARD_BATCH_LIMIT),
     role === "adminregion" || role === "validator" ? safeFetch<{ data: ValidationRequestItem[] }>("/validation-requests?queue=adminregion", token) : Promise.resolve(null),
     role === "superadmin" || role === "adminregion" ? safeFetch<{ data: ValidationRequestItem[] }>("/validation-requests?queue=superadmin", token) : Promise.resolve(null),
     safeFetch<{ data: ValidationRequestItem[] }>(`/validation-requests/quality-queue?queue=rejected_adminregion${suffix}`, token),
@@ -847,10 +847,10 @@ async function loadDashboardData(token: string, role: RoleKey, regionId: string,
       if (regionId) return all.filter((r: RegionItem) => r.id === regionId).slice(0, 200);
       return all.slice(0, 200);
     })(),
-    pops: (pops?.data || []).slice(0, 200),
-    devices: (devices?.data || []).slice(0, 500),
-    odpDevices: (odpDevices?.data || []).slice(0, 500),
-    ports: (ports?.data || []).slice(0, 500),
+    pops: (pops || []).slice(0, 200),
+    devices: (devices || []).slice(0, 500),
+    odpDevices: (odpDevices || []).slice(0, 500),
+    ports: (ports || []).slice(0, 500),
     adminregionRequests: adminregionRequests?.data || [],
     superadminRequests: superadminRequests?.data || [],
     rejectedAdminregion: rejectedAdminregion?.data || [],
