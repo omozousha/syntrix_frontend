@@ -124,8 +124,13 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData>(() => {
     if (typeof window === "undefined") return EMPTY_DATA;
     try {
-      const cached = sessionStorage.getItem("syntrix-dashboard");
-      if (cached) return JSON.parse(cached) as DashboardData;
+      const raw = sessionStorage.getItem("syntrix-dashboard");
+      if (!raw) return EMPTY_DATA;
+      const cached = JSON.parse(raw);
+      const age = Date.now() - (cached._ts || 0);
+      if (age > 60000) { sessionStorage.removeItem("syntrix-dashboard"); return EMPTY_DATA; }
+      const { _ts, ...rest } = cached;
+      return rest as DashboardData;
     } catch { /* ignore */ }
     return EMPTY_DATA;
   });
@@ -149,7 +154,7 @@ export default function DashboardPage() {
         });
         const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
         setData(next);
-        try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify(next)); } catch {}
+        try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify({ ...next, _ts: Date.now() })); } catch {}
       } catch { /* silent */ }
       setActionLoadingId("");
     },
@@ -164,7 +169,7 @@ export default function DashboardPage() {
         });
         const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
         setData(next);
-        try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify(next)); } catch {}
+        try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify({ ...next, _ts: Date.now() })); } catch {}
       } catch { /* silent */ }
       setActionLoadingId("");
     },
@@ -181,7 +186,7 @@ export default function DashboardPage() {
         const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
         if (!cancelled) {
           setData(next);
-          try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify(next)); } catch { /* ignore */ }
+          try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify({ ...next, _ts: Date.now() })); } catch { /* ignore */ }
         }
       } catch (err) {
         if (!cancelled) {
