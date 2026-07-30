@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, AlertTriangle, CheckCircle2, ClipboardCheck, Database, MapPinned, RadioTower, ShieldCheck, Timer, Users } from "lucide-react";
 import { DashboardActivityFeed, type DashboardActivityItem } from "@/components/dashboard/dashboard-activity-feed";
 import { DashboardBarChartCard, DashboardDonutChartCard, type DashboardChartDatum } from "@/components/dashboard/dashboard-chart-card";
@@ -121,26 +121,29 @@ const EMPTY_DATA: DashboardData = {
 export default function DashboardPage() {
   const { token, me } = useSession();
   const role = normalizeRole(me.role);
-  const [data, setData] = useState<DashboardData>(() => {
-    if (typeof window === "undefined") return EMPTY_DATA;
-    try {
-      const raw = sessionStorage.getItem("syntrix-dashboard");
-      if (!raw) return EMPTY_DATA;
-      const cached = JSON.parse(raw);
-      const age = Date.now() - (cached._ts || 0);
-      if (age > 60000) { sessionStorage.removeItem("syntrix-dashboard"); return EMPTY_DATA; }
-      const { _ts, ...rest } = cached;
-      return rest as DashboardData;
-    } catch { /* ignore */ }
-    return EMPTY_DATA;
-  });
-  const [loading, setLoading] = useState(!data.summary);
+  const [data, setData] = useState<DashboardData>(EMPTY_DATA);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [regionFilterId, setRegionFilterId] = useState("");
   const [actionLoadingId, setActionLoadingId] = useState("");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const scopeRegionIds = useMemo(() => me.app_user.user_region_scopes?.map((scope) => scope.region_id).filter(Boolean) || [], [me.app_user.user_region_scopes]);
   const singleRegionScope = regionFilterId || (scopeRegionIds.length === 1 ? scopeRegionIds[0] : "");
+
+  const doRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setError("");
+    try {
+      const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
+      setData(next);
+      setLastUpdated(new Date());
+    } catch (err) {
+      setError((err as Error).message || "Gagal refresh dashboard.");
+    }
+    setRefreshing(false);
+  }, [token, role, singleRegionScope, scopeRegionIds]);
 
   const fastAction = useMemo(() => ({
     approve: async (id: string) => {
@@ -154,7 +157,6 @@ export default function DashboardPage() {
         });
         const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
         setData(next);
-        try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify({ ...next, _ts: Date.now() })); } catch {}
       } catch { /* silent */ }
       setActionLoadingId("");
     },
@@ -169,7 +171,6 @@ export default function DashboardPage() {
         });
         const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
         setData(next);
-        try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify({ ...next, _ts: Date.now() })); } catch {}
       } catch { /* silent */ }
       setActionLoadingId("");
     },
@@ -186,7 +187,7 @@ export default function DashboardPage() {
         const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
         if (!cancelled) {
           setData(next);
-          try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify({ ...next, _ts: Date.now() })); } catch { /* ignore */ }
+          setLastUpdated(new Date());
         }
       } catch (err) {
         if (!cancelled) {
@@ -217,12 +218,15 @@ export default function DashboardPage() {
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 pr-3">
-        <DashboardHeader
+<DashboardHeader
           role={role}
           regionCount={scopeRegionIds.length}
           regions={data.regions.map((r) => ({ id: String(r.id), label: r.region_name || r.region_id || "Region" }))}
           regionFilter={regionFilterId}
           onRegionFilterChange={setRegionFilterId}
+          onRefresh={doRefresh}
+          refreshing={refreshing}
+          lastUpdated={lastUpdated}
         />
 
         {error ? (
@@ -308,12 +312,18 @@ function DashboardHeader({
   regions,
   regionFilter,
   onRegionFilterChange,
+  onRefresh,
+  refreshing,
+  lastUpdated,
 }: {
   role: RoleKey;
   regionCount: number;
   regions?: { id: string; label: string }[];
   regionFilter?: string;
   onRegionFilterChange?: (id: string) => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
+  lastUpdated?: Date | null;
 }) {
   const copy = getRoleCopy(role);
   const regionOptions = regions ? [{ value: "__all__", label: "Semua region" }, ...regions.map((r) => ({ value: r.id, label: r.label }))] : [];
@@ -328,6 +338,20 @@ function DashboardHeader({
         <p className="max-w-3xl text-sm text-muted-foreground">{copy.description}</p>
       </div>
       <div className="flex items-center gap-2">
+        <span className="hidden text-[10px] text-muted-foreground sm:inline">
+          {lastUpdated ? `${formatTimeAgo(lastUpdated)}` : ""}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={refreshing}
+          onClick={onRefresh}
+          className="h-9 px-2 text-xs"
+          aria-label="Refresh dashboard"
+        >
+          {refreshing ? "..." : "⟳"}
+        </Button>
         {regions && onRegionFilterChange ? (
           <Select value={regionFilter || "__all__"} onValueChange={(v) => onRegionFilterChange(v === "__all__" ? "" : v)}>
             <SelectTrigger className="h-9 w-[180px] text-sm">
@@ -892,6 +916,14 @@ async function fetchAllPaginated<T>(pathWithPage: string, token: string, limit =
     if (r?.data?.length) allRows.push(r.data);
   }
   return allRows.flat();
+}
+
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return `${seconds}d yang lalu`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m yang lalu`;
+  return `${Math.floor(minutes / 60)}j yang lalu`;
 }
 
 function deviceTypeChart(items: DeviceItem[]): DashboardChartDatum[] {
