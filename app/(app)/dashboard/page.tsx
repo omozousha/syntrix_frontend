@@ -120,9 +120,10 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData>(EMPTY_DATA);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [regionFilterId, setRegionFilterId] = useState("");
 
   const scopeRegionIds = useMemo(() => me.app_user.user_region_scopes?.map((scope) => scope.region_id).filter(Boolean) || [], [me.app_user.user_region_scopes]);
-  const singleRegionScope = scopeRegionIds.length === 1 ? scopeRegionIds[0] : "";
+  const singleRegionScope = regionFilterId || (scopeRegionIds.length === 1 ? scopeRegionIds[0] : "");
 
   useEffect(() => {
     let cancelled = false;
@@ -147,7 +148,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [role, singleRegionScope, token]);
+  }, [role, singleRegionScope, token, regionFilterId]);
 
   if (loading && !data.summary) {
     return (
@@ -162,7 +163,13 @@ export default function DashboardPage() {
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 pr-3">
-        <DashboardHeader role={role} regionCount={scopeRegionIds.length} />
+        <DashboardHeader
+          role={role}
+          regionCount={scopeRegionIds.length}
+          regions={data.regions.map((r) => ({ id: String(r.id), label: r.region_name || r.region_id || "Region" }))}
+          regionFilter={regionFilterId}
+          onRegionFilterChange={setRegionFilterId}
+        />
 
         {error ? (
           <Alert variant="destructive">
@@ -241,8 +248,21 @@ function DashboardTabs({
   );
 }
 
-function DashboardHeader({ role, regionCount }: { role: RoleKey; regionCount: number }) {
+function DashboardHeader({
+  role,
+  regionCount,
+  regions,
+  regionFilter,
+  onRegionFilterChange,
+}: {
+  role: RoleKey;
+  regionCount: number;
+  regions?: { id: string; label: string }[];
+  regionFilter?: string;
+  onRegionFilterChange?: (id: string) => void;
+}) {
   const copy = getRoleCopy(role);
+  const regionOptions = regions ? [{ value: "", label: "Semua region" }, ...regions.map((r) => ({ value: r.id, label: r.label }))] : [];
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 md:flex-row md:items-center md:justify-between">
       <div className="space-y-1">
@@ -253,9 +273,22 @@ function DashboardHeader({ role, regionCount }: { role: RoleKey; regionCount: nu
         <h2 className="text-2xl font-semibold tracking-tight">{copy.title}</h2>
         <p className="max-w-3xl text-sm text-muted-foreground">{copy.description}</p>
       </div>
-      <Button asChild size="sm" className="w-full md:w-auto">
-        <Link href={copy.primaryHref}>{copy.primaryAction}</Link>
-      </Button>
+      <div className="flex items-center gap-2">
+        {regions && onRegionFilterChange ? (
+          <select
+            value={regionFilter || ""}
+            onChange={(e) => onRegionFilterChange(e.target.value)}
+            className="h-9 rounded-md border bg-background px-3 text-sm shadow-sm"
+          >
+            {regionOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        ) : null}
+        <Button asChild size="sm" className="w-full md:w-auto">
+          <Link href={copy.primaryHref}>{copy.primaryAction}</Link>
+        </Button>
+      </div>
     </div>
   );
 }
