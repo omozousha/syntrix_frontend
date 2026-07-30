@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -147,7 +147,7 @@ export default function DashboardPage() {
           method: "POST",
           body: { note: "Fast approve from dashboard" },
         });
-        const next = await loadDashboardData(token, role, singleRegionScope);
+        const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
         setData(next);
         try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify(next)); } catch {}
       } catch { /* silent */ }
@@ -162,7 +162,7 @@ export default function DashboardPage() {
           method: "POST",
           body: { note: "Fast reject from dashboard" },
         });
-        const next = await loadDashboardData(token, role, singleRegionScope);
+        const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
         setData(next);
         try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify(next)); } catch {}
       } catch { /* silent */ }
@@ -178,7 +178,7 @@ export default function DashboardPage() {
       setLoading(true);
       setError("");
       try {
-        const next = await loadDashboardData(token, role, singleRegionScope);
+        const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
         if (!cancelled) {
           setData(next);
           try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify(next)); } catch { /* ignore */ }
@@ -815,8 +815,9 @@ function ValidationProgressCard({ odpStats, loading }: { odpStats: ReturnType<ty
   );
 }
 
-async function loadDashboardData(token: string, role: RoleKey, regionId: string): Promise<DashboardData> {
+async function loadDashboardData(token: string, role: RoleKey, regionId: string, userRegionScope?: string[]): Promise<DashboardData> {
   const suffix = regionId ? `&region_id=${encodeURIComponent(regionId)}` : "";
+  const scopeRegionIds = userRegionScope || [];
   const DASHBOARD_LIMIT = 5000;
   const [summary, regions, pops, devices, odpDevices, ports, adminregionRequests, superadminRequests, rejectedAdminregion, rejectedSuperadmin, evidenceMissing, auditLogs] = await Promise.all([
     safeFetch<DashboardSummaryResponse>("/dashboard/summary", token),
@@ -835,7 +836,12 @@ async function loadDashboardData(token: string, role: RoleKey, regionId: string)
 
   return {
     summary: summary?.data || null,
-    regions: (regionId ? (regions?.data || []).filter((item: RegionItem) => item.id === regionId) : (regions?.data || [])).slice(0, 200),
+    regions: (() => {
+      const all = regions?.data || [];
+      if (!regionId && scopeRegionIds?.length) return all.filter((r: RegionItem) => scopeRegionIds.includes(r.id)).slice(0, 200);
+      if (regionId) return all.filter((r: RegionItem) => r.id === regionId).slice(0, 200);
+      return all.slice(0, 200);
+    })(),
     pops: (pops?.data || []).slice(0, 200),
     devices: (devices?.data || []).slice(0, 500),
     odpDevices: (odpDevices?.data || []).slice(0, 500),
