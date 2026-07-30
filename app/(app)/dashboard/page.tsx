@@ -857,24 +857,30 @@ async function safeFetch<T>(path: string, token: string) {
   }
 }
 
-async function fetchAllPaginated<T>(pathWithPage: string, token: string, limit = 100) {
-  const rows: T[] = [];
-  let page = 1;
+async function fetchAllPaginated<T>(pathWithPage: string, token: string, limit = 500) {
+  const buildUrl = (page: number) => pathWithPage
+    .replace(/page=\d+/i, `page=${page}`)
+    .replace(/limit=\d+/i, `limit=${limit}`);
 
-  while (true) {
-    const path = pathWithPage.replace(/page=\d+/i, `page=${page}`).replace(/limit=\d+/i, `limit=${limit}`);
-    const payload = await safeFetch<PaginatedResponse<T>>(path, token);
-    const pageRows = payload?.data || [];
-    rows.push(...pageRows);
+  const first = await safeFetch<PaginatedResponse<T>>(buildUrl(1), token);
+  const firstRows = first?.data || [];
+  const total = first?.meta?.total ?? 0;
 
-    const total = payload?.meta?.total ?? 0;
-    if (!pageRows.length) break;
-    if (total && rows.length >= total) break;
-    if (!total && pageRows.length < limit) break;
-    page += 1;
+  if (!firstRows.length) return [];
+  if (total <= firstRows.length) return firstRows;
+
+  const remainingPages = Math.ceil((total - firstRows.length) / limit);
+  const pagePromises: Promise<PaginatedResponse<T> | null>[] = [];
+  for (let p = 2; p <= 2 + remainingPages - 1; p++) {
+    pagePromises.push(safeFetch<PaginatedResponse<T>>(buildUrl(p), token));
   }
 
-  return rows;
+  const rest = await Promise.all(pagePromises);
+  const allRows = [firstRows];
+  for (const r of rest) {
+    if (r?.data?.length) allRows.push(r.data);
+  }
+  return allRows.flat();
 }
 
 function deviceTypeChart(items: DeviceItem[]): DashboardChartDatum[] {
