@@ -3,7 +3,7 @@
 import Image from "next/image";
 import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
-import { Eye, ImageUp, QrCode, RefreshCw, Save, Upload } from "lucide-react";
+import { Eye, ImageUp, Info, QrCode, RefreshCw, Save, Upload } from "lucide-react";
 
 import { AppLoading } from "@/components/app-loading-new";
 import { ResponseDialog } from "@/components/response-dialog";
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiFetch } from "@/lib/api";
 import {
   buildQrLabelPngDataUrl,
@@ -284,7 +286,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-2 text-base">
                 <QrCode className="size-4 text-primary" />
-                QR label settings
+                QR Label Settings
               </CardTitle>
               <CardDescription>
                 Atur logo tengah dan footer QR label untuk download detail ODP dan bulk QR.
@@ -295,25 +297,49 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-          <div className="min-w-0 space-y-4">
+        <CardContent className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+          <div className="min-w-0 space-y-5">
             {loading ? <AppLoading label="Memuat QR label settings..." /> : null}
+
             {!loading ? (
               <>
+                {/* Status Aktif */}
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/20 px-4 py-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-emerald-500" />
+                    <span className="font-medium text-foreground">Logo aktif</span>
+                  </div>
+                  <Separator orientation="vertical" className="h-4" />
+                  <span className="truncate text-muted-foreground">
+                    {cropSourceDataUrl ? "Menunggu crop" : selectedFile?.name || setting?.qr_logo_original_name || "Default Syntrix logo"}
+                  </span>
+                  {setting?.updated_at ? (
+                    <span className="text-muted-foreground">
+                      &middot; Update: {new Date(setting.updated_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                    </span>
+                  ) : null}
+                  {cropSourceDataUrl ? (
+                    <Badge variant="destructive" className="ml-auto shrink-0">
+                      Belum disimpan
+                    </Badge>
+                  ) : null}
+                </div>
+
+                {/* Mobile Preview Toggle */}
                 <div className="xl:hidden">
                   <Button
                     type="button"
-                    variant="outline"
-                    className="min-h-11 w-full justify-center"
-                    onClick={() => setMobilePreviewOpen((value) => !value)}
+                    variant="ghost"
+                    className="w-full justify-center gap-2 text-muted-foreground"
+                    onClick={() => setMobilePreviewOpen((v) => !v)}
                   >
-                    <Eye className="mr-2 size-4" />
-                    {mobilePreviewOpen ? "Tutup preview QR label" : "Lihat preview QR label"}
+                    <Eye className="size-4" />
+                    {mobilePreviewOpen ? "Tutup preview" : "Lihat preview QR label"}
                   </Button>
                   {mobilePreviewOpen ? (
-                    <div className="mt-3 space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Preview label</p>
-                      <div className="overflow-hidden rounded-md border bg-white p-2 shadow-sm">
+                    <div className="mt-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Preview label</p>
+                      <div className="overflow-hidden rounded-lg border bg-white p-3 shadow-sm">
                         {labelPreviewDataUrl ? (
                           <Image
                             src={labelPreviewDataUrl}
@@ -321,46 +347,30 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                             width={900}
                             height={450}
                             unoptimized
-                            className="h-auto w-full max-w-full rounded-md"
+                            className="h-auto w-full rounded"
                           />
                         ) : (
-                          <div className="flex aspect-[2/1] items-center justify-center text-xs text-muted-foreground">
-                            Preview belum tersedia
-                          </div>
+                          <div className="flex aspect-[2/1] items-center justify-center text-xs text-muted-foreground">Preview belum tersedia</div>
                         )}
                       </div>
                     </div>
                   ) : null}
                 </div>
 
+                {/* Upload Zone */}
                 <div
                   role="button"
                   tabIndex={0}
                   onClick={() => fileInputRef.current?.click()}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") fileInputRef.current?.click();
-                  }}
-                  onDragEnter={(event) => {
-                    event.preventDefault();
-                    setDragActive(true);
-                  }}
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    setDragActive(true);
-                  }}
-                  onDragLeave={(event) => {
-                    event.preventDefault();
-                    setDragActive(false);
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    setDragActive(false);
-                    void handleFile(event.dataTransfer.files?.[0] || null);
-                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click(); }}
+                  onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
+                  onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
+                  onDrop={(e) => { e.preventDefault(); setDragActive(false); void handleFile(e.dataTransfer.files?.[0] || null); }}
                   className={[
-                    "flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed p-4 text-center transition-colors",
-                    dragActive ? "border-primary bg-primary/10 text-primary" : "border-border bg-muted/20 hover:bg-muted/35",
-                    saving ? "pointer-events-none opacity-60" : "",
+                    "flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-4 text-center transition-all",
+                    dragActive ? "border-primary bg-primary/5 text-primary" : "border-border hover:border-primary/40 hover:bg-muted/30",
+                    saving ? "pointer-events-none opacity-50" : "",
                   ].join(" ")}
                 >
                   <input
@@ -368,112 +378,110 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(event) => void handleFile(event.target.files?.[0] || null)}
+                    onChange={(e) => void handleFile(e.target.files?.[0] || null)}
                     disabled={saving}
                   />
-                  <div className="rounded-md bg-background p-3 shadow-sm">
-                    <ImageUp className="size-5" />
+                  <div className="mb-2 rounded-full bg-muted p-2">
+                    <ImageUp className="size-5 text-muted-foreground" />
                   </div>
-                  <p className="mt-3 text-sm font-semibold">Upload atau drag logo QR</p>
-                  <p className="mt-1 max-w-md text-xs text-muted-foreground">
-                    Gunakan logo sederhana dengan kontras jelas. Sistem akan crop square sebelum upload.
+                  <p className="text-sm font-semibold">Upload atau drag logo QR</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Gunakan logo dengan kontras jelas. Crop square sebelum upload.
                   </p>
-                  {selectedFile ? <p className="mt-2 text-xs font-medium text-primary">File siap upload: {selectedFile.name}</p> : null}
+                  {selectedFile ? (
+                    <p className="mt-2 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                      File siap upload: {selectedFile.name}
+                    </p>
+                  ) : null}
                 </div>
 
+                {/* Crop Controls */}
                 {cropSourceDataUrl ? (
-                  <div className="grid gap-4 rounded-md border bg-muted/20 p-3 sm:grid-cols-[170px_minmax(0,1fr)]">
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Preview crop</p>
-                      <div className="flex aspect-square items-center justify-center overflow-hidden rounded-md border bg-white p-2">
+                  <div className="rounded-lg border bg-muted/20 p-4">
+                    <p className="mb-3 text-sm font-semibold">Crop logo</p>
+                    <div className="grid gap-4 sm:grid-cols-[160px_minmax(0,1fr)]">
+                      <div className="flex aspect-square items-center justify-center overflow-hidden rounded-lg border bg-white">
                         {cropPreviewDataUrl ? (
-                          <Image
-                            src={cropPreviewDataUrl}
-                            alt="Preview crop logo QR"
-                            width={512}
-                            height={512}
-                            unoptimized
-                            className="h-full w-full rounded object-contain"
-                          />
+                          <Image src={cropPreviewDataUrl} alt="Preview crop" width={512} height={512} unoptimized className="h-full w-full object-contain" />
                         ) : (
                           <span className="text-xs text-muted-foreground">Memproses...</span>
                         )}
                       </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm font-medium">Crop logo sebelum upload</p>
+                      <div className="space-y-4">
                         <p className="text-xs text-muted-foreground">
-                          Hasil crop dibuat square agar logo tetap rapi di tengah QR label.
+                          Hasil crop square agar logo rapi di tengah QR label.
                         </p>
-                      </div>
-                      <CropRange id="qr-logo-crop-zoom" label="Zoom" min={1} max={3} step={0.05} value={cropZoom} onChange={setCropZoom} valueLabel={`${cropZoom.toFixed(2)}x`} />
-                      <CropRange id="qr-logo-crop-x" label="Geser horizontal" min={-100} max={100} step={1} value={cropOffsetX} onChange={setCropOffsetX} valueLabel={`${cropOffsetX}`} />
-                      <CropRange id="qr-logo-crop-y" label="Geser vertikal" min={-100} max={100} step={1} value={cropOffsetY} onChange={setCropOffsetY} valueLabel={`${cropOffsetY}`} />
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="button" className="min-h-11" onClick={() => void handleApplyCrop()} disabled={saving || !cropPreviewDataUrl}>
-                          Gunakan crop
-                        </Button>
-                        <Button type="button" className="min-h-11" variant="outline" onClick={handleCancelCrop} disabled={saving}>
-                          Batal
-                        </Button>
+                        <CropRange id="qr-logo-crop-zoom" label="Zoom" min={1} max={3} step={0.05} value={cropZoom} valueLabel={`${cropZoom.toFixed(2)}x`} onChange={setCropZoom} />
+                        <CropRange id="qr-logo-crop-x" label="Geser horizontal" min={-100} max={100} step={1} value={cropOffsetX} valueLabel={`${cropOffsetX}`} onChange={setCropOffsetX} />
+                        <CropRange id="qr-logo-crop-y" label="Geser vertikal" min={-100} max={100} step={1} value={cropOffsetY} valueLabel={`${cropOffsetY}`} onChange={setCropOffsetY} />
+                        <div className="flex flex-wrap gap-2">
+                          <Button type="button" size="sm" onClick={() => void handleApplyCrop()} disabled={saving || !cropPreviewDataUrl}>
+                            Gunakan crop
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" onClick={handleCancelCrop} disabled={saving}>
+                            Batal
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ) : null}
 
-                <div className="grid gap-2">
+                {/* Footer Text */}
+                <div className="space-y-1.5">
                   <Label htmlFor="qr-footer-text">Footer label</Label>
                   <Input
                     id="qr-footer-text"
                     value={setting?.footer_text || ""}
-                    onChange={(event) => setSetting((prev) => ({ ...(prev || {}), footer_text: event.target.value }))}
+                    onChange={(e) => setSetting((prev) => ({ ...(prev || {}), footer_text: e.target.value }))}
                     placeholder="Scan QR untuk membuka detail/validasi Device"
                     disabled={saving}
                   />
+                  <p className="text-xs text-muted-foreground">Teks ini muncul di bawah QR label.</p>
                 </div>
 
+                {/* Actions */}
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" className="min-h-11" onClick={() => void handleSave()} disabled={saving || loading || Boolean(cropSourceDataUrl)}>
+                  <Button type="button" onClick={() => void handleSave()} disabled={saving || loading || Boolean(cropSourceDataUrl)}>
                     <Save className="mr-2 size-4" />
-                    {saving ? "Menyimpan..." : "Simpan settings"}
+                    {saving ? "Menyimpan..." : "Simpan"}
                   </Button>
-                  <Button type="button" className="min-h-11" variant="outline" onClick={() => void handleResetLogo()} disabled={saving || loading}>
+                  <Button type="button" variant="outline" onClick={() => void handleResetLogo()} disabled={saving || loading}>
                     <RefreshCw className="mr-2 size-4" />
-                    Reset logo
+                    Reset Logo
                   </Button>
                 </div>
 
-                <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-                  <div className="mb-2 flex items-center gap-2 font-medium text-foreground">
-                    <Upload className="size-3.5" />
-                    Logo aktif
+                {/* Error/Success */}
+                {error ? (
+                  <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {error}
                   </div>
-                  <p>{cropSourceDataUrl ? "Logo menunggu crop" : selectedFile?.name || setting?.qr_logo_original_name || "Default Syntrix logo"}</p>
-                  <p>Update terakhir: {setting?.updated_at ? new Date(setting.updated_at).toLocaleString("id-ID") : "-"}</p>
-                  {cropSourceDataUrl ? <p className="text-amber-600">Klik Gunakan crop sebelum menyimpan logo baru.</p> : null}
-                </div>
-
-                {error ? <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p> : null}
-                {success ? <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-300">{success}</p> : null}
+                ) : null}
+                {success ? (
+                  <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-300">
+                    {success}
+                  </div>
+                ) : null}
               </>
             ) : null}
           </div>
 
+          {/* Desktop Preview */}
           <div className="hidden min-w-0 space-y-2 xl:sticky xl:top-4 xl:block xl:self-start">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Preview label</p>
-            <div className="overflow-hidden rounded-md border bg-white p-2 shadow-sm">
+            <div className="overflow-hidden rounded-lg border bg-white p-3 shadow-sm">
               {labelPreviewDataUrl ? (
-                <Image src={labelPreviewDataUrl} alt="QR label preview" width={900} height={450} unoptimized className="h-auto w-full max-w-full rounded-md" />
+                <Image src={labelPreviewDataUrl} alt="QR label preview" width={900} height={450} unoptimized className="h-auto w-full max-w-full rounded" />
               ) : (
-                <div className="flex aspect-[2/1] items-center justify-center text-xs text-muted-foreground">
-                  Preview belum tersedia
-                </div>
+                <div className="flex aspect-[2/1] items-center justify-center text-xs text-muted-foreground">Preview belum tersedia</div>
               )}
             </div>
+            <p className="text-xs text-muted-foreground">Preview ini adalah simulasi. QR sebenarnya akan mengarah ke halaman detail perangkat ODP.</p>
           </div>
         </CardContent>
       </Card>
+
       <ResponseDialog
         open={successDialogOpen}
         title={successDialogTitle}

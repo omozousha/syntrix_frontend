@@ -1,0 +1,1 @@
+export { default } from "@/app/(app)/data-management/list/[slug]/page";

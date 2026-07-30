@@ -25,7 +25,7 @@ import { CableTopologySection } from "./sections/index";
 export type CableDeviceFormProps = DefaultInfoSectionProps & {
   splitterProfiles: SplitterProfileOption[];
   topologyLookup?: TopologySectionProps["topologyLookup"];
-  cableTypes?: Array<{ id: string; cable_type_code: string; cable_type_name: string }>;
+  cableTypes?: Array<{ id: string; cable_type_code: string; cable_type_name: string; core_count?: number | null }>;
   routeTypes?: Array<{ id: string; route_type_code?: string | null; route_type_name: string }>;
   coreCapacities?: Array<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>;
 };
@@ -64,7 +64,15 @@ export function CableDeviceForm(props: CableDeviceFormProps) {
         <ComboboxField
           label="Tipe Kabel"
           value={props.form.cable_type || "__none__"}
-          onValueChange={(value) => props.onChange((prev) => ({ ...prev, cable_type: value === "__none__" ? "" : value }))}
+          onValueChange={(value) => {
+            const nextCode = value === "__none__" ? "" : value;
+            const matched = (props.cableTypes || []).find((t) => t.cable_type_code === nextCode);
+            props.onChange((prev) => ({ 
+              ...prev, 
+              cable_type: nextCode,
+              capacity_core: (!prev.capacity_core || prev.capacity_core === "0") && matched?.core_count ? String(matched.core_count) : prev.capacity_core
+            }));
+          }}
           disabled={!props.editing}
           searchPlaceholder="Cari tipe kabel..."
           options={[

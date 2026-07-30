@@ -69,13 +69,13 @@ export function Combobox({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={cn("w-full justify-between font-normal", triggerClassName)}
+          className={cn("w-full justify-between font-normal bg-background", triggerClassName)}
         >
           <span className="truncate">{selectedLabel}</span>
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-60" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={cn("w-(--radix-popover-trigger-width) p-2", className)} align="start">
+      <PopoverContent className={cn("w-(--radix-popover-trigger-width) p-2 bg-popover", className)} align="start">
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -90,7 +90,7 @@ export function Combobox({
                   key={option.value}
                   type="button"
                   variant="ghost"
-                  className="w-full justify-start text-left"
+                  className="w-full justify-start text-left bg-popover hover:bg-accent"
                   onClick={() => {
                     onValueChange(option.value)
                     setOpen(false)

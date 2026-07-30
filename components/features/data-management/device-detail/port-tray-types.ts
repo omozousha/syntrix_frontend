@@ -14,6 +14,9 @@ export type DevicePort = {
   customer_number?: string | null;
   ont_device_id?: string | null;
   notes?: string | null;
+  splitter_profile_id?: string | null;
+  splitter_role?: "input" | "output" | "bidirectional" | string | null;
+  splitter_ratio?: string | null;
 };
 
 export type PortConnection = {

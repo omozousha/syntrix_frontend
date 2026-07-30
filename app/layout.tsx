@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Doto, Space_Grotesk, Space_Mono } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { ThemeSync } from "@/components/providers/theme-sync";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -60,8 +61,26 @@ export default function RootLayout({
       lang="id"
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} ${fontDisplay.variable} ${fontBody.variable} ${fontMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('syntrix-theme');
+                  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  var isDark = theme === 'dark' || (theme !== 'light' && prefersDark);
+                  document.documentElement.classList.toggle('dark', isDark);
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
+        <ThemeSync />
         <QueryProvider>
           <TooltipProvider>
             {children}

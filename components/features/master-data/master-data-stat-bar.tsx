@@ -1,32 +1,35 @@
 "use client";
 
-import { BookMarked, Boxes, Network, Workflow } from "lucide-react";
+import { BookMarked, Boxes, Building2, MapPinned, Network } from "lucide-react";
 
 type MasterDataStatBarProps = {
-  totalCategories: number;
   totalItems: number;
+  sectionTotals: { label: string; icon: React.ComponentType<{ className?: string }>; count: number }[];
 };
 
-const ITEMS = [
-  { key: "catalogs", label: "Jenis Referensi", icon: Workflow, value: (p: MasterDataStatBarProps) => p.totalCategories },
-  { key: "items", label: "Total Item", icon: Boxes, value: (p: MasterDataStatBarProps) => p.totalItems },
-  { key: "groups", label: "Kelompok", icon: Network, value: () => 4 },
-  { key: "access", label: "Akses", icon: BookMarked, value: () => "Admin" },
-];
-
-export function MasterDataStatBar(props: MasterDataStatBarProps) {
+export function MasterDataStatBar({ totalItems, sectionTotals }: MasterDataStatBarProps) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      {ITEMS.map((item) => {
-        const Icon = item.icon;
+      <div className="inline-flex items-center gap-1.5 rounded-md border bg-primary/5 px-2.5 py-1.5 text-xs shadow-none">
+        <Boxes className="size-3.5 shrink-0 text-primary" />
+        <span className="font-semibold tabular-nums">{totalItems}</span>
+        <span className="text-muted-foreground">Total Item</span>
+      </div>
+      {sectionTotals.map((s) => {
+        const Icon = s.icon;
         return (
-          <div key={item.key} className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-xs shadow-none">
+          <div key={s.label} className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-xs shadow-none">
             <Icon className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="font-semibold tabular-nums">{item.value(props)}</span>
-            <span className="text-muted-foreground">{item.label}</span>
+            <span className="font-semibold tabular-nums">{s.count}</span>
+            <span className="text-muted-foreground">{s.label}</span>
           </div>
         );
       })}
+      <div className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-xs shadow-none">
+        <BookMarked className="size-3.5 shrink-0 text-muted-foreground" />
+        <span className="font-semibold tabular-nums">Admin</span>
+        <span className="text-muted-foreground">Akses</span>
+      </div>
     </div>
   );
 }

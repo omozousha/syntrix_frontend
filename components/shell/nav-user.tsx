@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bell, Check, ChevronDown, LogOut, Moon, Sun, User } from "lucide-react";
 import { toast } from "sonner";
 import type { SessionUser } from "@/lib/session";
+import { useTheme } from "@/lib/use-theme";
 import { ResponseDialog } from "@/components/response-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -77,12 +78,8 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
   const { token } = useSession();
   const normalizedRole = normalizeRole(me.role);
   const canReviewValidation = normalizedRole === "adminregion" || normalizedRole === "superadmin";
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const stored = window.localStorage.getItem(THEME_KEY);
-    if (stored) return stored === "dark";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
-  });
+  const { theme: currentTheme, setTheme: setThemePreference } = useTheme();
+  const isDarkMode = currentTheme === "dark" || (currentTheme === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [notifications, setNotifications] = useState<ValidationRequestNotificationItem[]>([]);
@@ -97,10 +94,6 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
   const seenUnreadIdsRef = useRef<Set<string>>(new Set());
   const firstNotificationLoadRef = useRef(true);
   const logoutTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-  }, [darkMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,13 +144,6 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
       cancelled = true;
     };
   }, [me.app_user, token]);
-
-  function toggleTheme() {
-    const next = !darkMode;
-    setDarkMode(next);
-    document.documentElement.classList.toggle("dark", next);
-    window.localStorage.setItem(THEME_KEY, next ? "dark" : "light");
-  }
 
   function handleLogout() {
     if (logoutLoading) return;
@@ -453,9 +439,9 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
         me={me}
         avatarUrl={avatarUrl}
         initials={initials}
-        darkMode={darkMode}
+        currentTheme={currentTheme}
         onProfile={() => router.push("/profile")}
-        onToggleTheme={toggleTheme}
+        onSetTheme={setThemePreference}
         onLogout={handleLogout}
       />
       <ResponseDialog
@@ -478,19 +464,25 @@ function NavUserAccountMenu({
   me,
   avatarUrl,
   initials,
-  darkMode,
+  currentTheme,
   onProfile,
-  onToggleTheme,
+  onSetTheme,
   onLogout,
 }: {
   me: SessionUser;
   avatarUrl: string;
   initials: string;
-  darkMode: boolean;
+  currentTheme: "light" | "dark" | "system";
   onProfile: () => void;
-  onToggleTheme: () => void;
+  onSetTheme: (theme: "light" | "dark" | "system") => void;
   onLogout: () => void;
 }) {
+  const themeOptions: { value: "light" | "dark" | "system"; label: string; icon: typeof Sun }[] = [
+    { value: "system", label: "System", icon: Sun },
+    { value: "light", label: "Light", icon: Sun },
+    { value: "dark", label: "Dark", icon: Moon },
+  ];
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -522,10 +514,23 @@ function NavUserAccountMenu({
           <User className="mr-2 size-4" />
           Profile
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onToggleTheme} className="cursor-pointer">
-          {darkMode ? <Sun className="mr-2 size-4" /> : <Moon className="mr-2 size-4" />}
-          {darkMode ? "Light mode" : "Dark mode"}
-        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-[11px] text-muted-foreground">Theme</DropdownMenuLabel>
+        {themeOptions.map((opt) => {
+          const Icon = opt.icon;
+          return (
+            <DropdownMenuItem
+              key={opt.value}
+              onClick={() => onSetTheme(opt.value)}
+              className="cursor-pointer"
+            >
+              <Icon className="mr-2 size-4" />
+              <span className="flex-1">{opt.label}</span>
+              {currentTheme === opt.value ? <Check className="size-3.5 text-primary" /> : null}
+            </DropdownMenuItem>
+          );
+        })}
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-destructive focus:text-destructive">
           <LogOut className="mr-2 size-4" />
           Logout

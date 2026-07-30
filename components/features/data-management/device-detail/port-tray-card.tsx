@@ -38,11 +38,17 @@ export function PortTrayCard({
   const fiber = fiberColor || getFiberColor(port.port_index);
   const fiberCoreNum = getFiberCoreNumber(port.port_index);
 
+  const hasSplitter = !!port.splitter_profile_id || !!port.splitter_ratio;
+  const splitterRoleLabel = port.splitter_role ? ` (${port.splitter_role})` : "";
+
   const tooltipLines = [
     `Port ${port.port_label || `#${port.port_index}`}`,
     `Status: ${getPortStatusLabel(status)}`,
     `Fiber #${fiberCoreNum}: ${fiber.name}`,
   ];
+  if (hasSplitter) {
+    tooltipLines.push(`Splitter: ${port.splitter_ratio || "Splitter"}${splitterRoleLabel}`);
+  }
   if (isConnected && connection) {
     tooltipLines.push(`Koneksi: ${getConnectionLabel(connection)}`);
   }
@@ -92,6 +98,16 @@ export function PortTrayCard({
       <span className="absolute left-1.5 bottom-1 text-[7px] font-medium leading-none text-muted-foreground/50">
         #{fiberCoreNum}
       </span>
+
+      {/* Splitter ratio indicator (small badge) */}
+      {hasSplitter && (
+        <span className={cn(
+          "absolute right-1.5 bottom-1 text-[7px] font-bold leading-none rounded-[2px] px-0.5",
+          port.splitter_role === "input" ? "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300" : "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300"
+        )}>
+          {port.splitter_ratio || "SPL"}
+        </span>
+      )}
 
       {/* Port label */}
       <span className="text-[10px] font-semibold leading-tight text-foreground">

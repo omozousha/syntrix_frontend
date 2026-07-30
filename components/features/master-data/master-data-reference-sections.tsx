@@ -114,7 +114,7 @@ export function MasterDataReferenceSections({
         return (
             <Tooltip key={item.slug}>
               <TooltipTrigger asChild>
-                <Link href={`/data-management/list/${item.slug}`}
+                <Link href={`/master-data/list/${item.slug}`}
                   className={`group flex flex-col items-center gap-1 rounded-lg border bg-card p-2 text-center transition-all hover:shadow-sm hover:ring-1 hover:ring-primary/30 ${isEmpty ? "opacity-55" : ""}`}>
                   <div className={`rounded-md p-1.5 ${bg ?? "bg-muted"} ${color ?? "text-muted-foreground"} transition-transform group-hover:scale-110`}>
                     <Icon className="size-4" />
@@ -157,9 +157,12 @@ export function MasterDataReferenceSections({
           if (cats.length === 0) return null;
           return (
             <div key={section.title}>
-              <h3 className={`mb-1.5 text-[11px] font-semibold uppercase tracking-wider ${SECTION_COLORS[section.title] ?? "text-muted-foreground"}`}>
-                <section.icon className="mr-1 inline size-3.5 align-text-top" />
+              <h3 className={`mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider ${SECTION_COLORS[section.title] ?? "text-muted-foreground"}`}>
+                <section.icon className="size-3.5" />
                 {section.title}
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
+                  {cats.reduce((acc, c) => acc + c.count, 0)}
+                </span>
               </h3>
               {renderCards(cats)}
             </div>

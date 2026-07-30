@@ -34,6 +34,9 @@ import { OdpCreateModeDialog } from "@/components/features/data-management/devic
 import { DataListKpiStrip } from "@/components/features/data-management/device-list/data-list-kpi-strip";
 import { DataMobileList } from "@/components/features/data-management/device-list/data-mobile-list";
 import { DataTableView } from "@/components/features/data-management/device-list/data-table-view";
+import { MasterDataQuickEditSheet } from "@/components/features/data-management/master-data-quick-edit-sheet";
+import { MasterDataUsageCheckDialog, MasterDataDeleteConfirmDialog } from "@/components/features/data-management/master-data-delete-dialog";
+import { MasterDataRenameDialog } from "@/components/features/data-management/master-data-rename-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -70,14 +73,28 @@ import { MasterDataFormFields, type LookupOptions } from "@/components/features/
 import { buildDeviceListDisplay, type DeviceListLookupMaps } from "@/lib/display-adapters/device-list-display-adapter";
 import { buildDeviceQrHref, drawQrLabelPdf, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
+import {
+  type GenericItem,
+  pick,
+  normalizeHexColor,
+  formatDateTime,
+  isArchived,
+  mapLookupToOptions,
+  resolveRelationName,
+  sanitizeFileName,
+  getApprovalRequestId,
+  canWriteResource,
+  supportsIsActiveResource,
+  supportsSoftDeleteResource,
+  supportsPopFilterResource,
+  supportsProjectFilterResource,
+  getRenameConfig,
+  getCreateDefaults,
+  buildCreatePayload,
+  buildEditFormFromItem,
+} from "@/lib/master-data-helpers";
 
 const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() || "";
-
-type GenericItem = Record<string, unknown> & {
-  id: string;
-  updated_at?: string | null;
-  created_at?: string | null;
-};
 
 type LookupOption = { id: string; label: string };
 type PopFilterOption = LookupOption & { regionId: string };
@@ -564,7 +581,7 @@ export default function DataManagementListPage() {
   }, [provinceFilter, category?.resource]);
 
   useEffect(() => {
-    if (!createOpen || !category) return;
+    if ((!createOpen && !quickEditTarget) || !category) return;
     const activeCategory = category;
 
     async function loadLookups() {
@@ -630,7 +647,7 @@ export default function DataManagementListPage() {
     }
 
     void loadLookups();
-  }, [createOpen, category, token]);
+  }, [createOpen, quickEditTarget, category, token]);
 
   useEffect(() => {
     if (!category) return;
@@ -793,7 +810,7 @@ export default function DataManagementListPage() {
       }
       if (category.resource === "devices") {
         const validationStatus = getDeviceDisplayValidationStatus(item);
-        const validation = formatValidationStatus(validationStatus);
+        const validation = mapValidationStatus(validationStatus);
         const validationTitle = getDeviceValidationTitle(item, validation.label);
         const isCable = category.deviceTypeKey === "CABLE";
         const baseCells = [
@@ -1077,7 +1094,8 @@ export default function DataManagementListPage() {
   const selectedRows = useMemo(() => rows.filter((row) => selectedIds.has(row.id)), [rows, selectedIds]);
 
   function getDetailHref(itemId: string) {
-    return `/data-management/list/${category?.slug}/${itemId}${queryString ? `?${queryString}` : ""}`;
+    const base = isMasterCategory ? `/master-data/list` : `/data-management/list`;
+    return `${base}/${category?.slug}/${itemId}${queryString ? `?${queryString}` : ""}`;
   }
 
   function getTraceHref(item: GenericItem) {
@@ -1553,7 +1571,7 @@ export default function DataManagementListPage() {
                   getUpdatedAt={(row) => formatDateTime(pick(row, ["updated_at", "created_at"]))}
                   getPopLabel={(row) => buildDeviceListDisplay(row, listDisplayLookups).pop}
                   getValidationBadge={(row) => {
-                    const validation = formatValidationStatus(getDeviceDisplayValidationStatus(row));
+                    const validation = mapValidationStatus(getDeviceDisplayValidationStatus(row));
                     return {
                       label: validation.label,
                       className: validation.className,
@@ -1668,83 +1686,32 @@ export default function DataManagementListPage() {
         ) : null}
       </div>
 
-      <AlertDialog open={Boolean(renameTarget)} onOpenChange={(open) => !open && setRenameTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Rename {category.label}</AlertDialogTitle>
-            <AlertDialogDescription>
-              Perbarui nama data tanpa keluar dari halaman list.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <Input
-            value={renameValue}
-            onChange={(event) => setRenameValue(event.target.value)}
-            placeholder={`Masukkan ${renameConfig?.label || "nama baru"}`}
-          />
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Batal</AlertDialogCancel>
-            <AlertDialogAction disabled={actionLoading} onClick={() => void submitRename()}>
-              {actionLoading ? "Menyimpan..." : "Simpan"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <MasterDataRenameDialog
+        open={Boolean(renameTarget)}
+        onClose={() => setRenameTarget(null)}
+        categoryLabel={category.label}
+        label={renameConfig?.label || "nama baru"}
+        value={renameValue}
+        onValueChange={setRenameValue}
+        actionLoading={actionLoading}
+        onConfirm={() => void submitRename()}
+      />
 
-      {/* Usage check warning dialog */}
-      <AlertDialog open={usageCheck !== null && usageCheck.total > 0} onOpenChange={(open) => !open && setUsageCheck(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Data Masih Digunakan</AlertDialogTitle>
-            <AlertDialogDescription>
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
-                <p className="font-medium text-amber-800">
-                  {usageCheck?.total} data masih menggunakan referensi ini
-                </p>
-                {usageCheck?.by_type ? Object.entries(usageCheck.by_type).map(([table, info]) => (
-                  <div key={table} className="mt-2">
-                    <p className="text-amber-700 font-medium">
-                      {table.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}: {info.count}
-                    </p>
-                    {info.sample.length > 0 && (
-                      <ul className="list-disc ml-4 text-amber-600">
-                        {info.sample.map((item: { id: string; label: string }) => (
-                          <li key={item.id}>{item.label}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )) : null}
-                <p className="mt-2 text-amber-700">Hapus tetap bisa dilakukan, namun data yang merujuk mungkin rusak atau kehilangan referensi.</p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setUsageCheck(null)}>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void forceDelete()}>
-              Tetap Hapus
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <MasterDataUsageCheckDialog
+        usageCheck={usageCheck}
+        onForceDelete={() => void forceDelete()}
+        onClose={() => setUsageCheck(null)}
+      />
 
-      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{isSoftDeleteResource ? "Arsipkan" : "Hapus"} {category.label}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {isSoftDeleteResource
-                ? "Data akan dipindahkan ke arsip (soft delete) dan tidak tampil di list utama."
-                : "Aksi ini tidak bisa dibatalkan. Data yang dipilih akan dihapus permanen."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading || usageLoading}>Batal</AlertDialogCancel>
-            <AlertDialogAction disabled={actionLoading || usageLoading} onClick={() => void submitDelete()}>
-              {actionLoading ? (isSoftDeleteResource ? "Mengarsipkan..." : "Menghapus...") : usageLoading ? "Memeriksa referensi..." : (isSoftDeleteResource ? "Arsipkan" : "Hapus")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <MasterDataDeleteConfirmDialog
+        deleteTarget={deleteTarget}
+        isSoftDeleteResource={isSoftDeleteResource}
+        categoryLabel={category.label}
+        actionLoading={actionLoading}
+        usageLoading={usageLoading}
+        onSubmitDelete={() => void submitDelete()}
+        onClose={() => setDeleteTarget(null)}
+      />
 
       <AlertDialog open={Boolean(bulkActionRequest)} onOpenChange={(open) => !open && setBulkActionRequest(null)}>
         <AlertDialogContent>
@@ -1773,39 +1740,19 @@ export default function DataManagementListPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Sheet open={Boolean(quickEditTarget)} onOpenChange={(open) => !open && setQuickEditTarget(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>Quick Edit {category.label}</SheetTitle>
-            <SheetDescription>Ubah data langsung dari list tanpa pindah halaman.</SheetDescription>
-          </SheetHeader>
-          <div className="grid gap-3 px-4">
-            {renderMasterForm(category.resource, quickEditForm, setQuickEditForm, lookupOptions, fieldErrors, setFieldError, clearFieldError, handleFieldBlur, true, rows, quickEditTarget?.id)}
-          {supportsIsActiveResource(category.resource) && category.resource !== "splitterProfiles" ? (
-              <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Combobox
-                  value={quickEditForm.is_active || "true"}
-                  onValueChange={(value) => setQuickEditForm((prev) => ({ ...prev, is_active: value }))}
-                  options={[
-                    { value: "true", label: "Active" },
-                    { value: "false", label: "Inactive" },
-                  ]}
-                />
-              </div>
-            ) : null}
-            {quickEditError ? <p className="text-sm text-destructive">{quickEditError}</p> : null}
-          </div>
-          <SheetFooter className="mt-2 border-t">
-            <Button type="button" variant="outline" onClick={() => setQuickEditTarget(null)} disabled={actionLoading || Object.keys(fieldErrors).length > 0}>
-              Batal
-            </Button>
-            <Button type="button" onClick={() => void submitQuickEdit()} disabled={actionLoading || Object.keys(fieldErrors).length > 0}>
-              {actionLoading ? "Menyimpan..." : "Simpan"}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+      <MasterDataQuickEditSheet
+        open={Boolean(quickEditTarget)}
+        onOpenChange={(open) => !open && setQuickEditTarget(null)}
+        categoryLabel={category.label}
+        formContent={renderMasterForm(category.resource, quickEditForm, setQuickEditForm, lookupOptions, fieldErrors, setFieldError, clearFieldError, handleFieldBlur, true, rows, quickEditTarget?.id)}
+        showStatus={supportsIsActiveResource(category.resource) && category.resource !== "splitterProfiles"}
+        statusValue={quickEditForm.is_active || "true"}
+        onStatusChange={(value) => setQuickEditForm((prev) => ({ ...prev, is_active: value }))}
+        error={quickEditError}
+        actionLoading={actionLoading}
+        hasFieldErrors={Object.keys(fieldErrors).length > 0}
+        onSave={() => void submitQuickEdit()}
+      />
 
       <Sheet open={createOpen} onOpenChange={setCreateOpen}>
         <SheetContent side="right" className="w-full sm:max-w-lg">
@@ -1837,1545 +1784,21 @@ export default function DataManagementListPage() {
   );
 }
 
-function renderCreateFields(
-  resource: string,
-  form: Record<string, string>,
-  setForm: (updater: (prev: Record<string, string>) => Record<string, string>) => void,
-  lookups: {
-    manufacturers: LookupOption[];
-    brands: LookupOption[];
-    provinces: LookupOption[];
-    assetTypes: LookupOption[];
-  },
-) {
-  const setValue = (key: string, value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
-
-  if (resource === "regions") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Region Name *</Label>
-          <Input value={form.region_name || ""} onChange={(e) => setValue("region_name", e.target.value)} placeholder="Contoh: Jawa Barat" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Inventory Region Code</Label>
-          <Input value={form.inventory_region_code || "Otomatis"} disabled />
-          <p className="text-xs text-muted-foreground">
-            Diisi otomatis dari nomor regional berikutnya yang belum dipakai.
-          </p>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Region Color</Label>
-          <RegionColorPickerField value={form.region_color || ""} onChange={(value) => setValue("region_color", value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Description</Label>
-          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi region" />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "deviceTypes") {
-    const isEdit = Boolean(form.id);
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Device Type Key *</Label>
-          <Input value={form.device_type_key || ""} onChange={(e) => setValue("device_type_key", e.target.value.toUpperCase())} placeholder="Contoh: OLT" />
-          {isEdit && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              ⚠ Mengubah Type Key akan memengaruhi device yang sudah ada. Pastikan tidak ada device yang masih memakai key lama.
-            </p>
-          )}
-        </div>
-        <div className="space-y-1.5">
-          <Label>Device Type Name *</Label>
-          <Input value={form.device_type_name || ""} onChange={(e) => setValue("device_type_name", e.target.value)} placeholder="Contoh: Optical Line Terminal" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Asset Group *</Label>
-          <Combobox
-            value={form.asset_group || "active"}
-            onValueChange={(value) => setValue("asset_group", value)}
-            options={[
-              { value: "active", label: "active" },
-              { value: "passive", label: "passive" },
-            ]}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Topology Role</Label>
-          <Combobox
-            value={form.topology_role || "termination_panel"}
-            onValueChange={(value) => setValue("topology_role", value)}
-            options={[
-              { value: "source_active", label: "source_active" },
-              { value: "termination_panel", label: "termination_panel" },
-              { value: "distribution_point", label: "distribution_point" },
-              { value: "access_point", label: "access_point" },
-              { value: "splice_point", label: "splice_point" },
-              { value: "physical_cable", label: "physical_cable" },
-              { value: "customer_endpoint", label: "customer_endpoint" },
-              { value: "network_active", label: "network_active" },
-              { value: "civil_structure", label: "civil_structure" },
-            ]}
-            placeholder="Pilih topology role"
-            searchPlaceholder="Cari role..."
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Layout Type</Label>
-          <Combobox
-            value={form.layout_type || "summary_only"}
-            onValueChange={(value) => setValue("layout_type", value)}
-            options={[
-              { value: "tray", label: "tray" },
-              { value: "tube", label: "tube" },
-              { value: "core_grid", label: "core_grid" },
-              { value: "odp_operations", label: "odp_operations" },
-              { value: "olt_slot", label: "olt_slot" },
-              { value: "switch_grid", label: "switch_grid" },
-              { value: "summary_only", label: "summary_only" },
-            ]}
-            placeholder="Pilih layout type"
-            searchPlaceholder="Cari layout..."
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Inventory Type Code</Label>
-          <Input
-            value={form.inventory_type_code || ""}
-            onChange={(e) => setValue("inventory_type_code", e.target.value)}
-            placeholder={isEdit ? "Kosongkan untuk auto-assign" : "Otomatis"}
-            disabled={!isEdit}
-          />
-          <p className="text-xs text-muted-foreground">
-            {isEdit ? "Kosongkan untuk auto-assign, atau isi 3 digit angka (contoh: 001)." : "Diisi otomatis dari nomor tipe perangkat berikutnya yang belum dipakai."}
-          </p>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Icon</Label>
-          <Combobox
-            value={form.icon_name || "HardDrive"}
-            onValueChange={(value) => setValue("icon_name", value)}
-            options={DEVICE_ICON_OPTIONS}
-            placeholder="Pilih icon"
-            searchPlaceholder="Cari icon..."
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Default Front Label</Label>
-          <Input value={form.default_front_label || ""} onChange={(e) => setValue("default_front_label", e.target.value)} placeholder="Contoh: Hulu" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Default Rear Label</Label>
-          <Input value={form.default_rear_label || ""} onChange={(e) => setValue("default_rear_label", e.target.value)} placeholder="Contoh: Hilir" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Supports Ports</Label>
-          <Combobox
-            value={form.supports_ports || "false"}
-            onValueChange={(value) => setValue("supports_ports", value)}
-            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Supports Splitter</Label>
-          <Combobox
-            value={form.supports_splitter || "false"}
-            onValueChange={(value) => setValue("supports_splitter", value)}
-            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Supports Core Management</Label>
-          <Combobox
-            value={form.supports_core_management || "false"}
-            onValueChange={(value) => setValue("supports_core_management", value)}
-            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Supports Joint Closure</Label>
-          <Combobox
-            value={form.supports_joint_closure || "false"}
-            onValueChange={(value) => setValue("supports_joint_closure", value)}
-            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Is Assignable</Label>
-          <Combobox
-            value={form.is_assignable || "false"}
-            onValueChange={(value) => setValue("is_assignable", value)}
-            options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]}
-          />
-        </div>
-        <div className="space-y-1.5 md:col-span-2">
-          <Label>Description</Label>
-          <Input
-            value={form.description || ""}
-            onChange={(e) => setValue("description", e.target.value)}
-            placeholder="Deskripsi tipe perangkat"
-          />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "topologyRelationRules") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Source Device Type Key *</Label>
-          <Input value={form.source_device_type_key || ""} onChange={(e) => setValue("source_device_type_key", e.target.value.toUpperCase())} placeholder="Contoh: ODC" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Direction *</Label>
-          <Combobox value={form.direction || "front"} onValueChange={(value) => setValue("direction", value)} options={[{ value: "front", label: "front" }, { value: "rear", label: "rear" }]} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Allowed Peer Device Type Key *</Label>
-          <Input value={form.allowed_peer_device_type_key || ""} onChange={(e) => setValue("allowed_peer_device_type_key", e.target.value.toUpperCase())} placeholder="Contoh: ODP" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Connection Role</Label>
-          <Combobox value={form.connection_role || "physical_fiber"} onValueChange={(value) => setValue("connection_role", value)} options={[{ value: "uplink", label: "uplink" }, { value: "feeder", label: "feeder" }, { value: "distribution", label: "distribution" }, { value: "branch", label: "branch" }, { value: "drop", label: "drop" }, { value: "physical_fiber", label: "physical_fiber" }]} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Route Type</Label>
-          <Input value={form.route_type || ""} onChange={(e) => setValue("route_type", e.target.value)} placeholder="Contoh: distribution" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Requires Same POP</Label>
-          <Combobox value={form.requires_same_pop || "true"} onValueChange={(value) => setValue("requires_same_pop", value)} options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Requires Same Project</Label>
-          <Combobox value={form.requires_same_project || "false"} onValueChange={(value) => setValue("requires_same_project", value)} options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Required on Create</Label>
-          <Combobox value={form.is_required_on_create || "false"} onValueChange={(value) => setValue("is_required_on_create", value)} options={[{ value: "true", label: "true" }, { value: "false", label: "false" }]} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Description</Label>
-          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi aturan topology" />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "linkBudgetParameters") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Parameter Key *</Label>
-          <Input value={form.parameter_key || ""} onChange={(e) => setValue("parameter_key", e.target.value)} placeholder="Contoh: engineering_margin" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Parameter Label *</Label>
-          <Input value={form.parameter_label || ""} onChange={(e) => setValue("parameter_label", e.target.value)} placeholder="Contoh: Default engineering margin" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Parameter Value *</Label>
-          <Input type="number" step="0.001" min={0} value={form.parameter_value || ""} onChange={(e) => setValue("parameter_value", e.target.value)} placeholder="Contoh: 3.0" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Unit</Label>
-          <Input value={form.unit || "dB"} onChange={(e) => setValue("unit", e.target.value)} placeholder="dB" />
-        </div>
-        <div className="space-y-1.5 md:col-span-2">
-          <Label>Description</Label>
-          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi parameter" />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "popTypes") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>POP Type Name *</Label>
-          <Input value={form.pop_type_name || ""} onChange={(e) => setValue("pop_type_name", e.target.value)} placeholder="Contoh: Main POP" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>POP Type Code</Label>
-          <Input value={form.pop_type_code || ""} onChange={(e) => setValue("pop_type_code", e.target.value.toUpperCase())} placeholder="Contoh: MAIN_POP" />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "routeTypes") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Route Type Name *</Label>
-          <Input value={form.route_type_name || ""} onChange={(e) => setValue("route_type_name", e.target.value)} placeholder="Contoh: Backbone" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Route Type Code</Label>
-          <Input value={form.route_type_code || ""} onChange={(e) => setValue("route_type_code", e.target.value.toUpperCase())} placeholder="Contoh: BB" />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "cableTypes") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Cable Type Name *</Label>
-          <Input value={form.cable_type_name || ""} onChange={(e) => setValue("cable_type_name", e.target.value)} placeholder="Contoh: Single-mode (SM)" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Cable Type Code</Label>
-          <Input value={form.cable_type_code || ""} onChange={(e) => setValue("cable_type_code", e.target.value.toUpperCase())} placeholder="Contoh: SM" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Cable Role</Label>
-          <Combobox value={form.cable_role || "distribution"} onValueChange={(value) => setValue("cable_role", value)} options={[{ value: "feeder", label: "feeder" }, { value: "distribution", label: "distribution" }, { value: "branch", label: "branch" }, { value: "drop", label: "drop" }]} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Core Count</Label>
-          <Input type="number" min={0} value={form.core_count || ""} onChange={(e) => setValue("core_count", e.target.value)} placeholder="Contoh: 24" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Attenuation 1310 (dB/km)</Label>
-          <Input type="number" step="0.001" min={0} value={form.attenuation_1310_db_per_km || "0.35"} onChange={(e) => setValue("attenuation_1310_db_per_km", e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Attenuation 1490 (dB/km)</Label>
-          <Input type="number" step="0.001" min={0} value={form.attenuation_1490_db_per_km || "0.25"} onChange={(e) => setValue("attenuation_1490_db_per_km", e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Attenuation 1550 (dB/km)</Label>
-          <Input type="number" step="0.001" min={0} value={form.attenuation_1550_db_per_km || "0.25"} onChange={(e) => setValue("attenuation_1550_db_per_km", e.target.value)} />
-        </div>
-        <div className="space-y-1.5 md:col-span-2">
-          <Label>Description</Label>
-          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi tipe kabel" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Sort Order</Label>
-          <Input type="number" value={form.sort_order || "0"} onChange={(e) => setValue("sort_order", e.target.value)} />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "coreCapacities") {
-    const allowedKeys = parseJsonStringArray(form.allowed_route_type_keys);
-    const isAllState = allowedKeys.length === 0;
-    const isNoneState = allowedKeys.includes("_NONE_");
-    const routeTypeList = ["BACKBONE", "FEEDER", "DISTRIBUTION", "ACCESS", "DROP"];
-    const isChecked = (key: string) => isAllState || allowedKeys.includes(key);
-    const toggleRouteTypeKey = (key: string) => {
-      let next: string[];
-      if (isAllState) {
-        // Currently ALL, unchecking one → only the other 4
-        next = routeTypeList.filter((k) => k !== key);
-      } else if (isNoneState) {
-        // Currently NONE, checking one → only this one
-        next = [key];
-      } else {
-        next = allowedKeys.includes(key)
-          ? allowedKeys.filter((k) => k !== key)
-          : [...allowedKeys, key];
-      }
-      // All checked → ALL (empty)
-      if (next.length === routeTypeList.length) {
-        setValue("allowed_route_type_keys", "[]");
-      }
-      // None checked → NONE
-      else if (next.length === 0) {
-        setValue("allowed_route_type_keys", JSON.stringify(["_NONE_"]));
-      }
-      else {
-        setValue("allowed_route_type_keys", JSON.stringify(next));
-      }
-    };
-
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Core Capacity Value *</Label>
-          <Input type="number" min={1} value={form.core_capacity_value || ""} onChange={(e) => setValue("core_capacity_value", e.target.value)} placeholder="Contoh: 96" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Label *</Label>
-          <Input value={form.label || ""} onChange={(e) => setValue("label", e.target.value)} placeholder="Contoh: 96 Cores" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Description</Label>
-          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi kapasitas core" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Route Types</Label>
-          <p className="text-xs text-muted-foreground">Pilih kategori kabel yang diizinkan. Centang semua = ALL (semua kategori). Kosongkan semua = NONE (tidak ada kategori).</p>
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={isChecked("BACKBONE")}
-                onChange={() => toggleRouteTypeKey("BACKBONE")}
-                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
-              />
-              BACKBONE
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={isChecked("FEEDER")}
-                onChange={() => toggleRouteTypeKey("FEEDER")}
-                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
-              />
-              FEEDER
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={isChecked("DISTRIBUTION")}
-                onChange={() => toggleRouteTypeKey("DISTRIBUTION")}
-                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
-              />
-              DISTRIBUTION
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={isChecked("ACCESS")}
-                onChange={() => toggleRouteTypeKey("ACCESS")}
-                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
-              />
-              ACCESS
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={isChecked("DROP")}
-                onChange={() => toggleRouteTypeKey("DROP")}
-                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
-              />
-              DROP
-            </label>
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Sort Order</Label>
-          <Input type="number" value={form.sort_order || "0"} onChange={(e) => setValue("sort_order", e.target.value)} />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "odpTypes") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>ODP Type Name *</Label>
-          <Input value={form.odp_type_name || ""} onChange={(e) => setValue("odp_type_name", e.target.value)} placeholder="Contoh: ODP PB" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>ODP Type Code</Label>
-          <Input value={form.odp_type_code || ""} onChange={(e) => setValue("odp_type_code", e.target.value.toUpperCase())} placeholder="Contoh: ODP_PB" />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "installationTypes") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Installation Type Name *</Label>
-          <Input value={form.installation_type_name || ""} onChange={(e) => setValue("installation_type_name", e.target.value)} placeholder="Contoh: Aerial" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Installation Type Code</Label>
-          <Input value={form.installation_type_code || ""} onChange={(e) => setValue("installation_type_code", e.target.value.toUpperCase())} placeholder="Contoh: AERIAL" />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "serviceTypes") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Service Type Name *</Label>
-          <Input value={form.service_type_name || ""} onChange={(e) => setValue("service_type_name", e.target.value)} placeholder="Contoh: Internet" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Service Type Code</Label>
-          <Input value={form.service_type_code || ""} onChange={(e) => setValue("service_type_code", e.target.value.toUpperCase())} placeholder="Contoh: INTERNET" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Description</Label>
-          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi jenis layanan" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Sort Order</Label>
-          <Input type="number" value={form.sort_order || "0"} onChange={(e) => setValue("sort_order", e.target.value)} />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "tenants") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Tenant Name *</Label>
-          <Input value={form.tenant_name || ""} onChange={(e) => setValue("tenant_name", e.target.value)} placeholder="Contoh: FiberPro" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Tenant Code</Label>
-          <Input value={form.tenant_code || ""} onChange={(e) => setValue("tenant_code", e.target.value.toUpperCase())} placeholder="Contoh: FIBERPRO" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Description</Label>
-          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi tenant" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Sort Order</Label>
-          <Input type="number" value={form.sort_order || "0"} onChange={(e) => setValue("sort_order", e.target.value)} />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "manufacturers") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Manufacturer Name *</Label>
-          <Input value={form.manufacturer_name || ""} onChange={(e) => setValue("manufacturer_name", e.target.value)} placeholder="Contoh: Huawei" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Manufacturer Code</Label>
-          <Input value={form.manufacturer_code || ""} onChange={(e) => setValue("manufacturer_code", e.target.value.toUpperCase())} placeholder="Contoh: HUAWEI" />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "brands") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Brand Name *</Label>
-          <Input value={form.brand_name || ""} onChange={(e) => setValue("brand_name", e.target.value)} placeholder="Contoh: MA5800" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Brand Code</Label>
-          <Input value={form.brand_code || ""} onChange={(e) => setValue("brand_code", e.target.value.toUpperCase())} placeholder="Contoh: MA5800" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Manufacturer</Label>
-          <Combobox
-            value={form.manufacturer_id || "__none"}
-            onValueChange={(value) => setValue("manufacturer_id", value === "__none" ? "" : value)}
-            placeholder="Pilih manufacturer"
-            searchPlaceholder="Cari manufacturer..."
-            options={[{ value: "__none", label: "-" }, ...mapLookupToOptions(lookups.manufacturers)]}
-          />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "assetModels") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Model Name *</Label>
-          <Input value={form.model_name || ""} onChange={(e) => setValue("model_name", e.target.value)} placeholder="Contoh: MA5800-X17" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Model Code</Label>
-          <Input value={form.model_code || ""} onChange={(e) => setValue("model_code", e.target.value.toUpperCase())} placeholder="Contoh: MA5800X17" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Brand</Label>
-          <Combobox
-            value={form.brand_id || "__none"}
-            onValueChange={(value) => setValue("brand_id", value === "__none" ? "" : value)}
-            placeholder="Pilih brand"
-            searchPlaceholder="Cari brand..."
-            options={[{ value: "__none", label: "-" }, ...mapLookupToOptions(lookups.brands)]}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Manufacturer</Label>
-          <Combobox
-            value={form.manufacturer_id || "__none"}
-            onValueChange={(value) => setValue("manufacturer_id", value === "__none" ? "" : value)}
-            placeholder="Pilih manufacturer"
-            searchPlaceholder="Cari manufacturer..."
-            options={[{ value: "__none", label: "-" }, ...mapLookupToOptions(lookups.manufacturers)]}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Asset Type</Label>
-          <Combobox
-            value={form.asset_type_id || "__none"}
-            onValueChange={(value) => setValue("asset_type_id", value === "__none" ? "" : value)}
-            placeholder="Pilih asset type"
-            searchPlaceholder="Cari asset type..."
-            options={[{ value: "__none", label: "-" }, ...mapLookupToOptions(lookups.assetTypes)]}
-          />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "splitterProfiles") {
-    const allowedKeys = parseJsonStringArray(form.allowed_device_type_keys);
-    const toggleDeviceTypeKey = (key: string) => {
-      const next = allowedKeys.includes(key) ? allowedKeys.filter((k) => k !== key) : [...allowedKeys, key];
-      setValue("allowed_device_type_keys", JSON.stringify(next));
-    };
-
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Ratio Label *</Label>
-          <Input value={form.ratio_label || ""} onChange={(e) => setValue("ratio_label", e.target.value)} placeholder="Contoh: 1:8" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Input Port Count *</Label>
-          <Input type="number" min={1} value={form.input_port_count || ""} onChange={(e) => setValue("input_port_count", e.target.value)} placeholder="Contoh: 1" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Output Port Count *</Label>
-          <Input type="number" min={1} value={form.output_port_count || ""} onChange={(e) => setValue("output_port_count", e.target.value)} placeholder="Contoh: 8" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Expected Loss (dB)</Label>
-          <Input type="number" step="0.01" min={0} value={form.expected_loss_db || ""} onChange={(e) => setValue("expected_loss_db", e.target.value)} placeholder="Contoh: 10.5" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Device Types</Label>
-          <p className="text-xs text-muted-foreground">Pilih tipe perangkat yang diizinkan menggunakan splitter ratio ini.</p>
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={allowedKeys.includes("ODC")}
-                onChange={() => toggleDeviceTypeKey("ODC")}
-                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
-              />
-              ODC
-            </label>
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Notes</Label>
-          <Input value={form.notes || ""} onChange={(e) => setValue("notes", e.target.value)} placeholder="Catatan splitter profile" />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "provinces") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Province Name *</Label>
-          <Input value={form.province_name || ""} onChange={(e) => setValue("province_name", e.target.value)} placeholder="Contoh: Banten" />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "cities") {
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>City Name *</Label>
-          <Input value={form.city_name || ""} onChange={(e) => setValue("city_name", e.target.value)} placeholder="Contoh: Kota Serang" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>City Code</Label>
-          <Input value={form.city_code || ""} onChange={(e) => setValue("city_code", e.target.value.toUpperCase())} placeholder="Contoh: SERANG" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Province</Label>
-          <Combobox
-            value={form.province_id || "__none"}
-            onValueChange={(value) => setValue("province_id", value === "__none" ? "" : value)}
-            placeholder="Pilih province"
-            searchPlaceholder="Cari province..."
-            options={[{ value: "__none", label: "-" }, ...mapLookupToOptions(lookups.provinces)]}
-          />
-        </div>
-      </>
-    );
-  }
-
-  if (resource === "deviceCoreCapacities") {
-    const allowedKeys = parseJsonStringArray(form.allowed_device_type_keys);
-    const toggleDeviceTypeKey = (key: string) => {
-      const next = allowedKeys.includes(key) ? allowedKeys.filter((k) => k !== key) : [...allowedKeys, key];
-      setValue("allowed_device_type_keys", JSON.stringify(next));
-    };
-
-    return (
-      <>
-        <div className="space-y-1.5">
-          <Label>Core Capacity Value *</Label>
-          <Input type="number" min={1} value={form.core_capacity_value || ""} onChange={(e) => setValue("core_capacity_value", e.target.value)} placeholder="Contoh: 48" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Label *</Label>
-          <Input value={form.label || ""} onChange={(e) => setValue("label", e.target.value)} placeholder="Contoh: 48 Cores" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Description</Label>
-          <Input value={form.description || ""} onChange={(e) => setValue("description", e.target.value)} placeholder="Deskripsi kapasitas core" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Device Types</Label>
-          <p className="text-xs text-muted-foreground">Pilih tipe perangkat yang diizinkan. Kosongkan = berlaku untuk semua.</p>
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={allowedKeys.includes("OTB")}
-                onChange={() => toggleDeviceTypeKey("OTB")}
-                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
-              />
-              OTB
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={allowedKeys.includes("ODC")}
-                onChange={() => toggleDeviceTypeKey("ODC")}
-                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
-              />
-              ODC
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={allowedKeys.includes("JC")}
-                onChange={() => toggleDeviceTypeKey("JC")}
-                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
-              />
-              JC
-            </label>
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Sort Order</Label>
-          <Input type="number" value={form.sort_order || "0"} onChange={(e) => setValue("sort_order", e.target.value)} />
-        </div>
-      </>
-    );
-  }
-
+function withArchivedLabel(item: Record<string, unknown>, text: string) {
+  if (!isArchived(item)) return text;
   return (
-    <p className="text-sm text-muted-foreground">
-      Form create belum tersedia untuk resource ini.
-    </p>
+    <span className="inline-flex items-center gap-1.5">
+      <span>{text}</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex">
+            <AlertTriangle className="size-3.5 text-red-500" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top">Archived</TooltipContent>
+      </Tooltip>
+    </span>
   );
-}
-
-function getCreateDefaults(resource: string): Record<string, string> {
-  if (resource === "deviceTypes") return { asset_group: "active", icon_name: "HardDrive", topology_role: "termination_panel", supports_ports: "false", supports_splitter: "false", supports_core_management: "false", supports_joint_closure: "false", layout_type: "summary_only", default_front_label: "Hulu", default_rear_label: "Hilir", is_assignable: "false", is_active: "true", sort_order: "0" };
-  if (resource === "topologyRelationRules") return { direction: "front", connection_role: "physical_fiber", requires_same_pop: "true", requires_same_project: "false", is_required_on_create: "false", is_active: "true", sort_order: "0" };
-  if (resource === "linkBudgetParameters") return { unit: "dB", is_active: "true", sort_order: "0" };
-  if (resource === "popTypes") return { is_active: "true", sort_order: "0" };
-  if (resource === "routeTypes") return { is_active: "true", sort_order: "0" };
-  if (resource === "cableTypes") return { cable_role: "distribution", attenuation_1310_db_per_km: "0.35", attenuation_1490_db_per_km: "0.25", attenuation_1550_db_per_km: "0.25", is_active: "true", sort_order: "0" };
-  if (resource === "coreCapacities") return { is_active: "true", sort_order: "0", allowed_route_type_keys: "[]" };
-  if (resource === "deviceCoreCapacities") return { is_active: "true", sort_order: "0", allowed_device_type_keys: "[]" };
-  if (resource === "odpTypes") return { is_active: "true", sort_order: "0" };
-  if (resource === "installationTypes") return { is_active: "true", sort_order: "0" };
-  if (resource === "serviceTypes") return { is_active: "true", sort_order: "0" };
-  if (resource === "tenants") return { is_active: "true", sort_order: "0" };
-  if (resource === "splitterProfiles") return { input_port_count: "1", output_port_count: "8", allowed_device_type_keys: "[]", is_active: "true" };
-  if (resource === "provinces") return { is_active: "true" };
-  if (resource === "cities") return { is_active: "true" };
-  return {};
-}
-
-type OdpIssueKey =
-  | "odp-without-ports"
-  | "odp-pending-validation"
-  | "odp-used-without-endpoint"
-  | "odp-assigned-not-used"
-  | "odp-down-maintenance";
-
-type OdpIssueRow = {
-  rowId: string;
-  issue: OdpIssueKey;
-  odpId: string;
-  odpDeviceId: string;
-  odpDeviceName: string;
-  portLabel: string;
-  portStatus: string;
-  note: string;
-  auditEntityType: string;
-  auditEntityId: string;
-};
-
-function OdpQualityTab({ regionId, token }: { regionId: string; token: string }) {
-  const issueOptions: Array<{ key: OdpIssueKey; label: string }> = [
-    { key: "odp-without-ports", label: "ODP tanpa port" },
-    { key: "odp-pending-validation", label: "ODP belum tervalidasi" },
-    { key: "odp-used-without-endpoint", label: "Port used tanpa Customer/ONT" },
-    { key: "odp-assigned-not-used", label: "Port assigned tapi status bukan used" },
-    { key: "odp-down-maintenance", label: "Port down/maintenance" },
-  ];
-  const [issue, setIssue] = useState<OdpIssueKey>("odp-without-ports");
-  const [rows, setRows] = useState<OdpIssueRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    async function run() {
-      setLoading(true);
-      setError("");
-      try {
-        const suffix = regionId ? `&region_id=${encodeURIComponent(regionId)}` : "";
-        const [devices, ports] = await Promise.all([
-          fetchAllPages(`/devices?device_type_key=ODP${suffix}`, token),
-          fetchAllPages(`/devicePorts?${suffix.replace(/^&/, "")}`, token),
-        ]);
-        if (cancelled) return;
-        const result = buildOdpIssueRows(issue, devices, ports);
-        setRows(result);
-      } catch (err) {
-        if (!cancelled) setError((err as Error).message || "Gagal memuat issue ODP.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [issue, regionId, token]);
-
-  const filteredRows = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-    if (!keyword) return rows;
-    return rows.filter((row) => [row.odpDeviceName, row.odpDeviceId, row.portLabel, row.note].join(" ").toLowerCase().includes(keyword));
-  }, [rows, search]);
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>ODP Quality Issues</CardTitle>
-        <CardDescription>Issue ODP per region aktif. Direct action ke ODP detail/field/audit trail.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          {issueOptions.map((item) => (
-            <Button key={item.key} type="button" size="sm" variant={issue === item.key ? "default" : "outline"} onClick={() => setIssue(item.key)}>
-              {item.label}
-            </Button>
-          ))}
-        </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
-          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari ODP ID / nama / port / catatan..." />
-          <Button type="button" variant="outline" onClick={() => setSearch("")}>Reset</Button>
-        </div>
-        {loading ? <AppLoading label="Memuat issue ODP..." /> : null}
-        {!loading && error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {!loading && !error ? (
-          <div className="space-y-2">
-            {filteredRows.length ? filteredRows.map((row) => (
-              <div key={row.rowId} className="rounded-md border bg-background p-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{row.odpDeviceName}</p>
-                    <p className="text-xs text-muted-foreground">{row.odpDeviceId}</p>
-                  </div>
-                  <span className="rounded border px-2 py-0.5 text-xs">{row.portStatus || "-"}</span>
-                </div>
-                <p className="mt-2 text-xs"><span className="font-medium">Port:</span> {row.portLabel}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{row.note}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button asChild variant="outline" size="sm"><Link href={`/data-management/list/odp/${row.odpId}`}>Open ODP</Link></Button>
-                  <Button asChild variant="outline" size="sm"><Link href={`/audit-trail?entity_type=${encodeURIComponent(row.auditEntityType)}&entity_id=${encodeURIComponent(row.auditEntityId)}`}>Audit Trail</Link></Button>
-                </div>
-              </div>
-            )) : <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">Tidak ada issue pada filter saat ini.</p>}
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
-
-async function fetchAllPages(path: string, token: string) {
-  let page = 1;
-  const limit = 100;
-  const all: GenericItem[] = [];
-  while (true) {
-    const joiner = path.includes("?") ? "&" : "?";
-    const result = await apiFetch<PaginatedResponse<GenericItem>>(`${path}${joiner}page=${page}&limit=${limit}`, { token });
-    const rows = result.data || [];
-    all.push(...rows);
-    if (rows.length < limit) break;
-    page += 1;
-    if (page > 50) break;
-  }
-  return all;
-}
-
-function buildOdpIssueRows(issue: OdpIssueKey, devices: GenericItem[], ports: GenericItem[]) {
-  const odpMap = new Map(devices.map((item) => [item.id, item]));
-  const odpPorts = ports.filter((port) => port.device_id && odpMap.has(String(port.device_id)));
-  const portsByOdp = new Map<string, GenericItem[]>();
-  odpPorts.forEach((port) => {
-    const key = String(port.device_id);
-    if (!portsByOdp.has(key)) portsByOdp.set(key, []);
-    portsByOdp.get(key)?.push(port);
-  });
-
-  const toRow = (key: OdpIssueKey, odp: GenericItem | null, port: GenericItem | null, note: string): OdpIssueRow => {
-    const hasPort = Boolean(port?.id);
-    const odpId = String(odp?.id || port?.device_id || "");
-    return {
-      rowId: `${key}:${port?.id || odpId}`,
-      issue: key,
-      odpId,
-      odpDeviceId: String(odp?.device_id || odpId || "-"),
-      odpDeviceName: String(odp?.device_name || "ODP"),
-      portLabel: String(port?.port_label || (port?.port_index != null ? `Port ${String(port.port_index)}` : "-")),
-      portStatus: String(port?.status || odp?.status || "-"),
-      note,
-      auditEntityType: hasPort ? "devicePorts" : "devices",
-      auditEntityId: hasPort ? String(port?.id || "") : odpId,
-    };
-  };
-
-  if (issue === "odp-without-ports") return devices.filter((item) => !portsByOdp.has(item.id)).map((item) => toRow(issue, item, null, "ODP belum memiliki data port."));
-  if (issue === "odp-pending-validation") {
-    return devices
-      .filter((item) => getDeviceDisplayValidationStatus(item) === "unvalidated")
-      .map((item) => toRow(issue, item, null, "ODP belum tervalidasi."));
-  }
-  if (issue === "odp-used-without-endpoint") return odpPorts.filter((port) => String(port.status || "") === "used" && !port.customer_id && !port.ont_device_id).map((port) => toRow(issue, odpMap.get(String(port.device_id)) || null, port, "Port status used tanpa customer/ONT."));
-  if (issue === "odp-assigned-not-used") return odpPorts.filter((port) => (port.customer_id || port.ont_device_id) && String(port.status || "") !== "used").map((port) => toRow(issue, odpMap.get(String(port.device_id)) || null, port, "Customer/ONT terisi, tapi status port bukan used."));
-  return odpPorts.filter((port) => String(port.status || "") === "down" || String(port.status || "") === "maintenance").map((port) => toRow(issue, odpMap.get(String(port.device_id)) || null, port, "Port berada pada status down/maintenance."));
-}
-
-function buildEditFormFromItem(resource: string, item: GenericItem): Record<string, string> {
-  const read = (...keys: string[]) => {
-    for (const key of keys) {
-      const value = item[key];
-      if (value === null || value === undefined) continue;
-      return String(value);
-    }
-    return "";
-  };
-  const readBool = (key: string, fallback = true) => {
-    const value = item[key];
-    if (typeof value === "boolean") return String(value);
-    if (typeof value === "string") {
-      const normalized = value.trim().toLowerCase();
-      if (normalized === "true") return "true";
-      if (normalized === "false") return "false";
-    }
-    return String(fallback);
-  };
-
-  if (resource === "regions") {
-    return {
-      region_name: read("region_name"),
-      region_color: read("region_color"),
-      description: read("description"),
-    };
-  }
-  if (resource === "deviceTypes") {
-    return {
-      id: read("id"),
-      device_type_key: read("device_type_key"),
-      device_type_name: read("device_type_name"),
-      asset_group: read("asset_group") || "active",
-      icon_name: read("icon_name") || "HardDrive",
-      topology_role: read("topology_role") || "termination_panel",
-      is_passive: readBool("is_passive", false),
-      is_active_device: readBool("is_active_device", false),
-      supports_ports: readBool("supports_ports", false),
-      supports_splitter: readBool("supports_splitter", false),
-      supports_core_management: readBool("supports_core_management", false),
-      supports_joint_closure: readBool("supports_joint_closure", false),
-      layout_type: read("layout_type") || "summary_only",
-      default_front_label: read("default_front_label") || "Hulu",
-      default_rear_label: read("default_rear_label") || "Hilir",
-      is_assignable: readBool("is_assignable", false),
-      description: read("description"),
-      inventory_type_code: read("inventory_type_code"),
-      sort_order: read("sort_order") || "0",
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "topologyRelationRules") {
-    return {
-      source_device_type_key: read("source_device_type_key"),
-      direction: read("direction") || "front",
-      allowed_peer_device_type_key: read("allowed_peer_device_type_key"),
-      connection_role: read("connection_role") || "physical_fiber",
-      route_type: read("route_type"),
-      requires_same_pop: readBool("requires_same_pop", true),
-      requires_same_project: readBool("requires_same_project", false),
-      is_required_on_create: readBool("is_required_on_create", false),
-      description: read("description"),
-      sort_order: read("sort_order") || "0",
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "linkBudgetParameters") {
-    return {
-      parameter_key: read("parameter_key"),
-      parameter_label: read("parameter_label"),
-      parameter_value: read("parameter_value"),
-      unit: read("unit") || "dB",
-      description: read("description"),
-      sort_order: read("sort_order") || "0",
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "popTypes") {
-    return {
-      pop_type_name: read("pop_type_name"),
-      pop_type_code: read("pop_type_code"),
-      description: read("description"),
-      sort_order: read("sort_order") || "0",
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "routeTypes") {
-    return {
-      route_type_name: read("route_type_name"),
-      route_type_code: read("route_type_code"),
-      description: read("description"),
-      sort_order: read("sort_order") || "0",
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "cableTypes") {
-    return {
-      cable_type_code: read("cable_type_code"),
-      cable_type_name: read("cable_type_name"),
-      cable_role: read("cable_role") || "distribution",
-      core_count: read("core_count"),
-      attenuation_1310_db_per_km: read("attenuation_1310_db_per_km") || "0.35",
-      attenuation_1490_db_per_km: read("attenuation_1490_db_per_km") || "0.25",
-      attenuation_1550_db_per_km: read("attenuation_1550_db_per_km") || "0.25",
-      description: read("description"),
-      sort_order: read("sort_order") || "0",
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "coreCapacities") {
-    const rawKeys = item.allowed_route_type_keys;
-    return {
-      label: read("label"),
-      core_capacity_value: read("core_capacity_value"),
-      description: read("description"),
-      allowed_route_type_keys: JSON.stringify(Array.isArray(rawKeys) ? rawKeys : []),
-      sort_order: read("sort_order") || "0",
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "deviceCoreCapacities") {
-    const rawKeys = item.allowed_device_type_keys;
-    return {
-      label: read("label"),
-      core_capacity_value: read("core_capacity_value"),
-      description: read("description"),
-      allowed_device_type_keys: JSON.stringify(Array.isArray(rawKeys) ? rawKeys : []),
-      sort_order: read("sort_order") || "0",
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "odpTypes") {
-    return {
-      odp_type_name: read("odp_type_name"),
-      odp_type_code: read("odp_type_code"),
-      description: read("description"),
-      sort_order: read("sort_order") || "0",
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "installationTypes") {
-    return {
-      installation_type_name: read("installation_type_name"),
-      installation_type_code: read("installation_type_code"),
-      description: read("description"),
-      sort_order: read("sort_order") || "0",
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "serviceTypes") {
-    return {
-      service_type_name: read("service_type_name"),
-      service_type_code: read("service_type_code"),
-      description: read("description"),
-      sort_order: read("sort_order") || "0",
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "tenants") {
-    return {
-      tenant_name: read("tenant_name"),
-      tenant_code: read("tenant_code"),
-      description: read("description"),
-      sort_order: read("sort_order") || "0",
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "manufacturers") {
-    return {
-      manufacturer_name: read("manufacturer_name"),
-      manufacturer_code: read("manufacturer_code"),
-      description: read("description"),
-    };
-  }
-  if (resource === "brands") {
-    return {
-      brand_name: read("brand_name"),
-      brand_code: read("brand_code"),
-      manufacturer_id: read("manufacturer_id"),
-      description: read("description"),
-    };
-  }
-  if (resource === "assetModels") {
-    return {
-      model_name: read("model_name"),
-      model_code: read("model_code"),
-      asset_type_id: read("asset_type_id"),
-      brand_id: read("brand_id"),
-      manufacturer_id: read("manufacturer_id"),
-      description: read("description"),
-    };
-  }
-  if (resource === "splitterProfiles") {
-    const rawKeys = item.allowed_device_type_keys;
-    return {
-      ratio_label: read("ratio_label"),
-      input_port_count: read("input_port_count"),
-      output_port_count: read("output_port_count"),
-      expected_loss_db: read("expected_loss_db"),
-      allowed_device_type_keys: JSON.stringify(Array.isArray(rawKeys) ? rawKeys : []),
-      notes: read("notes"),
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "provinces") {
-    return {
-      province_name: read("province_name"),
-      is_active: readBool("is_active", true),
-    };
-  }
-  if (resource === "cities") {
-    return {
-      city_name: read("city_name"),
-      city_code: read("city_code"),
-      province_id: read("province_id"),
-      is_active: readBool("is_active", true),
-    };
-  }
-  return {};
-}
-
-function buildCreatePayload(resource: string, form: Record<string, string>) {
-  const trim = (key: string) => (form[key] || "").trim();
-  const payload: Record<string, unknown> = {};
-  const assign = (key: string) => {
-    const value = trim(key);
-    if (value) payload[key] = value;
-  };
-
-  if (resource === "regions") {
-    if (!trim("region_name")) return null;
-    assign("region_name");
-    assign("region_color");
-    assign("description");
-    return payload;
-  }
-  if (resource === "deviceTypes") {
-    if (!trim("device_type_key") || !trim("device_type_name") || !trim("asset_group")) return null;
-    assign("device_type_key");
-    assign("device_type_name");
-    assign("asset_group");
-    assign("icon_name");
-    assign("topology_role");
-    payload.is_passive = payload.asset_group === 'passive';
-    payload.is_active_device = (trim("is_active_device") || "false") === "true";
-    payload.supports_ports = (trim("supports_ports") || "false") === "true";
-    payload.supports_splitter = (trim("supports_splitter") || "false") === "true";
-    payload.supports_core_management = (trim("supports_core_management") || "false") === "true";
-    payload.supports_joint_closure = (trim("supports_joint_closure") || "false") === "true";
-    assign("layout_type");
-    assign("default_front_label");
-    assign("default_rear_label");
-    payload.is_assignable = (trim("is_assignable") || "false") === "true";
-    assign("description");
-    assign("inventory_type_code");
-    payload.sort_order = Number(trim("sort_order") || "0");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  if (resource === "topologyRelationRules") {
-    if (!trim("source_device_type_key") || !trim("direction") || !trim("allowed_peer_device_type_key")) return null;
-    assign("source_device_type_key");
-    assign("direction");
-    assign("allowed_peer_device_type_key");
-    assign("connection_role");
-    assign("route_type");
-    payload.requires_same_pop = (trim("requires_same_pop") || "true") === "true";
-    payload.requires_same_project = (trim("requires_same_project") || "false") === "true";
-    payload.is_required_on_create = (trim("is_required_on_create") || "false") === "true";
-    assign("description");
-    payload.sort_order = Number(trim("sort_order") || "0");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  if (resource === "linkBudgetParameters") {
-    if (!trim("parameter_key") || !trim("parameter_label") || !trim("parameter_value")) return null;
-    assign("parameter_key");
-    assign("parameter_label");
-    if (trim("parameter_value")) payload.parameter_value = Number(trim("parameter_value"));
-    assign("unit");
-    assign("description");
-    payload.sort_order = Number(trim("sort_order") || "0");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  if (resource === "popTypes") {
-    if (!trim("pop_type_name")) return null;
-    assign("pop_type_name");
-    assign("pop_type_code");
-    assign("description");
-    payload.sort_order = Number(trim("sort_order") || "0");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  if (resource === "routeTypes") {
-    if (!trim("route_type_name")) return null;
-    assign("route_type_name");
-    assign("route_type_code");
-    assign("description");
-    payload.sort_order = Number(trim("sort_order") || "0");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  if (resource === "cableTypes") {
-    if (!trim("cable_type_name")) return null;
-    assign("cable_type_name");
-    assign("cable_type_code");
-    assign("cable_role");
-    if (trim("core_count")) payload.core_count = Number(trim("core_count"));
-    if (trim("attenuation_1310_db_per_km")) payload.attenuation_1310_db_per_km = Number(trim("attenuation_1310_db_per_km"));
-    if (trim("attenuation_1490_db_per_km")) payload.attenuation_1490_db_per_km = Number(trim("attenuation_1490_db_per_km"));
-    if (trim("attenuation_1550_db_per_km")) payload.attenuation_1550_db_per_km = Number(trim("attenuation_1550_db_per_km"));
-    assign("description");
-    payload.sort_order = Number(trim("sort_order") || "0");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  if (resource === "coreCapacities") {
-    if (!trim("label") || !trim("core_capacity_value")) return null;
-    assign("label");
-    payload.core_capacity_value = Number(trim("core_capacity_value"));
-    assign("description");
-    const parsedRouteKeys = parseJsonStringArray(form.allowed_route_type_keys);
-    payload.allowed_route_type_keys = parsedRouteKeys;
-    payload.sort_order = Number(trim("sort_order") || "0");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  if (resource === "deviceCoreCapacities") {
-    if (!trim("label") || !trim("core_capacity_value")) return null;
-    assign("label");
-    payload.core_capacity_value = Number(trim("core_capacity_value"));
-    assign("description");
-    const parsedDeviceKeys = parseJsonStringArray(form.allowed_device_type_keys);
-    payload.allowed_device_type_keys = parsedDeviceKeys;
-    payload.sort_order = Number(trim("sort_order") || "0");
-    payload.is_active = form.is_active === "true";
-    return payload;
-  }
-  if (resource === "odpTypes") {
-    if (!trim("odp_type_name")) return null;
-    assign("odp_type_name");
-    assign("odp_type_code");
-    assign("description");
-    payload.sort_order = Number(trim("sort_order") || "0");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  if (resource === "installationTypes") {
-    if (!trim("installation_type_name")) return null;
-    assign("installation_type_name");
-    assign("installation_type_code");
-    assign("description");
-    payload.sort_order = Number(trim("sort_order") || "0");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  if (resource === "serviceTypes") {
-    if (!trim("service_type_name")) return null;
-    assign("service_type_name");
-    assign("service_type_code");
-    assign("description");
-    payload.sort_order = Number(trim("sort_order") || "0");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  if (resource === "tenants") {
-    if (!trim("tenant_name")) return null;
-    assign("tenant_name");
-    assign("tenant_code");
-    assign("description");
-    payload.sort_order = Number(trim("sort_order") || "0");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  if (resource === "manufacturers") {
-    if (!trim("manufacturer_name")) return null;
-    assign("manufacturer_name");
-    assign("manufacturer_code");
-    assign("description");
-    return payload;
-  }
-  if (resource === "brands") {
-    if (!trim("brand_name")) return null;
-    assign("brand_name");
-    assign("brand_code");
-    assign("manufacturer_id");
-    assign("description");
-    return payload;
-  }
-  if (resource === "assetModels") {
-    if (!trim("model_name")) return null;
-    assign("model_name");
-    assign("model_code");
-    assign("asset_type_id");
-    assign("brand_id");
-    assign("manufacturer_id");
-    assign("description");
-    return payload;
-  }
-  if (resource === "splitterProfiles") {
-    if (!trim("ratio_label") || !trim("input_port_count") || !trim("output_port_count")) return null;
-    assign("ratio_label");
-    payload.input_port_count = Number(trim("input_port_count"));
-    payload.output_port_count = Number(trim("output_port_count"));
-    if (trim("expected_loss_db")) payload.expected_loss_db = Number(trim("expected_loss_db"));
-    const parsedKeys = parseJsonStringArray(form.allowed_device_type_keys);
-    payload.allowed_device_type_keys = parsedKeys;
-    payload.is_active = parsedKeys.length > 0; // auto-derive: ada device type = aktif, kosong = nonaktif
-    assign("notes");
-    return payload;
-  }
-  if (resource === "provinces") {
-    if (!trim("province_name")) return null;
-    assign("province_name");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  if (resource === "cities") {
-    if (!trim("city_name")) return null;
-    assign("city_name");
-    assign("city_code");
-    assign("province_id");
-    payload.is_active = (trim("is_active") || "true") !== "false";
-    return payload;
-  }
-  return null;
-}
-
-function pick(item: Record<string, unknown>, keys: string[]) {
-  for (const key of keys) {
-    const value = item[key];
-    if (value !== null && value !== undefined && String(value).trim() !== "") return String(value);
-  }
-  return "-";
-}
-
-function renderRouteTypeTags(value: unknown) {
-  const arr = Array.isArray(value) ? value.filter(Boolean) : [];
-  if (!arr.length) {
-    return (
-      <Badge variant="secondary" className="text-xs font-normal">
-        ALL
-      </Badge>
-    );
-  }
-  if (arr.includes("_NONE_")) {
-    return (
-      <Badge variant="outline" className="text-xs font-normal text-destructive border-destructive/50">
-        NONE
-      </Badge>
-    );
-  }
-  return (
-    <div className="flex flex-wrap gap-1">
-      {arr.map((type: string) => (
-        <Badge key={type} variant="outline" className="text-xs font-normal">
-          {type}
-        </Badge>
-      ))}
-    </div>
-  );
-}
-
-function renderDeviceTypeTags(value: unknown) {
-  const arr = Array.isArray(value) ? value.filter(Boolean) : [];
-  if (!arr.length) return <span className="text-xs text-muted-foreground">-</span>;
-  return (
-    <div className="flex flex-wrap gap-1">
-      {arr.map((type: string) => (
-        <Badge key={type} variant="outline" className="text-xs font-normal">
-          {type}
-        </Badge>
-      ))}
-    </div>
-  );
-}
-
-function parseJsonStringArray(value: string | undefined | null): string[] {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
-function renderDeviceIconCell(iconName: string) {
-  const normalized = iconName === "-" ? "HardDrive" : iconName;
-  const DeviceIcon = getDeviceIcon(normalized);
-  return (
-    <div className="flex items-center justify-center" title={normalized}>
-      <DeviceIcon className="size-4 text-muted-foreground" />
-    </div>
-  );
-}
-
-function resolveRelationName(value: unknown, map: Record<string, string>) {
-  if (value === null || value === undefined) return "-";
-  const key = String(value).trim();
-  if (!key) return "-";
-  return map[key] || key;
-}
-
-function buildDeviceDirectHref(categorySlug: string, item: GenericItem) {
-  return buildDeviceQrHref({
-    appBaseUrl: APP_BASE_URL,
-    categorySlug,
-    deviceId: item.id,
-    deviceTypeKey: String(item.device_type_key || ""),
-  });
-}
-
-function sanitizeFileName(value: string) {
-  return value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "devices";
-}
-
-function mapLookupToOptions(items: LookupOption[]) {
-  return items.map((item) => ({ value: item.id, label: item.label }));
-}
-
-function RegionColorPickerField({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const fallback = "#0EA5E9";
-  const normalized = normalizeHexColor(value) || fallback;
-  const swatches = Array.from(new Set([
-    "#EF4444", "#F97316", "#F59E0B", "#EAB308", "#84CC16", "#22C55E", "#10B981", "#14B8A6",
-    "#06B6D4", "#0EA5E9", "#3B82F6", "#6366F1", "#8B5CF6", "#A855F7", "#D946EF", "#EC4899",
-    "#F43F5E", "#DC2626", "#EA580C", "#CA8A04", "#65A30D", "#16A34A", "#059669", "#0D9488",
-    "#0891B2", "#0284C7", "#2563EB", "#4F46E5", "#7C3AED", "#9333EA", "#C026D3", "#DB2777",
-    "#E11D48", "#374151", "#4B5563", "#6B7280", "#9CA3AF", "#64748B", "#1F2937", "#111827",
-  ]));
-
-  return (
-    <div className="flex items-center gap-2">
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button type="button" variant="outline" className="w-24 justify-start gap-2 px-2">
-            <span className="size-4 rounded border" style={{ backgroundColor: normalized }} />
-            <span className="text-xs">{normalized}</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-64 space-y-3" align="start">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Color Picker</Label>
-            <Input
-              type="color"
-              value={normalized}
-              onChange={(event) => onChange(event.target.value.toUpperCase())}
-              className="h-10 w-full cursor-pointer p-1"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Quick Colors</Label>
-            <div className="grid grid-cols-8 gap-1">
-              {swatches.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className="size-6 rounded border"
-                  style={{ backgroundColor: color }}
-                  onClick={() => onChange(color)}
-                  aria-label={`Pilih ${color}`}
-                />
-              ))}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-      <Input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="Contoh: #0EA5E9"
-      />
-    </div>
-  );
-}
-
-function normalizeHexColor(value: string) {
-  const text = (value || "").trim();
-  if (/^#[0-9A-Fa-f]{6}$/.test(text)) return text.toUpperCase();
-  if (/^[0-9A-Fa-f]{6}$/.test(text)) return `#${text.toUpperCase()}`;
-  return "";
-}
-
-function formatDateTime(value: string) {
-  if (!value || value === "-") return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("id-ID", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
-function formatValidationStatus(value: string) {
-  return mapValidationStatus(value);
 }
 
 function getDeviceDisplayValidationStatus(item: GenericItem) {
@@ -3404,79 +1827,41 @@ function getDeviceValidationTitle(item: GenericItem, fallbackLabel: string) {
   ].filter(Boolean).join(" | ");
 }
 
-function getRenameConfig(resource: string) {
-  if (resource === "pops") return { field: "pop_name", label: "nama POP" };
-  if (resource === "devices") return { field: "device_name", label: "nama device" };
-  if (resource === "projects") return { field: "project_name", label: "nama project" };
-  if (resource === "poles") return { field: "pole_number", label: "nomor pole" };
-  if (resource === "customers") return { field: "customer_name", label: "nama customer" };
-  if (resource === "routes") return { field: "route_name", label: "nama route" };
-  if (resource === "regions") return { field: "region_name", label: "nama region" };
-  if (resource === "deviceTypes") return { field: "device_type_name", label: "nama tipe perangkat" };
-  if (resource === "popTypes") return { field: "pop_type_name", label: "nama tipe POP" };
-  if (resource === "routeTypes") return { field: "route_type_name", label: "nama tipe route" };
-  if (resource === "odpTypes") return { field: "odp_type_name", label: "nama tipe ODP" };
-  if (resource === "installationTypes") return { field: "installation_type_name", label: "nama jenis instalasi" };
-  if (resource === "serviceTypes") return { field: "service_type_name", label: "nama jenis layanan" };
-  if (resource === "tenants") return { field: "tenant_name", label: "nama tenant" };
-  if (resource === "manufacturers") return { field: "manufacturer_name", label: "nama manufacturer" };
-  if (resource === "brands") return { field: "brand_name", label: "nama brand" };
-  if (resource === "assetModels") return { field: "model_name", label: "nama model" };
-  if (resource === "provinces") return { field: "province_name", label: "nama provinsi" };
-  if (resource === "cities") return { field: "city_name", label: "nama kota/kabupaten" };
-  return null;
-}
-
-function getApprovalRequestId(value?: ApprovalResponse | null) {
-  return value?.approval_request?.request_id || value?.approval_request?.id || "";
-}
-
-function canWriteResource(role: string, resource: string) {
-  if (!resource) return false;
-  if (resource === "devices") {
-    return role === "admin" || role === "user_all_region";
+function renderRouteTypeTags(value: unknown) {
+  const arr = Array.isArray(value) ? value.filter(Boolean) : [];
+  if (!arr.length) {
+    return <Badge variant="secondary" className="text-xs font-normal">ALL</Badge>;
   }
-  if (["pops", "projects", "poles", "customers", "routes"].includes(resource)) {
-    return role === "admin" || role === "user_all_region";
+  if (arr.includes("_NONE_")) {
+    return <Badge variant="outline" className="text-xs font-normal text-destructive border-destructive/50">NONE</Badge>;
   }
-  return role === "admin";
-}
-
-function supportsIsActiveResource(resource: string) {
-  return ["deviceTypes", "topologyRelationRules", "linkBudgetParameters", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "splitterProfiles", "cableTypes", "coreCapacities", "deviceCoreCapacities", "provinces", "cities"].includes(resource);
-}
-
-function supportsSoftDeleteResource(resource: string) {
-  return ["regions", "deviceTypes", "topologyRelationRules", "linkBudgetParameters", "popTypes", "routeTypes", "odpTypes", "installationTypes", "serviceTypes", "tenants", "manufacturers", "brands", "assetModels", "cableTypes", "coreCapacities", "deviceCoreCapacities", "provinces", "cities"].includes(resource);
-}
-
-function supportsPopFilterResource(resource: string) {
-  return ["devices", "poles", "customers", "routes", "projects"].includes(resource);
-}
-
-function supportsProjectFilterResource(resource: string) {
-  return ["devices", "poles", "customers", "routes"].includes(resource);
-}
-
-function isArchived(item: Record<string, unknown>) {
-  const deletedAt = item.deleted_at;
-  if (deletedAt === null || deletedAt === undefined) return false;
-  return String(deletedAt).trim() !== "";
-}
-
-function withArchivedLabel(item: Record<string, unknown>, text: string) {
-  if (!isArchived(item)) return text;
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span>{text}</span>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="inline-flex">
-            <AlertTriangle className="size-3.5 text-red-500" />
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="top">Archived</TooltipContent>
-      </Tooltip>
-    </span>
+    <div className="flex flex-wrap gap-1">
+      {arr.map((type: string) => (
+        <Badge key={type} variant="outline" className="text-xs font-normal">{type}</Badge>
+      ))}
+    </div>
+  );
+}
+
+function renderDeviceTypeTags(value: unknown) {
+  const arr = Array.isArray(value) ? value.filter(Boolean) : [];
+  if (!arr.length) return <span className="text-xs text-muted-foreground">-</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {arr.map((type: string) => (
+        <Badge key={type} variant="outline" className="text-xs font-normal">{type}</Badge>
+      ))}
+    </div>
+  );
+}
+
+function renderDeviceIconCell(iconName: string) {
+  const normalized = iconName === "-" ? "HardDrive" : iconName;
+  const DeviceIcon = getDeviceIcon(normalized);
+  return (
+    <div className="flex items-center justify-center" title={normalized}>
+      <DeviceIcon className="size-4 text-muted-foreground" />
+    </div>
   );
 }

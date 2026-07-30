@@ -279,7 +279,7 @@ export function AddDataMenu({
               <DropdownMenuItem
                 className="items-start gap-3 py-2"
                 onSelect={() =>
-                  go("/data-management/list/master-device-types")
+                  go("/master-data/list/master-device-types")
                 }
               >
                 <Boxes className="mt-0.5 size-4 text-muted-foreground" />
@@ -292,7 +292,7 @@ export function AddDataMenu({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="items-start gap-3 py-2"
-                onSelect={() => go("/data-management/list/master-manufacturers")}
+                onSelect={() => go("/master-data/list/master-manufacturers")}
               >
                 <Building2 className="mt-0.5 size-4 text-muted-foreground" />
                 <div className="space-y-0.5">
@@ -304,7 +304,7 @@ export function AddDataMenu({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="items-start gap-3 py-2"
-                onSelect={() => go("/data-management/list/master-tenants")}
+                onSelect={() => go("/master-data/list/master-tenants")}
               >
                 <Building2 className="mt-0.5 size-4 text-muted-foreground" />
                 <div className="space-y-0.5">
@@ -316,7 +316,7 @@ export function AddDataMenu({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="items-start gap-3 py-2"
-                onSelect={() => go("/data-management/list/master-provinces")}
+                onSelect={() => go("/master-data/list/master-provinces")}
               >
                 <MapPinned className="mt-0.5 size-4 text-muted-foreground" />
                 <div className="space-y-0.5">

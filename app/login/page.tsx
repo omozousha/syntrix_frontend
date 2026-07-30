@@ -27,6 +27,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Apply theme from localStorage + system preference
+  useEffect(() => {
+    try {
+      const theme = window.localStorage.getItem("syntrix-theme");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const isDark = theme === "dark" || (theme !== "light" && prefersDark);
+      document.documentElement.classList.toggle("dark", isDark);
+    } catch {}
+  }, []);
   const nextParam = searchParams.get("next");
   const getNextPath = useCallback(() => {
     if (!nextParam) return "/dashboard";

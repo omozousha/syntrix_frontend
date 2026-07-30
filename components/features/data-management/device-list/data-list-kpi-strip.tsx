@@ -13,6 +13,9 @@ export function DataListKpiStrip({
   selectedPopLabel,
   canWrite,
   role,
+  isMasterCategory,
+  activeCount,
+  archivedCount,
 }: {
   total: number;
   categoryLabel: string;
@@ -22,6 +25,9 @@ export function DataListKpiStrip({
   selectedPopLabel: string;
   canWrite: boolean;
   role: string;
+  isMasterCategory?: boolean;
+  activeCount?: number;
+  archivedCount?: number;
 }) {
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -39,20 +45,41 @@ export function DataListKpiStrip({
         icon={CheckSquare}
         tone={selectedCount ? "amber" : "slate"}
       />
-      <OperationalKpiCard
-        label="POP Filter"
-        value={supportsPopFilter && isPopFilterActive ? "Active" : "All"}
-        caption={selectedPopLabel || "Semua POP"}
-        icon={MapPin}
-        tone={supportsPopFilter && isPopFilterActive ? "emerald" : "slate"}
-      />
-      <OperationalKpiCard
-        label="Access"
-        value={canWrite ? "Manage" : "View"}
-        caption={formatRoleLabel(role)}
-        icon={Shield}
-        tone={canWrite ? "emerald" : "slate"}
-      />
+      {isMasterCategory ? (
+        <>
+          <OperationalKpiCard
+            label="Active"
+            value={String(activeCount ?? 0)}
+            caption="Item aktif di halaman ini"
+            icon={CheckSquare}
+            tone="emerald"
+          />
+          <OperationalKpiCard
+            label="Inactive"
+            value={String(archivedCount ?? 0)}
+            caption="Item tidak aktif di halaman ini"
+            icon={Shield}
+            tone={archivedCount ? "rose" : "slate"}
+          />
+        </>
+      ) : (
+        <>
+          <OperationalKpiCard
+            label="POP Filter"
+            value={supportsPopFilter && isPopFilterActive ? "Active" : "All"}
+            caption={selectedPopLabel || "Semua POP"}
+            icon={MapPin}
+            tone={supportsPopFilter && isPopFilterActive ? "emerald" : "slate"}
+          />
+          <OperationalKpiCard
+            label="Access"
+            value={canWrite ? "Manage" : "View"}
+            caption={formatRoleLabel(role)}
+            icon={Shield}
+            tone={canWrite ? "emerald" : "slate"}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -101,6 +101,15 @@ export default function MasterDataPage() {
     [summaryBySlug],
   );
 
+  const sectionTotals = useMemo(
+    () => MASTER_SECTIONS.map((section) => ({
+      label: section.title.replace("Referensi ", ""),
+      icon: section.icon,
+      count: section.slugs.reduce((acc, slug) => acc + (summaryBySlug[slug] || 0), 0),
+    })),
+    [summaryBySlug],
+  );
+
   if (me.role !== "admin") {
     return (
       <div className="flex h-full items-center justify-center">
@@ -140,7 +149,7 @@ export default function MasterDataPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <MasterDataStatBar totalCategories={MASTER_DATA_CATEGORIES.length} totalItems={totalCatalogItems} />
+            <MasterDataStatBar totalItems={totalCatalogItems} sectionTotals={sectionTotals} />
           </CardContent>
         </Card>
 

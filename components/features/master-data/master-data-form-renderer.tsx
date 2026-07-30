@@ -1,13 +1,13 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SimpleDropdown } from "@/components/ui/simple-dropdown";
+import { Textarea } from "@/components/ui/textarea";
 import type { FieldDef, FieldType } from "@/lib/master-data-form-config";
 import type { ReactNode } from "react";
+import { useMemo } from "react";
 
 export type LookupOptions = {
   manufacturers: { id: string; label: string }[];
@@ -70,7 +70,6 @@ function renderNumberInput(field: FieldDef, value: string, onChange: (v: string)
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={field.placeholder}
-      min={field.validate?.toString().includes("< 0") ? 0 : undefined}
       className={`h-9 text-sm ${error ? "border-destructive" : ""}`}
     />
   );
@@ -89,13 +88,12 @@ function renderCombobox(
     options = [{ value: "__none", label: "-" }, ...items.map((item) => ({ value: item.id, label: item.label }))];
   }
   return (
-    <Combobox
+    <SimpleDropdown
       value={value}
       onValueChange={(v) => onChange(v === "__none" ? "" : v)}
       placeholder={field.placeholder || "Pilih..."}
-      searchPlaceholder="Cari..."
       options={options}
-      className={`h-9 text-sm ${error ? "border-destructive" : ""}`}
+      className={error ? "border-destructive" : ""}
     />
   );
 }
@@ -104,25 +102,36 @@ function renderReadonlyInput(field: FieldDef, value: string) {
   return <Input value={value || "Otomatis"} disabled className="h-9 text-sm text-muted-foreground" />;
 }
 
+function renderTextareaInput(field: FieldDef, value: string, onChange: (v: string) => void, error: string | undefined) {
+  return (
+    <Textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={field.placeholder}
+      className={`min-h-[120px] w-full font-mono text-xs ${error ? "border-destructive" : ""}`}
+    />
+  );
+}
+
 function renderColorInput(field: FieldDef, value: string, onChange: (v: string) => void) {
   const normalized = normalizeHexColor(value) || "#0EA5E9";
   return (
     <div className="flex items-center gap-2">
       <Popover>
         <PopoverTrigger asChild>
-          <Button type="button" variant="outline" className="w-24 justify-start gap-2 px-2">
+          <button type="button" className="flex h-9 items-center gap-2 rounded-md border px-3 text-sm">
             <span className="size-4 rounded border" style={{ backgroundColor: normalized }} />
-            <span className="text-xs">{normalized}</span>
-          </Button>
+            <span className="font-mono">{normalized}</span>
+          </button>
         </PopoverTrigger>
         <PopoverContent className="w-64 space-y-3" align="start">
           <div className="space-y-1.5">
             <Label className="text-xs">Color Picker</Label>
-            <Input
+            <input
               type="color"
               value={normalized}
               onChange={(e) => onChange(e.target.value.toUpperCase())}
-              className="h-10 w-full cursor-pointer p-1"
+              className="h-10 w-full cursor-pointer rounded border p-1"
             />
           </div>
           <div className="space-y-1.5">
@@ -185,91 +194,83 @@ function parseJsonStringArray(value: string | undefined | null): string[] {
   }
 }
 
-const FIELD_RENDERERS: Partial<Record<FieldType, (field: FieldDef, value: string, onChange: (v: string) => void, form: Record<string, string>, lookups: LookupOptions) => ReactNode>> = {
-  text: (f, v, onChange) => renderTextInput(f, v, onChange, undefined),
-  number: (f, v, onChange) => renderNumberInput(f, v, onChange, undefined),
-  combobox: (f, v, onChange, _form, lookups) => renderCombobox(f, v, onChange, undefined, lookups),
-  readonly: (_f, v) => renderReadonlyInput(_f, v),
-  color: (f, v, onChange) => renderColorInput(f, v, onChange),
-  "checkbox-group": (f, _v, onChange, form) => renderCheckboxGroup(f, form, onChange),
-};
-
-export function MasterDataFormField(props: {
-  field: FieldDef;
-  value: string;
-  onChange: (v: string) => void;
-  error?: string;
-  lookups: LookupOptions;
-  form: Record<string, string>;
-}) {
-  const { field, value, onChange, error, lookups, form: formState } = props;
-  const renderer = FIELD_RENDERERS[field.type];
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-medium">
-        {field.label}
-        {field.required ? " *" : ""}
-      </Label>
-      {renderer ? renderer(field, value, onChange, formState, lookups) : null}
-      {field.helpText ? <p className="text-xs text-muted-foreground">{field.helpText}</p> : null}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
-    </div>
-  );
-}
-
 export function MasterDataFormFields(props: RenderMasterDataFieldsProps) {
   const { fields, form, setForm, fieldErrors, setFieldError, clearFieldError, lookups, onBlur, isEdit } = props;
   const setValue = (key: string, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const sections = useMemo(() => {
+    const map = new Map<string, FieldDef[]>();
+    for (const field of fields) {
+      const section = field.section || "";
+      if (!map.has(section)) map.set(section, []);
+      map.get(section)!.push(field);
+    }
+    return Array.from(map.entries());
+  }, [fields]);
+
   return (
-    <div className="grid gap-3">
-      {fields.map((field) => {
-        const value = form[field.key] || "";
-        const error = fieldErrors[field.key];
-        const handleChange = (rawValue: string) => {
-          const transformed = field.transform ? field.transform(rawValue) : rawValue;
-          setValue(field.key, transformed);
-          clearFieldError(field.key);
-        };
-        const handleBlur = () => {
-          if (field.validate) {
-            const err = field.validate(value, form);
-            if (err) {
-              setFieldError(field.key, err);
-              return;
-            }
-          }
-          if (onBlur) onBlur(field, value);
-        };
-
-        if (field.type === "checkbox-group") {
-          return (
-            <div key={field.key} className="space-y-1.5">
-              <Label className="text-sm font-medium">{field.label}</Label>
-              {field.helpText ? <p className="text-xs text-muted-foreground">{field.helpText}</p> : null}
-              {renderCheckboxGroup(field, form, (v) => { setValue(field.key, v); clearFieldError(field.key); })}
-              {error ? <p className="text-xs text-destructive">{error}</p> : null}
-            </div>
-          );
-        }
-
+    <div className="space-y-5">
+      {sections.map(([sectionName, sectionFields]) => {
+        const hasGrid = sectionFields.some((f) => f.cols === 2);
         return (
-          <div key={field.key} className="space-y-1.5" onBlur={handleBlur}>
-            <Label className="text-sm font-medium">
-              {field.label}
-              {field.required ? " *" : ""}
-            </Label>
-            {field.type === "text" ? renderTextInput(field, value, handleChange, error) : null}
-            {field.type === "number" ? renderNumberInput(field, value, handleChange, error) : null}
-            {field.type === "combobox" ? renderCombobox(field, value, handleChange, error, lookups) : null}
-            {field.type === "readonly" ? renderReadonlyInput(field, value) : null}
-            {field.type === "color" ? renderColorInput(field, value, handleChange) : null}
-            {field.helpText ? (
-              <p className="text-xs text-muted-foreground">{field.helpText}</p>
-            ) : null}
-            {error ? <p className="text-xs text-destructive">{error}</p> : null}
+          <div key={sectionName || "fields"}>
+            {sectionName && (
+              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {sectionName}
+              </h4>
+            )}
+            <div className={`grid ${hasGrid ? "grid-cols-2 gap-x-4 gap-y-3" : "grid-cols-1 gap-3"}`}>
+              {sectionFields.map((field) => {
+                const value = form[field.key] || "";
+                const error = fieldErrors[field.key];
+                const handleChange = (rawValue: string) => {
+                  const transformed = field.transform ? field.transform(rawValue) : rawValue;
+                  setValue(field.key, transformed);
+                  clearFieldError(field.key);
+                };
+                const handleBlur = () => {
+                  if (field.validate) {
+                    const err = field.validate(value, form);
+                    if (err) {
+                      setFieldError(field.key, err);
+                      return;
+                    }
+                  }
+                  if (onBlur) onBlur(field, value);
+                };
+
+                return (
+                  <div
+                    key={field.key}
+                    className={`space-y-1.5 ${field.cols === 2 ? "col-span-1" : field.cols === 1 ? "col-span-2" : hasGrid ? "col-span-2" : ""}`}
+                    onBlur={field.type !== "checkbox-group" ? handleBlur : undefined}
+                  >
+                    <Label className="text-sm font-medium">
+                      {field.label}
+                      {field.required && <span className="ml-0.5 text-destructive">*</span>}
+                    </Label>
+                    {field.type === "text" ? renderTextInput(field, value, handleChange, error) : null}
+                    {field.type === "number" ? renderNumberInput(field, value, handleChange, error) : null}
+                    {field.type === "combobox" ? renderCombobox(field, value, handleChange, error, lookups) : null}
+                    {field.type === "readonly" ? renderReadonlyInput(field, value) : null}
+                    {field.type === "color" ? renderColorInput(field, value, handleChange) : null}
+                    {field.type === "textarea" ? renderTextareaInput(field, value, handleChange, error) : null}
+                    {field.type === "checkbox-group" ? (
+                      <div className="space-y-2">
+                        {field.helpText ? <p className="text-xs text-muted-foreground">{field.helpText}</p> : null}
+                        {renderCheckboxGroup(field, form, (v) => { setValue(field.key, v); clearFieldError(field.key); })}
+                      </div>
+                    ) : null}
+                    {field.helpText && field.type !== "checkbox-group" ? (
+                      <p className="text-xs text-muted-foreground">{field.helpText}</p>
+                    ) : null}
+                    {error ? <p className="text-xs text-destructive">{error}</p> : null}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
       })}

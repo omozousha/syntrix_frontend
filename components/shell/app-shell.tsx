@@ -4,11 +4,7 @@ import { usePathname } from "next/navigation";
 import type { SessionUser } from "@/lib/session";
 import { AppSidebar, type AppSidebarMenuItem } from "@/components/shell/app-sidebar";
 import { NavUser } from "@/components/shell/nav-user";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { getCategoryBySlug } from "@/lib/data-management-config";
 
@@ -123,7 +119,7 @@ function buildPageContext(pathname: string) {
     },
     "master-data": {
       eyebrow: "Reference",
-      title: "Master Data",
+      title: segments.length > 1 ? buildDataManagementTitle(segments) : "Master Data",
       description: "Standarisasi referensi perangkat, lokasi, dan layanan.",
     },
     "audit-trail": {

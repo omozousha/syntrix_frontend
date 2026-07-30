@@ -1,4 +1,4 @@
-export type FieldType = "text" | "number" | "combobox" | "checkbox-group" | "color" | "readonly";
+export type FieldType = "text" | "number" | "combobox" | "checkbox-group" | "color" | "readonly" | "textarea";
 
 export interface FieldDef {
   key: string;
@@ -8,6 +8,8 @@ export interface FieldDef {
   placeholder?: string;
   helpText?: string;
   isKeyField?: boolean;
+  section?: string;
+  cols?: 1 | 2;
   options?: { value: string; label: string }[];
   lookupType?: "manufacturers" | "brands" | "provinces" | "assetTypes";
   validate?: (value: string, form: Record<string, string>) => string | null;
@@ -69,6 +71,7 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         required: true,
         placeholder: "Contoh: OLT",
         isKeyField: true,
+        section: "Identitas",
         transform: (v) => v.toUpperCase(),
         validate: (v) =>
           !v.trim()
@@ -82,6 +85,7 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         label: "Device Type Name",
         type: "text",
         required: true,
+        section: "Identitas",
         placeholder: "Contoh: Optical Line Terminal",
         validate: (v) => (!v.trim() ? "Device Type Name wajib diisi" : null),
       },
@@ -90,6 +94,7 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         label: "Asset Group",
         type: "combobox",
         required: true,
+        section: "Identitas",
         options: [
           { value: "active", label: "active" },
           { value: "passive", label: "passive" },
@@ -99,6 +104,8 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         key: "topology_role",
         label: "Topology Role",
         type: "combobox",
+        section: "Klasifikasi",
+        cols: 2,
         options: [
           { value: "source_active", label: "source_active" },
           { value: "termination_panel", label: "termination_panel" },
@@ -115,6 +122,8 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         key: "layout_type",
         label: "Layout Type",
         type: "combobox",
+        section: "Klasifikasi",
+        cols: 2,
         options: [
           { value: "tray", label: "tray" },
           { value: "tube", label: "tube" },
@@ -126,20 +135,11 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         ],
       },
       {
-        key: "inventory_type_code",
-        label: "Inventory Type Code",
-        type: "text",
-        placeholder: "Otomatis / 3-digit (001-999)",
-        helpText: "Kosongkan untuk auto-assign, atau isi 3 digit angka (contoh: 001).",
-        validate: (v) =>
-          v.trim() && !/^\d{3}$/.test(v.trim())
-            ? "Harus 3 digit angka (contoh: 001)"
-            : null,
-      },
-      {
         key: "icon_name",
         label: "Icon",
         type: "combobox",
+        section: "Klasifikasi",
+        cols: 2,
         options: [
           { value: "HardDrive", label: "Generic Device" },
           { value: "Server", label: "OLT / Server" },
@@ -155,61 +155,65 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         ],
       },
       {
+        key: "inventory_type_code",
+        label: "Inventory Code",
+        type: "text",
+        section: "Konfigurasi",
+        placeholder: "Otomatis / 3 digit (001-999)",
+        helpText: "Kosongkan untuk auto-assign, atau isi 3 digit.",
+        validate: (v) =>
+          v.trim() && !/^\d{3}$/.test(v.trim())
+            ? "Harus 3 digit angka (contoh: 001)"
+            : null,
+      },
+      {
         key: "default_front_label",
         label: "Default Front Label",
         type: "text",
+        section: "Label Arah",
         placeholder: "Contoh: Hulu",
       },
       {
         key: "default_rear_label",
         label: "Default Rear Label",
         type: "text",
+        section: "Label Arah",
         placeholder: "Contoh: Hilir",
       },
       {
         key: "supports_ports",
         label: "Supports Ports",
         type: "combobox",
-        options: [
-          { value: "true", label: "true" },
-          { value: "false", label: "false" },
-        ],
+        section: "Kapabilitas",
+        options: [{ value: "true", label: "true" }, { value: "false", label: "false" }],
       },
       {
         key: "supports_splitter",
         label: "Supports Splitter",
         type: "combobox",
-        options: [
-          { value: "true", label: "true" },
-          { value: "false", label: "false" },
-        ],
+        section: "Kapabilitas",
+        options: [{ value: "true", label: "true" }, { value: "false", label: "false" }],
       },
       {
         key: "supports_core_management",
-        label: "Supports Core Management",
+        label: "Supports Core Mgmt",
         type: "combobox",
-        options: [
-          { value: "true", label: "true" },
-          { value: "false", label: "false" },
-        ],
+        section: "Kapabilitas",
+        options: [{ value: "true", label: "true" }, { value: "false", label: "false" }],
       },
       {
         key: "supports_joint_closure",
         label: "Supports Joint Closure",
         type: "combobox",
-        options: [
-          { value: "true", label: "true" },
-          { value: "false", label: "false" },
-        ],
+        section: "Kapabilitas",
+        options: [{ value: "true", label: "true" }, { value: "false", label: "false" }],
       },
       {
         key: "is_assignable",
         label: "Is Assignable",
         type: "combobox",
-        options: [
-          { value: "true", label: "true" },
-          { value: "false", label: "false" },
-        ],
+        section: "Kapabilitas",
+        options: [{ value: "true", label: "true" }, { value: "false", label: "false" }],
       },
       {
         key: "description",
@@ -412,12 +416,14 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         required: true,
         placeholder: "Contoh: Single-mode (SM)",
         isKeyField: true,
+        section: "Identitas",
         validate: (v) => (!v.trim() ? "Cable Type Name wajib diisi" : null),
       },
       {
         key: "cable_type_code",
         label: "Cable Type Code",
         type: "text",
+        section: "Identitas",
         placeholder: "Contoh: SM",
         transform: (v) => v.toUpperCase(),
       },
@@ -425,6 +431,7 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         key: "cable_role",
         label: "Cable Role",
         type: "combobox",
+        section: "Klasifikasi",
         options: [
           { value: "feeder", label: "feeder" },
           { value: "distribution", label: "distribution" },
@@ -436,6 +443,7 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         key: "core_count",
         label: "Core Count",
         type: "number",
+        section: "Klasifikasi",
         placeholder: "Contoh: 24",
         validate: (v) => (v.trim() && (isNaN(Number(v)) || Number(v) <= 0) ? "Harus integer > 0" : null),
       },
@@ -443,6 +451,8 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         key: "attenuation_1310_db_per_km",
         label: "Attenuation 1310 (dB/km)",
         type: "number",
+        section: "Spesifikasi Optik",
+        cols: 2,
         placeholder: "0.35",
         validate: (v) => (v.trim() && (isNaN(Number(v)) || Number(v) < 0) ? "Harus angka >= 0" : null),
       },
@@ -450,6 +460,8 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         key: "attenuation_1490_db_per_km",
         label: "Attenuation 1490 (dB/km)",
         type: "number",
+        section: "Spesifikasi Optik",
+        cols: 2,
         placeholder: "0.25",
         validate: (v) => (v.trim() && (isNaN(Number(v)) || Number(v) < 0) ? "Harus angka >= 0" : null),
       },
@@ -457,6 +469,8 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         key: "attenuation_1550_db_per_km",
         label: "Attenuation 1550 (dB/km)",
         type: "number",
+        section: "Spesifikasi Optik",
+        cols: 2,
         placeholder: "0.25",
         validate: (v) => (v.trim() && (isNaN(Number(v)) || Number(v) < 0) ? "Harus angka >= 0" : null),
       },
@@ -475,6 +489,103 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
       },
     ],
   },
+  closureTypes: {
+    resource: "closureTypes",
+    label: "Closure Type",
+    keyField: "closure_type_name",
+    fields: [
+      {
+        key: "closure_type_name",
+        label: "Closure Type Name",
+        type: "text",
+        required: true,
+        placeholder: "Contoh: Dome Closure 24 Core",
+        isKeyField: true,
+        section: "Identitas",
+        validate: (v) => (!v.trim() ? "Closure Type Name wajib diisi" : null),
+      },
+      {
+        key: "closure_type_code",
+        label: "Closure Type Code",
+        type: "text",
+        section: "Identitas",
+        placeholder: "Contoh: DOME-24",
+        transform: (v) => v.toUpperCase(),
+      },
+      {
+        key: "max_core_capacity",
+        label: "Max Core Capacity",
+        type: "number",
+        required: true,
+        section: "Kapasitas",
+        placeholder: "Contoh: 24",
+        validate: (v) => (!v.trim() || isNaN(Number(v)) || Number(v) <= 0 ? "Harus integer > 0" : null),
+      },
+      {
+        key: "max_splice_capacity",
+        label: "Max Splice Capacity",
+        type: "number",
+        required: true,
+        section: "Kapasitas",
+        placeholder: "Contoh: 48",
+        validate: (v) => (!v.trim() || isNaN(Number(v)) || Number(v) <= 0 ? "Harus integer > 0" : null),
+      },
+      {
+        key: "tray_count",
+        label: "Tray Count",
+        type: "number",
+        required: true,
+        section: "Kapasitas",
+        placeholder: "Contoh: 2",
+        validate: (v) => (!v.trim() || isNaN(Number(v)) || Number(v) <= 0 ? "Harus integer > 0" : null),
+      },
+      {
+        key: "environment_rating",
+        label: "Environment Rating",
+        type: "combobox",
+        section: "Lingkungan",
+        options: [
+          { value: "indoor", label: "indoor" },
+          { value: "outdoor", label: "outdoor" },
+          { value: "underground", label: "underground" },
+          { value: "aerial", label: "aerial" },
+        ],
+      },
+      {
+        key: "supports_pass_through",
+        label: "Supports Pass-Through",
+        type: "combobox",
+        section: "Kapabilitas",
+        options: [{ value: "true", label: "true" }, { value: "false", label: "false" }],
+      },
+      {
+        key: "supports_branching",
+        label: "Supports Branching",
+        type: "combobox",
+        section: "Kapabilitas",
+        options: [{ value: "true", label: "true" }, { value: "false", label: "false" }],
+      },
+      {
+        key: "supports_splitter",
+        label: "Supports Splitter",
+        type: "combobox",
+        section: "Kapabilitas",
+        options: [{ value: "true", label: "true" }, { value: "false", label: "false" }],
+      },
+      {
+        key: "description",
+        label: "Description",
+        type: "text",
+        placeholder: "Deskripsi tipe closure",
+      },
+      {
+        key: "sort_order",
+        label: "Sort Order",
+        type: "number",
+        placeholder: "0",
+      },
+    ],
+  },
   coreCapacities: {
     resource: "coreCapacities",
     label: "Core Capacity Cable",
@@ -485,6 +596,7 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         label: "Core Capacity Value",
         type: "number",
         required: true,
+        section: "Kapasitas",
         placeholder: "Contoh: 96",
         validate: (v) =>
           !v.trim()
@@ -498,6 +610,7 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         label: "Label",
         type: "text",
         required: true,
+        section: "Kapasitas",
         placeholder: "Contoh: 96 Cores",
         isKeyField: true,
         validate: (v) => (!v.trim() ? "Label wajib diisi" : null),
@@ -709,14 +822,23 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         required: true,
         placeholder: "Contoh: Huawei",
         isKeyField: true,
+        cols: 2,
         validate: (v) => (!v.trim() ? "Manufacturer Name wajib diisi" : null),
       },
       {
         key: "manufacturer_code",
         label: "Manufacturer Code",
         type: "text",
-        placeholder: "Contoh: HUAWEI",
+        placeholder: "Otomatis / isi manual",
+        helpText: "Kosongkan untuk auto-generate.",
+        cols: 2,
         transform: (v) => v.toUpperCase(),
+      },
+      {
+        key: "description",
+        label: "Description",
+        type: "text",
+        placeholder: "Deskripsi manufacturer",
       },
     ],
   },
@@ -732,13 +854,16 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         required: true,
         placeholder: "Contoh: MA5800",
         isKeyField: true,
+        cols: 2,
         validate: (v) => (!v.trim() ? "Brand Name wajib diisi" : null),
       },
       {
         key: "brand_code",
         label: "Brand Code",
         type: "text",
-        placeholder: "Contoh: MA5800",
+        placeholder: "Otomatis / isi manual",
+        helpText: "Kosongkan untuk auto-generate.",
+        cols: 2,
         transform: (v) => v.toUpperCase(),
       },
       {
@@ -746,6 +871,13 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         label: "Manufacturer",
         type: "combobox",
         lookupType: "manufacturers",
+        cols: 2,
+      },
+      {
+        key: "description",
+        label: "Description",
+        type: "text",
+        placeholder: "Deskripsi brand",
       },
     ],
   },
@@ -781,6 +913,40 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         label: "Manufacturer",
         type: "combobox",
         lookupType: "manufacturers",
+      },
+      {
+        key: "capacity_core",
+        label: "Capacity Core",
+        type: "number",
+        placeholder: "Contoh: 48",
+        validate: (v) => (v.trim() ? (!isNaN(Number(v)) && Number(v) > 0 ? null : "Harus integer > 0") : null),
+      },
+      {
+        key: "total_ports",
+        label: "Total Ports",
+        type: "number",
+        placeholder: "Contoh: 48",
+        validate: (v) => (v.trim() ? (!isNaN(Number(v)) && Number(v) > 0 ? null : "Harus integer > 0") : null),
+      },
+      {
+        key: "tray_config",
+        label: "Tray Config",
+        type: "textarea",
+        placeholder: '{\n  "version": 1,\n  "layout_type": "tube",\n  "groups": [\n    {\n      "id": "feeder",\n      "label": "Feeder",\n      "start_index": 1,\n      "end_index": 24\n    }\n  ]\n}',
+        helpText: 'JSON schema perpesifikasi tray and tube layout. Source: master-data-topology-synchronization-plan.md section 7.3.',
+        validate: (v) => {
+          if (!v.trim()) return null; // Opsional
+          try {
+            const config = JSON.parse(v);
+            if (typeof config !== 'object' || config === null) return 'Format tray_config harus objek JSON.';
+            if (!config.version) return 'tray_config wajib memiliki field "version".';
+            if (!config.layout_type) return 'tray_config wajib memiliki field "layout_type".';
+            if (config.groups && !Array.isArray(config.groups)) return 'tray_config.groups harus berupa array.';
+            return null;
+          } catch (e) {
+            return 'tersebut berupa JSON valid.';
+          }
+        },
       },
       {
         key: "asset_type_id",
@@ -846,7 +1012,10 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         key: "allowed_device_type_keys",
         label: "Device Types",
         type: "checkbox-group",
-        options: [{ value: "ODC", label: "ODC" }],
+        options: [
+          { value: "ODC", label: "ODC" },
+          { value: "ODP", label: "ODP" },
+        ],
         helpText: "Pilih tipe perangkat yang diizinkan menggunakan splitter ratio ini.",
       },
       {
@@ -871,6 +1040,13 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         isKeyField: true,
         validate: (v) => (!v.trim() ? "Province Name wajib diisi" : null),
       },
+      {
+        key: "province_code",
+        label: "Province Code",
+        type: "readonly",
+        placeholder: "Otomatis",
+        helpText: "Diisi otomatis oleh sistem. Unik per provinsi.",
+      },
     ],
   },
   cities: {
@@ -885,13 +1061,16 @@ export const MASTER_DATA_FORM_CONFIG: Record<string, ResourceFormConfig> = {
         required: true,
         placeholder: "Contoh: Kota Serang",
         isKeyField: true,
+        cols: 2,
         validate: (v) => (!v.trim() ? "City Name wajib diisi" : null),
       },
       {
         key: "city_code",
         label: "City Code",
         type: "text",
-        placeholder: "Contoh: SERANG",
+        placeholder: "Otomatis / isi manual",
+        helpText: "Kosongkan untuk auto-generate.",
+        cols: 2,
         transform: (v) => v.toUpperCase(),
       },
       {

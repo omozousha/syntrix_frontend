@@ -13,8 +13,8 @@ export default function RootPage() {
   }, [router]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100">
-      <p className="rounded bg-white px-4 py-3 text-sm text-slate-700 shadow">Redirecting...</p>
+    <main className="flex min-h-screen items-center justify-center bg-background">
+      <p className="rounded bg-card px-4 py-3 text-sm text-foreground shadow">Redirecting...</p>
     </main>
   );
 }

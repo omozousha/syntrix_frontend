@@ -18,6 +18,15 @@ type DevicePort = {
   ont_device_id?: string | null;
   occupied_at?: string | null;
   notes?: string | null;
+  splitter_profile_id?: string | null;
+  splitter_role?: string | null;
+};
+
+type SplitterProfileOption = {
+  id: string;
+  ratio_label: string;
+  output_port_count?: number | null;
+  expected_loss_db?: number | null;
 };
 
 type OdpCustomerOption = {
@@ -46,6 +55,7 @@ export function OdpPortSection({
   ports,
   customers,
   ontDevices,
+  splitterProfiles = [],
   loadingPorts,
   loadingLookups,
   updatingPortId,
@@ -57,6 +67,7 @@ export function OdpPortSection({
   ports: DevicePort[];
   customers: OdpCustomerOption[];
   ontDevices: OdpOntOption[];
+  splitterProfiles?: SplitterProfileOption[];
   loadingPorts: boolean;
   loadingLookups: boolean;
   updatingPortId: string;
@@ -65,6 +76,18 @@ export function OdpPortSection({
   onUpdatePort: (port: DevicePort, changes: Partial<DevicePort>) => void;
   onArchivePort: (port: DevicePort) => void;
 }) {
+  const splitterOptions = [
+    { value: "__none__", label: "Tanpa splitter" },
+    ...splitterProfiles.map((s) => ({
+      value: s.id,
+      label: s.output_port_count ? `${s.ratio_label} (${s.output_port_count} port)` : s.ratio_label,
+    })),
+  ];
+  const splitterRoleOptions = [
+    { value: "input", label: "Input" },
+    { value: "output", label: "Output" },
+    { value: "bidirectional", label: "Bidirectional" },
+  ];
   const customerOptions = [
     { value: "__none__", label: "Tanpa customer" },
     ...customers.map((customer) => ({
@@ -195,6 +218,24 @@ export function OdpPortSection({
                     placeholder="Catatan port"
                     className="h-9"
                   />
+                  <Combobox
+                    value={port.splitter_profile_id || "__none__"}
+                    onValueChange={(value) => onUpdatePort(port, { splitter_profile_id: value === "__none__" ? null : value })}
+                    disabled={updatingPortId === port.id || !editing}
+                    triggerClassName="h-9"
+                    placeholder="Splitter profile"
+                    options={splitterOptions}
+                  />
+                  {port.splitter_profile_id ? (
+                    <Combobox
+                      value={port.splitter_role || "__none__"}
+                      onValueChange={(value) => onUpdatePort(port, { splitter_role: value === "__none__" ? null : value })}
+                      disabled={updatingPortId === port.id || !editing}
+                      triggerClassName="h-9"
+                      placeholder="Splitter role"
+                      options={[{ value: "__none__", label: "Pilih role" }, ...splitterRoleOptions]}
+                    />
+                  ) : null}
                 </div>
               </div>
             );

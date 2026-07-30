@@ -80,9 +80,15 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
           <ComboboxField
             label="Tipe Joint Closure"
             value={props.form.closure_type_id || "__none__"}
-            onValueChange={(value) =>
-              props.onChange((prev) => ({ ...prev, closure_type_id: value === "__none__" ? "" : value }))
-            }
+            onValueChange={(value) => {
+              const nextId = value === "__none__" ? "" : value;
+              const type = closureTypes.find((t) => t.id === nextId) || null;
+              props.onChange((prev) => ({ 
+                ...prev, 
+                closure_type_id: nextId,
+                capacity_core: (!prev.capacity_core || prev.capacity_core === "0") && type?.max_core_capacity ? String(type.max_core_capacity) : prev.capacity_core
+              }));
+            }}
             disabled={!props.editing}
             searchPlaceholder="Cari tipe closure..."
             options={[

@@ -555,7 +555,7 @@ export default function DataManagementDetailPage() {
   const [loadingProjectAssets, setLoadingProjectAssets] = useState(false);
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
   const [closureTypes, setClosureTypes] = useState<Array<{ id: string; closure_type_name: string; closure_type_code?: string | null; max_core_capacity?: number | null; max_splice_capacity?: number | null; supports_pass_through?: boolean | null; supports_branching?: boolean | null }>>([]);
-  const [cableTypes, setCableTypes] = useState<Array<{ id: string; cable_type_code: string; cable_type_name: string }>>([]);
+  const [cableTypes, setCableTypes] = useState<Array<{ id: string; cable_type_code: string; cable_type_name: string; core_count?: number | null }>>([]);
   const [routeTypes, setRouteTypes] = useState<Array<{ id: string; route_type_code?: string | null; route_type_name: string }>>([]);
   const [deviceTypeMasters, setDeviceTypeMasters] = useState<DeviceTypeMasterOption[]>([]);
   const [topologyRelationRules, setTopologyRelationRules] = useState<TopologyRelationRuleOption[]>([]);
@@ -1087,7 +1087,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           apiFetch<PaginatedResponse<TenantOption>>("/tenants?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>>("/deviceCoreCapacities?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<{ id: string; closure_type_name: string; closure_type_code?: string | null; max_core_capacity?: number | null; max_splice_capacity?: number | null; supports_pass_through?: boolean | null; supports_branching?: boolean | null }>>("/closureTypes?page=1&limit=200&is_active=true", { token }),
-          apiFetch<PaginatedResponse<{ id: string; cable_type_code: string; cable_type_name: string }>>("/cableTypes?page=1&limit=200&is_active=true", { token }),
+          apiFetch<PaginatedResponse<{ id: string; cable_type_code: string; cable_type_name: string; core_count?: number | null }>>("/cableTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<{ id: string; route_type_code?: string | null; route_type_name: string }>>("/routeTypes?page=1&limit=200&is_active=true", { token }),
         ]);
         if (cancelled) return;
@@ -2446,22 +2446,25 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   }
 if (!category) {
     return (
-      <ScrollArea className="h-full min-h-0 w-full">
-        <div className="space-y-3 pr-3">
-          <p className="text-sm text-destructive">Kategori tidak ditemukan.</p>
-          <Button asChild variant="outline">
-            <Link href="/data-management">
-              <ArrowLeft className="mr-2 size-4" />
-              Kembali
+    <ScrollArea className="h-full min-h-0 w-full thin-scrollbar">
+      <div className="space-y-5 pr-3">
+        <div className="flex items-center gap-3">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`${category.group === "master" ? "/master-data" : "/data-management"}/list/${slug}${queryString ? `?${queryString}` : ""}`}>
+              <ArrowLeft className="mr-1 size-4" />
+              Kembali ke {category.label}
             </Link>
           </Button>
         </div>
-      </ScrollArea>
+        <DeviceDetailHeader item={item} token={token} category={category} lookupOptions={lookupOptions} />
+        <DeviceDetailTabs item={item} token={token} category={category} lookupOptions={lookupOptions} onRefresh={() => setRefreshSeed((prev) => prev + 1)} />
+      </div>
+    </ScrollArea>
     );
   }
 
   return (
-    <ScrollArea className="h-full min-h-0 w-full">
+    <ScrollArea className="h-full min-h-0 w-full thin-scrollbar">
       <div className="space-y-4 pr-3">
         <DeviceDetailHeader
           categoryLabel={category.label}
@@ -3232,6 +3235,7 @@ function OdpOperationsPanel({
               ports={ports}
               customers={customers}
               ontDevices={ontDevices}
+              splitterProfiles={splitterProfiles}
               loadingPorts={loadingPorts}
               loadingLookups={loadingLookups}
               updatingPortId={updatingPortId}

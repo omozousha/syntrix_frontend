@@ -99,7 +99,16 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
   const [measuredLoss, setMeasuredLoss] = useState("");
   const [ontRxPower, setOntRxPower] = useState("");
   const [oltTxPower, setOltTxPower] = useState("");
+  const [parameters, setParameters] = useState<Record<string, number>>({});
   const [engineeringMargin, setEngineeringMargin] = useState("3.0");
+
+  // Perbarui engineeringMargin dari master data saat parameters terload
+  useEffect(() => {
+    const val = parameters.ENG_MARGIN || parameters.ENGINEERING_MARGIN;
+    if (val && engineeringMargin === "3.0") {
+      setEngineeringMargin(String(val));
+    }
+  }, [parameters]);
   const [measurementDate, setMeasurementDate] = useState("");
   const [measurementMethod, setMeasurementMethod] = useState<"otdr" | "power_meter" | "manual" | "estimate">("otdr");
   const [notes, setNotes] = useState("");
@@ -120,7 +129,24 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
 
   useEffect(() => {
     fetchEstimate();
+    fetchLinkBudgetParameters();
   }, [deviceId, token]);
+
+  const fetchLinkBudgetParameters = async () => {
+    try {
+      const response = await apiFetch<{ data: any[] }>(`/linkBudgetParameters?page=1&limit=200&is_active=true`, { token });
+      const params = response?.data?.reduce((acc: Record<string, number>, item: any) => {
+        if (item.parameter_value != null) {
+          const key = item.parameter_key?.toUpperCase() || item.parameter_label?.toUpperCase().replace(/\s+/g, "_");
+          if (!acc[key]) acc[key] = parseFloat(item.parameter_value);
+        }
+        return acc;
+      }, {});
+      setParameters(params);
+    } catch (err) {
+      console.warn("Gagal memuat link budget parameters:", err);
+    }
+  };
 
   const fetchEstimate = async () => {
     setLoading(true);
@@ -159,7 +185,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
     setMeasuredLoss("");
     setOntRxPower("");
     setOltTxPower("");
-    setEngineeringMargin("3.0");
+    setEngineeringMargin(String(parameters.ENG_MARGIN || parameters.ENGINEERING_MARGIN || "3.0"));
     setMeasurementDate("");
     setMeasurementMethod("otdr");
     setNotes("");
@@ -202,7 +228,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
         splitter_ratios: parsedRatios,
         segments: parsedSegments,
         gpon_class: gponClass,
-        engineering_margin_db: parseFloat(engineeringMargin) || 3.0,
+        engineering_margin_db: parseFloat(engineeringMargin) || parameters.ENG_MARGIN || parameters.ENGINEERING_MARGIN || 3.0,
         measured_loss_db: measuredLoss ? parseFloat(measuredLoss) : null,
       };
 
