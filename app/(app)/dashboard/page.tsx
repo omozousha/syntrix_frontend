@@ -121,8 +121,15 @@ const EMPTY_DATA: DashboardData = {
 export default function DashboardPage() {
   const { token, me } = useSession();
   const role = normalizeRole(me.role);
-  const [data, setData] = useState<DashboardData>(EMPTY_DATA);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<DashboardData>(() => {
+    if (typeof window === "undefined") return EMPTY_DATA;
+    try {
+      const cached = sessionStorage.getItem("syntrix-dashboard");
+      if (cached) return JSON.parse(cached) as DashboardData;
+    } catch { /* ignore */ }
+    return EMPTY_DATA;
+  });
+  const [loading, setLoading] = useState(!data.summary);
   const [error, setError] = useState("");
   const [regionFilterId, setRegionFilterId] = useState("");
   const [actionLoadingId, setActionLoadingId] = useState("");
@@ -142,6 +149,7 @@ export default function DashboardPage() {
         });
         const next = await loadDashboardData(token, role, singleRegionScope);
         setData(next);
+        try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify(next)); } catch {}
       } catch { /* silent */ }
       setActionLoadingId("");
     },
@@ -156,6 +164,7 @@ export default function DashboardPage() {
         });
         const next = await loadDashboardData(token, role, singleRegionScope);
         setData(next);
+        try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify(next)); } catch {}
       } catch { /* silent */ }
       setActionLoadingId("");
     },
@@ -170,7 +179,10 @@ export default function DashboardPage() {
       setError("");
       try {
         const next = await loadDashboardData(token, role, singleRegionScope);
-        if (!cancelled) setData(next);
+        if (!cancelled) {
+          setData(next);
+          try { sessionStorage.setItem("syntrix-dashboard", JSON.stringify(next)); } catch { /* ignore */ }
+        }
       } catch (err) {
         if (!cancelled) {
           setError((err as Error).message || "Gagal memuat dashboard.");
@@ -805,13 +817,14 @@ function ValidationProgressCard({ odpStats, loading }: { odpStats: ReturnType<ty
 
 async function loadDashboardData(token: string, role: RoleKey, regionId: string): Promise<DashboardData> {
   const suffix = regionId ? `&region_id=${encodeURIComponent(regionId)}` : "";
+  const DASHBOARD_LIMIT = 5000;
   const [summary, regions, pops, devices, odpDevices, ports, adminregionRequests, superadminRequests, rejectedAdminregion, rejectedSuperadmin, evidenceMissing, auditLogs] = await Promise.all([
     safeFetch<DashboardSummaryResponse>("/dashboard/summary", token),
-    fetchAllPaginated<RegionItem>("/regions?page=1&limit=100", token),
-    fetchAllPaginated<PopItem>(`/pops?page=1&limit=100${suffix}`, token),
-    fetchAllPaginated<DeviceItem>(`/devices?page=1&limit=100${suffix}`, token),
-    fetchAllPaginated<DeviceItem>(`/devices?page=1&limit=100&device_type_key=ODP${suffix}`, token),
-    fetchAllPaginated<DevicePortItem>(`/devicePorts?page=1&limit=100${suffix}`, token),
+    safeFetch<PaginatedResponse<RegionItem>>(`/regions?page=1&limit=${DASHBOARD_LIMIT}`, token),
+    safeFetch<PaginatedResponse<PopItem>>(`/pops?page=1&limit=${DASHBOARD_LIMIT}${suffix}`, token),
+    safeFetch<PaginatedResponse<DeviceItem>>(`/devices?page=1&limit=${DASHBOARD_LIMIT}${suffix}`, token),
+    safeFetch<PaginatedResponse<DeviceItem>>(`/devices?page=1&limit=${DASHBOARD_LIMIT}&device_type_key=ODP${suffix}`, token),
+    safeFetch<PaginatedResponse<DevicePortItem>>(`/devicePorts?page=1&limit=${DASHBOARD_LIMIT}${suffix}`, token),
     role === "adminregion" || role === "validator" ? safeFetch<{ data: ValidationRequestItem[] }>("/validation-requests?queue=adminregion", token) : Promise.resolve(null),
     role === "superadmin" || role === "adminregion" ? safeFetch<{ data: ValidationRequestItem[] }>("/validation-requests?queue=superadmin", token) : Promise.resolve(null),
     safeFetch<{ data: ValidationRequestItem[] }>(`/validation-requests/quality-queue?queue=rejected_adminregion${suffix}`, token),
@@ -822,11 +835,11 @@ async function loadDashboardData(token: string, role: RoleKey, regionId: string)
 
   return {
     summary: summary?.data || null,
-    regions: regionId ? regions.filter((item) => item.id === regionId) : regions,
-    pops,
-    devices,
-    odpDevices,
-    ports,
+    regions: (regionId ? (regions?.data || []).filter((item: RegionItem) => item.id === regionId) : (regions?.data || [])).slice(0, 200),
+    pops: (pops?.data || []).slice(0, 200),
+    devices: (devices?.data || []).slice(0, 500),
+    odpDevices: (odpDevices?.data || []).slice(0, 500),
+    ports: (ports?.data || []).slice(0, 500),
     adminregionRequests: adminregionRequests?.data || [],
     superadminRequests: superadminRequests?.data || [],
     rejectedAdminregion: rejectedAdminregion?.data || [],
