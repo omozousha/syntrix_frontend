@@ -124,9 +124,42 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [regionFilterId, setRegionFilterId] = useState("");
+  const [actionLoadingId, setActionLoadingId] = useState("");
 
   const scopeRegionIds = useMemo(() => me.app_user.user_region_scopes?.map((scope) => scope.region_id).filter(Boolean) || [], [me.app_user.user_region_scopes]);
   const singleRegionScope = regionFilterId || (scopeRegionIds.length === 1 ? scopeRegionIds[0] : "");
+
+  const fastAction = useMemo(() => ({
+    approve: async (id: string) => {
+      setActionLoadingId(id);
+      try {
+        const endpoint = role === "superadmin" ? "superadmin" : "adminregion";
+        await apiFetch(`/validation-requests/${id}/${endpoint}/approve`, {
+          token,
+          method: "POST",
+          body: { note: "Fast approve from dashboard" },
+        });
+        const next = await loadDashboardData(token, role, singleRegionScope);
+        setData(next);
+      } catch { /* silent */ }
+      setActionLoadingId("");
+    },
+    reject: async (id: string) => {
+      setActionLoadingId(id);
+      try {
+        const endpoint = role === "superadmin" ? "superadmin" : "adminregion";
+        await apiFetch(`/validation-requests/${id}/${endpoint}/reject`, {
+          token,
+          method: "POST",
+          body: { note: "Fast reject from dashboard" },
+        });
+        const next = await loadDashboardData(token, role, singleRegionScope);
+        setData(next);
+      } catch { /* silent */ }
+      setActionLoadingId("");
+    },
+    loadingId: actionLoadingId,
+  }), [role, token, singleRegionScope, actionLoadingId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1022,7 +1055,16 @@ function isValidated(item: DeviceItem) {
   return Boolean(item.validation_date || item.last_validation_at);
 }
 
-function requestItems(items: ValidationRequestItem[], kind: "pending_adminregion" | "pending_superadmin" | "rejected_adminregion" | "rejected_superadmin"): DashboardQueueItem[] {
+function requestItems(
+  items: ValidationRequestItem[],
+  kind: "pending_adminregion" | "pending_superadmin" | "rejected_adminregion" | "rejected_superadmin",
+  onFastAction?: {
+    approve: (id: string) => Promise<void>;
+    reject: (id: string) => Promise<void>;
+    loadingId: string;
+  },
+): DashboardQueueItem[] {
+  const canAct = kind === "pending_adminregion" || kind === "pending_superadmin";
   return items.slice(0, 8).map((item) => ({
     id: `${kind}:${item.id}`,
     title: getRequestTitle(item),
@@ -1030,6 +1072,9 @@ function requestItems(items: ValidationRequestItem[], kind: "pending_adminregion
     href: kind === "pending_adminregion" || kind === "pending_superadmin" || kind === "rejected_superadmin" ? "/requests" : `/data-management/list/odp/${item.entity_id || ""}`,
     badge: statusLabel(item.current_status || kind),
     tone: kind.includes("rejected") ? "red" : "blue",
+    onApprove: canAct && onFastAction ? () => onFastAction.approve(item.id) : undefined,
+    onReject: canAct && onFastAction ? () => onFastAction.reject(item.id) : undefined,
+    actionLoading: onFastAction?.loadingId === item.id,
   }));
 }
 
