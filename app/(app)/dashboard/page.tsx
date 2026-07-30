@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -311,15 +312,16 @@ function DashboardHeader({
       </div>
       <div className="flex items-center gap-2">
         {regions && onRegionFilterChange ? (
-          <select
-            value={regionFilter || ""}
-            onChange={(e) => onRegionFilterChange(e.target.value)}
-            className="h-9 rounded-md border bg-background px-3 text-sm shadow-sm"
-          >
-            {regionOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+          <Select value={regionFilter || ""} onValueChange={onRegionFilterChange}>
+            <SelectTrigger className="h-9 w-[180px] text-sm">
+              <SelectValue placeholder="Semua region" />
+            </SelectTrigger>
+            <SelectContent>
+              {regionOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         ) : null}
         <Button asChild size="sm" className="w-full md:w-auto">
           <Link href={copy.primaryHref}>{copy.primaryAction}</Link>

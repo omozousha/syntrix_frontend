@@ -69,24 +69,28 @@ export function DashboardWorkQueue({
                   {item.onApprove || item.onReject ? (
                     <div className="mt-2 flex items-center gap-2">
                       {item.onApprove ? (
-                        <button
+                        <Button
                           type="button"
                           disabled={item.actionLoading}
                           onClick={item.onApprove}
-                          className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-[10px] text-emerald-700 hover:text-emerald-600"
                         >
                           {item.actionLoading ? "..." : "Setujui"}
-                        </button>
+                        </Button>
                       ) : null}
                       {item.onReject ? (
-                        <button
+                        <Button
                           type="button"
                           disabled={item.actionLoading}
                           onClick={item.onReject}
-                          className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50 dark:bg-rose-950/30 dark:text-rose-400 dark:hover:bg-rose-950/50"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-[10px] text-rose-700 hover:text-rose-600"
                         >
                           {item.actionLoading ? "..." : "Tolak"}
-                        </button>
+                        </Button>
                       ) : null}
                     </div>
                   ) : null}
