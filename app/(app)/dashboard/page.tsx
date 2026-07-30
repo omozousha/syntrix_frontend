@@ -361,7 +361,8 @@ function AssetOverviewDashboard({ data, loading }: { data: DashboardData; loadin
         <DashboardMetricCard label="Ports" value={data.ports.length} caption={`${portStats.problem} port perlu perhatian.`} badge="Capacity" tone={portStats.problem ? "amber" : "green"} icon={Activity} loading={loading} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">\r\n        <DashboardDonutChartCard
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <DashboardDonutChartCard
           title="Device Type Composition"
           description="Komposisi perangkat aktif pada scope dashboard."
           data={deviceTypeChart(data.devices)}
@@ -453,7 +454,8 @@ function ValidatorOverviewDashboard({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">\r\n        <DashboardDonutChartCard
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <DashboardDonutChartCard
           title="ODP Validation"
           description="Status validasi ODP pada scope validator."
           data={odpValidationChart(data.odpDevices, data)}
@@ -469,7 +471,8 @@ function ValidatorOverviewDashboard({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">\r\n        <DashboardWorkQueue
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <DashboardWorkQueue
           title="Prioritas Validasi"
           description="Rejected dan ODP belum valid yang paling cepat ditindaklanjuti."
           items={[...rejected, ...pendingOdp]}
@@ -492,7 +495,8 @@ function ValidatorOverviewDashboard({
 
 function RegionDashboardTab({ data, loading }: { data: DashboardData; loading: boolean }) {
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">\r\n        <DashboardBarChartCard
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <DashboardBarChartCard
         title="Device Per Region"
         description="Distribusi perangkat berdasarkan region."
         data={regionDistributionChart(data.regions, data.devices)}
@@ -520,7 +524,8 @@ function RegionDashboardTab({ data, loading }: { data: DashboardData; loading: b
 
 function PopDashboardTab({ data, loading }: { data: DashboardData; loading: boolean }) {
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">\r\n        <DashboardDonutChartCard
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <DashboardDonutChartCard
         title="POP Status"
         description="Komposisi status POP pada scope dashboard."
         data={popStatusChart(data.pops)}
@@ -555,7 +560,8 @@ function PopDashboardTab({ data, loading }: { data: DashboardData; loading: bool
 
 function DeviceDashboardTab({ data, loading }: { data: DashboardData; loading: boolean }) {
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">\r\n        <DashboardDonutChartCard
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <DashboardDonutChartCard
         title="Device Type"
         description="Komposisi jenis perangkat inventory."
         data={deviceTypeChart(data.devices)}
@@ -601,7 +607,8 @@ function SuperadminDashboard({ data, loading }: { data: DashboardData; loading: 
         <DashboardMetricCard label="Audit Events" value={data.auditLogs.length} caption="Aktivitas terbaru yang tersedia untuk governance." badge="Recent" icon={Activity} loading={loading} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">\r\n        <DashboardWorkQueue
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <DashboardWorkQueue
           title="Approval Command Queue"
           description="Prioritas request yang membutuhkan keputusan final atau tindak lanjut."
           items={[
@@ -622,7 +629,8 @@ function SuperadminDashboard({ data, loading }: { data: DashboardData; loading: 
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">\r\n        <RegionHealthCard data={data} loading={loading} />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <RegionHealthCard data={data} loading={loading} />
         <DashboardActivityFeed
           title="Recent Governance Activity"
           description="Aktivitas audit terbaru untuk approval dan perubahan asset."
@@ -649,7 +657,8 @@ function AdminregionDashboard({ data, loading, singleRegionScope }: { data: Dash
         <DashboardMetricCard label="Port Issue" value={portStats.problem} caption="Port down/maintenance atau mismatch assignment." badge="Ops" tone={portStats.problem ? "amber" : "green"} icon={RadioTower} loading={loading} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">\r\n        <DashboardWorkQueue
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <DashboardWorkQueue
           title="My Region Review Queue"
           description="Request yang sedang menunggu keputusan admin region."
           items={[
@@ -674,7 +683,8 @@ function AdminregionDashboard({ data, loading, singleRegionScope }: { data: Dash
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">\r\n        <ValidationProgressCard odpStats={odpStats} loading={loading} />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ValidationProgressCard odpStats={odpStats} loading={loading} />
         <DashboardActivityFeed
           title="Validator Activity"
           description="Submission dan resubmission terbaru yang perlu dipantau."
@@ -730,7 +740,8 @@ function ValidatorDashboard({ data, loading, singleRegionScope }: { data: Dashbo
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">\r\n        <DashboardWorkQueue
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <DashboardWorkQueue
           title="Tugas Hari Ini"
           description="ODP yang paling siap dibuka untuk validasi lapangan."
           items={[...rejected, ...openOdpItems]}
