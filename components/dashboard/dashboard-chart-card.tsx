@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 export type DashboardChartDatum = {
   label: string;
@@ -26,7 +27,6 @@ export function DashboardDonutChartCard({
 }) {
   const normalized = normalizeData(data);
   const total = normalized.reduce((sum, item) => sum + item.value, 0);
-  const background = total ? buildConicGradient(normalized) : "#e5e7eb";
 
   return (
     <Card className="min-w-0">
@@ -42,11 +42,31 @@ export function DashboardDonutChartCard({
           </>
         ) : total ? (
           <>
-            <div className="relative mx-auto size-28 shrink-0 rounded-full" style={{ background }}>
-              <div className="absolute inset-5 rounded-full bg-card" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-semibold">{total}</span>
-                <span className="text-[10px] uppercase text-muted-foreground">total</span>
+            <div className="relative mx-auto size-28 shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={normalized}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={35}
+                    outerRadius={55}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {normalized.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ fontSize: '10px', borderRadius: '6px' }}
+                    itemStyle={{ padding: '0px' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-xl font-bold leading-none">{total}</span>
+                <span className="text-[9px] uppercase text-muted-foreground">total</span>
               </div>
             </div>
             <ChartLegend data={normalized} total={total} />
@@ -112,17 +132,17 @@ export function DashboardBarChartCard({
 
 function ChartLegend({ data, total }: { data: DashboardChartDatum[]; total: number }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 overflow-auto max-h-[120px] pr-1">
       {data.map((item, index) => {
         const color = item.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
         const percent = total ? Math.round((item.value / total) * 100) : 0;
         return (
-          <div key={item.label} className="flex items-center justify-between gap-2 rounded-md border bg-background px-2 py-1.5 text-xs">
+          <div key={item.label} className="flex items-center justify-between gap-2 rounded-md border bg-background px-2 py-1 text-xs">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
+              <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
               <span className="truncate">{item.label}</span>
             </div>
-            <span className="shrink-0 text-muted-foreground">{item.value} ({percent}%)</span>
+            <span className="shrink-0 text-[10px] text-muted-foreground">{item.value} ({percent}%)</span>
           </div>
         );
       })}
@@ -147,17 +167,4 @@ function normalizeData(data: DashboardChartDatum[]) {
       ...item,
       color: item.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length],
     }));
-}
-
-function buildConicGradient(data: DashboardChartDatum[]) {
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-  let cursor = 0;
-  const segments = data.map((item, index) => {
-    const color = item.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
-    const start = cursor;
-    const size = (item.value / total) * 360;
-    cursor += size;
-    return `${color} ${start}deg ${cursor}deg`;
-  });
-  return `conic-gradient(${segments.join(", ")})`;
 }

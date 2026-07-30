@@ -6,6 +6,7 @@ import { Activity, AlertTriangle, CheckCircle2, ClipboardCheck, Database, MapPin
 import { DashboardActivityFeed, type DashboardActivityItem } from "@/components/dashboard/dashboard-activity-feed";
 import { DashboardBarChartCard, DashboardDonutChartCard, type DashboardChartDatum } from "@/components/dashboard/dashboard-chart-card";
 import { DashboardMetricCard } from "@/components/dashboard/dashboard-metric-card";
+import { DashboardTrendLine, type TrendDatum } from "@/components/dashboard/dashboard-trend-line";
 import { DashboardWorkQueue, type DashboardQueueItem } from "@/components/dashboard/dashboard-work-queue";
 import { AppLoading } from "@/components/app-loading-new";
 import { useSession } from "@/components/session-context";
@@ -295,6 +296,13 @@ function AssetOverviewDashboard({ data, loading }: { data: DashboardData; loadin
           loading={loading}
         />
       </div>
+
+      <DashboardTrendLine
+        title="Audit Activity Trend"
+        description="Tren aktivitas audit mingguan (7 hari terakhir)."
+        data={weeklyAuditTrend(data.auditLogs)}
+        loading={loading}
+      />
     </>
   );
 }
@@ -916,6 +924,30 @@ function getPortStats(items: DevicePortItem[]) {
     assignmentMismatch,
     problem: downMaintenance + assignmentMismatch,
   };
+}
+
+function weeklyAuditTrend(logs: AuditLogItem[]): TrendDatum[] {
+  const weeks: Record<string, number> = {};
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i * 7);
+    const key = d.toISOString().slice(0, 10);
+    weeks[key] = 0;
+  }
+  (logs || []).forEach((log) => {
+    if (!log.created_at) return;
+    const d = new Date(log.created_at);
+    const key = d.toISOString().slice(0, 10);
+    if (key in weeks) weeks[key] = (weeks[key] || 0) + 1;
+  });
+  const keys = Object.keys(weeks).sort();
+  return keys.map((k) => {
+    const d = new Date(k);
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return { label: `${month}/${day}`, value: weeks[k] };
+  });
 }
 
 function isValidated(item: DeviceItem) {
