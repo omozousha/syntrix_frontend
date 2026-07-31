@@ -26,7 +26,7 @@ export function DashboardMetricCard({
   trend?: { direction: "up" | "down" | "flat"; label: string };
 }) {
   const TrendIcon = trend?.direction === "up" ? ArrowUp : trend?.direction === "down" ? ArrowDown : Minus;
-  const trendColor = trend?.direction === "up" ? "text-emerald-600" : trend?.direction === "down" ? "text-rose-600" : "text-muted-foreground";
+  const trendColor = trend?.direction === "up" ? "text-emerald-600 dark:text-emerald-400" : trend?.direction === "down" ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground";
 
   return (
     <Card className={`overflow-hidden border ${toneClassName(tone)}`}>

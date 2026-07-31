@@ -50,11 +50,10 @@ export function DashboardTrendLine({
                   axisLine={false}
                   allowDecimals={false}
                 />
-                <Tooltip
-                  contentStyle={{ fontSize: '10px', borderRadius: '6px', border: '1px solid var(--border)' }}
-                  itemStyle={{ padding: '0px' }}
-                  labelStyle={{ fontWeight: 600, marginBottom: '4px' }}
-                />
+                  <Tooltip
+                    contentStyle={{ fontSize: "10px", borderRadius: "6px", background: "var(--card)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                    itemStyle={{ padding: "0px", color: "var(--foreground)" }}
+                  />
                 <Line
                   type="monotone"
                   dataKey="value"

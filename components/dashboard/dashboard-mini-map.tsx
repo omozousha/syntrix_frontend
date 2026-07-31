@@ -6,6 +6,7 @@ import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useState } from "react";
+import { useTheme } from "@/lib/use-theme";
 
 type MapMarker = {
   id: string;
@@ -46,10 +47,15 @@ export function DashboardMiniMap({
   defaultZoom?: number;
 }) {
   const [mounted, setMounted] = useState(false);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const tileUrl = resolvedTheme === "dark"
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
   return (
     <Card className="min-w-0 overflow-hidden">
@@ -70,7 +76,7 @@ export function DashboardMiniMap({
               attributionControl={false}
             >
               <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                url={tileUrl}
               />
               {markers.map((m) => (
                 <Marker

@@ -328,6 +328,10 @@
 }
 
 /* Thin custom scrollbar for overflow containers */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
 .thin-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;

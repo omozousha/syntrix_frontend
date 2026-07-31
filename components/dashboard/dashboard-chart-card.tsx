@@ -73,8 +73,8 @@ export function DashboardDonutChartCard({
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ fontSize: "10px", borderRadius: "6px" }}
-                    itemStyle={{ padding: "0px" }}
+                    contentStyle={{ fontSize: "10px", borderRadius: "6px", background: "var(--card)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                    itemStyle={{ padding: "0px", color: "var(--foreground)" }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -158,7 +158,7 @@ export function DashboardBarChartCard({
 function ChartLegend({ data, total }: { data: DashboardChartDatum[]; total: number }) {
   const router = useRouter();
   return (
-    <div className="space-y-1.5 overflow-auto max-h-[120px] pr-1">
+    <div className="space-y-1.5 overflow-auto max-h-[120px] pr-1 thin-scrollbar">
       {data.map((item, index) => {
         const color = item.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
         const percent = total ? Math.round((item.value / total) * 100) : 0;

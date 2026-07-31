@@ -69,28 +69,28 @@ export function DashboardWorkQueue({
                   {item.onApprove || item.onReject ? (
                     <div className="mt-2 flex items-center gap-2">
                       {item.onApprove ? (
-                        <Button
-                          type="button"
-                          disabled={item.actionLoading}
-                          onClick={item.onApprove}
-                          size="sm"
-                          variant="outline"
-                          className="h-7 px-2 text-[10px] text-emerald-700 hover:text-emerald-600"
-                        >
-                          {item.actionLoading ? "..." : "Setujui"}
-                        </Button>
+                    <Button
+                      type="button"
+                      disabled={item.actionLoading}
+                      onClick={item.onApprove}
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-[10px] text-emerald-700 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300"
+                    >
+                      {item.actionLoading ? "..." : "Setujui"}
+                    </Button>
                       ) : null}
                       {item.onReject ? (
-                        <Button
-                          type="button"
-                          disabled={item.actionLoading}
-                          onClick={item.onReject}
-                          size="sm"
-                          variant="outline"
-                          className="h-7 px-2 text-[10px] text-rose-700 hover:text-rose-600"
-                        >
-                          {item.actionLoading ? "..." : "Tolak"}
-                        </Button>
+                    <Button
+                      type="button"
+                      disabled={item.actionLoading}
+                      onClick={item.onReject}
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-[10px] text-rose-700 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300"
+                    >
+                      {item.actionLoading ? "..." : "Tolak"}
+                    </Button>
                       ) : null}
                     </div>
                   ) : null}
