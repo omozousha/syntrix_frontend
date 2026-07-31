@@ -866,8 +866,7 @@ async function loadDashboardData(token: string, role: RoleKey, regionId: string,
     summary: summary?.data || null,
     regions: (() => {
       const all = regions?.data || [];
-      if (!regionId && scopeRegionIds?.length) return all.filter((r: RegionItem) => scopeRegionIds.includes(r.id)).slice(0, 200);
-      if (regionId) return all.filter((r: RegionItem) => r.id === regionId).slice(0, 200);
+      if (scopeRegionIds?.length) return all.filter((r: RegionItem) => scopeRegionIds.includes(r.id)).slice(0, 200);
       return all.slice(0, 200);
     })(),
     pops: (pops?.data || []).slice(0, 200),
