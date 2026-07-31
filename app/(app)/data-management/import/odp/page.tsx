@@ -1062,7 +1062,7 @@ function validateOdpRow(row: Record<string, string>): {
     const foundKey = Object.keys(row).find(
       (k) => k.toLowerCase().trim() === key.toLowerCase().trim()
     );
-    return foundKey ? (row[foundKey] ?? "").trim() : "";
+    return foundKey ? String(row[foundKey] ?? "").trim() : "";
   };
 
   const deviceName = getValue("device name");
