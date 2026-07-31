@@ -226,6 +226,7 @@ export default function DashboardPage() {
           onRegionFilterChange={setRegionFilterId}
           onRefresh={doRefresh}
           refreshing={refreshing}
+          loading={loading}
           lastUpdated={lastUpdated}
         />
 
@@ -314,6 +315,7 @@ function DashboardHeader({
   onRegionFilterChange,
   onRefresh,
   refreshing,
+  loading,
   lastUpdated,
 }: {
   role: RoleKey;
@@ -323,6 +325,7 @@ function DashboardHeader({
   onRegionFilterChange?: (id: string) => void;
   onRefresh?: () => void;
   refreshing?: boolean;
+  loading?: boolean;
   lastUpdated?: Date | null;
 }) {
   const copy = getRoleCopy(role);
@@ -353,7 +356,7 @@ function DashboardHeader({
           {refreshing ? "..." : "⟳"}
         </Button>
         {regions && onRegionFilterChange ? (
-          <Select value={regionFilter || "__all__"} onValueChange={(v) => onRegionFilterChange(v === "__all__" ? "" : v)}>
+          <Select value={regionFilter || "__all__"} onValueChange={(v) => onRegionFilterChange(v === "__all__" ? "" : v)} disabled={refreshing || loading}>
             <SelectTrigger className="h-9 w-[180px] text-sm">
               <SelectValue placeholder="Semua region" />
             </SelectTrigger>
