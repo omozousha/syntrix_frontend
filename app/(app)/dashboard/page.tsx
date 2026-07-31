@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -373,37 +373,38 @@ function DashboardHeader({
 }
 
 function AssetOverviewDashboard({ data, loading }: { data: DashboardData; loading: boolean }) {
-  const odpStats = getOdpStats(data.odpDevices);
-  const portStats = getPortStats(data.ports);
+  const s = data.summary;
+  const odpStats = getOdpStatsFromSummary(s);
+  const portStats = getPortStatsFromSummary(s);
   return (
     <>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <DashboardMetricCard label="Regions" value={data.regions.length} caption="Region aktif sesuai scope user." badge="Scope" icon={MapPinned} loading={loading} />
-        <DashboardMetricCard label="POPs" value={data.pops.length} caption="POP yang menjadi titik agregasi jaringan." badge="POP" tone="blue" icon={Database} loading={loading} />
-        <DashboardMetricCard label="Devices" value={data.devices.length} caption="Total perangkat dalam scope dashboard." badge="Inventory" tone="green" icon={RadioTower} loading={loading} />
-        <DashboardMetricCard label="ODP" value={data.odpDevices.length} caption={`${odpStats.validated} validated, ${odpStats.unvalidated} belum valid.`} badge="Field" tone="amber" icon={ClipboardCheck} loading={loading} />
-        <DashboardMetricCard label="Ports" value={data.ports.length} caption={`${portStats.problem} port perlu perhatian.`} badge="Capacity" tone={portStats.problem ? "amber" : "green"} icon={Activity} loading={loading} />
+        <DashboardMetricCard label="Regions" value={s?.regions?.total ?? data.regions.length} caption="Region aktif sesuai scope user." badge="Scope" icon={MapPinned} loading={loading} />
+        <DashboardMetricCard label="POPs" value={s?.pops?.total ?? 0} caption="POP yang menjadi titik agregasi jaringan." badge="POP" tone="blue" icon={Database} loading={loading} />
+        <DashboardMetricCard label="Devices" value={s?.devices?.total ?? 0} caption="Total perangkat dalam scope dashboard." badge="Inventory" tone="green" icon={RadioTower} loading={loading} />
+        <DashboardMetricCard label="ODP" value={odpStats.total} caption={`${odpStats.validated} validated, ${odpStats.unvalidated} belum valid.`} badge="Field" tone="amber" icon={ClipboardCheck} loading={loading} />
+        <DashboardMetricCard label="Ports" value={portStats.total} caption={`${portStats.problem} port perlu perhatian.`} badge="Capacity" tone={portStats.problem ? "amber" : "green"} icon={Activity} loading={loading} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <DashboardDonutChartCard
           title="Device Type Composition"
           description="Komposisi perangkat aktif pada scope dashboard."
-          data={deviceTypeChart(data.devices)}
+          data={toChartFromSummary(s?.devices?.byType)}
           emptyLabel="Belum ada data device untuk chart komposisi."
           loading={loading}
         />
         <DashboardBarChartCard
           title="POP Distribution"
           description="Sebaran device per POP teratas."
-          data={popDeviceDistributionChart(data.pops, data.devices)}
+          data={toChartFromSummary(s?.pops?.topByDevice)}
           emptyLabel="Belum ada relasi device ke POP untuk ditampilkan."
           loading={loading}
         />
         <DashboardDonutChartCard
           title="ODP Validation"
           description="Distribusi status validasi ODP pada scope dashboard."
-          data={odpValidationChart(data.odpDevices, data)}
+          data={odpValidationFromSummary(s, data)}
           emptyLabel="Belum ada data ODP untuk validasi."
           loading={loading}
         />
@@ -436,7 +437,7 @@ function ValidatorOverviewDashboard({
   loading: boolean;
   singleRegionScope: string;
 }) {
-  const odpStats = getOdpStats(data.odpDevices);
+  const odpStats = getOdpStatsFromSummary(data.summary);
   const regionSuffix = singleRegionScope ? `&region_id=${encodeURIComponent(singleRegionScope)}` : "";
   const rejected = requestItems(data.rejectedAdminregion, "rejected_adminregion");
   const pendingOdp = data.odpDevices
@@ -454,8 +455,8 @@ function ValidatorOverviewDashboard({
   return (
     <>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <DashboardMetricCard label="Region Scope" value={data.regions.length || 1} caption={formatRegionScope(data.regions)} badge="Scope" tone="blue" icon={MapPinned} loading={loading} />
-        <DashboardMetricCard label="POP Coverage" value={data.pops.length} caption="POP yang menjadi konteks area validasi." badge="POP" icon={Database} loading={loading} />
+        <DashboardMetricCard label="Region Scope" value={data.summary?.regions?.total ?? (data.regions.length || 1)} caption={formatRegionScope(data.regions)} badge="Scope" tone="blue" icon={MapPinned} loading={loading} />
+        <DashboardMetricCard label="POP Coverage" value={data.summary?.pops?.total ?? data.pops.length} caption="POP yang menjadi konteks area validasi." badge="POP" icon={Database} loading={loading} />
         <DashboardMetricCard label="ODP Queue" value={odpStats.unvalidated} caption="ODP yang belum valid final." badge="Validate" tone="amber" icon={RadioTower} loading={loading} />
         <DashboardMetricCard label="Rejected" value={data.rejectedAdminregion.length} caption="Validasi yang perlu diperbaiki dari catatan reviewer." badge="Fix" tone={data.rejectedAdminregion.length ? "red" : "green"} icon={AlertTriangle} loading={loading} />
       </div>
@@ -482,14 +483,14 @@ function ValidatorOverviewDashboard({
         <DashboardDonutChartCard
           title="ODP Validation"
           description="Status validasi ODP pada scope validator."
-          data={odpValidationChart(data.odpDevices, data)}
+          data={odpValidationFromSummary(data.summary, data)}
           emptyLabel="Belum ada ODP dalam scope validator."
           loading={loading}
         />
         <DashboardBarChartCard
           title="POP by ODP"
           description="POP dengan ODP terbanyak dalam area kerja validator."
-          data={popDeviceDistributionChart(data.pops, data.odpDevices)}
+          data={toChartFromSummary(data.summary?.pops?.topByOdp)}
           emptyLabel="Belum ada ODP yang terhubung ke POP."
           loading={loading}
         />
@@ -507,7 +508,7 @@ function ValidatorOverviewDashboard({
         <DashboardWorkQueue
           title="POP Coverage Attention"
           description="POP tanpa relasi device pada scope data dashboard."
-          items={popWithoutDeviceItems(data.pops, data.devices)}
+          items={popWithoutDeviceFromSummary(data.summary)}
           emptyLabel="Semua POP dalam scope memiliki relasi device."
           icon={Database}
           loading={loading}
@@ -523,14 +524,14 @@ function RegionDashboardTab({ data, loading }: { data: DashboardData; loading: b
         <DashboardBarChartCard
         title="Device Per Region"
         description="Distribusi perangkat berdasarkan region."
-        data={regionDistributionChart(data.regions, data.devices)}
+        data={toChartFromSummary(data.summary?.devices?.byRegion)}
         emptyLabel="Belum ada data region/device untuk ditampilkan."
         loading={loading}
       />
       <DashboardBarChartCard
         title="POP Per Region"
         description="Distribusi POP berdasarkan region."
-        data={regionPopDistributionChart(data.regions, data.pops)}
+        data={toChartFromSummary(data.summary?.pops?.byRegion)}
         emptyLabel="Belum ada data POP per region."
         loading={loading}
       />
@@ -538,7 +539,7 @@ function RegionDashboardTab({ data, loading }: { data: DashboardData; loading: b
       <DashboardBarChartCard
         title="ODP Per Region"
         description="Sebaran ODP untuk membaca coverage field node."
-        data={regionDistributionChart(data.regions, data.odpDevices)}
+        data={toChartFromSummary(data.summary?.odp?.byRegion)}
         emptyLabel="Belum ada data ODP per region."
         loading={loading}
       />
@@ -552,28 +553,28 @@ function PopDashboardTab({ data, loading }: { data: DashboardData; loading: bool
         <DashboardDonutChartCard
         title="POP Status"
         description="Komposisi status POP pada scope dashboard."
-        data={popStatusChart(data.pops)}
+        data={toChartFromSummary(data.summary?.pops?.byStatus)}
         emptyLabel="Belum ada status POP untuk ditampilkan."
         loading={loading}
       />
       <DashboardBarChartCard
         title="Top POP by Device"
         description="POP dengan jumlah device terbanyak."
-        data={popDeviceDistributionChart(data.pops, data.devices)}
+        data={toChartFromSummary(data.summary?.pops?.topByDevice)}
         emptyLabel="Belum ada device yang terhubung ke POP."
         loading={loading}
       />
       <DashboardBarChartCard
         title="Top POP by ODP"
         description="POP dengan jumlah ODP terbanyak."
-        data={popDeviceDistributionChart(data.pops, data.odpDevices)}
+        data={toChartFromSummary(data.summary?.pops?.topByOdp)}
         emptyLabel="Belum ada ODP yang terhubung ke POP."
         loading={loading}
       />
       <DashboardWorkQueue
         title="POP Coverage Attention"
         description="POP yang belum memiliki device pada data scope saat ini."
-        items={popWithoutDeviceItems(data.pops, data.devices)}
+        items={popWithoutDeviceFromSummary(data.summary)}
         emptyLabel="Semua POP dalam scope memiliki relasi device."
         icon={Database}
         loading={loading}
@@ -584,32 +585,32 @@ function PopDashboardTab({ data, loading }: { data: DashboardData; loading: bool
 
 function DeviceDashboardTab({ data, loading }: { data: DashboardData; loading: boolean }) {
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DashboardDonutChartCard
         title="Device Type"
         description="Komposisi jenis perangkat inventory."
-        data={deviceTypeChart(data.devices)}
+        data={toChartFromSummary(data.summary?.devices?.byType)}
         emptyLabel="Belum ada data device."
         loading={loading}
       />
       <DashboardBarChartCard
         title="Device Status"
         description="Status perangkat yang tercatat pada inventory."
-        data={deviceStatusChart(data.devices)}
+        data={toChartFromSummary(data.summary?.devices?.byStatus)}
         emptyLabel="Belum ada status device."
         loading={loading}
       />
       <DashboardDonutChartCard
         title="ODP Validation"
         description="Validasi ODP berdasarkan status workflow terbaru."
-        data={odpValidationChart(data.odpDevices, data)}
+        data={odpValidationFromSummary(data.summary, data)}
         emptyLabel="Belum ada ODP dalam scope."
         loading={loading}
       />
       <DashboardBarChartCard
         title="Port Utilization"
         description="Distribusi status port pada scope dashboard."
-        data={portUtilizationChart(data.ports)}
+        data={toChartFromSummary(data.summary?.ports?.byStatus)}
         emptyLabel="Belum ada data port."
         loading={loading}
       />
@@ -618,8 +619,8 @@ function DeviceDashboardTab({ data, loading }: { data: DashboardData; loading: b
 }
 
 function SuperadminDashboard({ data, loading }: { data: DashboardData; loading: boolean }) {
-  const odpStats = getOdpStats(data.odpDevices);
-  const portStats = getPortStats(data.ports);
+  const odpStats = getOdpStatsFromSummary(data.summary);
+  const portStats = getPortStatsFromSummary(data.summary);
   const riskItems = buildRiskItems(data);
   return (
     <>
@@ -668,8 +669,8 @@ function SuperadminDashboard({ data, loading }: { data: DashboardData; loading: 
 }
 
 function AdminregionDashboard({ data, loading, singleRegionScope }: { data: DashboardData; loading: boolean; singleRegionScope: string }) {
-  const odpStats = getOdpStats(data.odpDevices);
-  const portStats = getPortStats(data.ports);
+  const odpStats = getOdpStatsFromSummary(data.summary);
+  const portStats = getPortStatsFromSummary(data.summary);
   const regionSuffix = singleRegionScope ? `&region_id=${encodeURIComponent(singleRegionScope)}` : "";
   return (
     <>
@@ -722,7 +723,7 @@ function AdminregionDashboard({ data, loading, singleRegionScope }: { data: Dash
 }
 
 function ValidatorDashboard({ data, loading, singleRegionScope }: { data: DashboardData; loading: boolean; singleRegionScope: string }) {
-  const odpStats = getOdpStats(data.odpDevices);
+  const odpStats = getOdpStatsFromSummary(data.summary);
   const regionSuffix = singleRegionScope ? `&region_id=${encodeURIComponent(singleRegionScope)}` : "";
   const rejected = requestItems(data.rejectedAdminregion, "rejected_adminregion");
   const openOdpItems = data.odpDevices
@@ -787,10 +788,10 @@ function ValidatorDashboard({ data, loading, singleRegionScope }: { data: Dashbo
 }
 
 function RegionHealthCard({ data, loading }: { data: DashboardData; loading: boolean }) {
-  const odpStats = getOdpStats(data.odpDevices);
-  const portStats = getPortStats(data.ports);
+  const odpStats = getOdpStatsFromSummary(data.summary);
+  const portStats = getPortStatsFromSummary(data.summary);
   const rows = [
-    { label: "ODP total", value: data.odpDevices.length },
+    { label: "ODP total", value: odpStats.total },
     { label: "Validated", value: odpStats.validated },
     { label: "Unvalidated", value: odpStats.unvalidated },
     { label: "Port issue", value: portStats.problem },
@@ -816,7 +817,7 @@ function RegionHealthCard({ data, loading }: { data: DashboardData; loading: boo
   );
 }
 
-function ValidationProgressCard({ odpStats, loading }: { odpStats: ReturnType<typeof getOdpStats>; loading: boolean }) {
+function ValidationProgressCard({ odpStats, loading }: { odpStats: { total: number; validated: number; unvalidated: number }; loading: boolean }) {
   const percent = odpStats.total ? Math.round((odpStats.validated / odpStats.total) * 100) : 0;
   return (
     <Card>
@@ -847,14 +848,12 @@ function ValidationProgressCard({ odpStats, loading }: { odpStats: ReturnType<ty
 async function loadDashboardData(token: string, role: RoleKey, regionId: string, userRegionScope?: string[]): Promise<DashboardData> {
   const suffix = regionId ? `&region_id=${encodeURIComponent(regionId)}` : "";
   const scopeRegionIds = userRegionScope || [];
-  const DASHBOARD_BATCH_LIMIT = 500;
-  const [summary, regions, pops, devices, odpDevices, ports, adminregionRequests, superadminRequests, rejectedAdminregion, rejectedSuperadmin, evidenceMissing, auditLogs] = await Promise.all([
+  const isValidator = role === "validator";
+  const [summary, regions, pops, odpDevices, adminregionRequests, superadminRequests, rejectedAdminregion, rejectedSuperadmin, evidenceMissing, auditLogs] = await Promise.all([
     safeFetch<DashboardSummaryResponse>("/dashboard/summary", token),
     safeFetch<PaginatedResponse<RegionItem>>(`/regions?page=1&limit=200`, token),
-    fetchAllPaginated<PopItem>(`/pops?page=1&limit=${DASHBOARD_BATCH_LIMIT}${suffix}`, token, DASHBOARD_BATCH_LIMIT),
-    fetchAllPaginated<DeviceItem>(`/devices?page=1&limit=${DASHBOARD_BATCH_LIMIT}${suffix}`, token, DASHBOARD_BATCH_LIMIT),
-    fetchAllPaginated<DeviceItem>(`/devices?page=1&limit=${DASHBOARD_BATCH_LIMIT}&device_type_key=ODP${suffix}`, token, DASHBOARD_BATCH_LIMIT),
-    fetchAllPaginated<DevicePortItem>(`/devicePorts?page=1&limit=${DASHBOARD_BATCH_LIMIT}${suffix}`, token, DASHBOARD_BATCH_LIMIT),
+    safeFetch<PaginatedResponse<PopItem>>(`/pops?page=1&limit=200${suffix}`, token),
+    isValidator ? fetchAllPaginated<DeviceItem>(`/devices?page=1&limit=200&device_type_key=ODP${suffix}`, token, 200) : Promise.resolve([]),
     role === "adminregion" || role === "validator" ? safeFetch<{ data: ValidationRequestItem[] }>("/validation-requests?queue=adminregion", token) : Promise.resolve(null),
     role === "superadmin" || role === "adminregion" ? safeFetch<{ data: ValidationRequestItem[] }>("/validation-requests?queue=superadmin", token) : Promise.resolve(null),
     safeFetch<{ data: ValidationRequestItem[] }>(`/validation-requests/quality-queue?queue=rejected_adminregion${suffix}`, token),
@@ -871,10 +870,10 @@ async function loadDashboardData(token: string, role: RoleKey, regionId: string,
       if (regionId) return all.filter((r: RegionItem) => r.id === regionId).slice(0, 200);
       return all.slice(0, 200);
     })(),
-    pops: (pops || []).slice(0, 200),
-    devices: (devices || []).slice(0, 500),
-    odpDevices: (odpDevices || []).slice(0, 500),
-    ports: (ports || []).slice(0, 500),
+    pops: (pops?.data || []).slice(0, 200),
+    devices: [],
+    odpDevices: isValidator ? (odpDevices || []).slice(0, 200) : [],
+    ports: [],
     adminregionRequests: adminregionRequests?.data || [],
     superadminRequests: superadminRequests?.data || [],
     rejectedAdminregion: rejectedAdminregion?.data || [],
@@ -1039,6 +1038,49 @@ function getOdpStats(items: DeviceItem[]) {
   };
 }
 
+function getOdpStatsFromSummary(s?: DashboardSummaryResponse["data"] | null) {
+  if (!s?.odp) return { total: 0, validated: 0, unvalidated: 0 };
+  return { total: s.odp.total, validated: s.odp.validated, unvalidated: s.odp.unvalidated };
+}
+
+function getPortStatsFromSummary(s?: DashboardSummaryResponse["data"] | null) {
+  if (!s?.ports) return { total: 0, downMaintenance: 0, reserved: 0, problem: 0 };
+  return {
+    total: s.ports.total,
+    downMaintenance: s.ports.downMaintenance,
+    reserved: s.ports.reserved,
+    problem: s.ports.downMaintenance + s.ports.reserved,
+  };
+}
+
+function toChartFromSummary(rows?: Array<{ label?: string; value?: number }> | null): DashboardChartDatum[] {
+  return (rows || []).filter((x) => x?.value && x?.value > 0).map((x) => ({ label: x.label || "Lainnya", value: Number(x.value) || 0 }));
+}
+
+function odpValidationFromSummary(s?: DashboardSummaryResponse["data"] | null, data?: DashboardData): DashboardChartDatum[] {
+  const odp = s?.odp;
+  const items: DashboardChartDatum[] = [];
+  if (!odp) return items;
+  if (odp.validated) items.push({ label: "Validated", value: odp.validated, color: "#16a34a", href: "/data-management/list/odp?status=validated" });
+  if (odp.unvalidated) items.push({ label: "Unvalidated", value: odp.unvalidated, color: "#f59e0b", href: "/data-management/list/odp?status=unvalidated" });
+  if (data?.adminregionRequests?.length) items.push({ label: "Pending Admin Region", value: data.adminregionRequests.length, color: "#2563eb", href: "/requests" });
+  if (data?.superadminRequests?.length) items.push({ label: "Pending Superadmin", value: data.superadminRequests.length, color: "#7c3aed", href: "/requests" });
+  const rejected = (data?.rejectedAdminregion?.length || 0) + (data?.rejectedSuperadmin?.length || 0);
+  if (rejected) items.push({ label: "Rejected", value: rejected, color: "#dc2626", href: "/requests" });
+  return items;
+}
+
+function popWithoutDeviceFromSummary(s?: DashboardSummaryResponse["data"] | null): DashboardQueueItem[] {
+  return (s?.pops?.withoutDevice || []).slice(0, 6).map((pop) => ({
+    id: `pop-wd:${pop.pop_id}`,
+    title: pop.pop_name || pop.pop_code || "POP",
+    description: `${pop.pop_code || "POP"} belum memiliki device pada scope data dashboard.`,
+    href: "/data-management",
+    badge: "No Device",
+    tone: "amber" as const,
+  }));
+}
+
 function valueText(value: unknown, fallback: string) {
   const text = String(value ?? "").trim();
   return text || fallback;
@@ -1116,7 +1158,11 @@ function buildMapMarkers(pops: PopItem[], odpDevices: DeviceItem[]): MapMarker[]
 }
 
 function isValidated(item: DeviceItem) {
-  return Boolean(item.validation_date || item.last_validation_at);
+  return Boolean(
+    item.validation_status === "valid" ||
+    item.validation_date ||
+    item.last_validation_at
+  );
 }
 
 function requestItems(
@@ -1163,8 +1209,8 @@ function auditItems(items: AuditLogItem[]): DashboardActivityItem[] {
 }
 
 function buildRiskItems(data: DashboardData) {
-  const odpStats = getOdpStats(data.odpDevices);
-  const portStats = getPortStats(data.ports);
+  const odpStats = getOdpStatsFromSummary(data.summary);
+  const portStats = getPortStatsFromSummary(data.summary);
   return [
     qualityItem("ODP belum tervalidasi", odpStats.unvalidated, "/data-management/odp-quality?issue=odp-pending-validation", "medium"),
     qualityItem("Evidence kurang", data.evidenceMissing.length, "/data-management/odp-quality?issue=odp-evidence-missing", "high"),

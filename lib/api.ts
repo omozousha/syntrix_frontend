@@ -162,13 +162,37 @@ export type DashboardSummaryResponse = {
   success: boolean;
   message: string;
   data: {
-    devices: number;
-    pops: number;
-    projects: number;
-    customers: number;
-    routes: number;
-    validations: number;
-    monitoring_snapshots: number;
+    devices: {
+      total: number;
+      byType: Array<{ label: string; value: number }>;
+      byStatus: Array<{ label: string; value: number }>;
+      byRegion: Array<{ label: string; value: number }>;
+    };
+    odp: {
+      total: number;
+      validated: number;
+      unvalidated: number;
+      byRegion: Array<{ label: string; value: number }>;
+    };
+    pops: {
+      total: number;
+      byStatus: Array<{ label: string; value: number }>;
+      byRegion: Array<{ label: string; value: number }>;
+      topByDevice: Array<{ label: string; pop_id?: string; value: number }>;
+      topByOdp: Array<{ label: string; pop_id?: string; value: number }>;
+      withoutDevice: Array<{ pop_id: string; pop_name?: string; pop_code?: string }>;
+    };
+    ports: {
+      total: number;
+      used: number;
+      downMaintenance: number;
+      reserved: number;
+      byStatus: Array<{ label: string; value: number }>;
+    };
+    regions: { total: number };
+    projects: { total: number };
+    customers: { total: number };
+    routes: { total: number };
   };
 };
 

@@ -3,8 +3,9 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { Cell, Pie, PieChart } from "recharts";
 
 export type DashboardChartDatum = {
   label: string;
@@ -32,6 +33,11 @@ export function DashboardDonutChartCard({
   const normalized = normalizeData(data);
   const total = normalized.reduce((sum, item) => sum + item.value, 0);
 
+  const chartConfig: ChartConfig = {};
+  normalized.forEach((item) => {
+    chartConfig[item.label] = { label: item.label, color: item.color };
+  });
+
   const handleClick = useCallback(
     (_: unknown, index: number) => {
       const target = normalized[index];
@@ -55,7 +61,11 @@ export function DashboardDonutChartCard({
         ) : total ? (
           <>
             <div className="relative mx-auto size-28 shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
+              <ChartContainer
+                config={chartConfig}
+                className="size-28"
+                initialDimension={{ width: 112, height: 112 }}
+              >
                 <PieChart>
                   <Pie
                     data={normalized}
@@ -66,19 +76,19 @@ export function DashboardDonutChartCard({
                     paddingAngle={2}
                     dataKey="value"
                     onClick={handleClick}
-                    style={{ cursor: (normalized.some((d) => d.href) ? "pointer" : "default") }}
+                    style={{ cursor: normalized.some((d) => d.href) ? "pointer" : "default" }}
                   >
                     {normalized.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{ fontSize: "10px", borderRadius: "6px", background: "var(--card)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-                    itemStyle={{ padding: "0px", color: "var(--foreground)" }}
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="dot" />}
                   />
                 </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              </ChartContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-xl font-bold leading-none">{total}</span>
                 <span className="text-[9px] uppercase text-muted-foreground">total</span>
               </div>
@@ -158,7 +168,7 @@ export function DashboardBarChartCard({
 function ChartLegend({ data, total }: { data: DashboardChartDatum[]; total: number }) {
   const router = useRouter();
   return (
-    <div className="space-y-1.5 overflow-auto max-h-[120px] pr-1 thin-scrollbar">
+    <div className="thin-scrollbar max-h-[120px] space-y-1.5 overflow-auto pr-1">
       {data.map((item, index) => {
         const color = item.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
         const percent = total ? Math.round((item.value / total) * 100) : 0;
@@ -175,8 +185,8 @@ function ChartLegend({ data, total }: { data: DashboardChartDatum[]; total: numb
             style={{ cursor: item.href ? "pointer" : "default" }}
           >
             <div className="flex min-w-0 items-center gap-2">
-              <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-              <span className={`truncate ${item.href ? "text-primary hover:underline underline-offset-2" : ""}`}>{item.label}</span>
+              <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+              <span className={`truncate ${item.href ? "text-primary underline-offset-2 hover:underline" : ""}`}>{item.label}</span>
             </div>
             <span className="shrink-0 text-[10px] text-muted-foreground">{item.value} ({percent}%)</span>
           </div>
