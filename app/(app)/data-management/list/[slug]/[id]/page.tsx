@@ -2805,6 +2805,7 @@ if (!category) {
                 ports={odpPorts}
                 customers={odpCustomers}
                 ontDevices={odpOntDevices}
+                splitterProfiles={splitterProfiles}
                 loadingPorts={loadingOdpPorts}
                 loadingLookups={loadingOdpLookups}
                 provisioning={provisioningPorts}
@@ -3062,6 +3063,7 @@ function OdpOperationsPanel({
   ports,
   customers,
   ontDevices,
+  splitterProfiles = [],
   loadingPorts,
   loadingLookups,
   provisioning,
@@ -3098,6 +3100,7 @@ function OdpOperationsPanel({
   ports: DevicePort[];
   customers: OdpCustomerOption[];
   ontDevices: OdpOntOption[];
+  splitterProfiles?: SplitterProfileOption[];
   loadingPorts: boolean;
   loadingLookups: boolean;
   provisioning: boolean;
