@@ -850,7 +850,7 @@ async function loadDashboardData(token: string, role: RoleKey, regionId: string,
   const scopeRegionIds = userRegionScope || [];
   const isValidator = role === "validator";
   const [summary, regions, pops, odpDevices, adminregionRequests, superadminRequests, rejectedAdminregion, rejectedSuperadmin, evidenceMissing, auditLogs] = await Promise.all([
-    safeFetch<DashboardSummaryResponse>(`/dashboard/summary${suffix}`, token),
+    safeFetch<DashboardSummaryResponse>(`/dashboard/summary${regionId ? `?region_id=${encodeURIComponent(regionId)}` : ""}`, token),
     safeFetch<PaginatedResponse<RegionItem>>(`/regions?page=1&limit=200`, token),
     safeFetch<PaginatedResponse<PopItem>>(`/pops?page=1&limit=200${suffix}`, token),
     isValidator ? fetchAllPaginated<DeviceItem>(`/devices?page=1&limit=200&device_type_key=ODP${suffix}`, token, 200) : Promise.resolve([]),
