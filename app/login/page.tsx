@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Network, Radar, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Network, Radar, ShieldCheck } from "lucide-react";
 import { ResponseDialog } from "@/components/response-dialog";
 import { apiFetch } from "@/lib/api";
 import { clearStoredToken, fetchCurrentUser, loginWithPassword, storeSessionTokens, getStoredToken } from "@/lib/session";
@@ -131,7 +131,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-dvh overflow-hidden bg-[linear-gradient(135deg,var(--background),var(--muted)_58%,var(--accent))]">
+    <main className="min-h-dvh overflow-hidden bg-[linear-gradient(135deg,var(--background),var(--muted)_62%)]">
       <div className="mx-auto grid min-h-dvh w-full max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
         <section className="hidden items-center lg:flex">
           <div className="w-full space-y-6">
@@ -145,18 +145,15 @@ export default function LoginPage() {
             </div>
 
             <div className="max-w-2xl space-y-4">
-              <Badge variant="outline" className="w-fit rounded-md bg-background/70">
-                Network Assurance Console
-              </Badge>
               <h1 className="text-5xl font-semibold leading-[1.02] tracking-tight text-balance">
                 Synchronization & Validation Matrix
               </h1>
               <p className="max-w-xl text-sm leading-6 text-muted-foreground">
                 Workspace operasional untuk inventory region, POP, device, validasi lapangan, approval chain, dan audit data jaringan Syntrix.
               </p>
-          </div>
+            </div>
 
-            <div className="rounded-xl border bg-card/85 p-3 shadow-md">
+            <div className="rounded-xl border bg-card/85 p-3 shadow-sm">
               <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2">
                 <MatrixNode icon={Network} title="Inventory" description="Region, POP, Device" />
                 <ArrowRight className="size-4 text-muted-foreground" />
@@ -166,15 +163,9 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <SignalCard label="Scope" value="Region-aware" />
-              <SignalCard label="Workflow" value="Validator chain" />
-              <SignalCard label="Control" value="Audit ready" />
-            </div>
-
-            <div className="rounded-xl border bg-background/80 p-4 shadow-sm">
+            <div className="rounded-xl border bg-card/85 p-4 shadow-sm">
               <div className="flex items-start gap-3">
-                <div className="rounded-md border border-primary/15 bg-primary/10 p-2 text-primary shadow-inner">
+                <div className="rounded-md border border-primary/15 bg-primary/10 p-2 text-primary">
                   <LockKeyhole className="size-4" />
                 </div>
                 <div className="space-y-1">
@@ -199,15 +190,15 @@ export default function LoginPage() {
                   <p className="text-sm font-semibold">Syntrix</p>
                   <p className="truncate text-xs text-muted-foreground">Synchronization & Validation Matrix</p>
                 </div>
-            </div>
+              </div>
               <Badge variant="secondary">Secure</Badge>
             </div>
 
-            <Card className="border-border/80 bg-card/95 shadow-xl shadow-primary/10">
+            <Card className="border-border/80 bg-card/95 shadow-lg shadow-primary/5">
               <CardHeader className="space-y-4 pb-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-md border border-primary/15 bg-primary/10 p-2 text-primary shadow-inner">
+                    <div className="rounded-md border border-primary/15 bg-primary/10 p-2 text-primary">
                       <ShieldCheck className="size-5" />
                     </div>
                     <div>
@@ -215,7 +206,6 @@ export default function LoginPage() {
                       <CardDescription>Masuk ke workspace sesuai role akun.</CardDescription>
                     </div>
                   </div>
-                  <Sparkles className="mt-1 size-4 text-primary" />
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
