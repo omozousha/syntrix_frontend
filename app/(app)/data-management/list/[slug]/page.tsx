@@ -1442,7 +1442,9 @@ export default function DataManagementListPage() {
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "list" | "quality")}>
             <TabsList className="w-full justify-start md:w-auto">
               <TabsTrigger value="list">Data ODP</TabsTrigger>
-              <TabsTrigger value="quality">ODP Quality Issues</TabsTrigger>
+              <TabsTrigger value="quality" asChild>
+                <Link href="/data-management/odp-quality">ODP Quality Issues</Link>
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         ) : null}
@@ -1691,7 +1693,9 @@ export default function DataManagementListPage() {
         ) : null}
 
         {isOdpCategory && activeTab === "quality" ? (
-          <OdpQualityTab regionId={effectiveRegionScopeId} token={token} />
+          <Link href="/data-management/odp-quality" className="flex w-full items-center justify-center rounded-md border border-dashed p-6 text-sm text-muted-foreground hover:bg-muted/40">
+            Buka halaman ODP Quality Issues
+          </Link>
         ) : null}
       </div>
 
@@ -1718,8 +1722,10 @@ export default function DataManagementListPage() {
         categoryLabel={category.label}
         actionLoading={actionLoading}
         usageLoading={usageLoading}
+        usageCheck={usageCheck}
         onSubmitDelete={() => void submitDelete()}
         onClose={() => setDeleteTarget(null)}
+        onForceDelete={() => void forceDelete()}
       />
 
       <AlertDialog open={Boolean(bulkActionRequest)} onOpenChange={(open) => !open && setBulkActionRequest(null)}>

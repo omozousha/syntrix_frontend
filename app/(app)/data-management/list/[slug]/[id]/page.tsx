@@ -2448,16 +2448,7 @@ if (!category) {
     return (
     <ScrollArea className="h-full min-h-0 w-full thin-scrollbar">
       <div className="space-y-5 pr-3">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="outline" size="sm">
-            <Link href={`${category.group === "master" ? "/master-data" : "/data-management"}/list/${slug}${queryString ? `?${queryString}` : ""}`}>
-              <ArrowLeft className="mr-1 size-4" />
-              Kembali ke {category.label}
-            </Link>
-          </Button>
-        </div>
-        <DeviceDetailHeader item={item} token={token} category={category} lookupOptions={lookupOptions} />
-        <DeviceDetailTabs item={item} token={token} category={category} lookupOptions={lookupOptions} onRefresh={() => setRefreshSeed((prev) => prev + 1)} />
+        <AppLoading label="Memuat detail..." />
       </div>
     </ScrollArea>
     );

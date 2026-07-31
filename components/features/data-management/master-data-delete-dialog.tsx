@@ -33,7 +33,7 @@ export function MasterDataUsageCheckDialog({
   onForceDelete,
   onClose,
 }: {
-  usageCheck: UsageCheckData;
+  usageCheck: UsageCheckData | null;
   onForceDelete: () => void;
   onClose: () => void;
 }) {
