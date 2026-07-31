@@ -1312,6 +1312,7 @@ export default function DataManagementListPage() {
       const qrRows = await Promise.all(
         selectedRows.map(async (row) => {
           const display = buildDeviceListDisplay(row, listDisplayLookups);
+          const deviceId = pick(row, ["id"]);
           return {
             deviceName: pick(row, ["device_name", "name"]),
             deviceCode: pick(row, ["device_id", "id"]),
@@ -1319,11 +1320,19 @@ export default function DataManagementListPage() {
             popName: formatQrPopLabel(display.pop, pick(row, ["pop_code", "pop_id"])),
             projectName: display.project,
             tenantName: display.tenant,
-            qrDataUrl: await QRCode.toDataURL(buildDeviceDirectHref(category.slug, row), {
-              width: 360,
-              margin: 2,
-              errorCorrectionLevel: "H",
-            }),
+            qrDataUrl: await QRCode.toDataURL(
+              buildDeviceQrHref({
+                appBaseUrl: APP_BASE_URL,
+                categorySlug: category.slug,
+                deviceId,
+                deviceTypeKey: pick(row, ["device_type_key"]),
+              }),
+              {
+                width: 360,
+                margin: 2,
+                errorCorrectionLevel: "H",
+              },
+            ),
             logoDataUrl,
             footerText: qrLabelSetting?.footer_text || undefined,
           };
