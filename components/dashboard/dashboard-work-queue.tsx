@@ -62,6 +62,10 @@ export function DashboardWorkQueue({
             <div key={item.id} className="flex min-w-0 items-start justify-between gap-3 rounded-md border bg-background p-3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`size-2 shrink-0 rounded-full ${toneDotClass(item.tone)} ${item.tone === "red" || item.tone === "amber" ? "animate-pulse" : ""}`}
+                    aria-hidden="true"
+                  />
                   <p className="truncate text-sm font-medium">{item.title}</p>
                   {item.badge ? <Badge variant={badgeVariant(item.tone)} className="text-xs">{item.badge}</Badge> : null}
                 </div>
@@ -116,4 +120,12 @@ function badgeVariant(tone?: "neutral" | "blue" | "amber" | "red" | "green") {
   if (tone === "red") return "destructive";
   if (tone === "green") return "secondary";
   return "outline";
+}
+
+function toneDotClass(tone?: "neutral" | "blue" | "amber" | "red" | "green") {
+  if (tone === "red") return "bg-rose-500";
+  if (tone === "amber") return "bg-amber-400";
+  if (tone === "green") return "bg-emerald-500";
+  if (tone === "blue") return "bg-blue-500";
+  return "bg-muted-foreground/40";
 }
