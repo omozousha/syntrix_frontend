@@ -927,88 +927,6 @@ function formatTimeAgo(date: Date): string {
   return `${Math.floor(minutes / 60)}j yang lalu`;
 }
 
-function deviceTypeChart(items: DeviceItem[]): DashboardChartDatum[] {
-  const keyMap: Record<string, string> = {
-    OLT: "olt", OTB: "otb", ODC: "odc", ODP: "odp", JC: "jc", CABLE: "cable", ONT: "ont", SWITCH: "switch", ROUTER: "router",
-  };
-  return countBy(items, (item) => valueText(item.device_type_key, "Unknown")).map((item) => ({
-    ...item,
-    color: deviceTypeColor(item.label),
-    href: keyMap[item.label] ? `/data-management/list/${keyMap[item.label]}` : undefined,
-  }));
-}
-
-function deviceStatusChart(items: DeviceItem[]): DashboardChartDatum[] {
-  return countBy(items, (item) => valueText(item.status, "unknown")).map((item) => ({
-    ...item,
-    color: statusColor(item.label),
-  }));
-}
-
-function popStatusChart(items: PopItem[]): DashboardChartDatum[] {
-  return countBy(items, (item) => valueText(item.status_pop, "unknown")).map((item) => ({
-    ...item,
-    color: statusColor(item.label),
-  }));
-}
-
-function regionDistributionChart(regions: RegionItem[], devices: DeviceItem[]): DashboardChartDatum[] {
-  const regionMap = new Map(regions.map((region) => [region.id, getRegionLabel({ relation: region })]));
-  return countBy(devices, (item) => regionMap.get(String(item.region_id || "")) || getRegionLabel({ fallback: item.region_id, optional: true }));
-}
-
-function regionPopDistributionChart(regions: RegionItem[], pops: PopItem[]): DashboardChartDatum[] {
-  const regionMap = new Map(regions.map((region) => [region.id, getRegionLabel({ relation: region })]));
-  return countBy(pops, (item) => regionMap.get(String(item.region_id || "")) || getRegionLabel({ fallback: item.region_id, optional: true }));
-}
-
-function popDeviceDistributionChart(pops: PopItem[], devices: DeviceItem[], regionSuffix = ""): DashboardChartDatum[] {
-  const popMap = new Map(pops.map((pop) => [pop.id, getPopLabel({ relation: pop, fallback: pop.pop_code || pop.pop_id, optional: true })]));
-  return countBy(devices, (item) => popMap.get(String(item.pop_id || "")) || "No POP").slice(0, 8).map((item) => ({
-    ...item,
-    href: "/data-management" + regionSuffix,
-  }));
-}
-
-function odpValidationChart(items: DeviceItem[], data: DashboardData, regionSuffix = ""): DashboardChartDatum[] {
-  const odpStats = getOdpStats(items);
-  return [
-    { label: "Validated", value: odpStats.validated, color: "#16a34a", href: `/data-management/list/odp?status=validated${regionSuffix}` },
-    { label: "Unvalidated", value: odpStats.unvalidated, color: "#f59e0b", href: `/data-management/list/odp?status=unvalidated${regionSuffix}` },
-    { label: "Pending Admin Region", value: data.adminregionRequests.length, color: "#2563eb", href: "/requests" },
-    { label: "Pending Superadmin", value: data.superadminRequests.length, color: "#7c3aed", href: "/requests" },
-    { label: "Rejected", value: data.rejectedAdminregion.length + data.rejectedSuperadmin.length, color: "#dc2626", href: "/requests" },
-  ];
-}
-
-function portUtilizationChart(items: DevicePortItem[]): DashboardChartDatum[] {
-  return countBy(items, (item) => valueText(item.status, "unknown")).map((item) => ({
-    ...item,
-    color: statusColor(item.label),
-  }));
-}
-
-function popWithoutDeviceItems(pops: PopItem[], devices: DeviceItem[]): DashboardQueueItem[] {
-  const deviceCounts = new Map<string, number>();
-  devices.forEach((device) => {
-    const popId = String(device.pop_id || "");
-    if (!popId) return;
-    deviceCounts.set(popId, (deviceCounts.get(popId) || 0) + 1);
-  });
-
-  return pops
-    .filter((pop) => !deviceCounts.get(pop.id))
-    .slice(0, 6)
-    .map((pop) => ({
-      id: pop.id,
-      title: getPopLabel({ relation: pop, fallback: pop.pop_code || pop.pop_id, optional: true }) || "POP",
-      description: `${pop.pop_id || pop.pop_code || "POP belum tersedia"} belum memiliki device pada scope data dashboard.`,
-      href: "/data-management",
-      badge: "No Device",
-      tone: "amber" as const,
-    }));
-}
-
 function formatRegionScope(regions: RegionItem[]) {
   if (!regions.length) return "Region mengikuti scope akun validator.";
   if (regions.length === 1) return getRegionLabel({ relation: regions[0], fallback: "1 region aktif" });
@@ -1029,15 +947,6 @@ function countBy<T>(items: T[], getKey: (item: T) => string): DashboardChartDatu
   return [...counts.entries()]
     .map(([label, value]) => ({ label, value }))
     .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
-}
-
-function getOdpStats(items: DeviceItem[]) {
-  const validated = items.filter(isValidated).length;
-  return {
-    total: items.length,
-    validated,
-    unvalidated: Math.max(items.length - validated, 0),
-  };
 }
 
 function getOdpStatsFromSummary(s?: DashboardSummaryResponse["data"] | null) {
@@ -1081,41 +990,6 @@ function popWithoutDeviceFromSummary(s?: DashboardSummaryResponse["data"] | null
     badge: "No Device",
     tone: "amber" as const,
   }));
-}
-
-function valueText(value: unknown, fallback: string) {
-  const text = String(value ?? "").trim();
-  return text || fallback;
-}
-
-function deviceTypeColor(label: string) {
-  const key = label.toUpperCase();
-  if (key === "ODP") return "#2563eb";
-  if (key === "OLT") return "#16a34a";
-  if (key === "ONT") return "#0891b2";
-  if (key === "ODC") return "#7c3aed";
-  if (key === "OTB") return "#f59e0b";
-  if (key === "CABLE") return "#64748b";
-  return "#94a3b8";
-}
-
-function statusColor(label: string) {
-  const key = label.toLowerCase();
-  if (["active", "used", "validated", "valid", "ok"].includes(key)) return "#16a34a";
-  if (["idle", "draft", "pending", "reserved"].includes(key)) return "#f59e0b";
-  if (["down", "maintenance", "rejected", "archived", "inactive"].includes(key)) return "#dc2626";
-  return "#64748b";
-}
-
-function getPortStats(items: DevicePortItem[]) {
-  const downMaintenance = items.filter((item) => item.status === "down" || item.status === "maintenance").length;
-  const assignmentMismatch = items.filter((item) => (item.customer_id || item.ont_device_id) && item.status !== "used").length;
-  return {
-    total: items.length,
-    downMaintenance,
-    assignmentMismatch,
-    problem: downMaintenance + assignmentMismatch,
-  };
 }
 
 function weeklyAuditTrend(logs: AuditLogItem[]): TrendDatum[] {

@@ -29,7 +29,7 @@ export function DashboardMetricCard({
   const trendColor = trend?.direction === "up" ? "text-emerald-600 dark:text-emerald-400" : trend?.direction === "down" ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground";
 
   return (
-    <Card className={`overflow-hidden border ${toneClassName(tone)}`}>
+    <Card className={`overflow-hidden border ${toneClassName(tone)} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 active:scale-[0.98]`}>
       <CardContent className="p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
