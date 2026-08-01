@@ -46,7 +46,7 @@ export function DashboardWorkQueue({
             </CardTitle>
             <CardDescription>{description}</CardDescription>
           </div>
-          <Badge variant="outline">{loading ? "-" : items.length}</Badge>
+          <Badge variant="outline" className="tabular-nums">{loading ? "-" : items.length}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-2 p-3 pt-0">
@@ -59,50 +59,50 @@ export function DashboardWorkQueue({
           ))
         ) : items.length ? (
           items.slice(0, 6).map((item) => (
-<div key={item.id} className="flex min-w-0 items-start justify-between gap-3 rounded-md border bg-background p-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate text-sm font-medium">{item.title}</p>
-                    {item.badge ? <Badge variant={badgeVariant(item.tone)} className="text-[10px]">{item.badge}</Badge> : null}
+            <div key={item.id} className="flex min-w-0 items-start justify-between gap-3 rounded-md border bg-background p-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate text-sm font-medium">{item.title}</p>
+                  {item.badge ? <Badge variant={badgeVariant(item.tone)} className="text-xs">{item.badge}</Badge> : null}
+                </div>
+                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.description}</p>
+                {item.onApprove || item.onReject ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    {item.onApprove ? (
+                      <Button
+                        type="button"
+                        disabled={item.actionLoading}
+                        onClick={item.onApprove}
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs text-emerald-700 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300"
+                      >
+                        {item.actionLoading ? "..." : "Setujui"}
+                      </Button>
+                    ) : null}
+                    {item.onReject ? (
+                      <Button
+                        type="button"
+                        disabled={item.actionLoading}
+                        onClick={item.onReject}
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs text-rose-700 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300"
+                      >
+                        {item.actionLoading ? "..." : "Tolak"}
+                      </Button>
+                    ) : null}
                   </div>
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.description}</p>
-                  {item.onApprove || item.onReject ? (
-                    <div className="mt-2 flex items-center gap-2">
-                      {item.onApprove ? (
-                    <Button
-                      type="button"
-                      disabled={item.actionLoading}
-                      onClick={item.onApprove}
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-2 text-[10px] text-emerald-700 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300"
-                    >
-                      {item.actionLoading ? "..." : "Setujui"}
-                    </Button>
-                      ) : null}
-                      {item.onReject ? (
-                    <Button
-                      type="button"
-                      disabled={item.actionLoading}
-                      onClick={item.onReject}
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-2 text-[10px] text-rose-700 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300"
-                    >
-                      {item.actionLoading ? "..." : "Tolak"}
-                    </Button>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex shrink-0 items-start gap-1">
-                  <Button asChild variant="ghost" size="icon" className="size-8">
-                    <Link href={item.href} aria-label={`Open ${item.title}`}>
-                      <ArrowUpRight className="size-4" />
-                    </Link>
-                  </Button>
-                </div>
+                ) : null}
               </div>
+              <div className="flex shrink-0 items-start gap-1">
+                <Button asChild variant="ghost" size="icon" className="size-8">
+                  <Link href={item.href} aria-label={`Open ${item.title}`}>
+                    <ArrowUpRight className="size-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
           ))
         ) : (
           <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">{emptyLabel}</p>

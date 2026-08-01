@@ -89,8 +89,8 @@ export function DashboardDonutChartCard({
                 </PieChart>
               </ChartContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-bold leading-none">{total}</span>
-                <span className="text-[9px] uppercase text-muted-foreground">total</span>
+                <span className="text-xl font-bold leading-none tabular-nums">{total}</span>
+                <span className="text-xs uppercase leading-none text-muted-foreground">total</span>
               </div>
             </div>
             <ChartLegend data={normalized} total={total} />
@@ -188,7 +188,7 @@ function ChartLegend({ data, total }: { data: DashboardChartDatum[]; total: numb
               <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
               <span className={`truncate ${item.href ? "text-primary underline-offset-2 hover:underline" : ""}`}>{item.label}</span>
             </div>
-            <span className="shrink-0 text-[10px] text-muted-foreground">{item.value} ({percent}%)</span>
+            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{item.value} ({percent}%)</span>
           </div>
         );
       })}

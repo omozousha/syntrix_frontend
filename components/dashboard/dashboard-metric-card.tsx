@@ -37,12 +37,12 @@ export function DashboardMetricCard({
             {loading ? (
               <Skeleton className="mt-2 h-9 w-28" />
             ) : (
-              <p className="mt-1 text-4xl font-bold leading-none tracking-tight">{value}</p>
+              <p className="mt-1 text-3xl font-bold leading-none tracking-tight tabular-nums xl:text-4xl">{value}</p>
             )}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2">
             {Icon ? <Icon className="size-5 text-muted-foreground/70" /> : null}
-            {badge ? <Badge variant={badgeVariant(tone)} className="text-[10px] leading-none">{badge}</Badge> : null}
+            {badge ? <Badge variant={badgeVariant(tone)} className="text-xs leading-none">{badge}</Badge> : null}
           </div>
         </div>
         <div className="mt-2 flex items-center gap-2">

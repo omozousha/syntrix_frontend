@@ -341,7 +341,7 @@ function DashboardHeader({
         <p className="max-w-3xl text-sm text-muted-foreground">{copy.description}</p>
       </div>
       <div className="flex items-center gap-2">
-        <span className="hidden text-[10px] text-muted-foreground sm:inline">
+        <span className="hidden text-xs text-muted-foreground sm:inline">
           {lastUpdated ? `${formatTimeAgo(lastUpdated)}` : ""}
         </span>
         <Button
@@ -381,7 +381,7 @@ function AssetOverviewDashboard({ data, loading }: { data: DashboardData; loadin
   const portStats = getPortStatsFromSummary(s);
   return (
     <>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <DashboardMetricCard label="Regions" value={s?.regions?.total ?? data.regions.length} caption="Region aktif sesuai scope user." badge="Scope" icon={MapPinned} loading={loading} />
         <DashboardMetricCard label="POPs" value={s?.pops?.total ?? 0} caption="POP yang menjadi titik agregasi jaringan." badge="POP" tone="blue" icon={Database} loading={loading} />
         <DashboardMetricCard label="Devices" value={s?.devices?.total ?? 0} caption="Total perangkat dalam scope dashboard." badge="Inventory" tone="green" icon={RadioTower} loading={loading} />
@@ -457,7 +457,7 @@ function ValidatorOverviewDashboard({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <DashboardMetricCard label="Region Scope" value={data.summary?.regions?.total ?? (data.regions.length || 1)} caption={formatRegionScope(data.regions)} badge="Scope" tone="blue" icon={MapPinned} loading={loading} />
         <DashboardMetricCard label="POP Coverage" value={data.summary?.pops?.total ?? data.pops.length} caption="POP yang menjadi konteks area validasi." badge="POP" icon={Database} loading={loading} />
         <DashboardMetricCard label="ODP Queue" value={odpStats.unvalidated} caption="ODP yang belum valid final." badge="Validate" tone="amber" icon={RadioTower} loading={loading} />
@@ -627,7 +627,7 @@ function SuperadminDashboard({ data, loading }: { data: DashboardData; loading: 
   const riskItems = buildRiskItems(data);
   return (
     <>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <DashboardMetricCard label="Final Approval" value={data.superadminRequests.length} caption="Request menunggu keputusan superadmin." badge="Queue" tone="blue" icon={ShieldCheck} loading={loading} />
         <DashboardMetricCard label="Rejected" value={data.rejectedAdminregion.length + data.rejectedSuperadmin.length} caption="Request yang perlu tindak lanjut role terkait." badge="Risk" tone="red" icon={AlertTriangle} loading={loading} />
         <DashboardMetricCard label="ODP Validated" value={odpStats.validated} caption={`${odpStats.unvalidated} ODP belum valid final.`} badge="ODP" tone="green" icon={CheckCircle2} loading={loading} />
@@ -677,7 +677,7 @@ function AdminregionDashboard({ data, loading, singleRegionScope }: { data: Dash
   const regionSuffix = singleRegionScope ? `&region_id=${encodeURIComponent(singleRegionScope)}` : "";
   return (
     <>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <DashboardMetricCard label="Need Review" value={data.adminregionRequests.length} caption="Submission validator menunggu review region." badge="Today" tone="blue" icon={ClipboardCheck} loading={loading} />
         <DashboardMetricCard label="Rejected Superadmin" value={data.rejectedSuperadmin.length} caption="Perlu review ulang sebelum resubmit final." badge="Follow up" tone="red" icon={AlertTriangle} loading={loading} />
         <DashboardMetricCard label="Validated ODP" value={odpStats.validated} caption={`${odpStats.unvalidated} ODP masih perlu validasi.`} badge="Progress" tone="green" icon={CheckCircle2} loading={loading} />
@@ -743,7 +743,7 @@ function ValidatorDashboard({ data, loading, singleRegionScope }: { data: Dashbo
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <DashboardMetricCard label="Tugas Validasi" value={odpStats.unvalidated} caption="ODP dalam scope region yang belum valid final." badge="Queue" tone="blue" icon={RadioTower} loading={loading} />
         <DashboardMetricCard label="Rejected" value={data.rejectedAdminregion.length} caption="Perlu perbaikan berdasarkan catatan admin region." badge="Fix" tone="red" icon={AlertTriangle} loading={loading} />
         <DashboardMetricCard label="Submitted" value={data.adminregionRequests.length} caption="Menunggu review admin region." badge="Review" tone="amber" icon={Timer} loading={loading} />

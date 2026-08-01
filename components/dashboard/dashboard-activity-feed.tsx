@@ -50,7 +50,7 @@ export function DashboardActivityFeed({
               <div className="rounded-md border bg-background p-3 transition-colors hover:bg-muted/40">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <p className="text-sm font-medium">{item.title}</p>
-                  {item.timestamp ? <Badge variant="outline" className="text-[10px]">{formatDateTime(item.timestamp)}</Badge> : null}
+                  {item.timestamp ? <Badge variant="outline" className="text-xs">{formatDateTime(item.timestamp)}</Badge> : null}
                 </div>
                 <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.description}</p>
               </div>
