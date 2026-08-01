@@ -14,7 +14,7 @@ export type DashboardChartDatum = {
   href?: string;
 };
 
-const DEFAULT_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2", "#64748b"];
+const DEFAULT_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-1)", "var(--chart-2)"];
 
 export function DashboardDonutChartCard({
   title,
