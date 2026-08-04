@@ -47,12 +47,12 @@ export function DashboardDonutChartCard({
   );
 
   return (
-    <Card className="min-w-0">
+    <Card className="flex min-w-0 flex-col">
       <CardHeader className="p-3 pb-2">
         <CardTitle className="text-base">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="grid min-w-0 grid-cols-1 gap-3 p-3 pt-0 sm:grid-cols-[132px_minmax(0,1fr)]">
+      <CardContent className="grid min-w-0 flex-1 grid-cols-1 gap-3 p-3 pt-0 sm:grid-cols-[132px_minmax(0,1fr)]">
         {loading ? (
           <>
             <Skeleton className="size-28 rounded-full" />
@@ -60,7 +60,7 @@ export function DashboardDonutChartCard({
           </>
         ) : total ? (
           <>
-            <div className="relative mx-auto size-28 shrink-0">
+            <div className="relative mx-auto size-28 shrink-0 self-start">
               <ChartContainer
                 config={chartConfig}
                 className="size-28"
@@ -123,12 +123,12 @@ export function DashboardBarChartCard({
   const maxValue = Math.max(...normalized.map((item) => item.value), 0);
 
   return (
-    <Card className="min-w-0">
+    <Card className="flex min-w-0 flex-col">
       <CardHeader className="p-3 pb-2">
         <CardTitle className="text-base">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-2 p-3 pt-0">
+      <CardContent className="flex flex-1 flex-col gap-2.5 p-3 pt-0">
         {loading ? (
           <ChartLegendSkeleton />
         ) : normalized.length && maxValue ? (
@@ -138,7 +138,7 @@ export function DashboardBarChartCard({
             return (
               <div
                 key={item.label}
-                className="space-y-1"
+                className="flex flex-1 flex-col justify-center gap-1"
                 onClick={() => item.href && router.push(item.href)}
                 role={item.href ? "button" : undefined}
                 tabIndex={item.href ? 0 : undefined}
@@ -158,7 +158,7 @@ export function DashboardBarChartCard({
             );
           })
         ) : (
-          <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">{emptyLabel}</p>
+          <p className="flex flex-1 items-center justify-center rounded-md border border-dashed p-3 text-sm text-muted-foreground">{emptyLabel}</p>
         )}
       </CardContent>
     </Card>
@@ -168,14 +168,14 @@ export function DashboardBarChartCard({
 function ChartLegend({ data, total }: { data: DashboardChartDatum[]; total: number }) {
   const router = useRouter();
   return (
-    <div className="thin-scrollbar max-h-[120px] space-y-1.5 overflow-auto pr-1">
+    <div className="flex h-full flex-col justify-between gap-1.5">
       {data.map((item, index) => {
         const color = item.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
         const percent = total ? Math.round((item.value / total) * 100) : 0;
         return (
           <div
             key={item.label}
-            className="flex items-center justify-between gap-2 rounded-md border bg-background px-2 py-1 text-xs"
+            className="flex min-h-7 items-center justify-between gap-2 rounded-md border bg-background px-2 py-1 text-xs"
             onClick={() => item.href && router.push(item.href)}
             role={item.href ? "button" : undefined}
             tabIndex={item.href ? 0 : undefined}

@@ -937,18 +937,6 @@ function formatRegionScope(regions: RegionItem[]) {
     .concat(regions.length > 2 ? ` +${regions.length - 2}` : "");
 }
 
-function countBy<T>(items: T[], getKey: (item: T) => string): DashboardChartDatum[] {
-  const counts = new Map<string, number>();
-  items.forEach((item) => {
-    const key = getKey(item);
-    counts.set(key, (counts.get(key) || 0) + 1);
-  });
-
-  return [...counts.entries()]
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
-}
-
 function getOdpStatsFromSummary(s?: DashboardSummaryResponse["data"] | null) {
   if (!s?.odp) return { total: 0, validated: 0, unvalidated: 0 };
   return { total: s.odp.total, validated: s.odp.validated, unvalidated: s.odp.unvalidated };
@@ -964,8 +952,22 @@ function getPortStatsFromSummary(s?: DashboardSummaryResponse["data"] | null) {
   };
 }
 
-function toChartFromSummary(rows?: Array<{ label?: string; value?: number }> | null): DashboardChartDatum[] {
-  return (rows || []).filter((x) => x?.value && x?.value > 0).map((x) => ({ label: x.label || "Lainnya", value: Number(x.value) || 0 }));
+const CHART_MAX_ITEMS = 6;
+
+function toChartFromSummary(rows?: Array<{ label?: string; value?: number; href?: string }> | null): DashboardChartDatum[] {
+  const items = (rows || [])
+    .filter((x) => x?.value && x?.value > 0)
+    .map((x) => ({ label: x.label || "Lainnya", value: Number(x.value) || 0, href: x.href }));
+
+  if (items.length <= CHART_MAX_ITEMS) return items;
+
+  const top = items.slice(0, CHART_MAX_ITEMS - 1);
+  const rest = items.slice(CHART_MAX_ITEMS - 1);
+  const restValue = rest.reduce((sum, item) => sum + item.value, 0);
+  return [
+    ...top,
+    { label: "Lainnya", value: restValue, color: "var(--chart-3)", href: "/data-management/list/devices" },
+  ];
 }
 
 function odpValidationFromSummary(s?: DashboardSummaryResponse["data"] | null, data?: DashboardData): DashboardChartDatum[] {
