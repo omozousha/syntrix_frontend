@@ -20,34 +20,21 @@ export function AssetSummaryStrip({
   stats: AssetSummaryStat[];
 }) {
   return (
-    <section className="space-y-3 rounded-lg border bg-muted/20 p-3">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
-        <span className="text-xs text-muted-foreground">{stats.length} metrics</span>
+    <section className="space-y-3 rounded-2xl border border-border/60 bg-muted/20 p-3.5 shadow-xs dark:bg-muted/10">
+      <div className="flex items-center justify-between gap-3 px-0.5">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
+        <span className="font-mono text-xs text-muted-foreground/80">{stats.length} metrics</span>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
         {stats.map((stat) => (
-          <div key={stat.key} className="xl:hidden">
-            <OperationalKpiCard
-              label={stat.label}
-              value={stat.value}
-              caption={stat.caption}
-              icon={stat.icon}
-              tone={stat.tone}
-              compact
-            />
-          </div>
-        ))}
-        {stats.map((stat) => (
-          <div key={`${stat.key}-wide`} className="hidden xl:block">
-            <OperationalKpiCard
-              label={stat.label}
-              value={stat.value}
-              caption={stat.caption}
-              icon={stat.icon}
-              tone={stat.tone}
-            />
-          </div>
+          <OperationalKpiCard
+            key={stat.key}
+            label={stat.label}
+            value={stat.value}
+            caption={stat.caption}
+            icon={stat.icon}
+            tone={stat.tone}
+          />
         ))}
       </div>
     </section>
@@ -56,32 +43,23 @@ export function AssetSummaryStrip({
 
 export function AssetSummaryLoading() {
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7">
-        {Array.from({ length: 7 }).map((_, index) => (
-          <Card key={index}>
-            <CardHeader className="px-3 py-2">
-              <Skeleton className="h-4 w-20" />
-            </CardHeader>
-            <CardContent className="px-3 pb-3 pt-0">
-              <Skeleton className="h-8 w-16" />
-              <Skeleton className="mt-2 h-3 w-24" />
-            </CardContent>
-          </Card>
-        ))}
+    <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/20 p-3.5 dark:bg-muted/10">
+      <div className="flex items-center justify-between px-0.5">
+        <Skeleton className="h-3.5 w-36" />
+        <Skeleton className="h-3.5 w-14" />
       </div>
-      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={index}>
-            <CardHeader className="px-3 py-3">
-              <Skeleton className="h-4 w-28" />
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-1.5 px-3 pb-3 pt-0">
-              {Array.from({ length: 4 }).map((__, cardIndex) => (
-                <Skeleton key={cardIndex} className="h-8 w-full" />
-              ))}
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7">
+        {Array.from({ length: 7 }).map((_, index) => (
+          <div key={index} className="rounded-xl border border-border/60 bg-card p-3 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <Skeleton className="size-8 shrink-0 rounded-lg" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-6 w-12" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     </div>

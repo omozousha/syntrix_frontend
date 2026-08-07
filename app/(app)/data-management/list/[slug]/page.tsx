@@ -27,7 +27,6 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { AppLoading } from "@/components/app-loading-new";
 import { DataBulkActions } from "@/components/features/data-management/device-list/data-bulk-actions";
 import { DataEmptyState } from "@/components/features/data-management/device-list/data-empty-state";
 import { DataListFilterBar } from "@/components/features/data-management/device-list/data-list-filter-bar";
@@ -57,6 +56,7 @@ import { ContextMenuItem, ContextMenuLabel, ContextMenuSeparator } from "@/compo
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Sheet,
@@ -1553,9 +1553,14 @@ export default function DataManagementListPage() {
         ) : null}
 
         {!isOdpCategory || activeTab === "list" ? (
-        <Card className="rounded-2xl border-border/60 shadow-xs">
+        <Card className="rounded-2xl border-border/60 shadow-xs glass-inset">
           <CardHeader className="pb-3">
-            <CardTitle>Data {category.label}</CardTitle>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-mono text-[9px] uppercase tracking-[0.2em] rounded-full px-2.5 py-0.5 font-medium border border-border/60 bg-muted/60 text-muted-foreground">
+                Inventory data
+              </span>
+            </div>
+            <CardTitle className="text-xl font-bold tracking-tight">Data {category.label}</CardTitle>
             <CardDescription className="text-xs">
               Total data: <span className="font-mono font-medium tabular-nums text-foreground">{total.toLocaleString("id-ID")}</span>. Klik kanan pada baris untuk aksi cepat.
               {supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel ? ` Filter POP: ${selectedPopLabel}.` : ""}
@@ -1679,7 +1684,41 @@ export default function DataManagementListPage() {
             ) : null}
 
             {loading ? (
-              <AppLoading label="Sedang memuat data list..." />
+              <div aria-label="Memuat data list" className="space-y-3">
+                <div className="hidden md:block overflow-x-auto rounded-lg border border-border/60 bg-card shadow-2xs">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-4 border-b bg-muted/60 px-4 py-3">
+                      <Skeleton className="size-4 rounded-sm" />
+                      <Skeleton className="h-3.5 w-28 rounded" />
+                      <Skeleton className="h-3.5 w-32 rounded" />
+                      <Skeleton className="h-3.5 w-24 rounded" />
+                      <Skeleton className="h-3.5 w-20 rounded" />
+                      <Skeleton className="h-3.5 w-32 rounded" />
+                    </div>
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <div key={index} className="flex items-center gap-4 border-b px-4 py-3 last:border-b-0">
+                        <Skeleton className="size-4 rounded-sm" />
+                        <Skeleton className="h-3.5 w-28 rounded" />
+                        <Skeleton className="h-3.5 w-32 rounded" />
+                        <Skeleton className="h-3.5 w-24 rounded" />
+                        <Skeleton className="h-3.5 w-20 rounded" />
+                        <Skeleton className="h-3.5 w-32 rounded" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2 md:hidden">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="rounded-xl border border-border/60 bg-card p-3 shadow-2xs">
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-40 rounded" />
+                        <Skeleton className="h-3 w-24 rounded" />
+                        <Skeleton className="h-3 w-32 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : error ? (
               <DataEmptyState
                 title="Gagal memuat data"
@@ -1803,9 +1842,9 @@ export default function DataManagementListPage() {
               </>
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
-              <span className="text-xs text-muted-foreground tabular-nums">
-                Menampilkan {rows.length} dari {total.toLocaleString("id-ID")} data
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-4">
+              <span className="text-xs text-muted-foreground">
+                Menampilkan <span className="font-mono font-medium text-foreground">{rows.length}</span> dari <span className="font-mono font-medium text-foreground">{total.toLocaleString("id-ID")}</span> data
               </span>
               <div className="flex items-center gap-2">
                 <Button

@@ -641,16 +641,16 @@ export default function DataManagementPage() {
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 px-3 pb-3 md:px-4 md:pb-4">
-        <div className="rounded-lg border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 shadow-xs dark:bg-muted/10 md:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline">{subtitle}</Badge>
-                {!isSuperadmin ? <Badge variant="secondary">{regions.length} region scope</Badge> : null}
+                <Badge variant="outline" className="border-border/60 bg-background/50 text-[10px]">{subtitle}</Badge>
+                {!isSuperadmin ? <Badge variant="secondary" className="font-mono text-[10px]">{regions.length} region scope</Badge> : null}
               </div>
               <div className="space-y-1">
-                <h2 className="text-2xl font-semibold tracking-tight">Asset Overview</h2>
-                <p className="max-w-2xl text-sm text-muted-foreground">
+                <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">Asset Overview</h2>
+                <p className="max-w-2xl text-sm text-muted-foreground leading-normal">
                   Ringkasan aset pasif, kualitas data, dan relasi inventory berdasarkan scope akun.
                 </p>
               </div>

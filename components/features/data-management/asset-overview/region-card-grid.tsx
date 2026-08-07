@@ -55,16 +55,18 @@ export function RegionCardGrid({
     <section className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h3 className="text-sm font-semibold uppercase text-muted-foreground">Daftar Region</h3>
-          <p className="text-xs text-muted-foreground">{regions.length} dari {allRegionsCount} region ditampilkan</p>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Daftar Region</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Menampilkan <span className="font-mono font-semibold text-foreground">{regions.length}</span> dari {allRegionsCount} region
+          </p>
         </div>
         <div className="relative w-full sm:w-72">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/60" />
           <Input
             value={searchRegion}
             onChange={(event) => onSearchRegionChange(event.target.value)}
             placeholder="Cari region..."
-            className="pl-8"
+            className="h-9 pl-8"
           />
         </div>
       </div>
@@ -94,10 +96,14 @@ export function RegionCardGrid({
             })}
           </div>
 
-          <div className="flex items-center justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onPrevPage} disabled={safeRegionPage <= 1}>Sebelumnya</Button>
-            <span className="text-xs text-muted-foreground">Halaman {safeRegionPage} / {totalRegionPages}</span>
-            <Button type="button" variant="outline" size="sm" onClick={onNextPage} disabled={safeRegionPage >= totalRegionPages}>Berikutnya</Button>
+          <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-3">
+            <span className="text-xs text-muted-foreground">
+              Menampilkan halaman <span className="font-mono font-medium text-foreground">{safeRegionPage}</span> dari {totalRegionPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={onPrevPage} disabled={safeRegionPage <= 1}>Sebelumnya</Button>
+              <Button type="button" variant="outline" size="sm" onClick={onNextPage} disabled={safeRegionPage >= totalRegionPages}>Berikutnya</Button>
+            </div>
           </div>
         </>
       )}

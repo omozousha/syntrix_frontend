@@ -106,21 +106,21 @@ export function DataQualityPanel({
     + filteredIntegrityIssues.length;
 
   return (
-    <section className="space-y-3">
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <section className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4 shadow-xs lg:flex-row lg:items-center lg:justify-between dark:bg-muted/5">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="gap-1">
-              <ShieldCheck className="size-3" />
+            <Badge variant="outline" className="gap-1 border-border/60 bg-background/50">
+              <ShieldCheck className="size-3 text-emerald-600 dark:text-emerald-400" />
               Quality Center
             </Badge>
-            <Badge variant={criticalTotal ? "destructive" : visibleIssueTotal ? "secondary" : "outline"}>
+            <Badge variant={criticalTotal ? "destructive" : visibleIssueTotal ? "secondary" : "outline"} className="font-mono text-[10px]">
               {visibleIssueTotal ? `${visibleIssueTotal} issue aktif` : "Sehat"}
             </Badge>
           </div>
           <div>
-            <h3 className="text-base font-semibold">Data Quality & Topology Integrity</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="text-base font-semibold tracking-tight">Data Quality & Topology Integrity</h3>
+            <p className="text-xs text-muted-foreground">
               Pantau kelengkapan asset, ODP operations, port connection, fiber core, dan readiness topology.
             </p>
           </div>
@@ -128,17 +128,17 @@ export function DataQualityPanel({
         <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto] lg:w-[38rem]">
           <Combobox value={qualityRegionId} onValueChange={onRegionChange} options={regionOptions} />
           <Select value={severityFilter} onValueChange={(value) => setSeverityFilter(value as SeverityFilter)}>
-            <SelectTrigger size="sm" className="w-full">
+            <SelectTrigger size="sm" className="w-full h-9 rounded-xl border-border/60">
               <SelectValue placeholder="Severity" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-xl">
               <SelectItem value="all">Semua severity</SelectItem>
               <SelectItem value="critical">Critical</SelectItem>
               <SelectItem value="warning">Warning</SelectItem>
               <SelectItem value="info">Info</SelectItem>
             </SelectContent>
           </Select>
-          <Button type="button" variant="outline" size="sm" onClick={onRefresh} disabled={qualityLoading} className="justify-center">
+          <Button type="button" variant="outline" size="sm" onClick={onRefresh} disabled={qualityLoading} className="justify-center h-9 rounded-xl border-border/60">
             <RefreshCcw className={`mr-1 size-4 ${qualityLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
@@ -150,8 +150,8 @@ export function DataQualityPanel({
       ) : qualityLoading && kpis.length === 0 ? (
         <QualityLoading />
       ) : (
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <HealthCard
               label="Critical"
               value={criticalTotal}
@@ -178,20 +178,20 @@ export function DataQualityPanel({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {kpis.map((kpi) => (
-              <Card key={kpi.key}>
-                <CardHeader className="px-3 py-2">
-                  <CardTitle className="text-sm font-semibold">{kpi.label}</CardTitle>
+              <Card key={kpi.key} className="rounded-2xl border-border/60 shadow-xs">
+                <CardHeader className="px-4 py-3">
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{kpi.label}</CardTitle>
                 </CardHeader>
-                <CardContent className="px-3 pb-3 pt-0">
-                  <p className="text-2xl font-bold leading-none">{kpi.value}</p>
+                <CardContent className="px-4 pb-4 pt-0">
+                  <p className="text-2xl font-bold font-mono tabular-nums leading-tight">{kpi.value}</p>
                   <p className="mt-1 text-[11px] text-muted-foreground">{kpi.note}</p>
                 </CardContent>
               </Card>
             ))}
             {!kpis.length ? (
-              <Card className="sm:col-span-2 xl:col-span-3">
+              <Card className="rounded-2xl border-border/60 shadow-xs sm:col-span-2 xl:col-span-3">
                 <CardContent className="p-0">
                   <OperationalState title="Belum ada KPI" description="Data quality belum tersedia untuk filter region ini." />
                 </CardContent>
@@ -199,7 +199,7 @@ export function DataQualityPanel({
             ) : null}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {filteredGroups.map((group) => (
               <IssueGroupCard key={group.key} group={group} />
             ))}
@@ -224,22 +224,24 @@ function HealthCard({
   tone: "good" | "warning" | "critical";
 }) {
   const Icon = tone === "good" ? CheckCircle2 : tone === "critical" ? AlertTriangle : DatabaseZap;
+  
+  // High-agency calibrated subtle card tones (dark mode compliant)
   const toneClass = tone === "critical"
-    ? "border-red-200 bg-red-50 text-red-950"
+    ? "border-red-200 bg-red-50/50 text-red-900 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300"
     : tone === "warning"
-      ? "border-amber-200 bg-amber-50 text-amber-950"
-      : "border-emerald-200 bg-emerald-50 text-emerald-950";
+      ? "border-amber-200 bg-amber-50/50 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300"
+      : "border-emerald-200 bg-emerald-50/50 text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300";
 
   return (
-    <Card className={toneClass}>
-      <CardContent className="flex items-start gap-3 p-3">
-        <div className="rounded-md border border-current/15 bg-white/60 p-2">
-          <Icon className="size-4" />
+    <Card className={`rounded-2xl border-border/60 shadow-xs ${toneClass}`}>
+      <CardContent className="flex items-start gap-3.5 p-4">
+        <div className="rounded-xl border border-current/15 bg-background/80 p-2 shadow-2xs">
+          <Icon className="size-4 shrink-0" />
         </div>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide opacity-75">{label}</p>
-          <p className="text-2xl font-bold leading-tight">{value}</p>
-          <p className="text-xs opacity-75">{note}</p>
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">{label}</p>
+          <p className="text-2xl font-bold leading-tight font-mono tabular-nums">{value}</p>
+          <p className="text-[11px] leading-snug opacity-75">{note}</p>
         </div>
       </CardContent>
     </Card>
@@ -250,8 +252,8 @@ function IssueGroupCard({ group }: { group: DataQualityIssueGroup }) {
   const issueTotal = group.issues.reduce((sum, issue) => sum + issue.value, 0);
 
   return (
-    <Card>
-      <CardHeader className="space-y-1 px-3 py-3">
+    <Card className="rounded-2xl border-border/60 shadow-xs">
+      <CardHeader className="space-y-1.5 px-4 py-4 border-b border-border/50">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
@@ -260,29 +262,31 @@ function IssueGroupCard({ group }: { group: DataQualityIssueGroup }) {
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">{group.description}</p>
           </div>
-          <Badge variant={issueTotal ? "secondary" : "outline"}>{issueTotal}</Badge>
+          <Badge variant={issueTotal ? "secondary" : "outline"} className="font-mono text-xs">
+            {issueTotal}
+          </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 px-3 pb-3 pt-0">
+      <CardContent className="space-y-3 px-4 pb-4 pt-3">
         {group.issues.length ? (
           group.issues.map((issue) => (
             <div
               key={issue.key}
-              className="grid gap-2 rounded-md border p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+              className="grid gap-3 rounded-xl border border-border/60 bg-muted/5 p-3.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center dark:bg-muted/2"
             >
-              <div className="min-w-0">
+              <div className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={issue.severity === "high" ? "destructive" : issue.severity === "medium" ? "secondary" : "outline"}>
+                  <Badge variant={issue.severity === "high" ? "destructive" : issue.severity === "medium" ? "secondary" : "outline"} className="font-mono text-[9px] uppercase tracking-wider h-5 px-1.5">
                     {issue.severity}
                   </Badge>
-                  <p className="text-sm font-medium">{issue.label}</p>
+                  <p className="text-sm font-medium tracking-tight text-foreground">{issue.label}</p>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{issue.note}</p>
+                <p className="text-xs text-muted-foreground leading-normal">{issue.note}</p>
               </div>
-              <Button asChild variant="outline" size="sm" className="w-full justify-between sm:w-32">
+              <Button asChild variant="outline" size="sm" className="w-full justify-between sm:w-32 rounded-xl border-border/60">
                 <Link href={issue.href}>
-                  <span>{issue.value}</span>
-                  <span>Open</span>
+                  <span className="font-mono font-semibold">{issue.value}</span>
+                  <span className="text-xs">Open</span>
                 </Link>
               </Button>
             </div>
@@ -305,42 +309,46 @@ function IntegrityFindingsCard({
   filteredIssueTotal: number;
 }) {
   return (
-    <Card>
-      <CardHeader className="space-y-1 px-3 py-3">
+    <Card className="rounded-2xl border-border/60 shadow-xs">
+      <CardHeader className="space-y-1.5 px-4 py-4 border-b border-border/50">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <CardTitle className="text-sm font-semibold">Integrity Findings</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
-              Detail issue dari backend topology integrity. Filter aktif menampilkan {filteredIssueTotal} item/indikator.
+              Detail issue dari backend topology integrity. Filter aktif menampilkan <span className="font-mono font-medium text-foreground">{filteredIssueTotal}</span> item/indikator.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">{severityFilter === "all" ? "Semua severity" : severityFilter}</Badge>
-            <Badge variant={issues.length ? "secondary" : "outline"}>{issues.length}</Badge>
+            <Badge variant="outline" className="border-border/60 bg-background/50 text-[10px]">
+              {severityFilter === "all" ? "Semua severity" : severityFilter}
+            </Badge>
+            <Badge variant={issues.length ? "secondary" : "outline"} className="font-mono text-[10px]">
+              {issues.length}
+            </Badge>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 px-3 pb-3 pt-0">
+      <CardContent className="space-y-3 px-4 pb-4 pt-3">
         {issues.length ? (
           issues.map((issue) => (
-            <div key={issue.key} className="rounded-md border p-3">
+            <div key={issue.key} className="rounded-xl border border-border/60 bg-muted/5 p-3.5 dark:bg-muted/2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 space-y-1">
+                <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant={issue.severity === "critical" ? "destructive" : issue.severity === "warning" ? "secondary" : "outline"}>
+                    <Badge variant={issue.severity === "critical" ? "destructive" : issue.severity === "warning" ? "secondary" : "outline"} className="font-mono text-[9px] uppercase tracking-wider h-5 px-1.5">
                       {issue.severity}
                     </Badge>
-                    <Badge variant="outline">{issue.type}</Badge>
+                    <Badge variant="outline" className="font-mono border-border/60 text-[9px] h-5 px-1.5 bg-background">{issue.type}</Badge>
                   </div>
-                  <p className="text-sm font-semibold">{issue.title}</p>
-                  <p className="text-xs text-muted-foreground">{issue.message}</p>
+                  <p className="text-sm font-semibold tracking-tight leading-tight">{issue.title}</p>
+                  <p className="text-xs text-muted-foreground leading-normal">{issue.message}</p>
                 </div>
-                <div className="grid min-w-0 gap-1 text-left text-xs sm:w-56 sm:text-right">
-                  <span className="font-medium">{issue.entityType}</span>
-                  <span className="truncate text-muted-foreground">{issue.entityId}</span>
+                <div className="grid min-w-0 gap-0.5 text-left text-[11px] sm:w-56 sm:text-right">
+                  <span className="font-semibold text-foreground">{issue.entityType}</span>
+                  <span className="truncate text-muted-foreground font-mono">{issue.entityId}</span>
                 </div>
               </div>
-              <div className="mt-2 rounded-md bg-muted/60 px-2 py-1.5 text-xs text-muted-foreground">
+              <div className="mt-2.5 rounded-lg bg-muted/40 px-2.5 py-2 text-xs text-muted-foreground leading-normal border border-border/40">
                 {issue.actionHint}
               </div>
             </div>
@@ -365,15 +373,15 @@ function matchesSeverityFilter(severity: SeverityFilter, filter: SeverityFilter)
 
 function QualityLoading() {
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, index) => (
-        <Card key={index}>
-          <CardHeader className="px-3 py-2">
-            <Skeleton className="h-4 w-32" />
+        <Card key={index} className="rounded-2xl border-border/60 shadow-xs">
+          <CardHeader className="px-4 py-3">
+            <Skeleton className="h-3 w-32 rounded" />
           </CardHeader>
-          <CardContent className="px-3 pb-3 pt-0">
-            <Skeleton className="h-8 w-14" />
-            <Skeleton className="mt-2 h-3 w-48" />
+          <CardContent className="px-4 pb-4 pt-0 space-y-2">
+            <Skeleton className="h-7 w-14 rounded" />
+            <Skeleton className="h-3 w-48 rounded" />
           </CardContent>
         </Card>
       ))}
