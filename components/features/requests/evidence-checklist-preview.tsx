@@ -22,16 +22,16 @@ export function EvidenceChecklistPreview({
   if (!initialPhotos.length && !conditionChecks.length) return null;
 
   return (
-    <div className="rounded-md border p-2.5">
-      <p className="mb-1.5 text-sm font-medium">Pemeriksaan Awal & Checklist Kondisi</p>
+    <div className="rounded-xl border border-border/60 bg-card p-2.5 shadow-2xs">
+      <p className="mb-2 text-sm font-semibold tracking-tight">Pemeriksaan Awal & Checklist Kondisi</p>
       {initialPhotos.length ? (
-        <div className="mb-3">
-          <p className="mb-1 text-xs font-medium text-muted-foreground">Pemeriksaan Awal</p>
+        <div className="mb-4">
+          <p className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Pemeriksaan Awal</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {initialPhotos.map((item, index) => (
-              <div key={`${valueText(item.label)}-${index}`} className="rounded-md border bg-muted/20 p-2">
-                <p className="text-xs font-medium">{valueText(item.label)}</p>
-                <p className="text-xs text-muted-foreground">Foto: {getInspectionAttachmentName(item.attachment)}</p>
+              <div key={`${valueText(item.label)}-${index}`} className="rounded-lg border border-border/50 bg-muted/20 p-2.5">
+                <p className="text-xs font-semibold leading-normal text-foreground">{valueText(item.label)}</p>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">Foto: <span className="font-mono text-[10px]">{getInspectionAttachmentName(item.attachment)}</span></p>
                 <InspectionEvidenceActions
                   attachment={item.attachment}
                   label={`${valueText(item.label)} ${index + 1}`}
@@ -45,18 +45,18 @@ export function EvidenceChecklistPreview({
       ) : null}
       {conditionChecks.length ? (
         <div>
-          <p className="mb-1 text-xs font-medium text-muted-foreground">Checklist Kondisi</p>
+          <p className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Checklist Kondisi</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {conditionChecks.map((item, index) => (
-              <div key={`${valueText(item.label)}-${index}`} className="rounded-md border bg-muted/20 p-2">
+              <div key={`${valueText(item.label)}-${index}`} className="rounded-lg border border-border/50 bg-muted/20 p-2.5">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-medium">{valueText(item.label)}</p>
-                  <Badge variant="outline" className="shrink-0 text-[10px]">
+                  <p className="text-xs font-semibold leading-normal text-foreground">{valueText(item.label)}</p>
+                  <Badge variant="outline" className="shrink-0 font-mono text-[9px] uppercase tracking-normal">
                     {valueText(item.condition)}
                   </Badge>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Keterangan: {valueText(item.note)}</p>
-                <p className="text-xs text-muted-foreground">Foto: {getInspectionAttachmentName(item.attachment)}</p>
+                <p className="mt-1 text-[11px] leading-normal text-muted-foreground">Keterangan: {valueText(item.note)}</p>
+                <p className="text-[11px] leading-normal text-muted-foreground">Foto: <span className="font-mono text-[10px]">{getInspectionAttachmentName(item.attachment)}</span></p>
                 <InspectionEvidenceActions
                   attachment={item.attachment}
                   label={`${valueText(item.label)} ${index + 1}`}

@@ -30,12 +30,14 @@ export function RequestList({
   onStatusFilterChange: (value: string) => void;
 }) {
   return (
-    <Card className="min-w-0 overflow-hidden 2xl:sticky 2xl:top-3 2xl:self-start">
-      <CardHeader className="border-b bg-muted/20 px-2.5 py-2">
+    <Card className="min-w-0 overflow-hidden rounded-2xl border-border/60 shadow-xs glass-inset 2xl:sticky 2xl:top-3 2xl:self-start">
+      <CardHeader className="border-b border-border/60 bg-muted/20 px-3 py-2.5">
         <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
-            <CardTitle className="text-sm">Daftar Request</CardTitle>
-            <CardDescription className="text-xs">{filteredCount} dari {totalCount} request ditampilkan.</CardDescription>
+            <CardTitle className="text-sm font-semibold tracking-tight">Daftar Request</CardTitle>
+            <CardDescription className="text-xs">
+              <span className="font-mono font-medium tabular-nums text-foreground">{filteredCount}</span> dari <span className="font-mono font-medium tabular-nums text-foreground">{totalCount}</span> request ditampilkan.
+            </CardDescription>
           </div>
           <Filter className="mt-0.5 size-3.5 text-muted-foreground" />
         </div>
@@ -81,8 +83,8 @@ export function RequestList({
             </SelectContent>
           </Select>
         </div>
-        <div className="min-h-0 overflow-hidden rounded-md border bg-background">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-b bg-muted/30 px-2 py-1.5 text-[10px] font-medium uppercase text-muted-foreground">
+        <div className="min-h-0 overflow-hidden rounded-lg border border-border/60 bg-background shadow-2xs">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-border/60 bg-muted/30 px-3 py-1.5 font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
             <span>Request</span>
             <span>Type</span>
           </div>

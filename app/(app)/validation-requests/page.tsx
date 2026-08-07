@@ -582,13 +582,13 @@ export default function ValidationRequestsPage() {
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-2 px-3 pb-3 md:px-4 md:pb-4">
-        <div className="rounded-md border bg-background/70 px-2 py-1.5">
+        <div className="rounded-xl border border-border/60 bg-background/70 px-3 py-2 shadow-2xs">
           <div className="flex items-center justify-between gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <Badge variant="secondary" className="h-6 max-w-[46vw] truncate px-2 text-[10px]">
+              <Badge variant="secondary" className="h-6 max-w-[46vw] truncate px-2 font-mono text-[9px] uppercase tracking-[0.15em]">
                 Approval Center
               </Badge>
-              <Badge variant="outline" className="h-6 max-w-[34vw] truncate px-2 text-[10px] uppercase tracking-normal">
+              <Badge variant="outline" className="h-6 max-w-[34vw] truncate px-2 font-mono text-[9px] uppercase tracking-[0.12em]">
                 {activeQueue === "adminregion" ? "Admin Region" : "Superadmin"}
               </Badge>
               <span className="hidden min-w-0 text-[11px] text-muted-foreground md:inline">
@@ -666,12 +666,12 @@ export default function ValidationRequestsPage() {
                 )}
             </RequestList>
 
-            <Card className="hidden min-w-0 overflow-hidden 2xl:block">
-              <CardHeader className="border-b bg-muted/20 px-3 py-3">
+            <Card className="hidden min-w-0 overflow-hidden rounded-2xl border-border/60 shadow-xs glass-inset 2xl:block">
+              <CardHeader className="border-b border-border/60 bg-muted/20 px-3 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <CardTitle className="text-base">{getOdpName(selected) || "Pilih Request"}</CardTitle>
-                    <CardDescription>{selectedType.description}</CardDescription>
+                    <CardTitle className="text-base font-semibold tracking-tight">{getOdpName(selected) || "Pilih Request"}</CardTitle>
+                    <CardDescription className="text-xs">{selectedType.description}</CardDescription>
                   </div>
                   {selected ? (
                     <RequestStatusBadge status={selected.current_status} />
@@ -874,7 +874,7 @@ function getReviewContext(
       rejectDialogDescription: isValidation
         ? "Catatan reject akan menjadi arahan revisi untuk validator. Minimal 10 karakter."
         : "Catatan reject wajib minimal 10 karakter.",
-      toneClassName: "border-amber-200 bg-amber-50/60 text-amber-950",
+      toneClassName: "border-amber-200/80 bg-amber-50/60 text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/15 dark:text-amber-200",
     };
   }
 
@@ -901,7 +901,7 @@ function getReviewContext(
     rejectLabel: "Reject ke Admin Region",
     rejectDialogTitle: "Reject ke Admin Region",
     rejectDialogDescription: "Catatan reject wajib minimal 10 karakter dan akan menjadi tindak lanjut admin region.",
-    toneClassName: "border-sky-200 bg-sky-50/60 text-sky-950",
+    toneClassName: "border-sky-200/80 bg-sky-50/60 text-sky-950 dark:border-sky-900/50 dark:bg-sky-950/15 dark:text-sky-200",
   };
 }
 
@@ -1011,8 +1011,8 @@ async function resolveAttachmentCandidates(candidates: string[], token: string):
 
 function Info({ title, value }: { title: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-md border bg-background px-2.5 py-2 shadow-sm">
-      <p className="text-[10px] uppercase leading-4 text-muted-foreground">{title}</p>
+    <div className="min-w-0 rounded-lg border border-border/50 bg-background px-2.5 py-2 shadow-2xs">
+      <p className="font-mono text-[9px] uppercase leading-4 tracking-[0.12em] text-muted-foreground">{title}</p>
       <p className="min-w-0 break-words text-sm font-medium leading-5">{value}</p>
     </div>
   );
@@ -1020,8 +1020,8 @@ function Info({ title, value }: { title: string; value: string }) {
 
 function InfoSlot({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="min-w-0 rounded-md border bg-background px-2.5 py-2 shadow-sm">
-      <p className="text-[10px] uppercase leading-4 text-muted-foreground">{title}</p>
+    <div className="min-w-0 rounded-lg border border-border/50 bg-background px-2.5 py-2 shadow-2xs">
+      <p className="font-mono text-[9px] uppercase leading-4 tracking-[0.12em] text-muted-foreground">{title}</p>
       <div className="mt-0.5 flex min-h-5 min-w-0 items-center">{children}</div>
     </div>
   );
@@ -1725,19 +1725,19 @@ function EvidenceThumbStrip({
             event.stopPropagation();
             void onPreview(ref.candidates, `${label} ${index + 1}`);
           }}
-          className="size-9 overflow-hidden rounded-md border bg-muted/30"
+          className="size-9 overflow-hidden rounded-lg border border-border/60 bg-muted/30 shadow-2xs transition hover:scale-105 active:scale-95"
           title={`${label} ${index + 1}`}
         >
           {thumbUrls[ref.key] ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={thumbUrls[ref.key]} alt={`${label} ${index + 1}`} className="size-full object-cover" />
           ) : (
-            <span className="flex size-full items-center justify-center text-[9px] text-muted-foreground">IMG</span>
+            <span className="flex size-full items-center justify-center font-mono text-[9px] text-muted-foreground">IMG</span>
           )}
         </button>
       ))}
       {refs.length > availableRefs.length ? (
-        <Badge variant="outline" className="h-6 px-1.5 text-[10px]">
+        <Badge variant="outline" className="h-6 px-1.5 font-mono text-[9px] uppercase tracking-normal">
           +{refs.length - availableRefs.length}
         </Badge>
       ) : null}
@@ -1761,7 +1761,7 @@ function EvidenceReviewCard({
   onDownload: (candidates: string[]) => Promise<void>;
 }) {
   return (
-    <div className="rounded-md border p-2.5">
+    <div className="rounded-xl border border-border/60 p-2.5 shadow-2xs">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <ReviewSectionHeader
           eyebrow="Evidence"
@@ -1772,34 +1772,34 @@ function EvidenceReviewCard({
               : "Preview attachment request untuk membantu review perubahan asset."
           }
         />
-        {isFieldValidation ? <Badge variant="outline" className="text-[10px]">Request aktif</Badge> : null}
+        {isFieldValidation ? <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-normal">Request aktif</Badge> : null}
       </div>
       {refs.length ? (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {refs.map((ref, index) => (
-            <div key={ref.key} className="overflow-hidden rounded-md border bg-muted/30">
+            <div key={ref.key} className="overflow-hidden rounded-lg border border-border/60 bg-muted/30 shadow-2xs">
               <button
                 type="button"
                 onClick={() => void onPreview(ref.candidates, `${title} ${index + 1}`)}
                 disabled={!ref.available}
-                className="block aspect-[4/3] w-full overflow-hidden border-b disabled:cursor-not-allowed disabled:opacity-60"
+                className="block aspect-[4/3] w-full overflow-hidden border-b border-border/60 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {thumbUrls[ref.key] ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={thumbUrls[ref.key]} alt={`${title} ${index + 1}`} className="size-full object-cover" />
                 ) : (
-                  <span className="flex size-full items-center justify-center text-[10px] text-muted-foreground">No preview</span>
+                  <span className="flex size-full items-center justify-center font-mono text-[9px] text-muted-foreground">No preview</span>
                 )}
               </button>
               <div className="flex items-center justify-between gap-2 p-1.5">
-                <span className="truncate text-[11px] text-muted-foreground">{title} {index + 1}</span>
+                <span className="truncate font-mono text-[10px] text-muted-foreground">{title} {index + 1}</span>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => void onDownload(ref.candidates)}
                   disabled={!ref.available}
-                  className="h-6 px-2 text-[10px]"
+                  className="h-6 px-2 font-mono text-[9px] uppercase tracking-normal"
                 >
                   Download
                 </Button>
@@ -1816,18 +1816,18 @@ function EvidenceReviewCard({
 
 function RequestStageBanner({ context }: { context: ReviewContext }) {
   return (
-    <div className={`rounded-md border px-2.5 py-2 ${context.toneClassName}`}>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="space-y-0.5">
-          <Badge variant="outline" className="w-fit border-current bg-background/70 text-[10px] uppercase tracking-normal">
+    <div className={`rounded-xl border px-3 py-2.5 shadow-2xs ${context.toneClassName}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2.5">
+        <div className="space-y-1">
+          <Badge variant="outline" className="w-fit border-current bg-background/70 font-mono text-[9px] uppercase tracking-[0.12em]">
             {context.stageLabel}
           </Badge>
           <div>
-            <p className="text-sm font-medium leading-5">{context.stageTitle}</p>
-            <p className="text-xs leading-4 opacity-90">{context.stageDescription}</p>
+            <p className="text-sm font-semibold leading-normal tracking-tight">{context.stageTitle}</p>
+            <p className="text-xs leading-relaxed opacity-90">{context.stageDescription}</p>
           </div>
         </div>
-        <p className="rounded-md border border-current/20 bg-background/60 px-2 py-1 text-[11px] font-medium">
+        <p className="rounded border border-current/25 bg-background/60 px-2 py-1 font-mono text-[10px] uppercase tracking-normal">
           {context.ownerLabel}
         </p>
       </div>
@@ -1845,13 +1845,13 @@ function ReviewSectionHeader({
   description: string;
 }) {
   return (
-    <div className="space-y-0.5">
-      <Badge variant="outline" className="w-fit text-[10px] uppercase tracking-normal">
+    <div className="space-y-1">
+      <Badge variant="outline" className="w-fit font-mono text-[9px] uppercase tracking-[0.12em]">
         {eyebrow}
       </Badge>
       <div>
-        <p className="text-sm font-medium">{title}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="text-sm font-semibold tracking-tight text-foreground">{title}</p>
+        <p className="text-xs text-muted-foreground leading-normal">{description}</p>
       </div>
     </div>
   );
