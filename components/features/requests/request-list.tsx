@@ -13,6 +13,9 @@ export function RequestList({
   typeFilter,
   statusFilter,
   summarySlot,
+  checkedAll,
+  onCheckedAllChange,
+  bulkActionsSlot,
   children,
   onSearchChange,
   onTypeFilterChange,
@@ -24,6 +27,9 @@ export function RequestList({
   typeFilter: string;
   statusFilter: string;
   summarySlot: ReactNode;
+  checkedAll?: boolean;
+  onCheckedAllChange?: (checked: boolean) => void;
+  bulkActionsSlot?: ReactNode;
   children: ReactNode;
   onSearchChange: (value: string) => void;
   onTypeFilterChange: (value: string) => void;
@@ -44,6 +50,7 @@ export function RequestList({
       </CardHeader>
       <CardContent className="flex min-w-0 flex-col gap-2 px-2.5 py-2.5">
         {summarySlot}
+        {bulkActionsSlot}
         <div className="relative min-w-0">
           <Search className="pointer-events-none absolute left-2.5 top-2 size-3.5 text-muted-foreground" />
           <Input
@@ -84,9 +91,18 @@ export function RequestList({
           </Select>
         </div>
         <div className="min-h-0 overflow-hidden rounded-lg border border-border/60 bg-background shadow-2xs">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-border/60 bg-muted/30 px-3 py-1.5 font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
+          <div className="flex items-center gap-2 border-b border-border/60 bg-muted/30 px-3 py-1.5 font-mono text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
+            {onCheckedAllChange && (
+              <input
+                type="checkbox"
+                checked={checkedAll}
+                onChange={(e) => onCheckedAllChange(e.target.checked)}
+                className="size-4 shrink-0 cursor-pointer rounded border-input bg-background text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
+                aria-label="Pilih semua request"
+              />
+            )}
             <span>Request</span>
-            <span>Type</span>
+            <span className="ml-auto">Type</span>
           </div>
           <div className="max-h-[44vh] min-h-0 overflow-y-auto [scrollbar-gutter:stable] sm:max-h-[48vh] 2xl:max-h-[calc(100vh-320px)]">
           {children}

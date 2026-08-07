@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Clock, Inbox, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Clock, Inbox, RefreshCw, ShieldCheck, X } from "lucide-react";
 import { ApprovalActions } from "@/components/features/requests/approval-actions";
 import { EvidenceChecklistPreview } from "@/components/features/requests/evidence-checklist-preview";
 import { RequestActorLine } from "@/components/features/requests/request-actor-line";
@@ -169,6 +169,10 @@ export default function ValidationRequestsPage() {
   const [evidenceThumbUrls, setEvidenceThumbUrls] = useState<Record<string, string>>({});
   const [lookupLabels, setLookupLabels] = useState<LookupLabels>({ regions: {}, pops: {}, projects: {}, users: {} });
   const [selectedDeviceSnapshot, setSelectedDeviceSnapshot] = useState<Record<string, unknown> | null>(null);
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkConfirmAction, setBulkConfirmAction] = useState<"approve" | "reject" | null>(null);
 
   const filteredItems = useMemo(
     () => {
@@ -438,6 +442,79 @@ export default function ValidationRequestsPage() {
     }
   }
 
+  function toggleBulkSelect(id: string, checked: boolean) {
+    setBulkSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleBulkSelectAll(checked: boolean) {
+    setBulkSelectedIds(checked ? new Set(filteredItems.map((item) => item.id)) : new Set());
+  }
+
+  const bulkSelectableIds = useMemo(
+    () => new Set(filteredItems.map((item) => item.id)),
+    [filteredItems],
+  );
+  const bulkSelectedCount = useMemo(
+    () => Array.from(bulkSelectedIds).filter((id) => bulkSelectableIds.has(id)).length,
+    [bulkSelectedIds, bulkSelectableIds],
+  );
+  const bulkAllChecked = bulkSelectedCount > 0 && bulkSelectedCount === filteredItems.length;
+
+  async function runBulkAction() {
+    if (!bulkConfirmAction || bulkSelectedCount === 0) return;
+    const ids = Array.from(bulkSelectedIds).filter((id) => bulkSelectableIds.has(id));
+    setBulkActionLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) =>
+          apiFetch(
+            `/validation-requests/${id}/superadmin/${bulkConfirmAction}`,
+            { method: "POST", token },
+          ),
+        ),
+      );
+      const failed = results.filter((result) => result.status === "rejected");
+      const succeededCount = results.length - failed.length;
+      setBulkConfirmOpen(false);
+      setBulkConfirmAction(null);
+      setBulkSelectedIds(new Set());
+      const message =
+        failed.length === 0
+          ? `${succeededCount} request berhasil di-${bulkConfirmAction === "approve" ? "approve" : "reject"}.`
+          : `${succeededCount} berhasil, ${failed.length} gagal di-${bulkConfirmAction === "approve" ? "approve" : "reject"}.`;
+      setSuccess(message);
+      setResultDialogTitle(bulkConfirmAction === "approve" ? "Bulk Approve Selesai" : "Bulk Reject Selesai");
+      setResultDialogDescription(message);
+      setResultDialogOpen(true);
+      await loadQueue();
+    } catch (err) {
+      const message = (err as Error).message || "Bulk action gagal.";
+      setError(message);
+      setResultDialogTitle("Bulk Action Gagal");
+      setResultDialogDescription(message);
+      setResultDialogOpen(true);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  }
+
+  function requestBulkConfirm(action: "approve" | "reject") {
+    if (bulkSelectedCount === 0) return;
+    setBulkConfirmAction(action);
+    setBulkConfirmOpen(true);
+  }
+
+  function clearBulkSelection() {
+    setBulkSelectedIds(new Set());
+  }
+
   async function openEvidence(candidates: string[]) {
     const resolved = await resolveAttachmentCandidates(candidates, token);
     for (const candidate of resolved) {
@@ -621,6 +698,30 @@ export default function ValidationRequestsPage() {
               typeFilter={typeFilter}
               statusFilter={statusFilter}
               summarySlot={<QueueSummaryChips summary={queueSummary} />}
+              checkedAll={bulkAllChecked}
+              onCheckedAllChange={(checked) => toggleBulkSelectAll(checked)}
+              bulkActionsSlot={
+                bulkSelectedCount > 0 ? (
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-primary">
+                      {bulkSelectedCount} dipilih
+                    </span>
+                    <div className="ml-auto flex flex-wrap gap-1.5">
+                      <Button type="button" size="sm" variant="default" className="h-7 px-2 text-xs" disabled={bulkActionLoading} onClick={() => requestBulkConfirm("approve")}>
+                        <Check className="mr-1 size-3.5" />
+                        Bulk Approve
+                      </Button>
+                      <Button type="button" size="sm" variant="destructive" className="h-7 px-2 text-xs" disabled={bulkActionLoading} onClick={() => requestBulkConfirm("reject")}>
+                        <X className="mr-1 size-3.5" />
+                        Bulk Reject
+                      </Button>
+                      <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={clearBulkSelection}>
+                        Batal
+                      </Button>
+                    </div>
+                  </div>
+                ) : null
+              }
               onSearchChange={setSearchTerm}
               onTypeFilterChange={(value) => setTypeFilter(value as RequestTypeFilter)}
               onStatusFilterChange={(value) => setStatusFilter(value as RequestStatusFilter)}
@@ -632,6 +733,8 @@ export default function ValidationRequestsPage() {
                       <RequestCard
                         key={item.id}
                         selected={selected?.id === item.id}
+                        checked={bulkSelectedIds.has(item.id)}
+                        onCheckedChange={(checked) => toggleBulkSelect(item.id, checked)}
                         title={getOdpName(item)}
                         typeKind={requestType.kind}
                         typeLabel={requestType.label}
@@ -742,6 +845,37 @@ export default function ValidationRequestsPage() {
               </Button>
               <Button type="button" variant="destructive" onClick={() => void rejectSelected()} disabled={acting}>
                 {acting ? "Memproses..." : "Submit Reject"}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog
+          open={bulkConfirmOpen}
+          onOpenChange={(open) => {
+            if (bulkActionLoading) return;
+            setBulkConfirmOpen(open);
+            if (!open) {
+              setBulkConfirmAction(null);
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {bulkConfirmAction === "approve" ? "Bulk Approve Request?" : "Bulk Reject Request?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin {bulkConfirmAction === "approve" ? "menyetujui" : "menolak"} sebanyak{" "}
+                <span className="font-semibold text-foreground">{bulkSelectedCount}</span> request terpilih secara massal?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <Button type="button" variant="outline" onClick={() => setBulkConfirmOpen(false)} disabled={bulkActionLoading}>
+                Batal
+              </Button>
+              <Button type="button" variant={bulkConfirmAction === "approve" ? "default" : "destructive"} onClick={() => void runBulkAction()} disabled={bulkActionLoading}>
+                {bulkActionLoading ? "Memproses..." : "Lanjutkan"}
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
