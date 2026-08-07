@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Check, Clock, Inbox, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Clock, Inbox, Pencil, RefreshCw, ShieldCheck, X } from "lucide-react";
 import { ApprovalActions } from "@/components/features/requests/approval-actions";
 import { EvidenceChecklistPreview } from "@/components/features/requests/evidence-checklist-preview";
 import { RequestActorLine } from "@/components/features/requests/request-actor-line";
@@ -17,6 +17,9 @@ import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -175,6 +178,12 @@ export default function ValidationRequestsPage() {
   const [bulkConfirmAction, setBulkConfirmAction] = useState<"approve" | "reject" | null>(null);
   const [bulkRejectNote, setBulkRejectNote] = useState("");
   const [bulkRejectError, setBulkRejectError] = useState("");
+  const [editPayloadOpen, setEditPayloadOpen] = useState(false);
+  const [editPayloadForm, setEditPayloadForm] = useState<Record<string, string>>({});
+  const [editPayloadError, setEditPayloadError] = useState("");
+  const [editPayloadSaving, setEditPayloadSaving] = useState(false);
+  const [payloadPopOptions, setPayloadPopOptions] = useState<Array<{ id: string; label: string }>>([]);
+  const [payloadProjectOptions, setPayloadProjectOptions] = useState<Array<{ id: string; label: string }>>([]);
 
   const filteredItems = useMemo(
     () => {
@@ -533,6 +542,107 @@ export default function ValidationRequestsPage() {
     setBulkRejectError("");
   }
 
+  function openEditPayload() {
+    if (!selected) return;
+    const payload = getCreateAssetPayload(selected);
+    setEditPayloadError("");
+    setEditPayloadForm({
+      device_name: String(payload.device_name || payload.name || "").trim(),
+      pop_id: String(payload.pop_id || "").trim(),
+      project_id: String(payload.project_id || "").trim(),
+      splitter_ratio: String(payload.splitter_ratio || "").trim(),
+      total_ports: String(payload.total_ports || payload.capacity_core || "").trim(),
+      address: String(payload.address || "").trim(),
+      longitude: String(payload.longitude || "").trim(),
+      latitude: String(payload.latitude || "").trim(),
+      status: String(payload.status || "installed").trim(),
+    });
+    setEditPayloadOpen(true);
+    void loadPayloadOptions(selected.region_id);
+  }
+
+  async function loadPayloadOptions(regionId?: string | null) {
+    try {
+      const popQuery = regionId ? `/pops?page=1&limit=200&region_id=${encodeURIComponent(regionId)}` : "/pops?page=1&limit=200";
+      const projectQuery = regionId ? `/projects?page=1&limit=200&region_id=${encodeURIComponent(regionId)}` : "/projects?page=1&limit=200";
+      const [popsRes, projectsRes] = await Promise.all([
+        apiFetch<{ data?: Array<{ id: string; pop_name?: string; pop_code?: string }> }>(popQuery, { token }).catch(() => ({ data: [] })),
+        apiFetch<{ data?: Array<{ id: string; project_name?: string; project_code?: string }> }>(projectQuery, { token }).catch(() => ({ data: [] })),
+      ]);
+      setPayloadPopOptions(
+        (popsRes.data || []).map((row) => ({
+          id: String(row.id),
+          label: [row.pop_name, row.pop_code].filter(Boolean).join(" | ") || row.id,
+        })),
+      );
+      setPayloadProjectOptions(
+        (projectsRes.data || []).map((row) => ({
+          id: String(row.id),
+          label: [row.project_name, row.project_code].filter(Boolean).join(" | ") || row.id,
+        })),
+      );
+    } catch {
+      // ignore
+    }
+  }
+
+  async function saveAndResubmitPayload() {
+    if (!selected) return;
+    const name = editPayloadForm.device_name?.trim();
+    if (!name) {
+      setEditPayloadError("Nama device tidak boleh kosong.");
+      return;
+    }
+    setEditPayloadSaving(true);
+    setEditPayloadError("");
+    setError("");
+    setSuccess("");
+    try {
+      const originalPayload = selected.payload_snapshot || {};
+      const targetDevice = originalPayload.device || originalPayload.resource_payload || {};
+      const nextDevice = {
+        ...targetDevice,
+        device_name: name,
+        pop_id: editPayloadForm.pop_id && editPayloadForm.pop_id !== "__none__" ? editPayloadForm.pop_id : null,
+        project_id: editPayloadForm.project_id && editPayloadForm.project_id !== "__none__" ? editPayloadForm.project_id : null,
+        splitter_ratio: editPayloadForm.splitter_ratio || null,
+        total_ports: editPayloadForm.total_ports ? Number(editPayloadForm.total_ports) : null,
+        address: editPayloadForm.address || null,
+        longitude: editPayloadForm.longitude || null,
+        latitude: editPayloadForm.latitude || null,
+        status: editPayloadForm.status || "installed",
+      };
+      const nextSnapshot = {
+        ...originalPayload,
+        device: originalPayload.device ? nextDevice : undefined,
+        resource_payload: originalPayload.resource_payload ? nextDevice : undefined,
+      };
+
+      // 1. Update payload snapshot
+      await apiFetch(`/validation-requests/${selected.id}/payload`, {
+        method: "PATCH",
+        token,
+        body: JSON.stringify({ payload_snapshot: nextSnapshot }),
+      });
+
+      // 2. Resubmit request ke superadmin
+      await apiFetch(`/validation-requests/${selected.id}/adminregion/resubmit`, { method: "POST", token });
+
+      setEditPayloadOpen(false);
+      setDetailDrawerOpen(false);
+      const message = `Koreksi data ${name} berhasil disimpan dan dikirim ulang (resubmit) ke Superadmin.`;
+      setSuccess(message);
+      setResultDialogTitle("Resubmit Berhasil");
+      setResultDialogDescription(message);
+      setResultDialogOpen(true);
+      await loadQueue();
+    } catch (err) {
+      setEditPayloadError((err as Error).message || "Gagal meng-update dan resubmit payload.");
+    } finally {
+      setEditPayloadSaving(false);
+    }
+  }
+
   async function openEvidence(candidates: string[]) {
     const resolved = await resolveAttachmentCandidates(candidates, token);
     for (const candidate of resolved) {
@@ -647,6 +757,20 @@ export default function ValidationRequestsPage() {
         ) : null}
         {selected.superadmin_review_note ? (
           <p className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">Catatan Superadmin: {selected.superadmin_review_note}</p>
+        ) : null}
+
+        {isAdminRegionView && isRejectedBySuperadmin && selectedType.kind !== "field_validation" ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full rounded-full sm:w-auto"
+            disabled={acting}
+            onClick={openEditPayload}
+          >
+            <Pencil className="mr-2 size-4" />
+            Koreksi Data &amp; Resubmit
+          </Button>
         ) : null}
 
         <ApprovalActions
@@ -827,6 +951,158 @@ export default function ValidationRequestsPage() {
             </div>
           </SheetContent>
         </Sheet>
+
+        <AlertDialog
+          open={editPayloadOpen}
+          onOpenChange={(open) => {
+            if (editPayloadSaving) return;
+            setEditPayloadOpen(open);
+            if (!open) setEditPayloadError("");
+          }}
+        >
+          <AlertDialogContent className="!w-[min(92vw,720px)] !max-w-[min(92vw,720px)]">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Koreksi Data &amp; Resubmit</AlertDialogTitle>
+              <AlertDialogDescription>
+                Perbarui data request yang ditolak Superadmin. Perubahan disimpan ke payload lalu request dikirim ulang ke antrean Superadmin.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-device-name">Nama Device / Asset</Label>
+                <Input
+                  id="edit-device-name"
+                  value={editPayloadForm.device_name}
+                  onChange={(e) => setEditPayloadForm((prev) => ({ ...prev, device_name: e.target.value }))}
+                  placeholder="Nama device..."
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>POP</Label>
+                  <Select
+                    value={editPayloadForm.pop_id}
+                    onValueChange={(value) => setEditPayloadForm((prev) => ({ ...prev, pop_id: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih POP" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Tanpa POP</SelectItem>
+                      {payloadPopOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Project</Label>
+                  <Select
+                    value={editPayloadForm.project_id}
+                    onValueChange={(value) => setEditPayloadForm((prev) => ({ ...prev, project_id: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Tanpa Project</SelectItem>
+                      {payloadProjectOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Status</Label>
+                  <Select
+                    value={editPayloadForm.status}
+                    onValueChange={(value) => setEditPayloadForm((prev) => ({ ...prev, status: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["draft", "installed", "active", "inactive", "maintenance", "retired"].map((status) => (
+                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Kapasitas Port / Core</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={editPayloadForm.total_ports}
+                    onChange={(e) => setEditPayloadForm((prev) => ({ ...prev, total_ports: e.target.value }))}
+                    placeholder="Contoh: 8"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Splitter Ratio</Label>
+                <Select
+                  value={editPayloadForm.splitter_ratio}
+                  onValueChange={(value) => setEditPayloadForm((prev) => ({ ...prev, splitter_ratio: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih splitter ratio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["1:4", "1:8", "1:16", "1:32", "1:64"].map((ratio) => (
+                      <SelectItem key={ratio} value={ratio}>{ratio}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Longitude</Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={editPayloadForm.longitude}
+                    onChange={(e) => setEditPayloadForm((prev) => ({ ...prev, longitude: e.target.value }))}
+                    placeholder="106.84513"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Latitude</Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={editPayloadForm.latitude}
+                    onChange={(e) => setEditPayloadForm((prev) => ({ ...prev, latitude: e.target.value }))}
+                    placeholder="-6.21462"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Alamat</Label>
+                <Input
+                  value={editPayloadForm.address}
+                  onChange={(e) => setEditPayloadForm((prev) => ({ ...prev, address: e.target.value }))}
+                  placeholder="Alamat lokasi..."
+                />
+              </div>
+              {editPayloadError ? (
+                <p className="rounded-md border border-destructive/20 bg-destructive/5 p-2 text-sm text-destructive">
+                  {editPayloadError}
+                </p>
+              ) : null}
+            </div>
+            <AlertDialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditPayloadOpen(false)} disabled={editPayloadSaving}>
+                Batal
+              </Button>
+              <Button type="button" variant="default" onClick={() => void saveAndResubmitPayload()} disabled={editPayloadSaving}>
+                {editPayloadSaving ? "Menyimpan & Resubmit..." : "Simpan & Resubmit"}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <AlertDialog
           open={rejectDialogOpen}
