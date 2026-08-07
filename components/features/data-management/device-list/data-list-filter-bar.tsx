@@ -1,5 +1,6 @@
 "use client";
 
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
@@ -37,7 +38,6 @@ export function DataListFilterBar({
   onProjectFilterChange,
   onArchiveViewChange,
   onLimitChange,
-  onApplyFilter,
   onResetFilters,
 }: {
   filterGridClass: string;
@@ -65,16 +65,19 @@ export function DataListFilterBar({
   onProjectFilterChange: (value: string) => void;
   onArchiveViewChange: (value: ArchiveView) => void;
   onLimitChange: (value: number) => void;
-  onApplyFilter: () => void;
   onResetFilters: () => void;
 }) {
   return (
     <div className={`grid grid-cols-1 gap-3 ${filterGridClass}`}>
-      <Input
-        value={searchInput}
-        onChange={(event) => onSearchInputChange(event.target.value)}
-        placeholder={categoryResource === "cities" ? "Cari city..." : "Cari data..."}
-      />
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <Input
+          value={searchInput}
+          onChange={(event) => onSearchInputChange(event.target.value)}
+          placeholder={categoryResource === "cities" ? "Cari city..." : "Cari data..."}
+          className="pl-8"
+        />
+      </div>
       {categoryResource === "cities" ? (
         <Combobox
           value={provinceFilter}
@@ -158,7 +161,6 @@ export function DataListFilterBar({
           { value: "50", label: "50 / halaman" },
         ]}
       />
-      <Button onClick={onApplyFilter}>Terapkan Filter</Button>
       <Button type="button" variant="outline" onClick={onResetFilters}>
         Reset
       </Button>

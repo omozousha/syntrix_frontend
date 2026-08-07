@@ -48,24 +48,24 @@ export function DataMobileList({
         const primaryCode = getPrimaryCode(row);
 
         return (
-          <div key={row.id} className="rounded-md border bg-card p-3">
+          <div key={row.id} className="rounded-xl border border-border/60 bg-card p-3 shadow-2xs">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 space-y-0.5">
                 <p className="truncate text-sm font-semibold">{primaryName || "-"}</p>
-                <p className="truncate text-xs text-muted-foreground">{primaryCode || "-"}</p>
+                <p className="truncate font-mono text-[10px] text-muted-foreground">{primaryCode || "-"}</p>
               </div>
               {showValidationBadge && validation ? (
-                <span title={validation.title} className={`inline-flex rounded border px-2 py-0.5 text-[11px] ${validation.className}`}>
+                <span title={validation.title} className={`inline-flex rounded border px-2 py-0.5 font-mono text-[10px] leading-tight ${validation.className}`}>
                   {validation.label}
                 </span>
               ) : null}
             </div>
             <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-              <span>Status: {getStatus(row) || "-"}</span>
-              <span>{getUpdatedAt(row)}</span>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Status: <span className="font-semibold text-foreground">{getStatus(row) || "-"}</span></span>
+              <span className="font-mono text-[10px]">{getUpdatedAt(row)}</span>
             </div>
             {supportsPopFilter ? (
-              <p className="mt-1 truncate text-xs text-muted-foreground">POP: {getPopLabel(row)}</p>
+              <p className="mt-1 truncate text-xs text-muted-foreground">POP: <span className="font-mono text-[10px]">{getPopLabel(row)}</span></p>
             ) : null}
             <div className={`mt-3 grid gap-2 ${canTraceTopology ? "grid-cols-2" : "grid-cols-1"}`}>
               <Button type="button" variant="outline" size="sm" onClick={() => onOpenDetail(row)}>

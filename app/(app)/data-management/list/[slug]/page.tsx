@@ -11,6 +11,7 @@ import {
   Boxes,
   Cable,
   CircleDot,
+  Download,
   Eye,
   HardDrive,
   Monitor,
@@ -23,6 +24,7 @@ import {
   Split,
   Trash2,
   Waypoints,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
@@ -202,6 +204,14 @@ export default function DataManagementListPage() {
   const queryString = searchParams.toString();
   const popQueryParam = searchParams.get("pop_id") || "__all";
   const projectQueryParam = searchParams.get("project_id") || "__all";
+  const idsFilter = useMemo(
+    () =>
+      (searchParams.get("ids") || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean),
+    [searchParams],
+  );
   const slug = (params?.slug || "").toLowerCase();
   const category = useMemo(() => getCategoryBySlug(slug), [slug]);
   const { token, me } = useSession();
@@ -211,6 +221,7 @@ export default function DataManagementListPage() {
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [provinceFilter, setProvinceFilter] = useState(searchParams.get("province_id") || "__all");
   const [directionFilter, setDirectionFilter] = useState("__all");
   const [popFilterOptions, setPopFilterOptions] = useState<PopFilterOption[]>([]);
@@ -228,6 +239,7 @@ export default function DataManagementListPage() {
   const [renameValue, setRenameValue] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<GenericItem | null>(null);
   const [bulkActionRequest, setBulkActionRequest] = useState<{ action: BulkActionType; count: number } | null>(null);
+  const [downloadQrRequest, setDownloadQrRequest] = useState<{ type: "selected" | "filtered"; count: number } | null>(null);
   const [quickEditTarget, setQuickEditTarget] = useState<GenericItem | null>(null);
   const [quickEditForm, setQuickEditForm] = useState<Record<string, string>>({});
   const [quickEditError, setQuickEditError] = useState("");
@@ -242,6 +254,19 @@ export default function DataManagementListPage() {
   function clearFieldError(field: string) {
     setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next; });
   }
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(""), 5000);
+    return () => clearTimeout(timer);
+  }, [success]);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(""), 6000); // Error sedikit lebih lama (6 detik)
+    return () => clearTimeout(timer);
+  }, [error]);
+
   const [downloadingQr, setDownloadingQr] = useState(false);
   const [lookupOptions, setLookupOptions] = useState<{
     manufacturers: LookupOption[];
@@ -395,10 +420,47 @@ export default function DataManagementListPage() {
     nextParams.delete("pop_id");
     nextParams.delete("project_id");
     nextParams.delete("province_id");
+    nextParams.delete("ids");
     const nextQuery = nextParams.toString();
     if (nextQuery === queryString) return;
     router.replace(`/data-management/list/${slug}${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
   }, [queryString, router, slug]);
+
+  const applySelectionFilter = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    const merged = new Set(idsFilter);
+    selectedIds.forEach((id) => merged.add(id));
+    setSearch("");
+    setSearchInput("");
+    setPage(1);
+
+    const nextParams = new URLSearchParams(queryString);
+    nextParams.set("ids", Array.from(merged).join(","));
+    const nextQuery = nextParams.toString();
+    router.replace(`/data-management/list/${slug}${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
+  }, [idsFilter, queryString, router, selectedIds, slug]);
+
+  const clearSelectionFilter = useCallback(() => {
+    const nextParams = new URLSearchParams(queryString);
+    nextParams.delete("ids");
+    const nextQuery = nextParams.toString();
+    if (nextQuery === queryString) return;
+    router.replace(`/data-management/list/${slug}${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
+  }, [queryString, router, slug]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
+
+  useEffect(() => {
+    const term = debouncedSearch.trim();
+    if (term === search) return;
+    setSearch(term);
+    setPage(1);
+  }, [debouncedSearch, search]);
 
   useEffect(() => {
     if (category?.slug === "odp" && searchParams.get("triggerCreate") === "true") {
@@ -426,6 +488,7 @@ export default function DataManagementListPage() {
           regionScopeId: effectiveRegionScopeId,
           popId: supportsPopFilter && popQueryParam !== "__all" ? popQueryParam : undefined,
           projectId: supportsProjectFilter && projectQueryParam !== "__all" ? projectQueryParam : undefined,
+          ids: search ? undefined : idsFilter,
         });
         let path =
           activeCategory.resource === "cities" && provinceFilter !== "__all"
@@ -460,7 +523,7 @@ export default function DataManagementListPage() {
     return () => {
       cancelled = true;
     };
-  }, [category, token, page, limit, search, effectiveRegionScopeId, provinceFilter, refreshSeed, archiveView, isSoftDeleteResource, supportsPopFilter, popQueryParam, supportsProjectFilter, projectQueryParam]);
+  }, [category, token, page, limit, search, effectiveRegionScopeId, provinceFilter, refreshSeed, archiveView, isSoftDeleteResource, supportsPopFilter, popQueryParam, supportsProjectFilter, projectQueryParam, idsFilter]);
 
   useEffect(() => {
     if (!supportsPopFilter) {
@@ -1294,55 +1357,95 @@ export default function DataManagementListPage() {
     }
   }
 
-  async function handleBulkDownloadQr() {
+  async function buildQrPdf(rows: GenericItem[]) {
+    if (!category || category.resource !== "devices") return 0;
+    const [logoDataUrl, qrLabelSetting] = await Promise.all([
+      loadQrLabelLogoDataUrl(token).catch(() => ""),
+      loadQrLabelSettings(token).catch(() => null),
+    ]);
+    const qrRows = await Promise.all(
+      rows.map(async (row) => {
+        const display = buildDeviceListDisplay(row, listDisplayLookups);
+        const deviceId = pick(row, ["id"]);
+        return {
+          deviceName: pick(row, ["device_name", "name"]),
+          deviceCode: pick(row, ["device_id", "id"]),
+          deviceType: pick(row, ["device_type_key"]),
+          popName: formatQrPopLabel(display.pop, pick(row, ["pop_code", "pop_id"])),
+          projectName: display.project,
+          tenantName: display.tenant,
+          qrDataUrl: await QRCode.toDataURL(
+            buildDeviceQrHref({
+              appBaseUrl: APP_BASE_URL,
+              categorySlug: category.slug,
+              deviceId,
+              deviceTypeKey: pick(row, ["device_type_key"]),
+            }),
+            {
+              width: 360,
+              margin: 2,
+              errorCorrectionLevel: "H",
+            },
+          ),
+          logoDataUrl,
+          footerText: qrLabelSetting?.footer_text || undefined,
+        };
+      }),
+    );
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    await drawQrLabelPdf(doc, qrRows);
+    doc.save(`${sanitizeFileName(category.slug)}-qr-labels-${new Date().toISOString().slice(0, 10)}.pdf`);
+    return qrRows.length;
+  }
+
+  function handleBulkDownloadQr() {
     if (!category || category.resource !== "devices") return;
     if (!selectedRows.length) {
       setError("Pilih minimal 1 device untuk download QR.");
       return;
     }
+    setDownloadQrRequest({ type: "selected", count: selectedRows.length });
+  }
 
+  function handleDownloadFilteredQr() {
+    if (!category || category.resource !== "devices") return;
+    if (!idsFilter.length) {
+      setError("Tidak ada item pada filter untuk download QR.");
+      return;
+    }
+    setDownloadQrRequest({ type: "filtered", count: idsFilter.length });
+  }
+
+  async function executeDownloadQrConfirmed() {
+    if (!downloadQrRequest || !category || category.resource !== "devices") return;
+    const request = downloadQrRequest;
+    setDownloadQrRequest(null);
     setDownloadingQr(true);
     setError("");
     setSuccess("");
     try {
-      const [logoDataUrl, qrLabelSetting] = await Promise.all([
-        loadQrLabelLogoDataUrl(token).catch(() => ""),
-        loadQrLabelSettings(token).catch(() => null),
-      ]);
-      const qrRows = await Promise.all(
-        selectedRows.map(async (row) => {
-          const display = buildDeviceListDisplay(row, listDisplayLookups);
-          const deviceId = pick(row, ["id"]);
-          return {
-            deviceName: pick(row, ["device_name", "name"]),
-            deviceCode: pick(row, ["device_id", "id"]),
-            deviceType: pick(row, ["device_type_key"]),
-            popName: formatQrPopLabel(display.pop, pick(row, ["pop_code", "pop_id"])),
-            projectName: display.project,
-            tenantName: display.tenant,
-            qrDataUrl: await QRCode.toDataURL(
-              buildDeviceQrHref({
-                appBaseUrl: APP_BASE_URL,
-                categorySlug: category.slug,
-                deviceId,
-                deviceTypeKey: pick(row, ["device_type_key"]),
-              }),
-              {
-                width: 360,
-                margin: 2,
-                errorCorrectionLevel: "H",
-              },
-            ),
-            logoDataUrl,
-            footerText: qrLabelSetting?.footer_text || undefined,
-          };
-        }),
-      );
-      const { jsPDF } = await import("jspdf");
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      await drawQrLabelPdf(doc, qrRows);
-      doc.save(`${sanitizeFileName(category.slug)}-qr-labels-${new Date().toISOString().slice(0, 10)}.pdf`);
-      setSuccess(`${qrRows.length} QR device berhasil dibuat dalam PDF.`);
+      let count = 0;
+      if (request.type === "selected") {
+        count = await buildQrPdf(selectedRows);
+      } else {
+        const path = buildCategoryApiPath(category, {
+          page: 1,
+          limit: 500,
+          regionScopeId: effectiveRegionScopeId,
+          popId: supportsPopFilter && popQueryParam !== "__all" ? popQueryParam : undefined,
+          projectId: supportsProjectFilter && projectQueryParam !== "__all" ? projectQueryParam : undefined,
+          ids: idsFilter,
+        });
+        const result = await apiFetch<PaginatedResponse<GenericItem>>(path, { token });
+        const rows = result.data || [];
+        if (!rows.length) {
+          setError("Tidak ada device pada filter untuk download QR.");
+          return;
+        }
+        count = await buildQrPdf(rows);
+      }
+      setSuccess(`${count} QR device berhasil dibuat dalam PDF.`);
     } catch (err) {
       setError((err as Error).message || "Gagal membuat bulk QR download.");
     } finally {
@@ -1450,11 +1553,11 @@ export default function DataManagementListPage() {
         ) : null}
 
         {!isOdpCategory || activeTab === "list" ? (
-        <Card>
-          <CardHeader>
+        <Card className="rounded-2xl border-border/60 shadow-xs">
+          <CardHeader className="pb-3">
             <CardTitle>Data {category.label}</CardTitle>
-            <CardDescription>
-              Total data: {total}. Klik kanan pada baris untuk aksi cepat.
+            <CardDescription className="text-xs">
+              Total data: <span className="font-mono font-medium tabular-nums text-foreground">{total.toLocaleString("id-ID")}</span>. Klik kanan pada baris untuk aksi cepat.
               {supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel ? ` Filter POP: ${selectedPopLabel}.` : ""}
             </CardDescription>
           </CardHeader>
@@ -1475,6 +1578,7 @@ export default function DataManagementListPage() {
               onDeactivate={() => requestBulkAction("deactivate")}
               onDelete={() => requestBulkAction("delete")}
               onClearSelection={() => setSelectedIds(new Set())}
+              onFilterBySelection={applySelectionFilter}
             />
             <DataListFilterBar
               filterGridClass={filterGridClass}
@@ -1521,15 +1625,21 @@ export default function DataManagementListPage() {
                 setPage(1);
                 setLimit(value);
               }}
-              onApplyFilter={() => {
-                setPage(1);
-                setSearch(searchInput.trim());
-              }}
               onResetFilters={resetListFilters}
             />
 
             {success ? (
-              <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-700">{success}</p>
+              <div className="flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <span>{success}</span>
+                <button
+                  type="button"
+                  onClick={() => setSuccess("")}
+                  aria-label="Tutup notifikasi"
+                  className="shrink-0 rounded p-0.5 text-emerald-600 transition-colors hover:bg-emerald-100 hover:text-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45 dark:text-emerald-400 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-100"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
             ) : null}
             {supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel ? (
               <div className="flex flex-wrap items-center gap-2">
@@ -1543,6 +1653,28 @@ export default function DataManagementListPage() {
                 <Badge variant="outline" className="font-normal">
                   Project: {selectedProjectLabel}
                 </Badge>
+              </div>
+            ) : null}
+            {idsFilter.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="font-normal">
+                  Filter: {idsFilter.length} item terpilih
+                </Badge>
+                {supportsQrBulkDownload ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleDownloadFilteredQr()}
+                    disabled={downloadingQr}
+                  >
+                    <Download className="mr-1 size-4" />
+                    {downloadingQr ? "Membuat QR..." : `Download QR (${idsFilter.length})`}
+                  </Button>
+                ) : null}
+                <Button type="button" variant="ghost" size="sm" onClick={clearSelectionFilter}>
+                  Clear
+                </Button>
               </div>
             ) : null}
 
@@ -1671,22 +1803,31 @@ export default function DataManagementListPage() {
               </>
             )}
 
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                variant="outline"
-                disabled={page <= 1 || loading}
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              >
-                Prev
-              </Button>
-              <span className="text-sm text-muted-foreground">Page {page}</span>
-              <Button
-                variant="outline"
-                disabled={loading || page * limit >= total}
-                onClick={() => setPage((prev) => prev + 1)}
-              >
-                Next
-              </Button>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
+              <span className="text-xs text-muted-foreground tabular-nums">
+                Menampilkan {rows.length} dari {total.toLocaleString("id-ID")} data
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                >
+                  Prev
+                </Button>
+                <span className="rounded border border-border/60 bg-muted/30 px-2.5 py-1 font-mono text-sm tabular-nums">
+                  {page}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={loading || page * limit >= total}
+                  onClick={() => setPage((prev) => prev + 1)}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -1727,6 +1868,27 @@ export default function DataManagementListPage() {
         onClose={() => setDeleteTarget(null)}
         onForceDelete={() => void forceDelete()}
       />
+
+      <AlertDialog open={Boolean(downloadQrRequest)} onOpenChange={(open) => !open && setDownloadQrRequest(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Download QR Label PDF?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {downloadQrRequest?.type === "selected"
+                ? `Membuat PDF berisi QR label untuk ${downloadQrRequest.count} item yang di-centang.`
+                : `Membuat PDF berisi QR label untuk ${downloadQrRequest?.count || 0} item pada filter aktif.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={downloadingQr}>Batal</AlertDialogCancel>
+            <AlertDialogAction disabled={downloadingQr} onClick={() => void executeDownloadQrConfirmed()}>
+              {downloadingQr ? "Membuat PDF..." : "Download PDF"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={Boolean(bulkActionRequest)} onOpenChange={(open) => !open && setBulkActionRequest(null)}>
         <AlertDialogContent>

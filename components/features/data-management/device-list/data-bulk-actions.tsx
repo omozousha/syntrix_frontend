@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, RotateCcw, Trash2 } from "lucide-react";
+import { Download, Filter, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function DataBulkActions({
@@ -19,6 +19,7 @@ export function DataBulkActions({
   onDeactivate,
   onDelete,
   onClearSelection,
+  onFilterBySelection,
 }: {
   selectedCount: number;
   selectedDownloadCount: number;
@@ -35,11 +36,26 @@ export function DataBulkActions({
   onDeactivate: () => void;
   onDelete: () => void;
   onClearSelection: () => void;
+  onFilterBySelection?: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
-      <span className="text-muted-foreground">Item terpilih: {selectedCount}</span>
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-sm shadow-xs dark:bg-muted/10">
+      <span className="text-muted-foreground">
+        <span className="font-mono tabular-nums font-medium text-foreground">{selectedCount}</span> item terpilih
+      </span>
       <div className="flex flex-wrap items-center gap-2">
+        {onFilterBySelection && selectedCount > 0 ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onFilterBySelection}
+            disabled={actionLoading}
+          >
+            <Filter className="mr-1 size-4" />
+            Add to Filter
+          </Button>
+        ) : null}
         {supportsQrBulkDownload ? (
           <Button
             type="button"

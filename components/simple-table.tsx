@@ -132,9 +132,9 @@ export function SimpleTable({
         </div>
       ) : null}
 
-      <div className="w-full overflow-x-auto rounded-lg border bg-card shadow-xs">
+      <div className="w-full overflow-x-auto rounded-lg border border-border/60 bg-card shadow-2xs">
         <Table className="min-w-max w-full">
-          <TableHeader className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
+          <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-md">
             <TableRow>
               {visibleColumnIndices.map((columnIndex) => {
                 const columnId = `col_${columnIndex}`;

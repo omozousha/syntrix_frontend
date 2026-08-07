@@ -131,6 +131,7 @@ export function buildCategoryApiPath(
     regionScopeId?: string;
     popId?: string;
     projectId?: string;
+    ids?: string[];
   },
 ) {
   const query = new URLSearchParams();
@@ -142,6 +143,7 @@ export function buildCategoryApiPath(
   if (options?.popId) query.set("pop_id", options.popId);
   if (options?.projectId) query.set("project_id", options.projectId);
   if (category.deviceTypeKey) query.set("device_type_key", category.deviceTypeKey);
+  if (options?.ids?.length) query.set("ids", options.ids.join(","));
 
   return `/${category.resource}?${query.toString()}`;
 }

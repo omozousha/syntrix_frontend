@@ -19,10 +19,10 @@ export function DataListHeader({
   onCreate: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 shadow-xs dark:bg-muted/5">
       <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="font-medium uppercase tracking-wide text-foreground">List controls</span>
-        <span className="rounded-full border bg-background px-2 py-0.5">
+        <span className="font-medium text-foreground">Kontrol daftar</span>
+        <span className="rounded border border-border/60 bg-background/60 px-2 py-0.5 text-xs text-muted-foreground">
           {isRegionScoped ? "Region scoped" : "All regions"}
         </span>
       </div>
