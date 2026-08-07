@@ -124,7 +124,7 @@ export function AppSidebar({
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold leading-none tracking-tight">Syntrix</p>
-                <p className="mt-1 truncate text-[11px] text-sidebar-foreground/70">Synchronization & Validation Matrix</p>
+                <p className="mt-1 text-[10px] leading-snug text-sidebar-foreground/70">Synchronization &amp; Validation Matrix</p>
               </div>
             </div>
             <Badge variant="secondary" className="mt-2.5 w-fit rounded-md font-mono text-[9px] uppercase tracking-[0.18em]">
