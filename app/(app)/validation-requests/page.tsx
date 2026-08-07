@@ -173,6 +173,8 @@ export default function ValidationRequestsPage() {
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [bulkConfirmAction, setBulkConfirmAction] = useState<"approve" | "reject" | null>(null);
+  const [bulkRejectNote, setBulkRejectNote] = useState("");
+  const [bulkRejectError, setBulkRejectError] = useState("");
 
   const filteredItems = useMemo(
     () => {
@@ -468,6 +470,14 @@ export default function ValidationRequestsPage() {
   async function runBulkAction() {
     if (!bulkConfirmAction || bulkSelectedCount === 0) return;
     const ids = Array.from(bulkSelectedIds).filter((id) => bulkSelectableIds.has(id));
+    if (bulkConfirmAction === "reject") {
+      const note = bulkRejectNote.trim();
+      if (note.length < 10) {
+        setBulkRejectError("Catatan reject minimal 10 karakter.");
+        return;
+      }
+      setBulkRejectError("");
+    }
     setBulkActionLoading(true);
     setError("");
     setSuccess("");
@@ -476,7 +486,9 @@ export default function ValidationRequestsPage() {
         ids.map((id) =>
           apiFetch(
             `/validation-requests/${id}/superadmin/${bulkConfirmAction}`,
-            { method: "POST", token },
+            bulkConfirmAction === "reject"
+              ? { method: "POST", token, body: JSON.stringify({ note: bulkRejectNote.trim() }) }
+              : { method: "POST", token },
           ),
         ),
       );
@@ -484,6 +496,8 @@ export default function ValidationRequestsPage() {
       const succeededCount = results.length - failed.length;
       setBulkConfirmOpen(false);
       setBulkConfirmAction(null);
+      setBulkRejectNote("");
+      setBulkRejectError("");
       setBulkSelectedIds(new Set());
       const message =
         failed.length === 0
@@ -508,11 +522,15 @@ export default function ValidationRequestsPage() {
   function requestBulkConfirm(action: "approve" | "reject") {
     if (bulkSelectedCount === 0) return;
     setBulkConfirmAction(action);
+    setBulkRejectNote("");
+    setBulkRejectError("");
     setBulkConfirmOpen(true);
   }
 
   function clearBulkSelection() {
     setBulkSelectedIds(new Set());
+    setBulkRejectNote("");
+    setBulkRejectError("");
   }
 
   async function openEvidence(candidates: string[]) {
@@ -857,6 +875,8 @@ export default function ValidationRequestsPage() {
             setBulkConfirmOpen(open);
             if (!open) {
               setBulkConfirmAction(null);
+              setBulkRejectNote("");
+              setBulkRejectError("");
             }
           }}
         >
@@ -870,11 +890,34 @@ export default function ValidationRequestsPage() {
                 <span className="font-semibold text-foreground">{bulkSelectedCount}</span> request terpilih secara massal?
               </AlertDialogDescription>
             </AlertDialogHeader>
+            {bulkConfirmAction === "reject" ? (
+              <div className="space-y-2">
+                <textarea
+                  value={bulkRejectNote}
+                  onChange={(event) => {
+                    setBulkRejectNote(event.target.value);
+                    if (bulkRejectError) setBulkRejectError("");
+                  }}
+                  placeholder="Tulis alasan reject (minimal 10 karakter)..."
+                  className="min-h-24 w-full rounded-md border bg-background p-2 text-sm outline-none ring-0"
+                />
+                {bulkRejectError ? (
+                  <p className="rounded-md border border-destructive/20 bg-destructive/5 p-2 text-sm text-destructive">
+                    {bulkRejectError}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <AlertDialogFooter>
               <Button type="button" variant="outline" onClick={() => setBulkConfirmOpen(false)} disabled={bulkActionLoading}>
                 Batal
               </Button>
-              <Button type="button" variant={bulkConfirmAction === "approve" ? "default" : "destructive"} onClick={() => void runBulkAction()} disabled={bulkActionLoading}>
+              <Button
+                type="button"
+                variant={bulkConfirmAction === "approve" ? "default" : "destructive"}
+                onClick={() => void runBulkAction()}
+                disabled={bulkActionLoading || (bulkConfirmAction === "reject" && bulkRejectNote.trim().length < 10)}
+              >
                 {bulkActionLoading ? "Memproses..." : "Lanjutkan"}
               </Button>
             </AlertDialogFooter>
