@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Check, Clock, Inbox, Pencil, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Clock, Inbox, RefreshCw, ShieldCheck, X } from "lucide-react";
 import { ApprovalActions } from "@/components/features/requests/approval-actions";
 import { EvidenceChecklistPreview } from "@/components/features/requests/evidence-checklist-preview";
 import { RequestActorLine } from "@/components/features/requests/request-actor-line";
@@ -759,20 +759,6 @@ export default function ValidationRequestsPage() {
           <p className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">Catatan Superadmin: {selected.superadmin_review_note}</p>
         ) : null}
 
-        {isAdminRegionView && isRejectedBySuperadmin && selectedType.kind !== "field_validation" ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full rounded-full sm:w-auto"
-            disabled={acting}
-            onClick={openEditPayload}
-          >
-            <Pencil className="mr-2 size-4" />
-            Koreksi Data &amp; Resubmit
-          </Button>
-        ) : null}
-
         <ApprovalActions
           acting={acting}
           showResubmit={isRejectedBySuperadmin && isAdminRegionView}
@@ -781,6 +767,11 @@ export default function ValidationRequestsPage() {
           onApprove={() => void approveSelected()}
           onReject={() => setRejectDialogOpen(true)}
           onResubmit={() => void resubmitSelected()}
+          onEditAndResubmit={
+            isAdminRegionView && isRejectedBySuperadmin && selectedType.kind !== "field_validation"
+              ? openEditPayload
+              : undefined
+          }
         />
       </>
     );
