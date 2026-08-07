@@ -157,7 +157,7 @@ export function AppSidebar({
                         className="relative h-9 rounded-lg px-2.5 text-sm transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-sidebar-accent data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
                       >
                         <Link href={item.url}>
-                          {itemIsActive ? <span className="absolute left-1.5 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full bg-primary" /> : null}
+                          {itemIsActive ? <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" /> : null}
                           {item.icon ? <item.icon className="size-4" /> : null}
                           <span>{item.title}</span>
                         </Link>
@@ -177,13 +177,13 @@ export function AppSidebar({
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton
                           tooltip={item.title}
-                          isActive={itemIsActive || subItemIsActive}
+                          isActive={itemIsActive}
                           className="relative h-9 rounded-lg px-2.5 text-sm transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-sidebar-accent data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
                         >
-                          {(itemIsActive || subItemIsActive) ? <span className="absolute left-1.5 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full bg-primary" /> : null}
+                          {itemIsActive ? <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" /> : null}
                           {item.icon ? <item.icon className="size-4" /> : null}
                           <span>{item.title}</span>
-                          <ChevronRight className="ml-auto transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-data-[state=open]/collapsible:rotate-90" />
+                          <ChevronRight className={`ml-auto size-4 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${isOpen ? "rotate-90 text-primary" : "text-muted-foreground"}`} />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
