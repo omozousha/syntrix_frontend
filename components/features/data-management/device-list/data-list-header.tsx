@@ -28,9 +28,11 @@ export function DataListHeader({
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {canCreateMaster ? (
-          <Button type="button" size="sm" onClick={onCreate}>
-            <Plus className="mr-2 size-4" />
+          <Button type="button" size="sm" onClick={onCreate} className="group rounded-full pl-4 pr-1.5 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
             Add {label}
+            <span className="ml-2 flex size-6 items-center justify-center rounded-full bg-white/20 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:-translate-y-[1px] group-hover:scale-105 dark:bg-white/15">
+              <Plus className="size-4" />
+            </span>
           </Button>
         ) : null}
         <Button asChild variant="outline" size="sm">

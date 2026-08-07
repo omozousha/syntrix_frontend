@@ -1553,7 +1553,8 @@ export default function DataManagementListPage() {
         ) : null}
 
         {!isOdpCategory || activeTab === "list" ? (
-        <Card className="rounded-2xl border-border/60 shadow-xs glass-inset">
+        <div className="rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-xs dark:bg-white/[0.02]">
+        <Card className="rounded-[calc(2rem-0.5rem)] border-border/60 shadow-xs glass-inset">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2 mb-1">
               <span className="font-mono text-[9px] uppercase tracking-[0.2em] rounded-full px-2.5 py-0.5 font-medium border border-border/60 bg-muted/60 text-muted-foreground">
@@ -1870,6 +1871,7 @@ export default function DataManagementListPage() {
             </div>
           </CardContent>
         </Card>
+        </div>
         ) : null}
 
         {isOdpCategory && activeTab === "quality" ? (
