@@ -45,17 +45,17 @@ export function AppShell({
       <AppSidebar pathname={pathname} menus={menus} />
 
       <SidebarInset className="h-dvh min-h-0 overflow-hidden">
-        <header className="sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+        <header className="sticky top-0 z-20 shrink-0 border-b border-border/60 bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
           <div className="flex min-h-14 w-full items-center justify-between gap-2 px-2 py-1.5 sm:gap-3 sm:px-4 sm:py-2.5">
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
               <SidebarTrigger className="shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-2">
-                  <p className="hidden shrink-0 text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:block">{pageContext.eyebrow}</p>
-                  <Badge variant="secondary" className="hidden h-5 rounded-md px-1.5 text-[10px] font-medium sm:inline-flex">
+                  <p className="hidden shrink-0 font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground sm:block">{pageContext.eyebrow}</p>
+                  <Badge variant="secondary" className="hidden h-5 rounded-md px-1.5 font-mono text-[10px] font-medium uppercase tracking-wide sm:inline-flex">
                     {formatRoleLabel(normalizedRole)}
                   </Badge>
-                  <Badge variant="outline" className="hidden h-5 rounded-md px-1.5 text-[10px] font-medium md:inline-flex">
+                  <Badge variant="outline" className="hidden h-5 rounded-md px-1.5 font-mono text-[10px] font-medium md:inline-flex">
                     {scopeLabel}
                   </Badge>
                 </div>

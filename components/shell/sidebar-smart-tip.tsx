@@ -39,13 +39,13 @@ export function SidebarSmartTip({
   }, [tips.length, tipsKey]);
 
   return (
-    <div className="rounded-lg border border-sidebar-border/70 bg-sidebar-accent/20 px-3 py-2">
-      <div className="mb-1.5 flex items-center justify-between gap-2">
+    <div className="rounded-xl border border-sidebar-border/60 bg-sidebar-accent/15 px-3 py-2.5 shadow-2xs dark:bg-white/[0.01]">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="text-[10px]">
+          <Badge variant="outline" className="rounded-md font-mono text-[9px] uppercase tracking-[0.15em] border-sidebar-border/70 text-muted-foreground bg-background/50">
             Panduan
           </Badge>
-          <Lightbulb className="size-3.5 text-sidebar-foreground/60" />
+          <Lightbulb className="size-3.5 text-sidebar-foreground/50" />
         </div>
         {tips.length > 1 ? (
           <div aria-label={`Tip ${activeTipIndex + 1} dari ${tips.length}`} className="flex items-center gap-1">

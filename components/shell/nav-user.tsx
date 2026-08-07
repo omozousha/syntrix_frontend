@@ -311,7 +311,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
             <Button type="button" variant="outline" size="icon" className="relative size-9">
               <Bell className="size-4" />
               {notificationCount > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
+                <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 font-mono text-[9px] font-semibold tabular-nums text-destructive-foreground">
                   {notificationCount > 9 ? "9+" : notificationCount}
                 </span>
               ) : null}
@@ -486,13 +486,13 @@ function NavUserAccountMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="size-9 justify-center p-0 sm:h-9 sm:w-auto sm:max-w-[220px] sm:justify-between sm:gap-2 sm:px-3">
-          <Avatar className="size-7">
+        <Button variant="outline" className="h-9 w-auto rounded-full pl-1 pr-3 py-1 shadow-2xs transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted/30 focus-visible:ring-ring/45 active:scale-[0.98]">
+          <Avatar className="size-7 border border-border/40">
             {avatarUrl ? <AvatarImage src={avatarUrl} alt={me.app_user.full_name} /> : null}
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
-          <span className="hidden max-w-[180px] truncate text-left sm:inline">{me.app_user.full_name}</span>
-          <ChevronDown className="hidden size-4 sm:block" />
+          <span className="hidden max-w-[150px] truncate text-left text-xs font-semibold sm:inline">{me.app_user.full_name}</span>
+          <ChevronDown className="hidden size-3.5 text-muted-foreground sm:block" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[calc(100vw-1rem)] max-w-64">
