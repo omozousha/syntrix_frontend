@@ -28,9 +28,9 @@ export function DashboardActivityFeed({
   loading?: boolean;
 }) {
   return (
-    <Card className="min-w-0">
+    <Card className="min-w-0 rounded-2xl border-border/60 shadow-xs glass-inset">
       <CardHeader className="p-3 pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold tracking-tight">
           <Clock3 className="size-4" />
           {title}
         </CardTitle>
@@ -39,7 +39,7 @@ export function DashboardActivityFeed({
       <CardContent className="space-y-2 p-3 pt-0">
         {loading ? (
           Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="rounded-md border p-3">
+            <div key={index} className="rounded-lg border border-border/60 p-3 shadow-2xs">
               <Skeleton className="h-4 w-3/4" />
               <Skeleton className="mt-2 h-3 w-full" />
             </div>
@@ -47,10 +47,10 @@ export function DashboardActivityFeed({
         ) : items.length ? (
           items.slice(0, 6).map((item) => {
             const content = (
-              <div className="rounded-md border bg-background p-3 transition-colors hover:bg-muted/40">
+              <div className="rounded-lg border border-border/60 bg-background p-3 shadow-2xs transition-all duration-300 hover:border-muted-foreground/30 hover:bg-muted/40 hover:shadow-xs">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <p className="text-sm font-medium">{item.title}</p>
-                  {item.timestamp ? <Badge variant="outline" className="text-xs">{formatDateTime(item.timestamp)}</Badge> : null}
+                  {item.timestamp ? <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em]">{formatDateTime(item.timestamp)}</Badge> : null}
                 </div>
                 <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.description}</p>
               </div>
@@ -65,7 +65,7 @@ export function DashboardActivityFeed({
             );
           })
         ) : (
-          <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">{emptyLabel}</p>
+          <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">{emptyLabel}</p>
         )}
       </CardContent>
     </Card>

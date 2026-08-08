@@ -47,9 +47,9 @@ export function DashboardDonutChartCard({
   );
 
   return (
-    <Card className="flex min-w-0 flex-col">
+    <Card className="flex min-w-0 flex-col rounded-2xl border-border/60 shadow-xs glass-inset">
       <CardHeader className="p-3 pb-2">
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="grid min-w-0 flex-1 grid-cols-1 gap-3 p-3 pt-0 sm:grid-cols-[132px_minmax(0,1fr)]">
@@ -123,9 +123,9 @@ export function DashboardBarChartCard({
   const maxValue = Math.max(...normalized.map((item) => item.value), 0);
 
   return (
-    <Card className="flex min-w-0 flex-col">
+    <Card className="flex min-w-0 flex-col rounded-2xl border-border/60 shadow-xs glass-inset">
       <CardHeader className="p-3 pb-2">
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-2.5 p-3 pt-0">
@@ -149,7 +149,7 @@ export function DashboardBarChartCard({
               >
                 <div className="flex items-center justify-between gap-2 text-xs">
                   <span className={`truncate font-medium ${item.href ? "text-primary underline-offset-2 hover:underline" : ""}`}>{item.label}</span>
-                  <span className="text-muted-foreground">{item.value}</span>
+                  <span className="font-mono text-[10px] tabular-nums text-muted-foreground">{item.value}</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div className="h-full rounded-full transition-all" style={{ width: `${percent}%`, backgroundColor: color }} />
@@ -188,7 +188,7 @@ function ChartLegend({ data, total }: { data: DashboardChartDatum[]; total: numb
               <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
               <span className={`truncate ${item.href ? "text-primary underline-offset-2 hover:underline" : ""}`}>{item.label}</span>
             </div>
-            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{item.value} ({percent}%)</span>
+            <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground">{item.value} ({percent}%)</span>
           </div>
         );
       })}

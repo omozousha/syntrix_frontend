@@ -331,45 +331,47 @@ function DashboardHeader({
   const copy = getRoleCopy(role);
   const regionOptions = regions ? [{ value: "__all__", label: "Semua region" }, ...regions.map((r) => ({ value: r.id, label: r.label }))] : [];
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 md:flex-row md:items-center md:justify-between">
-      <div className="space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{copy.badge}</Badge>
-          <Badge variant="outline">{regionCount ? `${regionCount} region scope` : "Global scope"}</Badge>
+    <div className="rounded-[2rem] border border-border/40 bg-gradient-to-br from-muted/10 to-muted/5 p-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:bg-gradient-to-br dark:from-white/[0.02] dark:to-transparent">
+      <div className="flex flex-col gap-3 rounded-[calc(2rem-0.5rem)] border border-border/60 bg-background/80 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-xl dark:bg-background/40 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.18em]">{copy.badge}</Badge>
+            <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.18em]">{regionCount ? `${regionCount} region scope` : "Global scope"}</Badge>
+          </div>
+          <h2 className="text-2xl font-semibold tracking-tight">{copy.title}</h2>
+          <p className="max-w-3xl text-sm text-muted-foreground">{copy.description}</p>
         </div>
-        <h2 className="text-2xl font-semibold tracking-tight">{copy.title}</h2>
-        <p className="max-w-3xl text-sm text-muted-foreground">{copy.description}</p>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="hidden text-xs text-muted-foreground sm:inline">
-          {lastUpdated ? `${formatTimeAgo(lastUpdated)}` : ""}
-        </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={refreshing}
-          onClick={onRefresh}
-          className="h-9 px-2 text-xs"
-          aria-label="Refresh dashboard"
-        >
-          {refreshing ? "..." : "⟳"}
-        </Button>
-        {regions && onRegionFilterChange ? (
-          <Select value={regionFilter || "__all__"} onValueChange={(v) => onRegionFilterChange(v === "__all__" ? "" : v)} disabled={refreshing || loading}>
-            <SelectTrigger className="h-9 w-[180px] text-sm">
-              <SelectValue placeholder="Semua region" />
-            </SelectTrigger>
-            <SelectContent>
-              {regionOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : null}
-        <Button asChild size="sm" className="w-full md:w-auto">
-          <Link href={copy.primaryHref}>{copy.primaryAction}</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <span className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:inline">
+            {lastUpdated ? `${formatTimeAgo(lastUpdated)}` : ""}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={refreshing}
+            onClick={onRefresh}
+            className="h-9 px-2 text-xs"
+            aria-label="Refresh dashboard"
+          >
+            {refreshing ? "..." : "⟳"}
+          </Button>
+          {regions && onRegionFilterChange ? (
+            <Select value={regionFilter || "__all__"} onValueChange={(v) => onRegionFilterChange(v === "__all__" ? "" : v)} disabled={refreshing || loading}>
+              <SelectTrigger className="h-9 w-[180px] text-sm">
+                <SelectValue placeholder="Semua region" />
+              </SelectTrigger>
+              <SelectContent>
+                {regionOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+          <Button asChild size="sm" className="w-full md:w-auto">
+            <Link href={copy.primaryHref}>{copy.primaryAction}</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
