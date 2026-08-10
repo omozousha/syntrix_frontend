@@ -18,6 +18,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
+import {
+  ACTION_LABELS,
+  ACTION_OPTIONS,
+  AUDIT_RESOURCE_LABELS,
+  ENTITY_LABELS,
+  EXACT_ACTION_FILTERS,
+} from "@/lib/audit-labels";
 
 type AuditLogItem = {
   id: string;
@@ -38,71 +45,10 @@ type UserItem = {
   email?: string | null;
 };
 
-const ACTION_OPTIONS = [
-  { value: "__all", label: "Semua aksi" },
-  { value: "create:,update:,delete:,soft_delete:,restore:,purge:", label: "Asset Change" },
-  { value: ":devices,validation_request_,provision_ports:devices", label: "Device" },
-  { value: "create:", label: "Create Data" },
-  { value: "update:", label: "Update Data" },
-  { value: "delete:,soft_delete:", label: "Hapus Data" },
-  { value: "restore:", label: "Restore" },
-  { value: "purge:", label: "Purge" },
-  { value: "validation_request_submitted,validation_request_resubmitted_by_validator", label: "Validasi Validator" },
-  {
-    value:
-      "validation_request_approved_by_adminregion,validation_request_rejected_by_adminregion,validation_request_resubmitted_by_adminregion",
-    label: "Approval Admin Region",
-  },
-  {
-    value: "validation_request_approved_by_superadmin,validation_request_rejected_by_superadmin",
-    label: "Approval Superadmin",
-  },
-  { value: "account:", label: "Account" },
-  { value: "notification:", label: "Notification" },
-  { value: "attachment:", label: "Attachment" },
-  { value: "import:", label: "Import" },
-];
-
-const EXACT_ACTION_FILTERS = new Set([
-  "validation_request_submitted,validation_request_resubmitted_by_validator",
-  "validation_request_approved_by_adminregion,validation_request_rejected_by_adminregion,validation_request_resubmitted_by_adminregion",
-  "validation_request_approved_by_superadmin,validation_request_rejected_by_superadmin",
-]);
-
-const ACTION_LABELS: Record<string, string> = {
-  "account:login_success": "Login successful",
-  "account:user_register": "Account created",
-  "account:bootstrap_admin": "Bootstrap admin created",
-  "account:profile_update": "Profile updated",
-  "account:password_change": "Password changed",
-  "account:password_reset_requested": "Password reset requested",
-  "account:avatar_orphan_cleanup": "Avatar orphan cleanup",
-  "attachment:upload": "Attachment uploaded",
-  "provision_ports:devices": "Provision port device",
-  validation_request_submitted: "Validator submit validasi device",
-  validation_request_resubmitted_by_validator: "Validator resubmit validasi device",
-  validation_request_submitted_by_adminregion: "Admin Region submit validasi device",
-  asset_create_request_submitted_by_adminregion: "Admin Region submit create asset",
-  asset_update_request_submitted_by_adminregion: "Admin Region submit update asset",
-  validation_request_approved_by_adminregion: "Admin Region approve validasi device",
-  validation_request_rejected_by_adminregion: "Admin Region reject validasi device",
-  validation_request_resubmitted_by_adminregion: "Admin Region resubmit validasi device",
-  validation_request_approved_by_superadmin: "Superadmin approve validasi device",
-  validation_request_rejected_by_superadmin: "Superadmin reject validasi device",
-  validation_request_applied_to_asset: "Perubahan validasi diterapkan ke asset",
-  "notification:validation_reminder_sent": "Validation reminder sent",
-};
-
-const ENTITY_LABELS: Record<string, string> = {
-  app_user: "Account",
-  attachments: "Attachment",
-  import_job: "Import Job",
-  validation_requests: "Validation Request",
-  devicePorts: "Device Port",
-  deviceTypes: "Device Type",
-  popTypes: "POP Type",
-  assetModels: "Asset Model",
-};
+/* Module-level user map cache — TTL 5 minutes, shared across remounts */
+let _userMapCache: Record<string, string> | null = null;
+let _userMapCacheAt = 0;
+const USER_MAP_TTL_MS = 5 * 60 * 1000;
 
 export default function AuditTrailPage() {
   const searchParams = useSearchParams();
@@ -193,6 +139,11 @@ export default function AuditTrailPage() {
     let cancelled = false;
 
     async function run() {
+      // Gunakan cache jika masih segar (TTL 5 menit)
+      if (_userMapCache && Date.now() - _userMapCacheAt < USER_MAP_TTL_MS) {
+        setUserMap(_userMapCache);
+        return;
+      }
       try {
         const payload = await apiFetch<PaginatedResponse<UserItem>>("/users?page=1&limit=200", { token });
         if (cancelled) return;
@@ -201,7 +152,9 @@ export default function AuditTrailPage() {
           if (!user.id) return;
           nextMap[user.id] = user.full_name?.trim() || user.email?.trim() || "User tidak tersedia";
         });
-        setUserMap(nextMap);
+        _userMapCache = nextMap;
+        _userMapCacheAt = Date.now();
+        if (!cancelled) setUserMap(nextMap);
       } catch {
         if (!cancelled) setUserMap({});
       }
@@ -283,8 +236,9 @@ export default function AuditTrailPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4 p-3 md:p-4">
-            <div className="rounded-md border bg-muted/10 p-3">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="rounded-2xl border border-border/40 bg-muted/10 p-1.5 shadow-xs dark:bg-white/[0.02]">
+              <div className="rounded-[calc(1.25rem-0.25rem)] border border-border/60 bg-background p-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <Filter className="size-4 text-muted-foreground" />
                   Filter Audit
@@ -294,7 +248,7 @@ export default function AuditTrailPage() {
                   Reset
                 </Button>
               </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
                 <div className="relative min-w-0">
                   <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
                   <Input
@@ -324,7 +278,7 @@ export default function AuditTrailPage() {
                   }}
                   options={ACTION_OPTIONS}
                 />
-                <div className="grid grid-cols-2 gap-2 sm:col-span-2 lg:col-span-2 2xl:col-span-1 2xl:grid-cols-[120px_128px]">
+                <div className="grid grid-cols-2 gap-3 sm:col-span-2 lg:col-span-2 2xl:col-span-1 2xl:grid-cols-[120px_128px]">
                   <Select
                     value={String(limit)}
                     onValueChange={(value) => {
@@ -345,6 +299,7 @@ export default function AuditTrailPage() {
                     Terapkan
                   </Button>
                 </div>
+              </div>
               </div>
             </div>
             {(entityTypeFilter || entityIdFilter || requestIdFilter.trim() || dateRangeFilter?.from) ? (
@@ -379,7 +334,9 @@ export default function AuditTrailPage() {
 
             <div className="flex flex-col gap-3 text-sm text-muted-foreground lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap items-center gap-2">
-                <span>Total data: {total}</span>
+                <span className="font-mono text-[11px] tabular-nums">
+                  {rows.length ? `Menampilkan ${(page - 1) * limit + 1}–${Math.min(page * limit, total)} dari ${total}` : `Total data: ${total}`}
+                </span>
                 <Button type="button" variant="outline" size="sm" onClick={exportVisibleCsv} disabled={!rows.length || loading}>
                   <Download className="mr-2 size-4" />
                   Export CSV
@@ -484,15 +441,15 @@ function AuditTrailTable({
           return (
             <div
               key={item.id}
-              className={`min-w-0 p-3 ${isValidationPair ? "border-l-4 border-l-sky-300 bg-sky-50/35 dark:bg-sky-500/10" : ""}`}
+              className={`min-w-0 p-3 ${isValidationPair ? "border-l-4 border-l-validation/60 bg-validation/10 dark:bg-validation/15" : ""}`}
             >
               <div className="flex min-w-0 items-start justify-between gap-2">
                 <div className="min-w-0 space-y-1">
-                  <Badge variant="outline" className="max-w-full whitespace-normal text-left">
+                  <Badge variant="outline" className="max-w-full whitespace-normal text-left font-mono text-[9px] uppercase tracking-[0.12em]">
                     {formatAction(item.action_name)}
                   </Badge>
                   <p className="break-words text-sm font-medium">{formatEntityName(item)}</p>
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] tabular-nums text-muted-foreground">
                     <span>{formatDateTime(item.created_at)}</span>
                     {requestId ? <span>{requestId}</span> : null}
                   </div>
@@ -502,7 +459,7 @@ function AuditTrailTable({
                   variant="ghost"
                   size="icon-sm"
                   onClick={() => onToggleExpanded(item.id)}
-                  aria-label={expanded ? "Tutup detail audit" : "Buka detail audit"}
+                  aria-label={expanded ? `Tutup detail ${formatAction(item.action_name)}` : `Buka detail ${formatAction(item.action_name)} (${formatDateTime(item.created_at)})`}
                   className="shrink-0"
                 >
                   <ChevronDown className={`size-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
@@ -530,7 +487,7 @@ function AuditTrailTable({
       </div>
       <div className="hidden overflow-x-auto 2xl:block">
         <Table className="min-w-[920px]">
-          <TableHeader className="bg-muted/50">
+          <TableHeader className="bg-muted/30 border-b border-border/60">
             <TableRow>
               <TableHead className="w-10" />
               <TableHead className="w-[160px]">Waktu</TableHead>
@@ -549,7 +506,7 @@ function AuditTrailTable({
               return (
                 <Fragment key={item.id}>
                   <TableRow
-                    className={isValidationPair ? "border-l-4 border-l-sky-300 bg-sky-50/35 dark:bg-sky-500/10" : undefined}
+                    className={isValidationPair ? "border-l-4 border-l-validation/60 bg-validation/10 dark:bg-validation/15" : undefined}
                   >
                     <TableCell className="px-2">
                       <Button
@@ -557,28 +514,28 @@ function AuditTrailTable({
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => onToggleExpanded(item.id)}
-                        aria-label={expanded ? "Tutup detail audit" : "Buka detail audit"}
+                        aria-label={expanded ? `Tutup detail ${formatAction(item.action_name)}` : `Buka detail ${formatAction(item.action_name)} (${formatDateTime(item.created_at)})`}
                       >
                         <ChevronDown className={`size-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
                       </Button>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDateTime(item.created_at)}</TableCell>
+                    <TableCell className="whitespace-nowrap font-mono text-[10px] tabular-nums text-muted-foreground">{formatDateTime(item.created_at)}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        <Badge variant="outline" className="max-w-full whitespace-normal text-left">
+                        <Badge variant="outline" className="max-w-full whitespace-normal text-left font-mono text-[9px] uppercase tracking-[0.12em]">
                           {formatAction(item.action_name)}
                         </Badge>
-                        {requestId ? <p className="text-[11px] text-muted-foreground">{requestId}</p> : null}
+                        {requestId ? <p className="font-mono text-[10px] tabular-nums text-muted-foreground">{requestId}</p> : null}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="min-w-0">
                         <p className="break-words text-sm font-medium">{formatEntityName(item)}</p>
-                        <p className="text-[11px] text-muted-foreground">{formatEntityType(item.entity_type || "-")}</p>
+                        <p className="font-mono text-[10px] tabular-nums text-muted-foreground">{formatEntityType(item.entity_type || "-")}</p>
                       </div>
                     </TableCell>
                     <TableCell className="break-words text-sm">{formatActorName(item.actor_user_id, userMap)}</TableCell>
-                    <TableCell className="whitespace-nowrap text-sm">{item.ip_address || "-"}</TableCell>
+                    <TableCell className="whitespace-nowrap font-mono tabular-nums text-xs">{item.ip_address || "-"}</TableCell>
                     <TableCell>
                       <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => onToggleExpanded(item.id)}>
                         {expanded ? "Tutup" : "Lihat"}
@@ -612,7 +569,7 @@ function AuditTrailTable({
 
 function AuditMiniField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-md border bg-background px-2 py-1.5">
+    <div className="min-w-0 rounded-xl border border-border/60 bg-card px-2 py-1.5 shadow-2xs glass-inset">
       <p className="text-[9px] font-medium uppercase text-muted-foreground">{label}</p>
       <p className="break-words text-xs">{value}</p>
     </div>
@@ -647,16 +604,16 @@ function AuditDateRangePicker({ value, onChange }: { value?: DateRange; onChange
 
 function AuditDetailBlock({ title, value }: { title: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-md border bg-background p-2">
+    <div className="min-w-0 rounded-xl border border-border/60 bg-card p-2 shadow-2xs glass-inset">
       <p className="text-[10px] font-medium uppercase text-muted-foreground">{title}</p>
-      <p className="mt-1 break-words text-xs">{value}</p>
+      <p className="mt-1 break-words font-mono text-xs">{value}</p>
     </div>
   );
 }
 
 function AuditJsonBlock({ title, value }: { title: string; value?: Record<string, unknown> | null }) {
   return (
-    <Collapsible className="min-w-0 rounded-md border bg-background p-2">
+    <Collapsible className="min-w-0 rounded-xl border border-border/60 bg-card p-2 shadow-2xs glass-inset">
       <CollapsibleTrigger asChild>
         <Button type="button" variant="ghost" className="h-7 w-full justify-between px-2 text-xs font-medium">
           {title}
@@ -664,7 +621,7 @@ function AuditJsonBlock({ title, value }: { title: string; value?: Record<string
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <pre className="mt-2 max-h-56 overflow-auto rounded bg-muted/40 p-2 text-[11px]">
+        <pre className="mt-2 max-h-56 overflow-auto rounded-md border border-border/60 bg-muted/20 p-2 text-[11px] thin-scrollbar">
           {JSON.stringify(value || {}, null, 2)}
         </pre>
       </CollapsibleContent>
@@ -690,24 +647,7 @@ function formatAction(value?: string | null) {
 }
 
 function formatAuditResourceName(value: string) {
-  const map: Record<string, string> = {
-    app_user: "Account",
-    assetModels: "Asset Model",
-    attachments: "Attachment",
-    customers: "Customer",
-    devicePorts: "Device Port",
-    devices: "Device",
-    deviceTypes: "Device Type",
-    import_job: "Import Job",
-    poles: "Pole",
-    popTypes: "POP Type",
-    pops: "POP",
-    projects: "Project",
-    regions: "Region",
-    routes: "Route",
-    validation_requests: "Validation Request",
-  };
-  return map[value] || formatEntityType(value);
+  return AUDIT_RESOURCE_LABELS[value] || formatEntityType(value);
 }
 
 function getAuditRequestId(item: AuditLogItem) {

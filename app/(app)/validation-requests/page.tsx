@@ -1345,7 +1345,7 @@ function getReviewContext(
     rejectLabel: "Reject ke Admin Region",
     rejectDialogTitle: "Reject ke Admin Region",
     rejectDialogDescription: "Catatan reject wajib minimal 10 karakter dan akan menjadi tindak lanjut admin region.",
-    toneClassName: "border-sky-200/80 bg-sky-50/60 text-sky-950 dark:border-sky-900/50 dark:bg-sky-950/15 dark:text-sky-200",
+    toneClassName: "border-validation/40 bg-validation/20 text-[oklch(0.250_0.120_200)] dark:border-validation/50 dark:bg-validation/15 dark:text-validation-foreground",
   };
 }
 

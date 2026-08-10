@@ -27,6 +27,8 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-validation: var(--validation);
+  --color-validation-foreground: var(--validation-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -59,7 +61,7 @@
 }
 
 :root {
-  --background: oklch(0.985 0.006 255);
+  --background: oklch(0.985 0.008 255);
   --foreground: oklch(0.205 0.022 255);
   --card: oklch(1.000 0 0);
   --card-foreground: oklch(0.205 0.022 255);
@@ -67,15 +69,17 @@
   --popover-foreground: oklch(0.205 0.022 255);
   --primary: oklch(0.505 0.185 255);
   --primary-foreground: oklch(0.990 0.004 255);
-  --secondary: oklch(0.940 0.014 250);
-  --secondary-foreground: oklch(0.285 0.030 255);
-  --muted: oklch(0.955 0.010 250);
-  --muted-foreground: oklch(0.475 0.028 255);
+  --secondary: oklch(0.935 0.016 250);
+  --secondary-foreground: oklch(0.245 0.030 255);
+  --muted: oklch(0.950 0.016 250);
+  --muted-foreground: oklch(0.400 0.032 255);
   --accent: oklch(0.935 0.030 210);
   --accent-foreground: oklch(0.280 0.070 225);
+  --validation: oklch(0.700 0.150 200);
+  --validation-foreground: oklch(0.250 0.120 200);
   --destructive: oklch(0.590 0.215 25);
-  --border: oklch(0.895 0.014 250);
-  --input: oklch(0.910 0.012 250);
+  --border: oklch(0.840 0.020 250);
+  --input: oklch(0.855 0.018 250);
   --ring: oklch(0.560 0.170 250);
   --chart-1: oklch(0.505 0.185 255);
   --chart-2: oklch(0.585 0.145 165);
@@ -119,6 +123,8 @@
   --muted-foreground: oklch(0.735 0.020 255);
   --accent: oklch(0.300 0.045 210);
   --accent-foreground: oklch(0.905 0.050 210);
+  --validation: oklch(0.750 0.140 200);
+  --validation-foreground: oklch(0.850 0.080 200);
   --destructive: oklch(0.700 0.190 25);
   --border: oklch(0.310 0.026 255);
   --input: oklch(0.300 0.026 255);
@@ -228,18 +234,22 @@
  * Nothing Design — Tokens
  * Refs: .claude/skills/nothing-design/references/tokens.md
  * Namespaced under `--nd-*` to coexist with shadcn/ui tokens.
+ *
+ * :root = light defaults (matches shadcn `:root` convention).
+ * .dark = dark overrides (matches theme toggle — class on <html>).
  * ──────────────────────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    --nd-black: #000000;
-    --nd-surface: #0a0a0a;
-    --nd-surface-raised: #141414;
-    --nd-border: #1f1f1f;
-    --nd-border-visible: #2a2a2a;
-    --nd-text-disabled: #4d4d4d;
-    --nd-text-secondary: #8a8a8a;
-    --nd-text-primary: #e8e8e8;
-    --nd-text-display: #ffffff;
+    /* Light mode defaults — surfaces are white, text is dark */
+    --nd-black: #f5f5f5;
+    --nd-surface: #ffffff;
+    --nd-surface-raised: #f0f0f0;
+    --nd-border: #d2d6dc;
+    --nd-border-visible: #b0b7c0;
+    --nd-text-disabled: #8e95a2;
+    --nd-text-secondary: #4b5563;
+    --nd-text-primary: #1a1a1a;
+    --nd-text-display: #000000;
     --nd-accent: #d71921;
     --nd-accent-subtle: rgba(215, 25, 33, 0.15);
     --nd-success: #4a9e5c;
@@ -262,17 +272,17 @@
     --nd-data-tracking: 0;
   }
 
-  .light,
-  :root[data-theme="light"] {
-    --nd-black: #f5f5f5;
-    --nd-surface: #ffffff;
-    --nd-surface-raised: #fafafa;
-    --nd-border: #e8e8e8;
-    --nd-border-visible: #cccccc;
-    --nd-text-disabled: #999999;
-    --nd-text-secondary: #666666;
-    --nd-text-primary: #1a1a1a;
-    --nd-text-display: #000000;
+  /* Dark mode — surfaces are near-black, text is light */
+  .dark {
+    --nd-black: #000000;
+    --nd-surface: #0a0a0a;
+    --nd-surface-raised: #141414;
+    --nd-border: #1f1f1f;
+    --nd-border-visible: #2a2a2a;
+    --nd-text-disabled: #4d4d4d;
+    --nd-text-secondary: #8a8a8a;
+    --nd-text-primary: #e8e8e8;
+    --nd-text-display: #ffffff;
   }
 }
 

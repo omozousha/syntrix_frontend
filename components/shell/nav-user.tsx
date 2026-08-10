@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Check, ChevronDown, LogOut, Moon, Sun, User } from "lucide-react";
+import { AlertTriangle, Bell, Check, ChevronDown, Clock, Inbox, LogOut, MailOpen, Moon, Sun, User } from "lucide-react";
 import { toast } from "sonner";
 import type { SessionUser } from "@/lib/session";
 import { useTheme } from "@/lib/use-theme";
@@ -24,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const THEME_KEY = "syntrix_theme";
 const AVATAR_CACHE_PREFIX = "syntrix_avatar_cache";
@@ -317,44 +318,62 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
               ) : null}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[calc(100vw-1rem)] max-w-80">
-            <DropdownMenuLabel className="flex items-center justify-between">
-              <span>Request Inbox</span>
-              <Badge variant="outline">{notificationQueueLabel}</Badge>
+          <DropdownMenuContent align="end" className="w-[calc(100vw-1rem)] max-w-80 rounded-2xl border border-border/40 bg-muted/10 p-1.5 shadow-xs dark:bg-white/[0.02]">
+            <div className="overflow-hidden rounded-[calc(1.25rem-0.25rem)] border border-border/60 bg-popover shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+            <DropdownMenuLabel className="flex items-center justify-between px-2.5 py-2">
+              <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Request Inbox</span>
+              <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em]">{notificationQueueLabel}</Badge>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <div className="space-y-2 px-2 pb-1">
               <div className="flex items-center gap-1">
-                <Button type="button" variant={digestWindow === "daily" ? "default" : "outline"} size="sm" className="h-7 text-[11px]" onClick={() => setDigestWindow("daily")}>
+                <Button type="button" variant={digestWindow === "daily" ? "default" : "outline"} size="sm" className="h-7 font-mono text-[10px] uppercase tracking-[0.12em]" onClick={() => setDigestWindow("daily")}>
                   24 Jam
                 </Button>
-                <Button type="button" variant={digestWindow === "weekly" ? "default" : "outline"} size="sm" className="h-7 text-[11px]" onClick={() => setDigestWindow("weekly")}>
+                <Button type="button" variant={digestWindow === "weekly" ? "default" : "outline"} size="sm" className="h-7 font-mono text-[10px] uppercase tracking-[0.12em]" onClick={() => setDigestWindow("weekly")}>
                   7 Hari
                 </Button>
               </div>
               {regionOptions.length ? (
-                <select
-                  value={selectedRegionId}
-                  onChange={(event) => setSelectedRegionId(event.target.value)}
-                  className="h-8 w-full rounded-md border bg-background px-2 text-xs"
-                >
-                  <option value="">Semua Region</option>
-                  {regionOptions.map((region) => (
-                    <option key={region.id} value={region.id}>
-                      {region.label}
-                    </option>
-                  ))}
-                </select>
+                <Select value={selectedRegionId || "all"} onValueChange={(value) => setSelectedRegionId(value === "all" ? "" : value)}>
+                  <SelectTrigger size="sm" className="h-8 min-h-8 w-full rounded-lg border-border/60 bg-background text-xs">
+                    <SelectValue placeholder="Semua Region" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Region</SelectItem>
+                    {regionOptions.map((region) => (
+                      <SelectItem key={region.id} value={region.id}>
+                        {region.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : null}
-              <div className="rounded-md border bg-muted/20 p-2 text-[11px]">
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-2 shadow-2xs">
                 {digestLoading ? (
-                  <span className="text-muted-foreground">Memuat ringkasan...</span>
+                  <span className="text-[11px] text-muted-foreground">Memuat ringkasan...</span>
                 ) : (
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                    <span>Inbox: {digest?.pending_total ?? 0}</span>
-                    <span>Unread: {digest?.unread_total ?? 0}</span>
-                    <span>Urgent: {digest?.urgent_total ?? 0}</span>
-                    <span>Update: {digest?.updated_in_window ?? 0}</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <span className="flex items-center gap-1.5 text-[11px]">
+                      <Inbox className="size-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Inbox</span>
+                      <span className="ml-auto font-mono font-medium tabular-nums">{digest?.pending_total ?? 0}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[11px]">
+                      <MailOpen className="size-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Unread</span>
+                      <span className="ml-auto font-mono font-medium tabular-nums">{digest?.unread_total ?? 0}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[11px]">
+                      <AlertTriangle className="size-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Urgent</span>
+                      <span className="ml-auto font-mono font-medium tabular-nums">{digest?.urgent_total ?? 0}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[11px]">
+                      <Clock className="size-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Update</span>
+                      <span className="ml-auto font-mono font-medium tabular-nums">{digest?.updated_in_window ?? 0}</span>
+                    </span>
                   </div>
                 )}
               </div>
@@ -380,45 +399,50 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
                     return (
                       <DropdownMenuItem
                         key={item.id}
-                        className={`flex cursor-pointer flex-col items-start gap-0.5 ${item.unread ? "bg-primary/5" : ""}`}
+                        className={`relative flex cursor-pointer flex-col items-start gap-1 rounded-xl border border-border/60 bg-background p-2 shadow-2xs transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted/40 hover:shadow-xs ${
+                          item.unread ? "border-primary/25" : ""
+                        }`}
                         onClick={() => {
                           void markOneAsRead(item.id);
                           router.push(REQUESTS_PATH);
                         }}
                       >
+                        {item.unread ? <span className="absolute bottom-2 left-1 top-2 w-[2px] rounded-full bg-primary" aria-hidden="true" /> : null}
                         <div className="flex w-full items-center justify-between gap-2">
-                          <Badge variant="outline" className="h-4 max-w-[150px] px-1 text-[10px] font-normal">
+                          <Badge variant="outline" className="h-4 max-w-[150px] px-1.5 font-mono text-[9px] font-medium uppercase tracking-[0.12em]">
                             <span className="truncate">{copy.requestType}</span>
                           </Badge>
-                          <Badge variant="outline" className={mappedStatus.className}>
+                          <Badge variant="outline" className={`font-mono text-[9px] uppercase tracking-[0.12em] ${mappedStatus.className}`}>
                             {mappedStatus.label}
                           </Badge>
                         </div>
-                        <span className="line-clamp-1 text-xs font-medium">
-                          {copy.title} {item.unread ? <span className="text-primary">*</span> : null}
-                          {item.urgent ? <span className="ml-1 text-amber-600">URGENT</span> : null}
+                        <span className="line-clamp-1 text-xs font-semibold tracking-tight">
+                          {copy.title}
+                          {item.urgent ? <span className="ml-1 font-mono text-[10px] font-bold text-amber-600 dark:text-amber-400">URGENT</span> : null}
                         </span>
                         <span className="line-clamp-1 text-[11px] text-muted-foreground">
                           {copy.targetName || "Asset terkait"} - {copy.stageLabel}
                         </span>
-                        <span className="text-[11px] text-muted-foreground">
-                          {formatDateTime(item.updated_at)}
-                          {item.age_minutes ? ` - ${formatAge(item.age_minutes)}` : ""}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="mt-1 h-6 px-2 text-[11px]"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            void markOneAsRead(item.id);
-                          }}
-                        >
-                          <Check className="mr-1 size-3" />
-                          Mark read
-                        </Button>
+                        <div className="mt-0.5 flex w-full items-center justify-between gap-2">
+                          <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                            {formatDateTime(item.updated_at)}
+                            {item.age_minutes ? ` - ${formatAge(item.age_minutes)}` : ""}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 rounded-full px-2 font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground transition-transform duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-foreground active:scale-[0.98]"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              void markOneAsRead(item.id);
+                            }}
+                          >
+                            <Check className="mr-1 size-2.5" />
+                            Read
+                          </Button>
+                        </div>
                       </DropdownMenuItem>
                     );
                   })
@@ -427,10 +451,15 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
                 )}
               </div>
             </ScrollArea>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push(REQUESTS_PATH)}>
-              Buka halaman Requests
-            </DropdownMenuItem>
+            <div className="border-t border-border/60">
+              <DropdownMenuItem
+                className="cursor-pointer rounded-b-2xl py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground transition-colors hover:bg-muted/50 focus:bg-muted/50"
+                onClick={() => router.push(REQUESTS_PATH)}
+              >
+                Buka halaman Requests
+              </DropdownMenuItem>
+            </div>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
