@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Check, Clock, Inbox, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Clock, Inbox, Loader2, ShieldCheck, X } from "lucide-react";
 import { ApprovalActions } from "@/components/features/requests/approval-actions";
 import { EvidenceChecklistPreview } from "@/components/features/requests/evidence-checklist-preview";
 import { RequestActorLine } from "@/components/features/requests/request-actor-line";
@@ -806,7 +806,7 @@ export default function ValidationRequestsPage() {
               </span>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={() => void loadQueue()} disabled={loading || acting} className="h-7 min-h-7 shrink-0 px-2 text-xs">
-              <RefreshCw className={`size-3.5 sm:mr-1.5 ${loading ? "animate-spin" : ""}`} />
+              <Loader2 className={`size-3.5 sm:mr-1.5 ${loading ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">Refresh</span>
             </Button>
           </div>

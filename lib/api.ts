@@ -314,3 +314,50 @@ export type RegionsListResponse = PaginatedResponse<{
     region_id: string;
     region_name: string;
   }>;
+
+// ── OSRM Road Routing ──────────────────────────────────────────────────────────
+
+export type OsgmRouteStep = {
+  index: number;
+  instruction: string;
+  distance_m: number;
+  duration_s: number;
+  type: string;
+  modifier: string;
+  location: [number, number] | null;
+};
+
+export type OsgmRouteResult = {
+  distance_km: number;
+  distance_meters: number;
+  duration_minutes: number;
+  duration_seconds: number;
+  geometry: { type: "LineString"; coordinates: [number, number][] };
+  steps: OsgmRouteStep[];
+  waypoints: Array<{ location: [number, number]; name?: string }>;
+  cached?: boolean;
+};
+
+export type OsrmRouteResponse = {
+  success: boolean;
+  data: OsgmRouteResult;
+  meta: {
+    origin: { lng: number; lat: number };
+    destination: { lng: number; lat: number };
+    engine: string;
+    cached: boolean;
+  };
+};
+
+/**
+ * Fetch driving route between two coordinates via backend OSRM proxy.
+ * @param origin - "lng,lat" format
+ * @param destination - "lng,lat" format
+ */
+export function fetchRoadRoute(origin: string, destination: string, token: string) {
+  const params = new URLSearchParams({ origin, destination });
+  return apiFetch<OsrmRouteResponse>(`/routing/route?${params.toString()}`, {
+    token,
+    timeoutMs: 12_000,
+  });
+}

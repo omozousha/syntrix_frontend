@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowRight, Download, ExternalLink, QrCode, ShieldCheck } from "lucide-react";
+import { ArrowRight, Download, ExternalLink, MapPin, Navigation, QrCode, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,8 @@ type DeviceQrContext = {
   id: string;
   device_name?: string | null;
   device_type_key?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   pop?: {
     id?: string | null;
     pop_id?: string | null;
@@ -128,6 +130,35 @@ export default function OdpQrBrowserFallbackPage() {
                 Download APK
               </Button>
             </div>
+
+            {device?.latitude != null && device?.longitude != null ? (
+              <div className="lg:max-w-2xl">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+                  <Navigation className="size-4 text-blue-300" />
+                  Petunjuk Arah ke Lokasi
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${device.latitude},${device.longitude}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-blue-300/20 bg-blue-400/10 px-4 text-sm font-medium text-blue-100 transition-all hover:bg-blue-400/20 active:scale-[0.98]"
+                  >
+                    <MapPin className="size-4" />
+                    Buka di Google Maps
+                  </a>
+                  <a
+                    href={`https://waze.com/ul?ll=${device.latitude},${device.longitude}&navigate=yes`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 text-sm font-medium text-cyan-100 transition-all hover:bg-cyan-400/20 active:scale-[0.98]"
+                  >
+                    <Navigation className="size-4" />
+                    Buka di Waze
+                  </a>
+                </div>
+              </div>
+            ) : null}
 
             <div className="grid gap-3 sm:grid-cols-3 lg:max-w-2xl">
               <SafetyPoint title="QR-first" description="Form validasi dibuka dari scanner app." />

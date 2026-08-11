@@ -27,16 +27,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
 
-  // Apply theme from localStorage + system preference
-  useEffect(() => {
-    try {
-      const theme = window.localStorage.getItem("syntrix-theme");
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const isDark = theme === "dark" || (theme !== "light" && prefersDark);
-      document.documentElement.classList.toggle("dark", isDark);
-    } catch {}
-  }, []);
   const nextParam = searchParams.get("next");
   const getNextPath = useCallback(() => {
     if (!nextParam) return "/dashboard";
@@ -55,13 +47,17 @@ export default function LoginPage() {
           if (profile.role === "user_region") {
             clearStoredToken();
             openSyntrixOneApp();
+            setIsCheckingSession(false);
             return;
           }
           router.replace(getNextPath());
         })
         .catch(() => {
           clearStoredToken();
+          setIsCheckingSession(false);
         });
+    } else {
+      setIsCheckingSession(false);
     }
   }, [router, getNextPath]);
 
@@ -132,16 +128,25 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-dvh overflow-hidden bg-[linear-gradient(135deg,var(--background),var(--muted)_62%)]">
+      {isCheckingSession ? (
+        <div className="flex min-h-dvh w-full items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="size-8 animate-spin text-primary" />
+            <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Memuat...</p>
+          </div>
+        </div>
+      ) : (
+    <>
       <div className="mx-auto grid min-h-dvh w-full max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
         <section className="hidden items-center lg:flex">
           <div className="w-full space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-md border bg-card/75 px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm">
+            <div className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-card/75 px-3 py-2 shadow-2xs">
               <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
                 <Network className="size-4" />
               </span>
-              <span className="text-foreground">Syntrix</span>
+              <span className="text-sm font-semibold text-foreground">Syntrix</span>
               <span className="h-4 w-px bg-border" />
-              <span>Ops Console</span>
+              <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Ops Console</span>
             </div>
 
             <div className="max-w-2xl space-y-4">
@@ -153,17 +158,19 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <div className="rounded-xl border bg-card/85 p-3 shadow-sm">
-              <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2">
-                <MatrixNode icon={Network} title="Inventory" description="Region, POP, Device" />
-                <ArrowRight className="size-4 text-muted-foreground" />
-                <MatrixNode icon={Radar} title="Validation" description="Field evidence" />
-                <ArrowRight className="size-4 text-muted-foreground" />
-                <MatrixNode icon={ShieldCheck} title="Approval" description="Role based" />
+            <div className="rounded-2xl border border-border/40 bg-muted/10 p-1.5 shadow-xs dark:bg-white/[0.02]">
+              <div className="rounded-[calc(1.25rem-0.25rem)] border border-border/60 bg-background p-3">
+                <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2">
+                  <MatrixNode icon={Network} title="Inventory" description="Region, POP, Device" />
+                  <ArrowRight className="size-4 text-muted-foreground" />
+                  <MatrixNode icon={Radar} title="Validation" description="Field evidence" />
+                  <ArrowRight className="size-4 text-muted-foreground" />
+                  <MatrixNode icon={ShieldCheck} title="Approval" description="Role based" />
+                </div>
               </div>
             </div>
 
-            <div className="rounded-xl border bg-card/85 p-4 shadow-sm">
+            <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-2xs glass-inset">
               <div className="flex items-start gap-3">
                 <div className="rounded-md border border-primary/15 bg-primary/10 p-2 text-primary">
                   <LockKeyhole className="size-4" />
@@ -188,13 +195,13 @@ export default function LoginPage() {
                 </span>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold">Syntrix</p>
-                  <p className="truncate text-xs text-muted-foreground">Synchronization & Validation Matrix</p>
+                  <p className="truncate font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Synchronization & Validation Matrix</p>
                 </div>
               </div>
-              <Badge variant="secondary">Secure</Badge>
+              <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.12em]">Secure</Badge>
             </div>
 
-            <Card className="border-border/80 bg-card/95 shadow-lg shadow-primary/5">
+            <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset">
               <CardHeader className="space-y-4 pb-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -250,7 +257,7 @@ export default function LoginPage() {
                       </div>
                     </Field>
 
-                    <Button type="submit" disabled={loading} className="w-full shadow-sm shadow-primary/20">
+                    <Button type="submit" disabled={loading} className="w-full rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] shadow-sm shadow-primary/20">
                       {loading ? <Loader2 className="size-4 animate-spin" /> : null}
                       {loading ? "Memproses..." : "Login"}
                     </Button>
@@ -260,7 +267,7 @@ export default function LoginPage() {
                       variant="outline"
                       onClick={() => void onResetPassword()}
                       disabled={resetLoading}
-                      className="w-full"
+                      className="w-full rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                     >
                       {resetLoading ? <Loader2 className="size-4 animate-spin" /> : null}
                       {resetLoading ? "Mengirim..." : "Reset Password"}
@@ -294,6 +301,8 @@ export default function LoginPage() {
         }}
         onAction={() => setStatusDialogOpen(false)}
       />
+    </>
+      )}
     </main>
   );
 }
@@ -317,19 +326,11 @@ function MatrixNode({
   description: string;
 }) {
   return (
-    <div className="min-w-0 rounded-md border bg-background/80 p-3 shadow-sm">
+    <div className="min-w-0 rounded-xl border border-border/60 bg-card p-3 shadow-2xs glass-inset">
       <Icon className="mb-3 size-5 text-primary" />
       <p className="truncate text-sm font-medium">{title}</p>
-      <p className="mt-1 truncate text-xs text-muted-foreground">{description}</p>
+      <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">{description}</p>
     </div>
   );
 }
 
-function SignalCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border bg-card/80 p-3 shadow-sm">
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-medium">{value}</p>
-    </div>
-  );
-}

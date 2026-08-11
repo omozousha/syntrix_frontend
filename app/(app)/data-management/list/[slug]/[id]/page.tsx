@@ -53,6 +53,7 @@ import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-utils";
 import { resolveAttachment } from "@/lib/attachment-utils";
+import { DeviceNavigationModal } from "@/components/features/maps/device-navigation-modal";
 import { deviceTypeKeyToSlug, getCategoryBySlug } from "@/lib/data-management-config";
 import { buildCustomerRelationDisplay, buildDeviceQrRelationDisplay } from "@/lib/display-adapters/device-display-adapter";
 import { useReferenceData } from "@/hooks/use-reference-data";
@@ -590,6 +591,7 @@ export default function DataManagementDetailPage() {
   const [popOptions, setPopOptions] = useState<PopLookupOption[]>([]);
   const [loadingOdpLookups, setLoadingOdpLookups] = useState(false);
   const [topologyLookupData, setTopologyLookupData] = useState<TopologyLookupData>(emptyTopologyLookup());
+  const [navModalOpen, setNavModalOpen] = useState(false);
   const relationReferenceMaps = useMemo(() => {
     const data = relationReferenceQuery.data?.data || {};
     return {
@@ -2478,6 +2480,16 @@ if (!category) {
                   <Link href={asBuiltHref}>Open As-Built</Link>
                 </Button>
               ) : null}
+              {category?.resource === "devices" && item &&
+               Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude)) ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setNavModalOpen(true)}
+                >
+                  Navigasi Rute
+                </Button>
+              ) : null}
             </>
           }
         />
@@ -2963,6 +2975,20 @@ if (!category) {
         onOpenChange={setSuccessDialogOpen}
         onAction={() => setSuccessDialogOpen(false)}
       />
+
+      {item &&
+       Number.isFinite(Number(item.latitude)) &&
+       Number.isFinite(Number(item.longitude)) && (
+        <DeviceNavigationModal
+          open={navModalOpen}
+          onOpenChange={setNavModalOpen}
+          token={token || ""}
+          deviceId={String(item.id)}
+          deviceName={String(item.device_name || item.device_id || "")}
+          deviceLat={Number(item.latitude)}
+          deviceLng={Number(item.longitude)}
+        />
+      )}
     </ScrollArea>
   );
 }

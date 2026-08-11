@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Search } from "lucide-react";
+import { Search } from "lucide-react";
+import { InlineLoader } from "@/components/shared/loading-icon";
 import { OperationalState } from "@/components/operational-ui";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -79,9 +80,7 @@ export function RegionInventoryDialog({
             />
           </div>
           {typeCountQuery.isFetching ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" /> Menghitung device...
-            </div>
+            <InlineLoader label="Menghitung device..." />
           ) : null}
         </div>
 

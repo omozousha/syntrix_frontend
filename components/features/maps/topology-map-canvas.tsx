@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import type { OsgmRouteResult } from "@/lib/api";
 
 export type MapDevice = {
   id: string;
@@ -36,6 +37,7 @@ type TopologyMapCanvasProps = {
   connections: MapConnection[];
   impactedDeviceIds?: string[];
   impactedConnectionIds?: string[];
+  osrmRoute?: OsgmRouteResult | null;
 };
 
 const BASE_STYLE = {
@@ -57,6 +59,7 @@ export function TopologyMapCanvas({
   connections,
   impactedDeviceIds = [],
   impactedConnectionIds = [],
+  osrmRoute,
 }: TopologyMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -145,6 +148,72 @@ export function TopologyMapCanvas({
         },
       });
 
+      // Render OSRM Road Route if available
+      if (osrmRoute && osrmRoute.geometry) {
+        map.addSource("osrm-route", {
+          type: "geojson",
+          data: {
+            type: "Feature" as const,
+            geometry: osrmRoute.geometry,
+            properties: {},
+          },
+        });
+        map.addLayer({
+          id: "osrm-route",
+          type: "line",
+          source: "osrm-route",
+          paint: {
+            "line-color": "#2563eb",
+            "line-width": 5,
+            "line-opacity": 0.85,
+          },
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+        });
+
+        // Add start and end pulse points
+        const coords = osrmRoute.geometry.coordinates;
+        if (coords.length > 0) {
+          const startPt = coords[0];
+          const endPt = coords[coords.length - 1];
+          map.addSource("osrm-endpoints", {
+            type: "geojson",
+            data: {
+              type: "FeatureCollection",
+              features: [
+                { type: "Feature", geometry: { type: "Point", coordinates: startPt }, properties: { type: "start" } },
+                { type: "Feature", geometry: { type: "Point", coordinates: endPt }, properties: { type: "end" } },
+              ],
+            },
+          });
+          map.addLayer({
+            id: "osrm-endpoints",
+            type: "circle",
+            source: "osrm-endpoints",
+            paint: {
+              "circle-radius": [
+                "match",
+                ["get", "type"],
+                "start", 9,
+                "end", 9,
+                6,
+              ],
+              "circle-color": [
+                "match",
+                ["get", "type"],
+                "start", "#3b82f6",
+                "end", "#ef4444",
+                "#ffffff",
+              ],
+              "circle-stroke-color": "#ffffff",
+              "circle-stroke-width": 2,
+            },
+          });
+        }
+      }
+
       map.on("click", "devices", (event) => {
         const feature = event.features?.[0];
         const coordinates = (feature?.geometry as { coordinates?: [number, number] } | undefined)?.coordinates;
@@ -160,12 +229,18 @@ export function TopologyMapCanvas({
       if (deviceFeatures.length) {
         const bounds = new maplibregl.LngLatBounds();
         deviceFeatures.forEach((feature) => bounds.extend(feature.geometry.coordinates as [number, number]));
+
+        // If OSRM route exists, include its coordinates in bounds
+        if (osrmRoute?.geometry?.coordinates?.length) {
+          osrmRoute.geometry.coordinates.forEach((coord) => bounds.extend(coord as [number, number]));
+        }
+
         map.fitBounds(bounds, { padding: 48, maxZoom: 15, duration: 0 });
       }
     });
 
     return () => map.remove();
-  }, [connections, devices, impactedConnectionIds, impactedDeviceIds, routes]);
+  }, [connections, devices, impactedConnectionIds, impactedDeviceIds, osrmRoute, routes]);
 
   return <div ref={containerRef} className="h-full min-h-[320px] w-full md:min-h-[420px]" aria-label="Topology operational map" />;
 }

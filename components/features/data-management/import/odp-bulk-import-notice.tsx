@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, CheckCircle2, Info, Loader2 } from "lucide-react";
+import { InlineLoader, ButtonLoader } from "@/components/shared/loading-icon";
 import { cn } from "@/lib/utils";
 
 export const NOTICE_DISMISSED_KEY = "odp-bulk-import-notice-dismissed";
@@ -123,11 +124,8 @@ export function OdpBulkImportNoticeDialog({
           </div>
 
           {isChecking && (
-            <div className="flex items-center justify-center gap-2 py-3">
-              <Loader2 className="size-4 animate-spin text-primary" aria-hidden />
-              <span className="text-sm text-muted-foreground">
-                Memeriksa ketersediaan data POP...
-              </span>
+            <div className="flex items-center justify-center py-3">
+              <InlineLoader label="Memeriksa ketersediaan data POP..." />
             </div>
           )}
 
@@ -214,7 +212,7 @@ export function OdpBulkImportNoticeDialog({
             >
               {isChecking ? (
                 <>
-                  <Loader2 className="mr-2 size-4 animate-spin" /> Memeriksa...
+                  <ButtonLoader className="mr-2 text-primary" /> Memeriksa...
                 </>
               ) : popCheck?.popCount === 0 ? (
                 "Tutup untuk buat POP"

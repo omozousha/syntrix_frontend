@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Download, RefreshCw } from "lucide-react";
+import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
@@ -180,7 +180,7 @@ export default function OdpQualityPage() {
                 setLastIssueKey(null);
               }}
             >
-              <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
+              <Loader2 className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
           </div>
