@@ -110,6 +110,7 @@ const DeviceMarker = React.memo(
 
     return (
       <MarkerF
+        key={showLabel ? "lbl-on" : "lbl-off"}
         position={{ lat, lng }}
         icon={icon}
         title={labelText || device.device_type_key || ""}
@@ -315,17 +316,20 @@ export function GoogleMapsCanvas({
                 />
               )}
 
-            {/* Device Markers (memoized, labels shown only when enabled & zoom >= 13) */}
+            {/* Device Markers (memoized, labels shown only when enabled & zoom >= 15) */}
             {showDevices &&
-              deviceFeatures.map(({ device, markerStatus }) => (
-                <DeviceMarker
-                  key={device.id}
-                  device={device}
-                  icon={deviceIcons[markerStatus] || svgMarker(MARKER_COLORS[markerStatus] || fallbackColor)}
-                  showLabel={showLabels && zoom >= 13}
-                  onClick={(d) => setSelectedDevice(d)}
-                />
-              ))}
+              deviceFeatures.map(({ device, markerStatus }) => {
+                const canShowLabel = showLabels && zoom >= 15;
+                return (
+                  <DeviceMarker
+                    key={`${device.id}-${canShowLabel}`}
+                    device={device}
+                    icon={deviceIcons[markerStatus] || svgMarker(MARKER_COLORS[markerStatus] || fallbackColor)}
+                    showLabel={canShowLabel}
+                    onClick={(d) => setSelectedDevice(d)}
+                  />
+                );
+              })}
 
             {/* OSRM start/end markers */}
             {showOsrmRoute && osrmRoute && osrmPath.length > 1 && (
