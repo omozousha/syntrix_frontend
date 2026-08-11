@@ -142,6 +142,7 @@ function MapsHostContent({ visible }: { visible: boolean }) {
     }
     return {
       devices: false, // Default uncheck per request
+      labels: false, // Device name labels off by default
       cables: true,
       connections: true,
       poi: false,
@@ -450,6 +451,7 @@ function MapsHostContent({ visible }: { visible: boolean }) {
                   userGpsPosition={userGpsPosition}
                   searchSelection={searchSelection}
                   showDevices={layerToggles.devices}
+                  showLabels={layerToggles.labels}
                   showCables={layerToggles.cables}
                   showConnections={layerToggles.connections}
                   showOsrmRoute={true}

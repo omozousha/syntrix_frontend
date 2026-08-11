@@ -34,6 +34,7 @@ type Option = { value: string; label: string };
 
 export type LayerToggles = {
   devices: boolean;
+  labels: boolean;
   cables: boolean;
   connections: boolean;
   poi: boolean;
@@ -780,6 +781,15 @@ export function MapLeftSidebar({
                       className="size-3.5 rounded accent-primary"
                     />
                     <span>Devices</span>
+                  </label>
+                  <label className="flex items-center gap-2 rounded-lg border border-border/60 p-1.5 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={layerToggles.labels}
+                      onChange={() => onToggleLayer("labels")}
+                      className="size-3.5 rounded accent-primary"
+                    />
+                    <span>Label Nama</span>
                   </label>
                   <label className="flex items-center gap-2 rounded-lg border border-border/60 p-1.5 cursor-pointer hover:bg-muted/40 transition-colors">
                     <input

@@ -30,6 +30,7 @@ export type GoogleMapsCanvasProps = {
   userGpsPosition?: { lat: number; lng: number } | null;
   searchSelection?: { lat: number; lng: number; label: string } | null;
   showDevices?: boolean;
+  showLabels?: boolean;
   showCables?: boolean;
   showConnections?: boolean;
   showOsrmRoute?: boolean;
@@ -131,6 +132,7 @@ export function GoogleMapsCanvas({
   userGpsPosition,
   searchSelection,
   showDevices = true,
+  showLabels = true,
   showCables = true,
   showConnections = true,
   showOsrmRoute = true,
@@ -313,14 +315,14 @@ export function GoogleMapsCanvas({
                 />
               )}
 
-            {/* Device Markers (memoized, labels shown only on zoom >= 13) */}
+            {/* Device Markers (memoized, labels shown only when enabled & zoom >= 13) */}
             {showDevices &&
               deviceFeatures.map(({ device, markerStatus }) => (
                 <DeviceMarker
                   key={device.id}
                   device={device}
                   icon={deviceIcons[markerStatus] || svgMarker(MARKER_COLORS[markerStatus] || fallbackColor)}
-                  showLabel={zoom >= 13}
+                  showLabel={showLabels && zoom >= 13}
                   onClick={(d) => setSelectedDevice(d)}
                 />
               ))}
