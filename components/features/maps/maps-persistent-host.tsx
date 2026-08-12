@@ -154,8 +154,8 @@ function MapsHostContent({ visible }: { visible: boolean }) {
     };
   });
 
-  // Status Dock Visibility
-  const [dockVisible, setDockVisible] = useState(true);
+  // Status Dock Visibility (default hidden)
+  const [dockVisible, setDockVisible] = useState(false);
 
   // Refs for Fullscreen (entire host) and Screenshot (map canvas area)
   const hostRef = useRef<HTMLDivElement>(null);
