@@ -5,8 +5,9 @@ import {
   GoogleMap,
   useJsApiLoader,
   MarkerF,
-  InfoWindow,
   PolylineF,
+  OverlayViewF,
+  OVERLAY_MOUSE_TARGET,
 } from "@react-google-maps/api";
 import type { OsgmRouteResult } from "@/lib/api";
 import type { MapConnection, MapDevice, MapRoute } from "./topology-map-canvas";
@@ -35,13 +36,15 @@ export type GoogleMapsCanvasProps = {
   showConnections?: boolean;
   showOsrmRoute?: boolean;
   showPoi?: boolean;
-  onDeviceSelect?: (device: MapDevice) => void;
+  onDeviceSelect?: (device: MapDevice, isMulti: boolean) => void;
+  onGroupSelect?: (devices: MapDevice[]) => void;
   onMapIdle?: (bounds: { south: number; west: number; north: number; east: number }) => void;
   className?: string;
 };
 
-const DEFAULT_CENTER = { lat: -6.2, lng: 106.816 };
-const DEFAULT_ZOOM = 10;
+// Default viewport covers Java Island, Indonesia.
+const DEFAULT_CENTER = { lat: -7.3, lng: 110.2 };
+const DEFAULT_ZOOM = 8;
 
 const MARKER_COLORS: Record<string, string> = {
   healthy: "#16a34a",
@@ -59,6 +62,17 @@ function svgMarker(color: string): string {
     `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
        <circle cx="14" cy="14" r="10" fill="${encoded}" stroke="#ffffff" stroke-width="2.5"/>
        <circle cx="14" cy="14" r="4" fill="#ffffff" fill-opacity="0.85"/>
+     </svg>`,
+  )}`;
+}
+
+function svgGroupMarker(count: number): string {
+  const text = String(count);
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+       <circle cx="16" cy="16" r="13" fill="#2563eb" stroke="#ffffff" stroke-width="2.5"/>
+       <circle cx="16" cy="16" r="9.5" fill="#1d4ed8"/>
+       <text x="16" y="20" font-family="monospace, sans-serif" font-size="10" font-weight="700" fill="#ffffff" text-anchor="middle">${text}</text>
      </svg>`,
   )}`;
 }
@@ -91,32 +105,39 @@ const DeviceMarker = React.memo(
     device: MapDevice;
     icon: google.maps.Icon | string;
     showLabel: boolean;
-    onClick: (device: MapDevice) => void;
+    onClick: (device: MapDevice, isMulti: boolean) => void;
   }) => {
     const lat = Number(device.latitude);
     const lng = Number(device.longitude);
     const labelText = device.device_name || device.device_id || "";
 
-    const markerLabel = React.useMemo(() => {
-      if (!showLabel || !labelText) return undefined;
-      return {
-        text: labelText,
-        color: "#1e293b",
-        fontSize: "10px",
-        fontWeight: "500",
-        fontFamily: "monospace",
-      };
-    }, [showLabel, labelText]);
-
     return (
-      <MarkerF
-        key={showLabel ? "lbl-on" : "lbl-off"}
-        position={{ lat, lng }}
-        icon={icon}
-        title={labelText || device.device_type_key || ""}
-        label={markerLabel}
-        onClick={() => onClick(device)}
-      />
+      <>
+        <MarkerF
+          position={{ lat, lng }}
+          icon={icon}
+          title={labelText || device.device_type_key || ""}
+          onClick={(e: google.maps.MapMouseEvent) => {
+            const domEvent = e.domEvent as MouseEvent | undefined;
+            onClick(device, Boolean(domEvent?.shiftKey));
+          }}
+        />
+
+        {showLabel && labelText && (
+          <OverlayViewF
+            position={{ lat, lng }}
+            mapPaneName={OVERLAY_MOUSE_TARGET}
+            getPixelPositionOffset={(width, height) => ({
+              x: -(width / 2),
+              y: -42,
+            })}
+          >
+            <div className="pointer-events-none rounded-full border border-border/60 bg-card/95 px-2.5 py-0.5 font-mono text-[9px] font-medium tracking-wide text-foreground shadow-xs backdrop-blur-md glass-inset whitespace-nowrap">
+              {labelText}
+            </div>
+          </OverlayViewF>
+        )}
+      </>
     );
   },
 );
@@ -139,6 +160,7 @@ export function GoogleMapsCanvas({
   showOsrmRoute = true,
   showPoi = false,
   onDeviceSelect,
+  onGroupSelect,
   onMapIdle,
   className,
 }: GoogleMapsCanvasProps) {
@@ -146,12 +168,11 @@ export function GoogleMapsCanvas({
   const { isLoaded, loadError } = useJsApiLoader({ googleMapsApiKey: apiKey, id: "google-maps-script" });
   const mapRef = React.useRef<google.maps.Map | null>(null);
   const [mapType, setMapType] = React.useState<string>("roadmap");
-  const [selectedDevice, setSelectedDevice] = React.useState<MapDevice | null>(null);
   const [zoom, setZoom] = React.useState<number>(DEFAULT_ZOOM);
 
   // Icons memoized once per marker status (avoids `new google.maps.Size/Point` on every render)
   const deviceIcons = React.useMemo(() => {
-    if (typeof google === "undefined") return {};
+    if (!isLoaded || typeof google === "undefined" || !google.maps) return {};
     const entries = Object.entries(MARKER_COLORS).map(([status, color]) => [
       status,
       {
@@ -162,7 +183,24 @@ export function GoogleMapsCanvas({
       } as google.maps.Icon,
     ]);
     return Object.fromEntries(entries);
-  }, []);
+  }, [isLoaded]);
+
+  const getIcon = React.useCallback(
+    (status: string) => {
+      if (deviceIcons[status]) return deviceIcons[status];
+      const color = MARKER_COLORS[status] || fallbackColor;
+      if (typeof google !== "undefined" && google.maps) {
+        return {
+          url: svgMarker(color),
+          scaledSize: new google.maps.Size(28, 28),
+          anchor: new google.maps.Point(14, 14),
+          labelOrigin: new google.maps.Point(14, -10),
+        } as google.maps.Icon;
+      }
+      return svgMarker(color);
+    },
+    [deviceIcons],
+  );
 
   // Auto-panTo when searchSelection changes
   React.useEffect(() => {
@@ -172,15 +210,43 @@ export function GoogleMapsCanvas({
     }
   }, [searchSelection]);
 
-  const deviceFeatures = React.useMemo(() => {
-    return devices
-      .filter((device) => Number.isFinite(Number(device.longitude)) && Number.isFinite(Number(device.latitude)))
-      .map((device) => {
-        const markerStatus = impactedDeviceIds.includes(device.id)
-          ? "impacted"
-          : device.marker_status || "unvalidated";
-        return { device, markerStatus };
-      });
+  const { singleDeviceGroups, multiDeviceGroups } = React.useMemo(() => {
+    const groups = new Map<string, Array<{ device: MapDevice; markerStatus: string }>>();
+
+    devices.forEach((device) => {
+      const lat = Number(device.latitude);
+      const lng = Number(device.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+      const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+      const markerStatus = impactedDeviceIds.includes(device.id)
+        ? "impacted"
+        : device.marker_status || "unvalidated";
+
+      const existing = groups.get(key) || [];
+      existing.push({ device, markerStatus });
+      groups.set(key, existing);
+    });
+
+    const single: Array<{ device: MapDevice; markerStatus: string; key: string }> = [];
+    const multi: Array<{ key: string; lat: number; lng: number; items: MapDevice[] }> = [];
+
+    groups.forEach((items, groupKey) => {
+      if (items.length === 1) {
+        single.push({ ...items[0], key: groupKey });
+      } else {
+        const firstLat = Number(items[0].device.latitude);
+        const firstLng = Number(items[0].device.longitude);
+        multi.push({
+          key: groupKey,
+          lat: firstLat,
+          lng: firstLng,
+          items: items.map((i) => i.device),
+        });
+      }
+    });
+
+    return { singleDeviceGroups: single, multiDeviceGroups: multi };
   }, [devices, impactedDeviceIds]);
 
   const routePaths = React.useMemo(() => routes.flatMap(extractLatLngPaths), [routes]);
@@ -211,10 +277,9 @@ export function GoogleMapsCanvas({
   const handleLoad = React.useCallback(
     (map: google.maps.Map) => {
       mapRef.current = map;
-      const points: FlatPoint[] = deviceFeatures.map(({ device }) => ({
-        lat: Number(device.latitude),
-        lng: Number(device.longitude),
-      }));
+      const points: FlatPoint[] = devices
+        .map((d) => ({ lat: Number(d.latitude), lng: Number(d.longitude) }))
+        .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
       if (points.length) {
         const bounds = new google.maps.LatLngBounds();
         points.forEach((p) => bounds.extend(p));
@@ -227,7 +292,7 @@ export function GoogleMapsCanvas({
       setZoom(map.getZoom() ?? DEFAULT_ZOOM);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [deviceFeatures, osrmPath],
+    [devices, osrmPath],
   );
 
   const handleIdle = React.useCallback(() => {
@@ -264,7 +329,6 @@ export function GoogleMapsCanvas({
             mapTypeId={mapType}
             onLoad={handleLoad}
             onIdle={handleIdle}
-            onClick={() => setSelectedDevice(null)}
             options={{
               disableDefaultUI: false,
               mapTypeControl: false,
@@ -316,20 +380,35 @@ export function GoogleMapsCanvas({
                 />
               )}
 
-            {/* Device Markers (memoized, labels shown only when enabled & zoom >= 15) */}
-            {showDevices &&
-              deviceFeatures.map(({ device, markerStatus }) => {
-                const canShowLabel = showLabels && zoom >= 15;
-                return (
-                  <DeviceMarker
-                    key={`${device.id}-${canShowLabel}`}
-                    device={device}
-                    icon={deviceIcons[markerStatus] || svgMarker(MARKER_COLORS[markerStatus] || fallbackColor)}
-                    showLabel={canShowLabel}
-                    onClick={(d) => setSelectedDevice(d)}
+            {/* Device Markers & Grouped Markers */}
+            {showDevices && (
+              <>
+                {/* Single devices (memoized, rounded dynamic label badge when enabled & zoom >= 15) */}
+                {singleDeviceGroups.map(({ device, markerStatus }) => {
+                  const canShowLabel = showLabels && zoom >= 15;
+                  return (
+                    <DeviceMarker
+                      key={`${device.id}-${canShowLabel}`}
+                      device={device}
+                      icon={getIcon(markerStatus)}
+                      showLabel={canShowLabel}
+                      onClick={(d, isMulti) => onDeviceSelect?.(d, isMulti)}
+                    />
+                  );
+                })}
+
+                {/* Grouped devices at identical coordinates */}
+                {multiDeviceGroups.map(({ key, lat, lng, items }) => (
+                  <MarkerF
+                    key={`group-${key}`}
+                    position={{ lat, lng }}
+                    icon={svgGroupMarker(items.length)}
+                    title={`${items.length} device di lokasi ini (Klik untuk melihat daftar)`}
+                    onClick={() => onGroupSelect?.(items)}
                   />
-                );
-              })}
+                ))}
+              </>
+            )}
 
             {/* OSRM start/end markers */}
             {showOsrmRoute && osrmRoute && osrmPath.length > 1 && (
@@ -370,36 +449,6 @@ export function GoogleMapsCanvas({
                 icon={svgMarker("#8b5cf6")}
                 title={searchSelection.label}
               />
-            )}
-
-            {/* Device InfoWindow */}
-            {selectedDevice && (
-              <InfoWindow
-                position={{
-                  lat: Number(selectedDevice.latitude),
-                  lng: Number(selectedDevice.longitude),
-                }}
-                onCloseClick={() => setSelectedDevice(null)}
-              >
-                <div className="max-w-[220px] text-sm">
-                  <p className="font-semibold leading-tight">
-                    {selectedDevice.device_name || selectedDevice.device_id || "Device"}
-                  </p>
-                  <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wide text-gray-500">
-                    {selectedDevice.device_type_key || "ASSET"}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onDeviceSelect?.(selectedDevice);
-                      setSelectedDevice(null);
-                    }}
-                    className="mt-2 w-full rounded-full border border-blue-600 bg-blue-600 px-3 py-1 text-[11px] font-medium text-white transition-transform active:scale-[0.98]"
-                  >
-                    Navigasi ke Sini
-                  </button>
-                </div>
-              </InfoWindow>
             )}
           </GoogleMap>
       )}
