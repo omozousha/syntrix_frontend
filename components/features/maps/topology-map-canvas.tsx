@@ -10,6 +10,8 @@ export type MapDevice = {
   device_id?: string | null;
   device_name?: string | null;
   device_type_key?: string | null;
+  region_id?: string | null;
+  pop_id?: string | null;
   marker_status?: string | null;
   longitude?: number | null;
   latitude?: number | null;

@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { InlineLoader, ButtonLoader } from "@/components/shared/loading-icon";
 import { useNominatimSearch, NominatimResult } from "@/hooks/use-nominatim-search";
 import type { OsgmRouteResult } from "@/lib/api";
@@ -773,50 +774,40 @@ export function MapLeftSidebar({
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
-                  <label className="flex items-center gap-2 rounded-lg border border-border/60 p-1.5 cursor-pointer hover:bg-muted/40 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={layerToggles.devices}
-                      onChange={() => onToggleLayer("devices")}
-                      className="size-3.5 rounded accent-primary"
-                    />
+                  <label className="flex items-center justify-between rounded-lg border border-border/60 p-2 cursor-pointer hover:bg-muted/40 transition-colors">
                     <span>Devices</span>
-                  </label>
-                  <label className="flex items-center gap-2 rounded-lg border border-border/60 p-1.5 cursor-pointer hover:bg-muted/40 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={layerToggles.labels}
-                      onChange={() => onToggleLayer("labels")}
-                      className="size-3.5 rounded accent-primary"
+                    <Switch
+                      checked={layerToggles.devices}
+                      onCheckedChange={() => onToggleLayer("devices")}
                     />
+                  </label>
+                  <label className="flex items-center justify-between rounded-lg border border-border/60 p-2 cursor-pointer hover:bg-muted/40 transition-colors">
                     <span>Label Nama</span>
-                  </label>
-                  <label className="flex items-center gap-2 rounded-lg border border-border/60 p-1.5 cursor-pointer hover:bg-muted/40 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={layerToggles.cables}
-                      onChange={() => onToggleLayer("cables")}
-                      className="size-3.5 rounded accent-primary"
+                    <Switch
+                      checked={layerToggles.labels}
+                      onCheckedChange={() => onToggleLayer("labels")}
                     />
+                  </label>
+                  <label className="flex items-center justify-between rounded-lg border border-border/60 p-2 cursor-pointer hover:bg-muted/40 transition-colors">
                     <span>Kabel Fiber</span>
-                  </label>
-                  <label className="flex items-center gap-2 rounded-lg border border-border/60 p-1.5 cursor-pointer hover:bg-muted/40 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={layerToggles.connections}
-                      onChange={() => onToggleLayer("connections")}
-                      className="size-3.5 rounded accent-primary"
+                    <Switch
+                      checked={layerToggles.cables}
+                      onCheckedChange={() => onToggleLayer("cables")}
                     />
+                  </label>
+                  <label className="flex items-center justify-between rounded-lg border border-border/60 p-2 cursor-pointer hover:bg-muted/40 transition-colors">
                     <span>Connections</span>
-                  </label>
-                  <label className="flex items-center gap-2 rounded-lg border border-border/60 p-1.5 cursor-pointer hover:bg-muted/40 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={layerToggles.poi}
-                      onChange={() => onToggleLayer("poi")}
-                      className="size-3.5 rounded accent-primary"
+                    <Switch
+                      checked={layerToggles.connections}
+                      onCheckedChange={() => onToggleLayer("connections")}
                     />
+                  </label>
+                  <label className="flex items-center justify-between rounded-lg border border-border/60 p-2 cursor-pointer hover:bg-muted/40 transition-colors">
                     <span>POI Overpass</span>
+                    <Switch
+                      checked={layerToggles.poi}
+                      onCheckedChange={() => onToggleLayer("poi")}
+                    />
                   </label>
                 </div>
               </div>
