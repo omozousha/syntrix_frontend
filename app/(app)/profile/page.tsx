@@ -295,23 +295,27 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-4 max-w-5xl">
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.18em]">
-            Account
-          </Badge>
+    <div className="w-full space-y-4">
+      {/* Page Header */}
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.18em]">
+              Account & Security
+            </Badge>
+          </div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Profile Settings</h2>
+          <p className="text-xs text-muted-foreground sm:text-sm">
+            Atur identitas akun, avatar, keamanan, dan informasi scope wilayah kamu.
+          </p>
         </div>
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Profile Settings</h2>
-        <p className="text-xs text-muted-foreground sm:text-sm">
-          Atur identitas akun, avatar, keamanan, dan informasi scope wilayah kamu.
-        </p>
       </div>
 
-      {/* Main Container Card */}
-      <Card className="min-w-0 rounded-2xl border-border/60 shadow-xs glass-inset overflow-hidden">
-        <CardHeader className="p-4 sm:p-6 border-b border-border/40 bg-muted/20">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      {/* Main Grid Layout - Utilizes full width on desktop */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        {/* Left Side: Avatar & Summary Card (4 cols on lg+) */}
+        <Card className="min-w-0 rounded-2xl border-border/60 shadow-xs glass-inset overflow-hidden lg:col-span-4 flex flex-col justify-between">
+          <CardHeader className="p-4 sm:p-6 border-b border-border/40 bg-muted/20 text-center flex flex-col items-center">
             <button
               type="button"
               className="group relative shrink-0 active:scale-[0.97] transition-transform duration-200"
@@ -319,12 +323,12 @@ export default function ProfilePage() {
               disabled={busy}
               aria-label="Ubah avatar"
             >
-              <Avatar className="size-20 sm:size-24 border-2 border-primary/20 shadow-xs transition-colors group-hover:border-primary/40">
+              <Avatar className="size-24 sm:size-28 border-4 border-background shadow-md transition-colors group-hover:border-primary/40 ring-2 ring-border/60">
                 {displayedAvatarUrl ? <AvatarImage src={displayedAvatarUrl} alt={me.app_user.full_name} className="object-cover" /> : null}
-                <AvatarFallback className="font-mono font-semibold text-lg bg-primary/10 text-primary">{initials}</AvatarFallback>
+                <AvatarFallback className="font-mono font-bold text-2xl bg-primary/10 text-primary">{initials}</AvatarFallback>
               </Avatar>
               <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-white opacity-0 backdrop-blur-[2px] transition-all duration-300 group-hover:opacity-100">
-                <Camera className="size-5" />
+                <Camera className="size-6" />
               </span>
             </button>
             <input
@@ -335,207 +339,242 @@ export default function ProfilePage() {
               onChange={(event) => handleSelectAvatarFile(event.target.files?.[0] || null)}
               disabled={busy}
             />
-            <div className="space-y-1.5 min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="text-xl font-bold tracking-tight">{me.app_user.full_name}</CardTitle>
+
+            <div className="mt-3 space-y-1 w-full">
+              <CardTitle className="text-lg sm:text-xl font-bold tracking-tight truncate">{me.app_user.full_name}</CardTitle>
+              <CardDescription className="font-mono text-xs text-muted-foreground truncate">{me.app_user.email}</CardDescription>
+              <div className="flex items-center justify-center gap-1.5 pt-1">
                 <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.18em] rounded-md">
                   {formatRoleLabel(me.role)}
                 </Badge>
-              </div>
-              <CardDescription className="font-mono text-xs text-muted-foreground">{me.app_user.email}</CardDescription>
-              <p className="text-xs text-muted-foreground/80 pt-0.5">Klik pada foto avatar untuk mengganti gambar profil (maks. 5MB).</p>
-              {selectedFile ? (
-                <Badge variant="secondary" className="font-mono text-[10px] tabular-nums mt-1 rounded-md">
-                  File terpilih: {selectedFile.name} — Klik "Simpan Perubahan" di bawah
+                <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.18em] rounded-md">
+                  {(me.app_user as { user_code?: string }).user_code || "USER"}
                 </Badge>
-              ) : null}
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6">
-          <Tabs defaultValue="profile" className="space-y-4">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-muted/40 p-1">
-              <TabsTrigger value="profile" className="h-9 rounded-lg font-medium text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-2xs">
-                Informasi & Identitas
-              </TabsTrigger>
-              <TabsTrigger value="security" className="h-9 rounded-lg font-medium text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-2xs">
-                Keamanan & Password
-              </TabsTrigger>
-            </TabsList>
+          </CardHeader>
 
-            <TabsContent value="profile" className="space-y-6 pt-2 outline-none">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="first_name" className="font-mono text-xs text-muted-foreground">Nama Depan</Label>
-                    <Input
-                      id="first_name"
-                      value={firstName}
-                      onChange={(event) => setFirstName(event.target.value)}
-                      disabled={busy}
-                      className="rounded-xl border-border/60"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="last_name" className="font-mono text-xs text-muted-foreground">Nama Belakang</Label>
-                    <Input
-                      id="last_name"
-                      value={lastName}
-                      onChange={(event) => setLastName(event.target.value)}
-                      disabled={busy}
-                      className="rounded-xl border-border/60"
-                    />
-                  </div>
+          <CardContent className="p-4 sm:p-6 space-y-4 flex-1 flex flex-col justify-between">
+            <div className="space-y-3 text-xs">
+              <p className="text-muted-foreground text-center">
+                Klik pada foto avatar di atas untuk mengunggah atau memperbarui foto profil kamu.
+              </p>
+
+              {selectedFile ? (
+                <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-center">
+                  <Badge variant="secondary" className="font-mono text-[10px] tabular-nums rounded-md mb-1">
+                    File Terpilih
+                  </Badge>
+                  <p className="font-mono text-xs font-medium text-foreground truncate">{selectedFile.name}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Klik "Simpan Profile" untuk menerapkan.</p>
                 </div>
+              ) : null}
 
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <Button
-                    type="button"
-                    onClick={() => void handleSaveProfile()}
-                    disabled={busy}
-                    className="h-9 rounded-xl px-4 text-xs font-medium transition-all active:scale-[0.98]"
-                  >
-                    {savingProfile ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-                    Simpan Perubahan Profile
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => void handleRemoveAvatar()}
-                    disabled={
-                      busy
-                      || !(
-                        me.app_user.avatar_attachment_id
-                        || (me.app_user as { metadata?: { avatar_attachment_id?: string | null } }).metadata?.avatar_attachment_id
-                      )
-                    }
-                    className="h-9 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-medium transition-all active:scale-[0.98]"
-                  >
-                    Hapus Avatar
-                  </Button>
+              <div className="rounded-xl border border-border/50 bg-muted/10 p-3 space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-mono uppercase tracking-wider text-muted-foreground">Default Region</span>
+                  <span className="font-medium text-foreground truncate max-w-[150px]">{defaultRegionLabel}</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-mono uppercase tracking-wider text-muted-foreground">Scope Access</span>
+                  <span className="font-mono tabular-nums font-semibold text-foreground">
+                    {me.app_user.user_region_scopes?.length || 0} Wilayah
+                  </span>
                 </div>
               </div>
+            </div>
 
-              {/* Detail Scope & Informasi Sistem */}
-              <Card className="rounded-xl border-border/60 bg-background/50 shadow-2xs glass-inset">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-sm font-semibold tracking-tight">Scope & Meta Sistem</CardTitle>
-                  <CardDescription className="text-xs">Data identifikasi akses regional dan otorisasi dari admin sistem.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 pt-1 space-y-3">
-                  <div className="space-y-1">
-                    <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Alamat Email Terdaftar</Label>
-                    <Input value={me.app_user.email} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Nama Role</Label>
-                      <Input value={me.app_user.role_name} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Kode Pengguna (User Code)</Label>
-                      <Input value={(me.app_user as { user_code?: string }).user_code || "-"} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Default Region</Label>
-                      <Input value={defaultRegionLabel} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Jumlah Scope Region</Label>
-                      <Input value={String(me.app_user.user_region_scopes?.length || 0)} disabled className="font-mono text-xs tabular-nums bg-muted/30 rounded-xl" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+            {me.app_user.avatar_attachment_id || (me.app_user as { metadata?: { avatar_attachment_id?: string | null } }).metadata?.avatar_attachment_id ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void handleRemoveAvatar()}
+                disabled={busy}
+                className="w-full h-9 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-medium transition-all active:scale-[0.98]"
+              >
+                Hapus Foto Profil
+              </Button>
+            ) : null}
+          </CardContent>
+        </Card>
 
-            <TabsContent value="security" className="space-y-4 pt-2 outline-none">
-              <Card className="rounded-xl border-border/60 bg-background/50 shadow-2xs glass-inset">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-sm font-semibold tracking-tight">Perbarui Password</CardTitle>
-                  <CardDescription className="text-xs">
-                    Kombinasi password aman minimal 8 karakter.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 pt-1 space-y-3">
+        {/* Right Side: Detailed Tabs Forms (8 cols on lg+) */}
+        <Card className="min-w-0 rounded-2xl border-border/60 shadow-xs glass-inset overflow-hidden lg:col-span-8">
+          <CardContent className="p-4 sm:p-6">
+            <Tabs defaultValue="profile" className="space-y-4">
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-muted/40 p-1">
+                <TabsTrigger value="profile" className="h-9 rounded-lg font-medium text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-2xs">
+                  Informasi & Identitas
+                </TabsTrigger>
+                <TabsTrigger value="security" className="h-9 rounded-lg font-medium text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-2xs">
+                  Keamanan & Password
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="profile" className="space-y-6 pt-2 outline-none">
+                <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="new_password" className="font-mono text-xs text-muted-foreground">Password Baru</Label>
+                      <Label htmlFor="first_name" className="font-mono text-xs text-muted-foreground">Nama Depan</Label>
                       <Input
-                        id="new_password"
-                        type="password"
-                        value={newPassword}
-                        onChange={(event) => setNewPassword(event.target.value)}
-                        placeholder="Minimal 8 karakter"
+                        id="first_name"
+                        value={firstName}
+                        onChange={(event) => setFirstName(event.target.value)}
                         disabled={busy}
                         className="rounded-xl border-border/60"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="confirm_password" className="font-mono text-xs text-muted-foreground">Konfirmasi Password Baru</Label>
+                      <Label htmlFor="last_name" className="font-mono text-xs text-muted-foreground">Nama Belakang</Label>
                       <Input
-                        id="confirm_password"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        id="last_name"
+                        value={lastName}
+                        onChange={(event) => setLastName(event.target.value)}
                         disabled={busy}
                         className="rounded-xl border-border/60"
                       />
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    onClick={() => void handleChangePassword()}
-                    disabled={busy}
-                    className="h-9 rounded-xl px-4 text-xs font-medium transition-all active:scale-[0.98]"
-                  >
-                    {savingPassword ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-                    Simpan Password Baru
-                  </Button>
-                </CardContent>
-              </Card>
 
-              <Card className="rounded-xl border-border/60 bg-background/50 shadow-2xs glass-inset">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-sm font-semibold tracking-tight">Kirim Link Pemulihan Password</CardTitle>
-                  <CardDescription className="text-xs">
-                    Kirim pesan konfirmasi reset password ke email terdaftar kamu.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 pt-1 space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Email Pemulihan</Label>
-                    <Input value={me.app_user.email} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <Button
+                      type="button"
+                      onClick={() => void handleSaveProfile()}
+                      disabled={busy}
+                      className="h-9 rounded-xl px-5 text-xs font-medium transition-all active:scale-[0.98]"
+                    >
+                      {savingProfile ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                      Simpan Profile
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => void handleSendResetEmail()}
-                    disabled={busy}
-                    className="h-9 rounded-xl border-border/60 text-xs font-medium transition-all active:scale-[0.98]"
-                  >
-                    {sendingReset ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-                    Kirim Link Reset Password
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                </div>
 
-          {message ? (
-            <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-              {message}
-            </div>
-          ) : null}
-          {error ? (
-            <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs font-medium text-destructive">
-              {error}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+                {/* Detail Scope & Informasi Sistem - Utilizes 3 columns on larger screens */}
+                <Card className="rounded-xl border-border/60 bg-background/50 shadow-2xs glass-inset">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-sm font-semibold tracking-tight">Scope & Meta Sistem</CardTitle>
+                    <CardDescription className="text-xs">Data identifikasi akses regional dan otorisasi dari admin sistem.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-1 space-y-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      <div className="space-y-1">
+                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Alamat Email</Label>
+                        <Input value={me.app_user.email} disabled className="font-mono text-xs bg-muted/30 rounded-xl truncate" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Nama Role</Label>
+                        <Input value={me.app_user.role_name} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
+                      </div>
+                      <div className="space-y-1 sm:col-span-2 xl:col-span-1">
+                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">User Code</Label>
+                        <Input value={(me.app_user as { user_code?: string }).user_code || "-"} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Default Region</Label>
+                        <Input value={defaultRegionLabel} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Jumlah Scope Region</Label>
+                        <Input value={String(me.app_user.user_region_scopes?.length || 0)} disabled className="font-mono text-xs tabular-nums bg-muted/30 rounded-xl" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="security" className="space-y-4 pt-2 outline-none">
+                <Card className="rounded-xl border-border/60 bg-background/50 shadow-2xs glass-inset">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-sm font-semibold tracking-tight">Perbarui Password</CardTitle>
+                    <CardDescription className="text-xs">
+                      Kombinasi password aman minimal 8 karakter.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-1 space-y-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="new_password" className="font-mono text-xs text-muted-foreground">Password Baru</Label>
+                        <Input
+                          id="new_password"
+                          type="password"
+                          value={newPassword}
+                          onChange={(event) => setNewPassword(event.target.value)}
+                          placeholder="Minimal 8 karakter"
+                          disabled={busy}
+                          className="rounded-xl border-border/60"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="confirm_password" className="font-mono text-xs text-muted-foreground">Konfirmasi Password Baru</Label>
+                        <Input
+                          id="confirm_password"
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(event) => setConfirmPassword(event.target.value)}
+                          disabled={busy}
+                          className="rounded-xl border-border/60"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-1">
+                      <Button
+                        type="button"
+                        onClick={() => void handleChangePassword()}
+                        disabled={busy}
+                        className="h-9 rounded-xl px-5 text-xs font-medium transition-all active:scale-[0.98]"
+                      >
+                        {savingPassword ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                        Simpan Password Baru
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-xl border-border/60 bg-background/50 shadow-2xs glass-inset">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-sm font-semibold tracking-tight">Kirim Link Pemulihan Password</CardTitle>
+                    <CardDescription className="text-xs">
+                      Kirim pesan konfirmasi reset password ke email terdaftar kamu.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-1 space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Email Pemulihan</Label>
+                      <Input value={me.app_user.email} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
+                    </div>
+                    <div className="flex justify-end pt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void handleSendResetEmail()}
+                        disabled={busy}
+                        className="h-9 rounded-xl border-border/60 text-xs font-medium transition-all active:scale-[0.98]"
+                      >
+                        {sendingReset ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                        Kirim Link Reset Password
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+
+            {message ? (
+              <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                {message}
+              </div>
+            ) : null}
+            {error ? (
+              <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs font-medium text-destructive">
+                {error}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
