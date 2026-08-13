@@ -80,133 +80,151 @@ export default function OdpQrBrowserFallbackPage() {
   }
 
   return (
-    <main className="min-h-dvh bg-slate-950 text-white">
-      <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
-        <header className="flex flex-wrap items-center justify-between gap-3">
+    <main className="min-h-dvh bg-background text-foreground antialiased selection:bg-primary/20">
+      <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Header Bar */}
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/80 p-3.5 sm:px-6 shadow-xs backdrop-blur-md glass-inset">
           <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-2xl border border-blue-300/25 bg-blue-500/15 text-blue-200">
+            <div className="flex size-10 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary shadow-2xs">
               <QrCode className="size-5" />
             </div>
             <div>
-              <p className="text-lg font-semibold tracking-tight">Syntrix-One</p>
-              <p className="text-xs font-medium uppercase tracking-[0.24em] text-blue-200/70">Field Validator</p>
+              <p className="text-base font-bold tracking-tight text-foreground">Syntrix-One</p>
+              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Field Validator Portal</p>
             </div>
           </div>
-          <Badge variant="outline" className="border-emerald-300/40 bg-emerald-400/10 text-emerald-100">
-            QR Device
+          <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.18em] border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            QR Device Verified
           </Badge>
         </header>
 
-        <section className="grid flex-1 items-center gap-6 py-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:gap-10">
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <Badge variant="outline" className="border-blue-300/40 bg-blue-400/10 text-blue-100">
-                Validasi resmi
-              </Badge>
-              <h1 className="max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-                Validasi hanya melalui Syntrix-One
+        {/* Main Section */}
+        <section className="grid flex-1 items-start gap-6 lg:grid-cols-12">
+          {/* Left Column: Hero Callout & Actions (7 cols) */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8 shadow-xs glass-inset space-y-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.18em]">
+                  Validasi Resmi
+                </Badge>
+              </div>
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground leading-[1.15]">
+                Validasi Lapangan Hanya Melalui Syntrix-One
               </h1>
-              <p className="max-w-2xl text-base leading-7 text-slate-300">
-                QR ini terdaftar sebagai device Syntrix. Untuk menjaga keamanan, scope region, dan evidence lapangan,
-                validasi hanya dapat dilakukan dari aplikasi Syntrix-One.
+              <p className="text-sm sm:text-base leading-relaxed text-muted-foreground">
+                QR Code ini terdaftar resmi dalam jaringan Syntrix. Untuk menjamin otentisitas data, audit trail, serta verifikasi koordinat & evidence presisi, proses validasi hanya dapat diproses via aplikasi seluler Syntrix-One.
               </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={openSyntrixOne}
+                  className="h-11 rounded-full bg-primary px-6 text-xs sm:text-sm font-semibold text-primary-foreground shadow-xs transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] hover:bg-primary/90"
+                >
+                  Buka Aplikasi Syntrix-One
+                  <ArrowRight className="ml-2 size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  className="h-11 rounded-full border-border/60 bg-background/50 px-6 text-xs sm:text-sm font-semibold transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] hover:bg-muted/20"
+                  onClick={() => {
+                    window.location.href = APK_DOWNLOAD_URL;
+                  }}
+                >
+                  <Download className="mr-2 size-4 text-primary" />
+                  Download APK Syntrix-One
+                </Button>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button type="button" size="lg" onClick={openSyntrixOne} className="h-12 rounded-xl bg-blue-500 px-5 text-white hover:bg-blue-400">
-                Buka Syntrix-One
-                <ArrowRight className="ml-2 size-4" />
-              </Button>
-              <Button
-                type="button"
-                size="lg"
-                variant="outline"
-                className="h-12 rounded-xl border-white/15 bg-white/5 px-5 text-white hover:bg-white/10 hover:text-white"
-                onClick={() => {
-                  window.location.href = APK_DOWNLOAD_URL;
-                }}
-              >
-                <Download className="mr-2 size-4" />
-                Download APK
-              </Button>
-            </div>
-
+            {/* Navigation Card if coordinates are present */}
             {device?.latitude != null && device?.longitude != null ? (
-              <div className="lg:max-w-2xl">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                  <Navigation className="size-4 text-blue-300" />
-                  Petunjuk Arah ke Lokasi
+              <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset p-5 space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Navigation className="size-4 text-primary" />
+                  <span>Petunjuk Arah Navigasi Lapangan</span>
                 </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${device.latitude},${device.longitude}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-blue-300/20 bg-blue-400/10 px-4 text-sm font-medium text-blue-100 transition-all hover:bg-blue-400/20 active:scale-[0.98]"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/20 px-4 text-xs font-mono font-medium text-foreground transition-all duration-200 hover:border-primary/50 hover:bg-primary/5 active:scale-[0.98]"
                   >
-                    <MapPin className="size-4" />
-                    Buka di Google Maps
+                    <MapPin className="size-3.5 text-primary" />
+                    Google Maps (<span className="tabular-nums">{device.latitude.toFixed(4)}, {device.longitude.toFixed(4)}</span>)
                   </a>
                   <a
                     href={`https://waze.com/ul?ll=${device.latitude},${device.longitude}&navigate=yes`}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 text-sm font-medium text-cyan-100 transition-all hover:bg-cyan-400/20 active:scale-[0.98]"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/20 px-4 text-xs font-mono font-medium text-foreground transition-all duration-200 hover:border-primary/50 hover:bg-primary/5 active:scale-[0.98]"
                   >
-                    <Navigation className="size-4" />
-                    Buka di Waze
+                    <Navigation className="size-3.5 text-sky-500" />
+                    Navigasi Waze
                   </a>
                 </div>
-              </div>
+              </Card>
             ) : null}
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:max-w-2xl">
-              <SafetyPoint title="QR-first" description="Form validasi dibuka dari scanner app." />
-              <SafetyPoint title="Region scope" description="Device dicek sesuai akses validator." />
-              <SafetyPoint title="Evidence aman" description="Foto dan koordinat dikirim dari app." />
+            {/* Feature Highlights Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <SafetyPoint title="QR-First Scanner" description="Form validasi dibuka langsung melalui scanner bawaan aplikasi." />
+              <SafetyPoint title="Otorisasi Region" description="Data dicek berdasarkan hak akses & scope validator." />
+              <SafetyPoint title="Evidence Presisi" description="Foto fisik & koordinat GPS terverifikasi otomatis." />
             </div>
           </div>
 
-          <Card className="border-white/10 bg-white/[0.06] text-white shadow-2xl shadow-blue-950/30 backdrop-blur">
-            <CardHeader>
-              <div className="mb-3 flex size-12 items-center justify-center rounded-2xl border border-blue-300/20 bg-blue-400/10 text-blue-200">
-                <ShieldCheck className="size-6" />
-              </div>
-              <CardTitle>Informasi QR</CardTitle>
-              <CardDescription className="text-slate-300">
-                {loading ? "Memuat konteks device..." : "Gunakan informasi ini untuk memastikan label QR yang discan."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                <InfoRow label="Type Device" value={display.deviceType} loading={loading} />
-                <InfoRow label="Nama Device" value={display.deviceName} loading={loading} />
-                <InfoRow label="POP" value={display.pop} loading={loading} />
-                <InfoRow label="Tenant" value={display.tenant} loading={loading} />
-              </div>
+          {/* Right Column: Device QR Context (5 cols) */}
+          <div className="lg:col-span-5">
+            <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset">
+              <CardHeader className="border-b border-border/40 bg-muted/10 p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary shadow-2xs">
+                    <ShieldCheck className="size-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold tracking-tight">Konteks QR Device</CardTitle>
+                    <CardDescription className="text-xs">
+                      {loading ? "Memuat identitas perangkat..." : "Informasi terdaftar untuk perangkat ini."}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
 
-              {loadMessage ? (
-                <p className="rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-50">
-                  {loadMessage}
-                </p>
-              ) : null}
+              <CardContent className="p-5 space-y-4">
+                <div className="space-y-2.5">
+                  <InfoRow label="Type Device" value={display.deviceType} loading={loading} />
+                  <InfoRow label="Nama Device" value={display.deviceName} loading={loading} />
+                  <InfoRow label="POP Terhubung" value={display.pop} loading={loading} />
+                  <InfoRow label="Tenant Owner" value={display.tenant} loading={loading} />
+                </div>
 
-              <div className="rounded-xl border border-white/10 bg-slate-950/50 px-3 py-3 text-xs leading-5 text-slate-300">
-                Jika aplikasi tidak terbuka otomatis, buka Syntrix-One secara manual lalu scan ulang QR dari tombol Scan
-                di bottom navigation.
-              </div>
+                {loadMessage ? (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs leading-relaxed font-medium text-amber-600 dark:text-amber-400">
+                    {loadMessage}
+                  </div>
+                ) : null}
 
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full justify-between rounded-xl border border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-                onClick={openSyntrixOne}
-              >
-                Coba buka aplikasi
-                <ExternalLink className="size-4" />
-              </Button>
-            </CardContent>
-          </Card>
+                <div className="rounded-xl border border-border/50 bg-muted/30 p-3.5 text-xs leading-relaxed text-muted-foreground">
+                  Jika aplikasi tidak terbuka secara otomatis, buka aplikasi Syntrix-One secara manual lalu tekan ikon <strong>Scan QR</strong> di menu navigasi utama.
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between h-10 rounded-xl border-border/60 bg-background/50 px-4 text-xs font-semibold transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] hover:bg-muted/20"
+                  onClick={openSyntrixOne}
+                >
+                  Buka Syntrix-One Sekarang
+                  <ExternalLink className="size-4 text-muted-foreground" />
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </section>
       </div>
     </main>
@@ -215,21 +233,21 @@ export default function OdpQrBrowserFallbackPage() {
 
 function SafetyPoint({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-      <p className="text-sm font-semibold text-white">{title}</p>
-      <p className="mt-1 text-xs leading-5 text-slate-400">{description}</p>
+    <div className="rounded-xl border border-border/60 bg-card p-4 shadow-2xs glass-inset space-y-1">
+      <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-semibold text-foreground">{title}</p>
+      <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
     </div>
   );
 }
 
 function InfoRow({ label, value, loading = false }: { label: string; value: string; loading?: boolean }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+    <div className="rounded-xl border border-border/50 bg-muted/15 p-3 space-y-1">
+      <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
       {loading ? (
-        <Skeleton className="mt-2 h-4 w-36 bg-white/15" />
+        <Skeleton className="h-4 w-32 rounded-md bg-muted/40" />
       ) : (
-        <p className="mt-1 break-words text-sm font-semibold text-slate-100">{value}</p>
+        <p className="text-xs font-semibold font-mono tabular-nums text-foreground break-words">{value}</p>
       )}
     </div>
   );
