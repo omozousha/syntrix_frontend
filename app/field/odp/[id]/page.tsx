@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowRight, Download, ExternalLink, Globe, MapPin, Navigation, QrCode, ShieldCheck, Smartphone } from "lucide-react";
+import { ArrowDown, ArrowRight, Download, ExternalLink, Globe, Info, MapPin, Navigation, QrCode, ShieldCheck, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch } from "@/lib/api";
 import { buildQrFallbackDisplay } from "@/lib/display-adapters/qr-fallback-display-adapter";
 
@@ -39,6 +40,7 @@ export default function OdpPublicGuestPortalPage() {
   const [device, setDevice] = useState<DeviceQrContext | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadMessage, setLoadMessage] = useState("");
+  const [activeTab, setActiveTab] = useState<"overview" | "details">("overview");
 
   const appOpenHref = useMemo(
     () => `${SYNTRIX_ONE_SCHEME}/${encodeURIComponent(id)}`,
@@ -79,17 +81,26 @@ export default function OdpPublicGuestPortalPage() {
     window.location.href = appOpenHref;
   }
 
+  function scrollToDetails() {
+    const el = document.getElementById("device-details-panel");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    } else {
+      setActiveTab("details");
+    }
+  }
+
   return (
-    <main className="min-h-dvh bg-background text-foreground antialiased selection:bg-primary/20">
-      <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col p-4 sm:p-6 lg:p-8 space-y-6">
+    <main className="min-h-dvh bg-background text-foreground antialiased selection:bg-primary/20 pb-16 lg:pb-8">
+      <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
         {/* Header Bar - Guest Public Portal */}
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/80 p-3.5 sm:px-6 shadow-xs backdrop-blur-md glass-inset">
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/80 p-3.5 sm:px-6 shadow-xs backdrop-blur-md glass-inset sticky top-2 z-20">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary shadow-2xs">
-              <Globe className="size-5" />
+            <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary shadow-2xs">
+              <Globe className="size-4 sm:size-5" />
             </div>
             <div>
-              <p className="text-base font-bold tracking-tight text-foreground">Syntrix Public Portal</p>
+              <p className="text-sm sm:text-base font-bold tracking-tight text-foreground">Syntrix Public Portal</p>
               <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Guest Device Verification</p>
             </div>
           </div>
@@ -100,11 +111,27 @@ export default function OdpPublicGuestPortalPage() {
           </div>
         </header>
 
-        {/* Main Grid Content - Full-width Zero Dead Space */}
-        <section className="grid flex-1 items-start gap-6 lg:grid-cols-12">
-          {/* Left Column: Hero Callout & Actions (7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8 shadow-xs glass-inset space-y-4">
+        {/* SPA Mobile View Tab Navigation Bar (Visible on mobile/tablet) */}
+        <div className="block lg:hidden">
+          <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as "overview" | "details")} className="w-full">
+            <TabsList className="grid h-10 w-full grid-cols-2 rounded-xl bg-muted/40 p-1 border border-border/50">
+              <TabsTrigger value="overview" className="rounded-lg font-mono text-[11px] uppercase tracking-wider font-semibold data-[state=active]:bg-background data-[state=active]:shadow-2xs flex items-center justify-center gap-1.5">
+                <Globe className="size-3.5" />
+                <span>Ringkasan</span>
+              </TabsTrigger>
+              <TabsTrigger value="details" className="rounded-lg font-mono text-[11px] uppercase tracking-wider font-semibold data-[state=active]:bg-background data-[state=active]:shadow-2xs flex items-center justify-center gap-1.5">
+                <Info className="size-3.5 text-primary" />
+                <span>Detail Aset QR</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Main Layout Grid (SPA Tabbed on mobile, Side-by-side 12-col on Desktop) */}
+        <div className="grid flex-1 items-start gap-4 sm:gap-6 lg:grid-cols-12">
+          {/* Left Column: Hero & Actions (7 cols on Desktop) */}
+          <div className={`space-y-4 sm:space-y-6 lg:col-span-7 ${activeTab === "overview" ? "block" : "hidden lg:block"}`}>
+            <div className="rounded-2xl border border-border/60 bg-card p-5 sm:p-8 shadow-xs glass-inset space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.18em]">
                   Asset Identification
@@ -114,16 +141,29 @@ export default function OdpPublicGuestPortalPage() {
                 </Badge>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground leading-[1.15]">
+              <h1 className="text-xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground leading-[1.15]">
                 Informasi Aset Perangkat Fiber Optik
               </h1>
 
-              <p className="text-sm sm:text-base leading-relaxed text-muted-foreground">
-                Anda melakukan pemindaian QR Code perangkat infrastruktur telko Syntrix sebagai <strong>Tamu / Guest</strong>. Halaman ini menyajikan informasi dasar lokasi dan aset tanpa memerlukan akun login. Untuk melakukan validasi fisik & input perbaikan lapangan, silakan buka atau unduh aplikasi seluler Syntrix-One.
+              <p className="text-xs sm:text-base leading-relaxed text-muted-foreground">
+                Anda melakukan pemindaian QR Code perangkat infrastruktur telko Syntrix sebagai <strong>Tamu / Guest</strong>. Halaman ini menyajikan informasi dasar lokasi dan aset tanpa memerlukan akun login.
               </p>
 
+              {/* Mobile Quick Link Button to Scroll/Switch to Details */}
+              <div className="block lg:hidden pt-1">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={scrollToDetails}
+                  className="w-full h-9 rounded-xl font-mono text-xs font-semibold flex items-center justify-center gap-2 border border-border/60 active:scale-[0.98]"
+                >
+                  <span>Lihat Detail Aset QR</span>
+                  <ArrowDown className="size-3.5 text-primary" />
+                </Button>
+              </div>
+
               {/* Primary Call To Actions */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
                 <Button
                   type="button"
                   size="lg"
@@ -151,12 +191,12 @@ export default function OdpPublicGuestPortalPage() {
 
             {/* Navigation Card if coordinates are present */}
             {device?.latitude != null && device?.longitude != null ? (
-              <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset p-5 space-y-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset p-4 sm:p-5 space-y-3">
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-foreground">
                   <Navigation className="size-4 text-primary" />
                   <span>Lokasi & Navigasi Peta</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${device.latitude},${device.longitude}`}
                     target="_blank"
@@ -180,23 +220,23 @@ export default function OdpPublicGuestPortalPage() {
             ) : null}
 
             {/* Guest Portal Highlights */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
               <SafetyPoint title="Akses Publik" description="Dapat diakses oleh siapa saja tanpa login." />
               <SafetyPoint title="Verifikasi QR" description="Memastikan identitas fisik label perangkat." />
               <SafetyPoint title="Integrasi App" description="Dapat dibuka langsung ke app Syntrix-One." />
             </div>
           </div>
 
-          {/* Right Column: Device QR Info Panel (5 cols) */}
-          <div className="lg:col-span-5">
+          {/* Right Column: Device QR Info Panel (5 cols on Desktop) */}
+          <div id="device-details-panel" className={`lg:col-span-5 scroll-mt-16 ${activeTab === "details" ? "block" : "hidden lg:block"}`}>
             <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset">
-              <CardHeader className="border-b border-border/40 bg-muted/10 p-5">
+              <CardHeader className="border-b border-border/40 bg-muted/10 p-4 sm:p-5">
                 <div className="flex items-center gap-3">
                   <div className="flex size-10 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary shadow-2xs">
                     <ShieldCheck className="size-5" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg font-bold tracking-tight">Detail Aset QR</CardTitle>
+                    <CardTitle className="text-base sm:text-lg font-bold tracking-tight">Detail Aset QR</CardTitle>
                     <CardDescription className="text-xs">
                       {loading ? "Memuat data perangkat..." : "Informasi terdaftar pada server Syntrix."}
                     </CardDescription>
@@ -204,7 +244,7 @@ export default function OdpPublicGuestPortalPage() {
                 </div>
               </CardHeader>
 
-              <CardContent className="p-5 space-y-4">
+              <CardContent className="p-4 sm:p-5 space-y-4">
                 <div className="space-y-2.5">
                   <InfoRow label="Tipe Perangkat" value={display.deviceType} loading={loading} />
                   <InfoRow label="Nama Perangkat" value={display.deviceName} loading={loading} />
@@ -219,7 +259,7 @@ export default function OdpPublicGuestPortalPage() {
                 ) : null}
 
                 <div className="rounded-xl border border-border/50 bg-muted/30 p-3.5 text-xs leading-relaxed text-muted-foreground">
-                  Ingin melakukan perubahan data atau validasi foto presisi? Buka aplikasi <strong>Syntrix-One</strong> melalui tombol di bawah atau scan dari menu scanner aplikasi.
+                  Ingin melakukan perubahan data atau validasi foto presisi? Buka aplikasi <strong>Syntrix-One</strong> melalui tombol di bawah.
                 </div>
 
                 <div className="space-y-2">
@@ -247,7 +287,7 @@ export default function OdpPublicGuestPortalPage() {
               </CardContent>
             </Card>
           </div>
-        </section>
+        </div>
       </div>
     </main>
   );
@@ -255,7 +295,7 @@ export default function OdpPublicGuestPortalPage() {
 
 function SafetyPoint({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-card p-4 shadow-2xs glass-inset space-y-1">
+    <div className="rounded-xl border border-border/60 bg-card p-3.5 sm:p-4 shadow-2xs glass-inset space-y-1">
       <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-semibold text-foreground">{title}</p>
       <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
     </div>
