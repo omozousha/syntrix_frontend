@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowRight, Download, ExternalLink, MapPin, Navigation, QrCode, ShieldCheck } from "lucide-react";
+import { ArrowRight, Download, ExternalLink, Globe, MapPin, Navigation, QrCode, ShieldCheck, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +33,7 @@ type DeviceQrContext = {
 const SYNTRIX_ONE_SCHEME = "io.syntrixone.app://field/odp";
 const APK_DOWNLOAD_URL = "https://od.lk/fl/OTRfMTcyOTg2MDBf";
 
-export default function OdpQrBrowserFallbackPage() {
+export default function OdpPublicGuestPortalPage() {
   const params = useParams<{ id: string }>();
   const id = String(params?.id || "").trim();
   const [device, setDevice] = useState<DeviceQrContext | null>(null);
@@ -58,11 +58,11 @@ export default function OdpQrBrowserFallbackPage() {
         if (cancelled) return;
         setDevice(result.data || null);
         if (!result.data) {
-          setLoadMessage("Nama device belum tersedia. Buka Syntrix-One lalu scan ulang QR.");
+          setLoadMessage("Informasi rinci perangkat tidak ditemukan atau telah diarsipkan.");
         }
       } catch {
         if (!cancelled) {
-          setLoadMessage("Nama device belum tersedia. Buka Syntrix-One lalu scan ulang QR.");
+          setLoadMessage("Gagal memuat detail perangkat dari server public.");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -82,39 +82,47 @@ export default function OdpQrBrowserFallbackPage() {
   return (
     <main className="min-h-dvh bg-background text-foreground antialiased selection:bg-primary/20">
       <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Header Bar */}
+        {/* Header Bar - Guest Public Portal */}
         <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/80 p-3.5 sm:px-6 shadow-xs backdrop-blur-md glass-inset">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary shadow-2xs">
-              <QrCode className="size-5" />
+              <Globe className="size-5" />
             </div>
             <div>
-              <p className="text-base font-bold tracking-tight text-foreground">Syntrix-One</p>
-              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Field Validator Portal</p>
+              <p className="text-base font-bold tracking-tight text-foreground">Syntrix Public Portal</p>
+              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Guest Device Verification</p>
             </div>
           </div>
-          <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.18em] border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            QR Device Verified
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.18em] border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              Tanpa Login / Guest Access
+            </Badge>
+          </div>
         </header>
 
-        {/* Main Section */}
+        {/* Main Grid Content - Full-width Zero Dead Space */}
         <section className="grid flex-1 items-start gap-6 lg:grid-cols-12">
           {/* Left Column: Hero Callout & Actions (7 cols) */}
           <div className="lg:col-span-7 space-y-6">
             <div className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8 shadow-xs glass-inset space-y-4">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.18em]">
-                  Validasi Resmi
+                  Asset Identification
+                </Badge>
+                <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.18em]">
+                  Public QR Reader
                 </Badge>
               </div>
+
               <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground leading-[1.15]">
-                Validasi Lapangan Hanya Melalui Syntrix-One
+                Informasi Aset Perangkat Fiber Optik
               </h1>
+
               <p className="text-sm sm:text-base leading-relaxed text-muted-foreground">
-                QR Code ini terdaftar resmi dalam jaringan Syntrix. Untuk menjamin otentisitas data, audit trail, serta verifikasi koordinat & evidence presisi, proses validasi hanya dapat diproses via aplikasi seluler Syntrix-One.
+                Anda melakukan pemindaian QR Code perangkat infrastruktur telko Syntrix sebagai <strong>Tamu / Guest</strong>. Halaman ini menyajikan informasi dasar lokasi dan aset tanpa memerlukan akun login. Untuk melakukan validasi fisik & input perbaikan lapangan, silakan buka atau unduh aplikasi seluler Syntrix-One.
               </p>
 
+              {/* Primary Call To Actions */}
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <Button
                   type="button"
@@ -122,7 +130,8 @@ export default function OdpQrBrowserFallbackPage() {
                   onClick={openSyntrixOne}
                   className="h-11 rounded-full bg-primary px-6 text-xs sm:text-sm font-semibold text-primary-foreground shadow-xs transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] hover:bg-primary/90"
                 >
-                  Buka Aplikasi Syntrix-One
+                  <Smartphone className="mr-2 size-4" />
+                  Buka di Aplikasi Syntrix-One
                   <ArrowRight className="ml-2 size-4" />
                 </Button>
                 <Button
@@ -135,7 +144,7 @@ export default function OdpQrBrowserFallbackPage() {
                   }}
                 >
                   <Download className="mr-2 size-4 text-primary" />
-                  Download APK Syntrix-One
+                  Download Aplikasi (APK)
                 </Button>
               </div>
             </div>
@@ -145,7 +154,7 @@ export default function OdpQrBrowserFallbackPage() {
               <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset p-5 space-y-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                   <Navigation className="size-4 text-primary" />
-                  <span>Petunjuk Arah Navigasi Lapangan</span>
+                  <span>Lokasi & Navigasi Peta</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <a
@@ -164,21 +173,21 @@ export default function OdpQrBrowserFallbackPage() {
                     className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/20 px-4 text-xs font-mono font-medium text-foreground transition-all duration-200 hover:border-primary/50 hover:bg-primary/5 active:scale-[0.98]"
                   >
                     <Navigation className="size-3.5 text-sky-500" />
-                    Navigasi Waze
+                    Buka Waze
                   </a>
                 </div>
               </Card>
             ) : null}
 
-            {/* Feature Highlights Grid */}
+            {/* Guest Portal Highlights */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <SafetyPoint title="QR-First Scanner" description="Form validasi dibuka langsung melalui scanner bawaan aplikasi." />
-              <SafetyPoint title="Otorisasi Region" description="Data dicek berdasarkan hak akses & scope validator." />
-              <SafetyPoint title="Evidence Presisi" description="Foto fisik & koordinat GPS terverifikasi otomatis." />
+              <SafetyPoint title="Akses Publik" description="Dapat diakses oleh siapa saja tanpa login." />
+              <SafetyPoint title="Verifikasi QR" description="Memastikan identitas fisik label perangkat." />
+              <SafetyPoint title="Integrasi App" description="Dapat dibuka langsung ke app Syntrix-One." />
             </div>
           </div>
 
-          {/* Right Column: Device QR Context (5 cols) */}
+          {/* Right Column: Device QR Info Panel (5 cols) */}
           <div className="lg:col-span-5">
             <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset">
               <CardHeader className="border-b border-border/40 bg-muted/10 p-5">
@@ -187,9 +196,9 @@ export default function OdpQrBrowserFallbackPage() {
                     <ShieldCheck className="size-5" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg font-bold tracking-tight">Konteks QR Device</CardTitle>
+                    <CardTitle className="text-lg font-bold tracking-tight">Detail Aset QR</CardTitle>
                     <CardDescription className="text-xs">
-                      {loading ? "Memuat identitas perangkat..." : "Informasi terdaftar untuk perangkat ini."}
+                      {loading ? "Memuat data perangkat..." : "Informasi terdaftar pada server Syntrix."}
                     </CardDescription>
                   </div>
                 </div>
@@ -197,10 +206,10 @@ export default function OdpQrBrowserFallbackPage() {
 
               <CardContent className="p-5 space-y-4">
                 <div className="space-y-2.5">
-                  <InfoRow label="Type Device" value={display.deviceType} loading={loading} />
-                  <InfoRow label="Nama Device" value={display.deviceName} loading={loading} />
+                  <InfoRow label="Tipe Perangkat" value={display.deviceType} loading={loading} />
+                  <InfoRow label="Nama Perangkat" value={display.deviceName} loading={loading} />
                   <InfoRow label="POP Terhubung" value={display.pop} loading={loading} />
-                  <InfoRow label="Tenant Owner" value={display.tenant} loading={loading} />
+                  <InfoRow label="Tenant / Pengelola" value={display.tenant} loading={loading} />
                 </div>
 
                 {loadMessage ? (
@@ -210,18 +219,31 @@ export default function OdpQrBrowserFallbackPage() {
                 ) : null}
 
                 <div className="rounded-xl border border-border/50 bg-muted/30 p-3.5 text-xs leading-relaxed text-muted-foreground">
-                  Jika aplikasi tidak terbuka secara otomatis, buka aplikasi Syntrix-One secara manual lalu tekan ikon <strong>Scan QR</strong> di menu navigasi utama.
+                  Ingin melakukan perubahan data atau validasi foto presisi? Buka aplikasi <strong>Syntrix-One</strong> melalui tombol di bawah atau scan dari menu scanner aplikasi.
                 </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-between h-10 rounded-xl border-border/60 bg-background/50 px-4 text-xs font-semibold transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] hover:bg-muted/20"
-                  onClick={openSyntrixOne}
-                >
-                  Buka Syntrix-One Sekarang
-                  <ExternalLink className="size-4 text-muted-foreground" />
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    className="w-full justify-between h-10 rounded-xl bg-primary text-primary-foreground px-4 text-xs font-semibold shadow-xs transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] hover:bg-primary/90"
+                    onClick={openSyntrixOne}
+                  >
+                    <span>Buka di Syntrix-One App</span>
+                    <ExternalLink className="size-4" />
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between h-10 rounded-xl border-border/60 bg-background/50 px-4 text-xs font-semibold transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] hover:bg-muted/20"
+                    onClick={() => {
+                      window.location.href = APK_DOWNLOAD_URL;
+                    }}
+                  >
+                    <span>Download App (APK Android)</span>
+                    <Download className="size-4 text-muted-foreground" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
