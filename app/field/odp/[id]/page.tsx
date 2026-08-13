@@ -119,7 +119,11 @@ export default function OdpPublicGuestPortalPage() {
                 <Globe className="size-3.5" />
                 <span>Ringkasan</span>
               </TabsTrigger>
-              <TabsTrigger value="details" className="rounded-lg font-mono text-[11px] uppercase tracking-wider font-semibold data-[state=active]:bg-background data-[state=active]:shadow-2xs flex items-center justify-center gap-1.5">
+              <TabsTrigger value="details" className="rounded-lg font-mono text-[11px] uppercase tracking-wider font-semibold data-[state=active]:bg-background data-[state=active]:shadow-2xs flex items-center justify-center gap-1.5 relative">
+                <span className="relative flex size-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full size-2 bg-primary"></span>
+                </span>
                 <Info className="size-3.5 text-primary" />
                 <span>Detail Aset QR</span>
               </TabsTrigger>
