@@ -103,5 +103,5 @@ className="font-mono tabular-nums font-semibold"
 Sebelum menyerahkan pekerjaan revisi visual:
 1. **Tidak Ada Flash Light Mode**: Pastikan tema sinkron sebelum hydration melalui inline script di `layout.tsx`.
 2. **Kesesuaian Bezel**: Pastikan padding Double-Bezel disesuaikan secara proporsional.
-3. **Scrollbar Custom**: Elemen overflow harus menggunakan class `.thin-scrollbar` (lebar 6px dengan warna border visual).
+3. **Scrollbar Standard**: Menggunakan komponen Radix UI `<ScrollArea>` dari Shadcn UI (`components/ui/scroll-area.tsx`) dengan rail `bg-transparent` dan thumb `bg-border/60 hover:bg-muted-foreground/50 rounded-full`. Hindari scrollbar native browser atau double scrolling container.
 4. **Validasi Build**: Selalu jalankan `npx tsc --noEmit` dan `npm run check:consistency` sebelum menandai pekerjaan selesai.
