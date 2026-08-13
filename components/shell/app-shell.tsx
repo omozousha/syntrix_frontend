@@ -76,7 +76,7 @@ export function AppShell({
             <MapsPersistentHost visible={pathname === "/maps"} />
 
             {pathname === "/maps" ? null : (
-              <main className="relative z-10 h-full min-h-0 overflow-y-auto px-3 py-2 sm:px-6 sm:py-4">
+              <main className="relative z-10 h-full min-h-0 overflow-y-auto px-3 py-2 sm:px-6 sm:py-4 thin-scrollbar">
                 <section className="min-h-full">{children}</section>
               </main>
             )}

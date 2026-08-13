@@ -207,39 +207,35 @@ export default function DashboardPage() {
 
   if (loading && !data.summary) {
     return (
-      <ScrollArea className="h-full min-h-0 w-full">
-        <div className="pr-3">
-          <AppLoading label="Sedang memuat dashboard operasional..." />
-        </div>
-      </ScrollArea>
+      <div className="h-full min-h-0 w-full pr-3">
+        <AppLoading label="Sedang memuat dashboard operasional..." />
+      </div>
     );
   }
 
   return (
-    <ScrollArea className="h-full min-h-0 w-full">
-      <div className="space-y-4 pr-1 sm:pr-3">
-        <DashboardHeader
-          role={role}
-          regionCount={scopeRegionIds.length}
-          regions={data.regions.map((r) => ({ id: String(r.id), label: r.region_name || r.region_id || "Region" }))}
-          regionFilter={regionFilterId}
-          onRegionFilterChange={setRegionFilterId}
-          onRefresh={doRefresh}
-          refreshing={refreshing}
-          loading={loading}
-          lastUpdated={lastUpdated}
-        />
+    <div className="space-y-4">
+      <DashboardHeader
+        role={role}
+        regionCount={scopeRegionIds.length}
+        regions={data.regions.map((r) => ({ id: String(r.id), label: r.region_name || r.region_id || "Region" }))}
+        regionFilter={regionFilterId}
+        onRegionFilterChange={setRegionFilterId}
+        onRefresh={doRefresh}
+        refreshing={refreshing}
+        loading={loading}
+        lastUpdated={lastUpdated}
+      />
 
-        {error ? (
-          <Alert variant="destructive">
-            <AlertTitle>Dashboard belum lengkap</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Dashboard belum lengkap</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
 
-        <DashboardTabs data={data} role={role} loading={loading} singleRegionScope={singleRegionScope} />
-      </div>
-    </ScrollArea>
+      <DashboardTabs data={data} role={role} loading={loading} singleRegionScope={singleRegionScope} />
+    </div>
   );
 }
 
