@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowDown, ArrowRight, Download, ExternalLink, Globe, Info, MapPin, Navigation, QrCode, ShieldCheck, Smartphone } from "lucide-react";
+import { ArrowDown, ArrowRight, Download, ExternalLink, MapPin, Navigation, QrCode, ShieldCheck, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,19 +85,18 @@ export default function OdpPublicGuestPortalPage() {
     const el = document.getElementById("device-details-panel");
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
-    } else {
-      setActiveTab("details");
     }
+    setActiveTab("details");
   }
 
   return (
-    <main className="min-h-dvh bg-background text-foreground antialiased selection:bg-primary/20 pb-16 lg:pb-8">
+    <main className="min-h-dvh bg-background text-foreground antialiased selection:bg-primary/20 pb-6 sm:pb-8">
       <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
-        {/* Header Bar - Guest Public Portal */}
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/80 p-3.5 sm:px-6 shadow-xs backdrop-blur-md glass-inset sticky top-2 z-20">
+        {/* Header Bar - Solid backdrop for clean scroll overlay */}
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/95 p-3.5 sm:px-6 shadow-sm backdrop-blur-xl glass-inset sticky top-2 z-30">
           <div className="flex items-center gap-3">
             <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary shadow-2xs">
-              <Globe className="size-4 sm:size-5" />
+              <QrCode className="size-4 sm:size-5" />
             </div>
             <div>
               <p className="text-sm sm:text-base font-bold tracking-tight text-foreground">Syntrix Public Portal</p>
@@ -106,32 +105,31 @@ export default function OdpPublicGuestPortalPage() {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.18em] border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              Tanpa Login / Guest Access
+              Guest Access
             </Badge>
           </div>
         </header>
 
-        {/* SPA Mobile View Tab Navigation Bar (Visible on mobile/tablet) */}
-        <div className="block lg:hidden">
+        {/* SPA Mobile View Tab Navigation Bar */}
+        <div className="block lg:hidden sticky top-16 z-20">
           <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as "overview" | "details")} className="w-full">
-            <TabsList className="grid h-10 w-full grid-cols-2 rounded-xl bg-muted/40 p-1 border border-border/50">
+            <TabsList className="grid h-10 w-full grid-cols-2 rounded-xl bg-card/95 p-1 border border-border/60 shadow-xs backdrop-blur-md">
               <TabsTrigger value="overview" className="rounded-lg font-mono text-[11px] uppercase tracking-wider font-semibold data-[state=active]:bg-background data-[state=active]:shadow-2xs flex items-center justify-center gap-1.5">
-                <Globe className="size-3.5" />
+                <QrCode className="size-3.5" />
                 <span>Ringkasan</span>
               </TabsTrigger>
-              <TabsTrigger value="details" className="rounded-lg font-mono text-[11px] uppercase tracking-wider font-semibold data-[state=active]:bg-background data-[state=active]:shadow-2xs flex items-center justify-center gap-1.5 relative">
-                <span className="relative flex size-2">
+              <TabsTrigger value="details" className="rounded-lg font-mono text-[11px] uppercase tracking-wider font-semibold data-[state=active]:bg-background data-[state=active]:shadow-2xs flex items-center justify-center gap-1.5">
+                <span>Detail Aset QR</span>
+                <span className="relative flex size-2 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                   <span className="relative inline-flex rounded-full size-2 bg-primary"></span>
                 </span>
-                <Info className="size-3.5 text-primary" />
-                <span>Detail Aset QR</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
-        {/* Main Layout Grid (SPA Tabbed on mobile, Side-by-side 12-col on Desktop) */}
+        {/* Main Layout Grid */}
         <div className="grid flex-1 items-start gap-4 sm:gap-6 lg:grid-cols-12">
           {/* Left Column: Hero & Actions (7 cols on Desktop) */}
           <div className={`space-y-4 sm:space-y-6 lg:col-span-7 ${activeTab === "overview" ? "block" : "hidden lg:block"}`}>
@@ -145,26 +143,13 @@ export default function OdpPublicGuestPortalPage() {
                 </Badge>
               </div>
 
-              <h1 className="text-xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground leading-[1.15]">
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground leading-[1.15]">
                 Informasi Aset Perangkat Fiber Optik
               </h1>
 
               <p className="text-xs sm:text-base leading-relaxed text-muted-foreground">
                 Anda melakukan pemindaian QR Code perangkat infrastruktur telko Syntrix sebagai <strong>Tamu / Guest</strong>. Halaman ini menyajikan informasi dasar lokasi dan aset tanpa memerlukan akun login.
               </p>
-
-              {/* Mobile Quick Link Button to Scroll/Switch to Details */}
-              <div className="block lg:hidden pt-1">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={scrollToDetails}
-                  className="w-full h-9 rounded-xl font-mono text-xs font-semibold flex items-center justify-center gap-2 border border-border/60 active:scale-[0.98]"
-                >
-                  <span>Lihat Detail Aset QR</span>
-                  <ArrowDown className="size-3.5 text-primary" />
-                </Button>
-              </div>
 
               {/* Primary Call To Actions */}
               <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
@@ -191,6 +176,18 @@ export default function OdpPublicGuestPortalPage() {
                   Download Aplikasi (APK)
                 </Button>
               </div>
+
+              {/* Subtle Mobile Text Link to Details */}
+              <div className="block lg:hidden pt-2 border-t border-border/30">
+                <button
+                  type="button"
+                  onClick={scrollToDetails}
+                  className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-primary hover:underline focus:outline-none"
+                >
+                  <span>Lihat rincian spesifikasi &amp; Detail Aset QR</span>
+                  <ArrowDown className="size-3.5" />
+                </button>
+              </div>
             </div>
 
             {/* Navigation Card if coordinates are present */}
@@ -198,7 +195,7 @@ export default function OdpPublicGuestPortalPage() {
               <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset p-4 sm:p-5 space-y-3">
                 <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-foreground">
                   <Navigation className="size-4 text-primary" />
-                  <span>Lokasi & Navigasi Peta</span>
+                  <span>Lokasi &amp; Navigasi Peta</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <a
@@ -232,7 +229,7 @@ export default function OdpPublicGuestPortalPage() {
           </div>
 
           {/* Right Column: Device QR Info Panel (5 cols on Desktop) */}
-          <div id="device-details-panel" className={`lg:col-span-5 scroll-mt-16 ${activeTab === "details" ? "block" : "hidden lg:block"}`}>
+          <div id="device-details-panel" className={`lg:col-span-5 scroll-mt-28 ${activeTab === "details" ? "block" : "hidden lg:block"}`}>
             <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset">
               <CardHeader className="border-b border-border/40 bg-muted/10 p-4 sm:p-5">
                 <div className="flex items-center gap-3">
