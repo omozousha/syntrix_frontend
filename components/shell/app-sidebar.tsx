@@ -116,25 +116,16 @@ export function AppSidebar({
   return (
     <Sidebar variant="sidebar" collapsible="offcanvas">
       <SidebarHeader className="px-3 pt-3 pb-2">
-        <div className="rounded-2xl border border-sidebar-border/60 bg-sidebar-accent/15 p-1.5 shadow-xs">
-          <div className="rounded-[calc(1rem-0.375rem)] border border-sidebar-border/50 bg-sidebar-accent/40 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] dark:bg-sidebar-accent/30 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-            <div className="flex items-center gap-2.5">
-              <div className="rounded-lg border border-primary/20 bg-primary/10 p-1.5 text-primary shadow-inner">
-                <Network className="size-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold leading-none tracking-tight">Syntrix</p>
-                <p className="mt-1 text-[10px] leading-snug text-sidebar-foreground/70">Synchronization &amp; Validation Matrix</p>
-              </div>
-            </div>
-            <Badge variant="secondary" className="mt-2.5 w-fit rounded-md font-mono text-[9px] uppercase tracking-[0.18em]">
-              Ops Console
-            </Badge>
+        <div className="flex items-center gap-2.5 px-2 py-1.5">
+          <div className="rounded-lg border border-primary/20 bg-primary/10 p-2 text-primary shadow-inner">
+            <Network className="size-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold leading-none tracking-tight">Syntrix</p>
+            <p className="mt-1 text-[10px] leading-snug text-sidebar-foreground/70">Ops Console</p>
           </div>
         </div>
       </SidebarHeader>
-
-      <SidebarSeparator />
 
       <SidebarContent>
         {sections.map((section) => (
@@ -209,8 +200,6 @@ export function AppSidebar({
           </SidebarGroup>
         ))}
       </SidebarContent>
-
-      <SidebarSeparator />
 
       <SidebarFooter className="px-3 pb-3 pt-2">
         <SidebarSmartTip pathname={pathname} menus={menus} />

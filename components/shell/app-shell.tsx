@@ -42,43 +42,45 @@ export function AppShell({
   const scopeLabel = buildScopeLabel(me, normalizedRole);
 
   return (
-    <SidebarProvider defaultOpen={true} className="h-dvh overflow-hidden">
+    <SidebarProvider defaultOpen={true} className="h-dvh overflow-hidden bg-sidebar">
       <AppSidebar pathname={pathname} menus={menus} />
 
-      <SidebarInset className="relative h-dvh min-h-0 overflow-hidden">
-        <header className="sticky top-0 z-20 shrink-0 border-b border-border/60 bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
-          <div className="flex min-h-14 w-full items-center justify-between gap-2 px-2 py-1.5 sm:gap-3 sm:px-4 sm:py-2.5">
-            <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-              <SidebarTrigger className="shrink-0" />
-              <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-2">
-                  <p className="hidden shrink-0 font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground sm:block">{pageContext.eyebrow}</p>
-                  <Badge variant="secondary" className="hidden h-5 rounded-md px-1.5 font-mono text-[10px] font-medium uppercase tracking-wide sm:inline-flex">
-                    {formatRoleLabel(normalizedRole)}
-                  </Badge>
-                  <Badge variant="outline" className="hidden h-5 rounded-md px-1.5 font-mono text-[10px] font-medium md:inline-flex">
-                    {scopeLabel}
-                  </Badge>
-                </div>
-                <div className="mt-0.5 flex min-w-0 items-baseline gap-3">
-                  <h1 className="truncate text-sm font-semibold tracking-tight text-foreground sm:text-lg">{pageContext.title}</h1>
-                  <p className="hidden truncate text-sm text-muted-foreground xl:block">{pageContext.description}</p>
+      <SidebarInset className="relative h-dvh min-h-0 overflow-hidden bg-sidebar p-2 sm:p-3">
+        <div className="flex h-full w-full flex-col overflow-hidden bg-card border-border/50 rounded-2xl border shadow-xs">
+          <header className="sticky top-0 z-20 shrink-0 border-b border-border/30 bg-card/80 backdrop-blur-md">
+            <div className="flex min-h-14 w-full items-center justify-between gap-2 px-3 py-1.5 sm:gap-3 sm:px-6 sm:py-2.5">
+              <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                <SidebarTrigger className="shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="hidden shrink-0 font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground sm:block">{pageContext.eyebrow}</p>
+                    <Badge variant="secondary" className="hidden h-5 rounded-md px-1.5 font-mono text-[10px] font-medium uppercase tracking-wide sm:inline-flex">
+                      {formatRoleLabel(normalizedRole)}
+                    </Badge>
+                    <Badge variant="outline" className="hidden h-5 rounded-md px-1.5 font-mono text-[10px] font-medium md:inline-flex">
+                      {scopeLabel}
+                    </Badge>
+                  </div>
+                  <div className="mt-0.5 flex min-w-0 items-baseline gap-3">
+                    <h1 className="truncate text-sm font-semibold tracking-tight text-foreground sm:text-lg">{pageContext.title}</h1>
+                    <p className="hidden truncate text-sm text-muted-foreground xl:block">{pageContext.description}</p>
+                  </div>
                 </div>
               </div>
+              <NavUser me={me} onLogout={onLogout} />
             </div>
-            <NavUser me={me} onLogout={onLogout} />
+          </header>
+
+          {/* Content area (below header). Maps host overlays this area only, not the header. */}
+          <div className="relative z-0 min-h-0 flex-1 overflow-hidden">
+            <MapsPersistentHost visible={pathname === "/maps"} />
+
+            {pathname === "/maps" ? null : (
+              <main className="relative z-10 h-full min-h-0 overflow-y-auto px-3 py-2 sm:px-6 sm:py-4">
+                <section className="min-h-full">{children}</section>
+              </main>
+            )}
           </div>
-        </header>
-
-        {/* Content area (below header). Maps host overlays this area only, not the header. */}
-        <div className="relative z-0 min-h-0 flex-1 overflow-hidden">
-          <MapsPersistentHost visible={pathname === "/maps"} />
-
-          {pathname === "/maps" ? null : (
-            <main className="relative z-10 h-full min-h-0 overflow-hidden bg-muted/25 px-2 py-2 sm:px-4 sm:py-3">
-              <section className="h-full overflow-hidden rounded-lg border bg-card/95 p-3 shadow-sm sm:rounded-xl sm:p-4">{children}</section>
-            </main>
-          )}
         </div>
       </SidebarInset>
     </SidebarProvider>

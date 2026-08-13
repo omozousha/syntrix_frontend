@@ -217,8 +217,8 @@ export default function DashboardPage() {
 
   return (
     <ScrollArea className="h-full min-h-0 w-full">
-      <div className="space-y-4 pr-3">
-<DashboardHeader
+      <div className="space-y-4 pr-1 sm:pr-3">
+        <DashboardHeader
           role={role}
           regionCount={scopeRegionIds.length}
           regions={data.regions.map((r) => ({ id: String(r.id), label: r.region_name || r.region_id || "Region" }))}
@@ -332,16 +332,16 @@ function DashboardHeader({
   const regionOptions = regions ? [{ value: "__all__", label: "Semua region" }, ...regions.map((r) => ({ value: r.id, label: r.label }))] : [];
   return (
     <div className="rounded-[2rem] border border-border/40 bg-gradient-to-br from-muted/10 to-muted/5 p-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:bg-gradient-to-br dark:from-white/[0.02] dark:to-transparent">
-      <div className="flex flex-col gap-3 rounded-[calc(2rem-0.5rem)] border border-border/60 bg-background/80 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-xl dark:bg-background/40 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 rounded-[calc(2rem-0.5rem)] border border-border/60 bg-background/80 p-3.5 sm:p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-xl dark:bg-background/40 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.18em]">{copy.badge}</Badge>
             <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.18em]">{regionCount ? `${regionCount} region scope` : "Global scope"}</Badge>
           </div>
-          <h2 className="text-2xl font-semibold tracking-tight">{copy.title}</h2>
-          <p className="max-w-3xl text-sm text-muted-foreground">{copy.description}</p>
+          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">{copy.title}</h2>
+          <p className="max-w-3xl text-xs sm:text-sm text-muted-foreground">{copy.description}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
           <span className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:inline">
             {lastUpdated ? `${formatTimeAgo(lastUpdated)}` : ""}
           </span>
@@ -358,7 +358,7 @@ function DashboardHeader({
           </Button>
           {regions && onRegionFilterChange ? (
             <Select value={regionFilter || "__all__"} onValueChange={(v) => onRegionFilterChange(v === "__all__" ? "" : v)} disabled={refreshing || loading}>
-              <SelectTrigger className="h-9 w-[180px] text-sm">
+              <SelectTrigger className="h-9 w-full sm:w-[180px] text-xs sm:text-sm">
                 <SelectValue placeholder="Semua region" />
               </SelectTrigger>
               <SelectContent>
@@ -368,7 +368,7 @@ function DashboardHeader({
               </SelectContent>
             </Select>
           ) : null}
-          <Button asChild size="sm" className="w-full md:w-auto">
+          <Button asChild size="sm" className="w-full sm:w-auto">
             <Link href={copy.primaryHref}>{copy.primaryAction}</Link>
           </Button>
         </div>

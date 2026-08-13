@@ -79,7 +79,7 @@ export function DashboardWorkQueue({
                         onClick={item.onApprove}
                         size="sm"
                         variant="outline"
-                        className="h-7 rounded-full px-2 text-xs text-emerald-700 transition-all duration-300 active:scale-[0.98] hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300"
+                        className="h-7 rounded-full border-emerald-500/30 px-2 text-xs text-emerald-600 transition-all duration-300 active:scale-[0.98] hover:bg-emerald-500/10 hover:text-emerald-500 dark:border-emerald-500/40 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
                       >
                         {item.actionLoading ? "..." : "Setujui"}
                       </Button>
@@ -91,7 +91,7 @@ export function DashboardWorkQueue({
                         onClick={item.onReject}
                         size="sm"
                         variant="outline"
-                        className="h-7 rounded-full px-2 text-xs text-rose-700 transition-all duration-300 active:scale-[0.98] hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300"
+                        className="h-7 rounded-full border-destructive/30 px-2 text-xs text-destructive transition-all duration-300 active:scale-[0.98] hover:bg-destructive/10 hover:text-destructive"
                       >
                         {item.actionLoading ? "..." : "Tolak"}
                       </Button>
