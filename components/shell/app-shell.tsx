@@ -5,6 +5,7 @@ import type { SessionUser } from "@/lib/session";
 import { AppSidebar, type AppSidebarMenuItem } from "@/components/shell/app-sidebar";
 import { NavUser } from "@/components/shell/nav-user";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { getCategoryBySlug } from "@/lib/data-management-config";
 import { MapsPersistentHost } from "@/components/features/maps/maps-persistent-host";
@@ -76,9 +77,11 @@ export function AppShell({
             <MapsPersistentHost visible={pathname === "/maps"} />
 
             {pathname === "/maps" ? null : (
-              <main className="relative z-10 h-full min-h-0 overflow-y-auto px-3 py-2 sm:px-6 sm:py-4 thin-scrollbar">
-                <section className="min-h-full">{children}</section>
-              </main>
+              <ScrollArea className="h-full w-full">
+                <main className="relative z-10 min-h-full px-3 py-2 sm:px-6 sm:py-4">
+                  <section className="min-h-full">{children}</section>
+                </main>
+              </ScrollArea>
             )}
           </div>
         </div>
