@@ -7,7 +7,7 @@ Dokumen ini mendefinisikan standar visual, token CSS, dan pola layout untuk selu
 ## 1. Asas Utama (Nothing Design / Vanguard UI)
 Desain Syntrix berpusat pada estetika minimalis, presisi teknis, dan keterbacaan tinggi dengan ciri khas:
 - **Materialitas & Depth**: Penggunaan Double-Bezel border, backdrop-blur, dan `glass-inset`.
-- **Informasi Padat**: Kombinasi label monospace kecil dan angka tabular.
+- **Informasi Padat & Responsif**: Penggunaan full-width container (`w-full`), grid adaptif 12-kolom (`lg:grid-cols-12`), dan pemanfaatan ruang kosong secara efisien tanpa *dead space* atau constraint lebar artifisial (`max-w-*` yang tidak perlu).
 - **Micro-feedback & Physics**: Transisi pegas (`cubic-bezier`) dan efek tekan (`active:scale`).
 
 ---
@@ -80,6 +80,12 @@ className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset tra
   ```
 - **Global Button Physics** (`app/globals.css`): Seluruh tombol secara default mendapatkan efek tekan `translate-y-px` dan `scale(0.99)` saat aktif melalui CSS.
 
+### D. Layout Responsif & Efisiensi Ruang (Zero Dead Space)
+Setiap halaman dan komponen wajib memanfaatkan ruang layar secara maksimal dan responsif:
+- **No Unnecessary Max-Width**: Dilarang memasang constraint `max-w-4xl` atau `max-w-5xl` pada halaman utama jika menyebabkan area kosong (*dead space*) di layar desktop/layar lebar.
+- **Adaptive Multi-Column Grid**: Gunakan sistem grid 12-kolom (`grid-cols-1 lg:grid-cols-12`) untuk membagi area kerja menjadi panel ringkasan/profil (misal 4 kolom) dan panel form/detail utama (misal 8 kolom).
+- **Dense Data Grid**: Field form dan metadata wajib disusun dalam sub-grid responsif (`sm:grid-cols-2 xl:grid-cols-3`) agar sejajar dan padat informasi.
+
 ---
 
 ## 4. Tipografi & Tampilan Data
@@ -104,4 +110,5 @@ Sebelum menyerahkan pekerjaan revisi visual:
 1. **Tidak Ada Flash Light Mode**: Pastikan tema sinkron sebelum hydration melalui inline script di `layout.tsx`.
 2. **Kesesuaian Bezel**: Pastikan padding Double-Bezel disesuaikan secara proporsional.
 3. **Scrollbar Standard**: Menggunakan komponen Radix UI `<ScrollArea>` dari Shadcn UI (`components/ui/scroll-area.tsx`) dengan rail `bg-transparent` dan thumb `bg-border/60 hover:bg-muted-foreground/50 rounded-full`. Hindari scrollbar native browser atau double scrolling container.
-4. **Validasi Build**: Selalu jalankan `npx tsc --noEmit` dan `npm run check:consistency` sebelum menandai pekerjaan selesai.
+4. **Pemanfaatan Ruang & Grid Layout (Zero Dead Space)**: Memastikan kontainer menggunakan `w-full`, memanfaatkan layout multi-kolom (`lg:grid-cols-12`, `xl:grid-cols-3`), dan tidak meninggalkan area kosong/terbuang (*dead space*) di layar lebar desktop.
+5. **Validasi Build**: Selalu jalankan `npx tsc --noEmit` dan `npm run check:consistency` sebelum menandai pekerjaan selesai.
