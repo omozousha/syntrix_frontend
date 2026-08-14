@@ -3,6 +3,7 @@ import { ImagePlus, Images, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 type AttachmentRef = {
   id: string;
@@ -68,23 +69,21 @@ export function DeviceGallerySection({
               const src = imagePreviewUrls[attachment.id];
               const fileName = attachmentNames[attachment.id] || attachment.name || "Attachment tidak tersedia";
               return (
-                <Button
-                  type="button"
+                <div
                   key={attachment.id}
-                  variant="ghost"
-                  className="h-auto flex-col items-stretch justify-start overflow-hidden rounded-md border bg-muted/30 p-0 text-left transition hover:ring-2 hover:ring-primary/40"
-                  title={fileName}
-                  onClick={() => onOpenGallery(index)}
+                  className="flex flex-col gap-1 rounded-xl border border-border/60 bg-card p-1 shadow-2xs glass-inset"
                 >
-                  {src ? (
-                    <Image src={src} alt={fileName} width={120} height={90} className="h-20 w-full object-cover" />
-                  ) : (
-                    <div className="flex h-20 items-center justify-center text-[10px] text-muted-foreground">
-                      {loadingImagePreviews ? "Loading..." : "No preview"}
-                    </div>
-                  )}
-                  <p className="truncate px-1.5 py-1 text-[10px] text-muted-foreground">{fileName}</p>
-                </Button>
+                  <OptimizedImage
+                    src={src}
+                    alt={fileName}
+                    aspectRatio="square"
+                    size="thumb"
+                    allowLightbox={true}
+                    className="h-20 w-full"
+                    onClick={() => onOpenGallery(index)}
+                  />
+                  <p className="truncate px-1 text-[10px] text-muted-foreground" title={fileName}>{fileName}</p>
+                </div>
               );
             })}
           </div>

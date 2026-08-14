@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 export type EvidenceChecklistRef = {
   key: string;
@@ -31,7 +32,17 @@ export function EvidenceChecklistPreview({
             {initialPhotos.map((item, index) => (
               <div key={`${valueText(item.label)}-${index}`} className="rounded-lg border border-border/50 bg-muted/20 p-2.5">
                 <p className="text-xs font-semibold leading-normal text-foreground">{valueText(item.label)}</p>
-                <p className="text-[11px] leading-relaxed text-muted-foreground">Foto: <span className="font-mono text-[10px]">{getInspectionAttachmentName(item.attachment)}</span></p>
+                <p className="text-[11px] leading-relaxed text-muted-foreground mb-1.5">Foto: <span className="font-mono text-[10px]">{getInspectionAttachmentName(item.attachment)}</span></p>
+                {getInspectionAttachmentUrl(item.attachment) && (
+                  <OptimizedImage
+                    src={getInspectionAttachmentUrl(item.attachment)}
+                    thumbUrl={getInspectionAttachmentUrl(item.attachment)}
+                    alt={valueText(item.label)}
+                    aspectRatio="square"
+                    size="thumb"
+                    className="mb-2 h-24 w-full"
+                  />
+                )}
                 <InspectionEvidenceActions
                   attachment={item.attachment}
                   label={`${valueText(item.label)} ${index + 1}`}
@@ -141,6 +152,12 @@ function getInspectionAttachmentName(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return "-";
   const attachment = value as Record<string, unknown>;
   return valueText(attachment.name || attachment.attachment_id || "Attachment tidak tersedia");
+}
+
+function getInspectionAttachmentUrl(value: unknown): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const attachment = value as Record<string, unknown>;
+  return (attachment.url || attachment.thumbUrl || attachment.file_url) as string | null;
 }
 
 function valueText(value: unknown) {

@@ -33,7 +33,10 @@ export function ImageAttachmentField({
       <Input type="file" accept="image/*" multiple onChange={(event) => onChange(event.target.files)} />
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <ImagePlus className="size-3.5" />
-        Maksimal {MAX_IMAGE_ATTACHMENTS} file, masing-masing max 5MB.
+        <span>Maksimal {MAX_IMAGE_ATTACHMENTS} file, masing-masing max 5MB.</span>
+        <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em] text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
+          Auto WebP ~80% Compress
+        </Badge>
       </div>
 
       {files.length ? (

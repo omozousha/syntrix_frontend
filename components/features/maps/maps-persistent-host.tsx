@@ -16,6 +16,7 @@ import type { NominatimResult } from "@/hooks/use-nominatim-search";
 import { cn } from "@/lib/utils";
 import { Copy, Check, X, ExternalLink, ChevronUp } from "lucide-react";
 import Link from "next/link";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 const GoogleMapsCanvas = dynamic(
   () =>
@@ -681,6 +682,21 @@ function DeviceDetailCard({
 
         {/* Compact 2-column grid */}
         <div className="space-y-2 mb-3">
+          {/* Optional device image thumbnail */}
+          {((device as unknown) as { image_attachments?: Array<{ url?: string; thumbUrl?: string; blurDataUrl?: string }> })?.image_attachments?.[0] && (
+            <div className="mb-2">
+              <OptimizedImage
+                src={((device as unknown) as { image_attachments?: Array<{ url?: string }> }).image_attachments?.[0]?.url}
+                thumbUrl={((device as unknown) as { image_attachments?: Array<{ thumbUrl?: string }> }).image_attachments?.[0]?.thumbUrl}
+                blurDataUrl={((device as unknown) as { image_attachments?: Array<{ blurDataUrl?: string }> }).image_attachments?.[0]?.blurDataUrl}
+                alt={device.device_name || "Device image"}
+                aspectRatio="square"
+                size="thumb"
+                className="h-24 w-full"
+              />
+            </div>
+          )}
+
           {fieldRows.map((row, rowIdx) => (
             <div
               key={rowIdx}
