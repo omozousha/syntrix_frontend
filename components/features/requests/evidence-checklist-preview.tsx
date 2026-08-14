@@ -151,7 +151,15 @@ function objectRecordValues(value: unknown) {
 function getInspectionAttachmentName(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return "-";
   const attachment = value as Record<string, unknown>;
-  return valueText(attachment.name || attachment.attachment_id || "Attachment tidak tersedia");
+  return normalizeImageFilename(valueText(attachment.name || attachment.attachment_id || "Attachment tidak tersedia"));
+}
+
+// Sinkronkan ekstensi tampilan nama evidence lama (jpg/png/gif) menjadi .webp
+// karena seluruh pipeline image sekarang dikonversi ke WebP di backend.
+const RASTER_IMAGE_EXT = /\.(jpe?g|png|gif|bmp|tiff?|avif|webp)$/i;
+function normalizeImageFilename(name: string) {
+  if (!name || name === "-") return name;
+  return RASTER_IMAGE_EXT.test(name) ? name.replace(/\.[^/.]+$/, "") + ".webp" : name;
 }
 
 function getInspectionAttachmentUrl(value: unknown): string | null {
