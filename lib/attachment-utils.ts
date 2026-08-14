@@ -103,10 +103,13 @@ export async function fetchAttachmentBlob(
 
 export async function downloadAttachmentFile(identifier: string, token: string) {
   const { blob, filename } = await fetchAttachmentBlob(identifier, token, "download");
+  const cleanFilename = blob.type === "image/webp" && filename && !filename.toLowerCase().endsWith(".webp")
+    ? filename.replace(/\.[^/.]+$/, "") + ".webp"
+    : filename || "attachment.webp";
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = filename || "attachment";
+  anchor.download = cleanFilename;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
