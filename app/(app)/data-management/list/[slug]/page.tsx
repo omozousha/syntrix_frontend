@@ -577,7 +577,7 @@ export default function DataManagementListPage() {
   }, [effectiveRegionScopeId, supportsPopFilter, token]);
 
   useEffect(() => {
-    if (!supportsPopFilter || popQueryParam === "__all" || popFilterLoading) return;
+    if (!supportsPopFilter || popQueryParam === "__all" || popQueryParam === "__null__" || popFilterLoading) return;
     const selectedPop = popFilterOptions.find((option) => option.id === popQueryParam);
     if (!selectedPop) {
       applyPopFilter("__all");
@@ -601,7 +601,7 @@ export default function DataManagementListPage() {
       try {
         const query = new URLSearchParams({ page: "1", limit: "500" });
         if (effectiveRegionScopeId) query.set("region_id", effectiveRegionScopeId);
-        if (supportsPopFilter && popQueryParam !== "__all") query.set("pop_id", popQueryParam);
+        if (supportsPopFilter && popQueryParam !== "__all" && popQueryParam !== "__null__") query.set("pop_id", popQueryParam);
         const result = await apiFetch<PaginatedResponse<GenericItem>>(`/projects?${query.toString()}`, { token });
         if (cancelled) return;
         const options = (result.data || []).map((item) => ({
