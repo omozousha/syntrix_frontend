@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "check:consistency": "node scripts/check-frontend-consistency.mjs",
-    "test:frontend": "node scripts/test-frontend-topology-components.js && node scripts/test-frontend-odp-ont-assignment.js",
+    "test:frontend": "node scripts/test-frontend-topology-components.js && node scripts/test-frontend-odp-ont-assignment.js && node scripts/test-odp-formatters.js",
     "audit:relation-display": "node scripts/audit-relation-display.mjs",
     "audit:performance-safety": "node scripts/audit-performance-safety.mjs"
   },

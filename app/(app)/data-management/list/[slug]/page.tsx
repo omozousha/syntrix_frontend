@@ -221,7 +221,10 @@ export default function DataManagementListPage() {
   const { token, me } = useSession();
 
   const [rows, setRows] = useState<GenericItem[]>([]);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => {
+    const p = Number(searchParams.get("page") || "1");
+    return Number.isFinite(p) && p > 0 ? p : 1;
+  });
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -476,6 +479,24 @@ export default function DataManagementListPage() {
     setSearch(term);
     setPage(1);
   }, [debouncedSearch, search]);
+
+  // Sync page ke URL (keputusan user Phase 0: pagination URL sync)
+  useEffect(() => {
+    const nextParams = new URLSearchParams(queryString);
+    if (page > 1) nextParams.set("page", String(page));
+    else nextParams.delete("page");
+    const nextQuery = nextParams.toString();
+    if (nextQuery === queryString) return;
+    router.replace(`/data-management/list/${slug}${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
+  }, [page, queryString, router, slug]);
+
+  // Baca page dari URL saat back/forward browser
+  useEffect(() => {
+    const urlPage = Number(searchParams.get("page") || "1");
+    if (Number.isFinite(urlPage) && urlPage > 0 && urlPage !== page) {
+      setPage(urlPage);
+    }
+  }, [searchParams, page]);
 
   useEffect(() => {
     if (category?.slug === "odp" && searchParams.get("triggerCreate") === "true") {
@@ -1803,6 +1824,7 @@ export default function DataManagementListPage() {
                   showValidationBadge={category?.resource === "devices"}
                   supportsPopFilter={supportsPopFilter}
                   canTraceTopology={isOdpCategory && canTraceTopology}
+                  selectedIds={selectedIds}
                   getPrimaryName={(row) => buildDeviceListDisplay(row, listDisplayLookups).primaryName}
                   getPrimaryCode={(row) => buildDeviceListDisplay(row, listDisplayLookups).primaryCode}
                   getStatus={(row) => pick(row, ["status", "status_pop", "is_active"])}
@@ -1818,6 +1840,14 @@ export default function DataManagementListPage() {
                   }}
                   onOpenDetail={(row) => router.push(getDetailHref(row.id))}
                   onOpenTrace={(row) => router.push(getTraceHref(row))}
+                  onToggleSelection={(row) => {
+                    setSelectedIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(row.id)) next.delete(row.id);
+                      else next.add(row.id);
+                      return next;
+                    });
+                  }}
                 />
                 <DataTableView
                   headers={headers}
@@ -1912,7 +1942,7 @@ export default function DataManagementListPage() {
                   Prev
                 </Button>
                 <span className="rounded border border-border/60 bg-muted/30 px-2.5 py-1 font-mono text-sm tabular-nums">
-                  {page}
+                  {page} / {Math.max(1, Math.ceil(total / limit))}
                 </span>
                 <Button
                   variant="outline"

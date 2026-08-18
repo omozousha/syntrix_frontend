@@ -18,6 +18,7 @@ export function DataMobileList({
   showValidationBadge,
   supportsPopFilter,
   canTraceTopology,
+  selectedIds,
   getPrimaryName,
   getPrimaryCode,
   getStatus,
@@ -26,11 +27,13 @@ export function DataMobileList({
   getValidationBadge,
   onOpenDetail,
   onOpenTrace,
+  onToggleSelection,
 }: {
   rows: GenericItem[];
   showValidationBadge: boolean;
   supportsPopFilter: boolean;
   canTraceTopology: boolean;
+  selectedIds: Set<string>;
   getPrimaryName: (row: GenericItem) => string;
   getPrimaryCode: (row: GenericItem) => string;
   getStatus: (row: GenericItem) => string;
@@ -39,6 +42,7 @@ export function DataMobileList({
   getValidationBadge: (row: GenericItem) => ValidationBadge;
   onOpenDetail: (row: GenericItem) => void;
   onOpenTrace: (row: GenericItem) => void;
+  onToggleSelection: (row: GenericItem) => void;
 }) {
   return (
     <div className="space-y-2 md:hidden">
@@ -46,16 +50,31 @@ export function DataMobileList({
         const validation = getValidationBadge(row);
         const primaryName = getPrimaryName(row);
         const primaryCode = getPrimaryCode(row);
+        const isSelected = selectedIds.has(row.id);
 
         return (
-          <div key={row.id} className="rounded-xl border border-border/60 bg-card p-3 shadow-2xs">
+          <div
+            key={row.id}
+            className={`rounded-xl border bg-card p-3 shadow-2xs transition-colors ${
+              isSelected ? "border-primary/60 bg-primary/5" : "border-border/60"
+            }`}
+          >
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 space-y-0.5">
-                <p className="truncate text-sm font-semibold">{primaryName || "-"}</p>
-                <p className="truncate font-mono text-[10px] text-muted-foreground">{primaryCode || "-"}</p>
+              <div className="flex min-w-0 items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => onToggleSelection(row)}
+                  aria-label={`Pilih ${primaryName || row.id}`}
+                  className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-input bg-background text-primary"
+                />
+                <div className="min-w-0 space-y-0.5">
+                  <p className="truncate text-sm font-semibold">{primaryName || "-"}</p>
+                  <p className="truncate font-mono text-[10px] text-muted-foreground">{primaryCode || "-"}</p>
+                </div>
               </div>
               {showValidationBadge && validation ? (
-                <span title={validation.title} className={`inline-flex rounded border px-2 py-0.5 font-mono text-[10px] leading-tight ${validation.className}`}>
+                <span title={validation.title} className={`inline-flex shrink-0 rounded border px-2 py-0.5 font-mono text-[10px] leading-tight ${validation.className}`}>
                   {validation.label}
                 </span>
               ) : null}
