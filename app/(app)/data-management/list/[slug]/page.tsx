@@ -35,6 +35,10 @@ import { OdpCreateModeDialog } from "@/components/features/data-management/devic
 import { DataListKpiStrip } from "@/components/features/data-management/device-list/data-list-kpi-strip";
 import { DataMobileList } from "@/components/features/data-management/device-list/data-mobile-list";
 import { DataTableView } from "@/components/features/data-management/device-list/data-table-view";
+import { OdpListSummaryStrip } from "@/components/features/data-management/device-list/odp-list-summary-strip";
+import { OdpPopDistributionPanel } from "@/components/features/data-management/device-list/odp-pop-distribution-panel";
+import { OdpListSkeleton } from "@/components/features/data-management/device-list/odp-list-skeleton";
+import { useOdpSummary } from "@/lib/hooks/useOdpSummary";
 import { MasterDataQuickEditSheet } from "@/components/features/data-management/master-data-quick-edit-sheet";
 import { MasterDataUsageCheckDialog, MasterDataDeleteConfirmDialog } from "@/components/features/data-management/master-data-delete-dialog";
 import { MasterDataRenameDialog } from "@/components/features/data-management/master-data-rename-dialog";
@@ -322,6 +326,14 @@ export default function DataManagementListPage() {
   const renameConfig = getRenameConfig(category?.resource || "");
   const createDefaults = useMemo(() => getCreateDefaults(category?.resource || ""), [category?.resource]);
   const [activeTab, setActiveTab] = useState<"list" | "quality">("list");
+  
+  // ODP Summary Hook
+  const { data: odpSummary, loading: odpSummaryLoading, error: odpSummaryError } = useOdpSummary({
+    regionScopeId: effectiveRegionScopeId,
+    popId: popQueryParam !== "__all" ? popQueryParam : null,
+    projectId: projectQueryParam !== "__all" ? projectQueryParam : null,
+    token,
+  });
   const handleFieldBlur = useCallback(
     async (field: { key: string; isKeyField?: boolean }, value: string) => {
       if (!field.isKeyField || !value.trim() || !category) return;
@@ -1530,26 +1542,51 @@ export default function DataManagementListPage() {
           }}
         />
 
-        <DataListKpiStrip
-          total={total}
-          categoryLabel={category.label}
-          selectedCount={selectedIds.size}
-          supportsPopFilter={supportsPopFilter}
-          isPopFilterActive={popQueryParam !== "__all"}
-          selectedPopLabel={selectedPopLabel}
-          canWrite={canWrite}
-          role={me.role}
-        />
+        {isOdpCategory ? (
+          <OdpListSummaryStrip
+            summary={odpSummary?.odp ?? null}
+            popCount={odpSummary?.pops?.length}
+            loading={odpSummaryLoading}
+          />
+        ) : (
+          <DataListKpiStrip
+            total={total}
+            categoryLabel={category.label}
+            selectedCount={selectedIds.size}
+            supportsPopFilter={supportsPopFilter}
+            isPopFilterActive={popQueryParam !== "__all"}
+            selectedPopLabel={selectedPopLabel}
+            canWrite={canWrite}
+            role={me.role}
+          />
+        )}
 
         {isOdpCategory ? (
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "list" | "quality")}>
-            <TabsList className="w-full justify-start md:w-auto">
-              <TabsTrigger value="list">Data ODP</TabsTrigger>
-              <TabsTrigger value="quality" asChild>
-                <Link href="/data-management/odp-quality">ODP Quality Issues</Link>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <>
+            <OdpPopDistributionPanel
+              pops={odpSummary?.pops ?? []}
+              activePopId={popQueryParam !== "__all" ? popQueryParam : null}
+              totalOdpCount={odpSummary?.odp?.total ?? 0}
+              onPopSelect={(popId) => {
+                if (popId === null || (popQueryParam !== "__all" && popQueryParam === popId)) {
+                  applyPopFilter("__all");
+                } else {
+                  applyPopFilter(popId);
+                }
+              }}
+              loading={odpSummaryLoading}
+              error={odpSummaryError}
+              onRetry={() => setRefreshSeed((prev) => prev + 1)}
+            />
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "list" | "quality")}>
+              <TabsList className="w-full justify-start md:w-auto">
+                <TabsTrigger value="list">Data ODP</TabsTrigger>
+                <TabsTrigger value="quality" asChild>
+                  <Link href="/data-management/odp-quality">ODP Quality Issues</Link>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </>
         ) : null}
 
         {!isOdpCategory || activeTab === "list" ? (
@@ -1684,7 +1721,9 @@ export default function DataManagementListPage() {
               </div>
             ) : null}
 
-            {loading ? (
+            {isOdpCategory && (odpSummaryLoading || loading) ? (
+              <OdpListSkeleton />
+            ) : loading ? (
               <div aria-label="Memuat data list" className="space-y-3">
                 <div className="hidden md:block overflow-x-auto rounded-lg border border-border/60 bg-card shadow-2xs">
                   <div className="flex flex-col">
