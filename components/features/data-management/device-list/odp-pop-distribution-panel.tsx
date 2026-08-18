@@ -163,7 +163,7 @@ export function OdpPopDistributionPanel({
 
   const content = (
     <div className="space-y-1.5">
-      {sortedPops.map((pop) => {
+      {sortedPops.map((pop, index) => {
         const isSelected = activePopId === pop.popId;
         const unassigned = isUnassignedPOP(pop.popId);
         const validationStats = formatValidationRate(pop.validated, pop.total);
@@ -171,7 +171,7 @@ export function OdpPopDistributionPanel({
 
         return (
           <button
-            key={pop.popId ?? "unassigned"}
+            key={pop.popId ? `pop-${pop.popId}` : `unassigned-${index}`}
             type="button"
             onClick={() => onPopSelect?.(pop.popId)}
             className={cn(
