@@ -228,6 +228,7 @@ export default function DataManagementListPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [provinceFilter, setProvinceFilter] = useState(searchParams.get("province_id") || "__all");
   const [directionFilter, setDirectionFilter] = useState("__all");
+  const [validationStatusFilter, setValidationStatusFilter] = useState(searchParams.get("validation_status") || "__all");
   const [popFilterOptions, setPopFilterOptions] = useState<PopFilterOption[]>([]);
   const [popFilterLoading, setPopFilterLoading] = useState(true);
   const [projectFilterOptions, setProjectFilterOptions] = useState<ProjectFilterOption[]>([]);
@@ -355,10 +356,10 @@ export default function DataManagementListPage() {
     },
     [category, token, quickEditTarget],
   );
-  const selectedPopLabel = useMemo(
-    () => popFilterOptions.find((option) => option.id === popQueryParam)?.label || "",
-    [popQueryParam, popFilterOptions],
-  );
+  const selectedPopLabel = useMemo(() => {
+    if (popQueryParam === "__null__") return "POP Belum Ditentukan";
+    return popFilterOptions.find((option) => option.id === popQueryParam)?.label || "";
+  }, [popQueryParam, popFilterOptions]);
   const selectedProjectLabel = useMemo(
     () => projectFilterOptions.find((option) => option.id === projectQueryParam)?.label || "",
     [projectQueryParam, projectFilterOptions],
@@ -424,6 +425,7 @@ export default function DataManagementListPage() {
     setSearchInput("");
     setProvinceFilter("__all");
     setDirectionFilter("__all");
+    setValidationStatusFilter("__all");
     setArchiveView("active");
     setSelectedIds(new Set());
     setPage(1);
@@ -433,6 +435,7 @@ export default function DataManagementListPage() {
     nextParams.delete("project_id");
     nextParams.delete("province_id");
     nextParams.delete("ids");
+    nextParams.delete("validation_status");
     const nextQuery = nextParams.toString();
     if (nextQuery === queryString) return;
     router.replace(`/data-management/list/${slug}${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
@@ -501,6 +504,7 @@ export default function DataManagementListPage() {
           popId: supportsPopFilter && popQueryParam !== "__all" ? popQueryParam : undefined,
           projectId: supportsProjectFilter && projectQueryParam !== "__all" ? projectQueryParam : undefined,
           ids: search ? undefined : idsFilter,
+          validationStatus: validationStatusFilter,
         });
         let path =
           activeCategory.resource === "cities" && provinceFilter !== "__all"
@@ -535,7 +539,7 @@ export default function DataManagementListPage() {
     return () => {
       cancelled = true;
     };
-  }, [category, token, page, limit, search, effectiveRegionScopeId, provinceFilter, refreshSeed, archiveView, isSoftDeleteResource, supportsPopFilter, popQueryParam, supportsProjectFilter, projectQueryParam, idsFilter]);
+  }, [category, token, page, limit, search, effectiveRegionScopeId, provinceFilter, refreshSeed, archiveView, isSoftDeleteResource, supportsPopFilter, popQueryParam, supportsProjectFilter, projectQueryParam, idsFilter, validationStatusFilter]);
 
   useEffect(() => {
     if (!supportsPopFilter) {
@@ -1565,10 +1569,16 @@ export default function DataManagementListPage() {
           <>
             <OdpPopDistributionPanel
               pops={odpSummary?.pops ?? []}
-              activePopId={popQueryParam !== "__all" ? popQueryParam : null}
+              activePopId={popQueryParam === "__null__" ? "__unassigned__" : (popQueryParam !== "__all" ? popQueryParam : null)}
               totalOdpCount={odpSummary?.odp?.total ?? 0}
               onPopSelect={(popId) => {
-                if (popId === null || (popQueryParam !== "__all" && popQueryParam === popId)) {
+                if (popId === null) {
+                  if (popQueryParam === "__null__") {
+                    applyPopFilter("__all");
+                  } else {
+                    applyPopFilter("__null__");
+                  }
+                } else if (popQueryParam === popId) {
                   applyPopFilter("__all");
                 } else {
                   applyPopFilter(popId);
@@ -1632,6 +1642,8 @@ export default function DataManagementListPage() {
                 .sort((a, b) => a[1].localeCompare(b[1], "id"))
                 .map(([id, name]) => ({ id, label: name }))}
               directionFilter={directionFilter}
+              validationStatusFilter={validationStatusFilter}
+              supportsValidationFilter={category.resource === "devices"}
               supportsPopFilter={supportsPopFilter}
               popFilterValue={popQueryParam}
               popFilterLoading={popFilterLoading}
@@ -1656,6 +1668,10 @@ export default function DataManagementListPage() {
                 setPage(1);
                 setSearch("");
                 setSearchInput("");
+              }}
+              onValidationStatusFilterChange={(value) => {
+                setValidationStatusFilter(value);
+                setPage(1);
               }}
               onPopFilterChange={applyPopFilter}
               onProjectFilterChange={applyProjectFilter}

@@ -19,6 +19,8 @@ export function DataListFilterBar({
   provinceFilter,
   provinceOptions,
   directionFilter,
+  validationStatusFilter,
+  supportsValidationFilter,
   supportsPopFilter,
   popFilterValue,
   popFilterLoading,
@@ -34,6 +36,7 @@ export function DataListFilterBar({
   onSearchInputChange,
   onProvinceFilterChange,
   onDirectionFilterChange,
+  onValidationStatusFilterChange,
   onPopFilterChange,
   onProjectFilterChange,
   onArchiveViewChange,
@@ -46,6 +49,8 @@ export function DataListFilterBar({
   provinceFilter: string;
   provinceOptions: FilterOption[];
   directionFilter: string;
+  validationStatusFilter: string;
+  supportsValidationFilter: boolean;
   supportsPopFilter: boolean;
   popFilterValue: string;
   popFilterLoading: boolean;
@@ -61,6 +66,7 @@ export function DataListFilterBar({
   onSearchInputChange: (value: string) => void;
   onProvinceFilterChange: (value: string) => void;
   onDirectionFilterChange: (value: string) => void;
+  onValidationStatusFilterChange: (value: string) => void;
   onPopFilterChange: (value: string) => void;
   onProjectFilterChange: (value: string) => void;
   onArchiveViewChange: (value: ArchiveView) => void;
@@ -99,6 +105,24 @@ export function DataListFilterBar({
             { value: "__all", label: "Semua direction" },
             { value: "front", label: "front" },
             { value: "rear", label: "rear" },
+          ]}
+        />
+      ) : null}
+      {supportsValidationFilter ? (
+        <Combobox
+          value={validationStatusFilter}
+          onValueChange={onValidationStatusFilterChange}
+          placeholder="Filter Status Validasi"
+          options={[
+            { value: "__all", label: "Semua status validasi" },
+            { value: "valid", label: "Validated" },
+            { value: "__unvalidated__", label: "Belum Valid" },
+            { value: "pending_async", label: "Pending Superadmin" },
+            { value: "ongoing_validated", label: "Ongoing Admin Region" },
+            { value: "rejected_by_adminregion", label: "Rejected Admin Region" },
+            { value: "rejected_by_superadmin", label: "Rejected Superadmin" },
+            { value: "warning", label: "Warning" },
+            { value: "invalid", label: "Invalid" },
           ]}
         />
       ) : null}

@@ -132,6 +132,7 @@ export function buildCategoryApiPath(
     popId?: string;
     projectId?: string;
     ids?: string[];
+    validationStatus?: string;
   },
 ) {
   const query = new URLSearchParams();
@@ -144,6 +145,7 @@ export function buildCategoryApiPath(
   if (options?.projectId) query.set("project_id", options.projectId);
   if (category.deviceTypeKey) query.set("device_type_key", category.deviceTypeKey);
   if (options?.ids?.length) query.set("ids", options.ids.join(","));
+  if (options?.validationStatus && options.validationStatus !== "__all") query.set("validation_status", options.validationStatus);
 
   return `/${category.resource}?${query.toString()}`;
 }
