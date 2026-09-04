@@ -84,6 +84,12 @@ type CalculationResult = {
   warnings: Array<{ code: string; severity: "critical" | "warning" | "info"; message: string }>;
 };
 
+function safeToFixed(val: unknown, digits = 2): string {
+  if (val === null || val === undefined || val === "") return "-";
+  const num = Number(val);
+  return Number.isNaN(num) ? "-" : num.toFixed(digits);
+}
+
 export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLinkBudgetSectionProps) {
   const [estimate, setEstimate] = useState<LinkBudgetEstimate | null>(null);
   const [loading, setLoading] = useState(true);
@@ -429,7 +435,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                     Class {estimate.gpon_class === "C_plus" ? "C+" : "B+"}
                   </span>
                   <span className="font-mono text-[11px] text-text-secondary block mt-1">
-                    Budget: {estimate.gpon_budget_db?.toFixed(1) || "28.0"} dB
+                    Budget: {safeToFixed(estimate.gpon_budget_db, 1)} dB
                   </span>
                 </div>
 
@@ -437,10 +443,10 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                   <div className="border border-visible p-3 rounded-none bg-surface/50">
                     <span className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">Calculated Loss</span>
                     <span className="font-mono font-bold text-lg text-text-primary block mt-0.5">
-                      {estimate.calculated_loss_db != null ? `${estimate.calculated_loss_db.toFixed(2)} dB` : "-"}
+                      {estimate.calculated_loss_db != null ? `${safeToFixed(estimate.calculated_loss_db, 2)} dB` : "-"}
                     </span>
                     <span className="font-mono text-[10px] text-text-disabled block">
-                      Margin: {estimate.engineering_margin_db?.toFixed(1) || "3.0"} dB
+                      Margin: {safeToFixed(estimate.engineering_margin_db, 1)} dB
                     </span>
                   </div>
 
@@ -448,16 +454,16 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                     <span className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">Measured Loss</span>
                     <span className={`font-mono font-bold text-lg block mt-0.5 ${
                       estimate.measured_loss_db != null 
-                        ? (estimate.calculated_loss_db != null && Math.abs(estimate.measured_loss_db - estimate.calculated_loss_db) >= 3.0
+                        ? (estimate.calculated_loss_db != null && Math.abs(Number(estimate.measured_loss_db) - Number(estimate.calculated_loss_db)) >= 3.0
                             ? "text-amber-500" 
                             : "text-success") 
                         : "text-text-primary"
                     }`}>
-                      {estimate.measured_loss_db != null ? `${estimate.measured_loss_db.toFixed(2)} dB` : "-"}
+                      {estimate.measured_loss_db != null ? `${safeToFixed(estimate.measured_loss_db, 2)} dB` : "-"}
                     </span>
                     <span className="font-mono text-[10px] text-text-disabled block">
                       Link Margin: {estimate.calculated_loss_db != null && estimate.gpon_budget_db != null
-                        ? `${(estimate.gpon_budget_db - estimate.calculated_loss_db).toFixed(2)} dB`
+                        ? `${safeToFixed(Number(estimate.gpon_budget_db) - Number(estimate.calculated_loss_db), 2)} dB`
                         : "-"}
                     </span>
                   </div>
@@ -467,14 +473,14 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                   <div className="border border-visible p-3 rounded-none bg-surface/50">
                     <span className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">ONT Rx Power</span>
                     <span className="font-mono font-semibold text-sm text-text-primary block mt-0.5">
-                      {estimate.ont_rx_power_dbm != null ? `${estimate.ont_rx_power_dbm.toFixed(2)} dBm` : "-"}
+                      {estimate.ont_rx_power_dbm != null ? `${safeToFixed(estimate.ont_rx_power_dbm, 2)} dBm` : "-"}
                     </span>
                   </div>
 
                   <div className="border border-visible p-3 rounded-none bg-surface/50">
                     <span className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">OLT Tx Power</span>
                     <span className="font-mono font-semibold text-sm text-text-primary block mt-0.5">
-                      {estimate.olt_tx_power_dbm != null ? `${estimate.olt_tx_power_dbm.toFixed(2)} dBm` : "-"}
+                      {estimate.olt_tx_power_dbm != null ? `${safeToFixed(estimate.olt_tx_power_dbm, 2)} dBm` : "-"}
                     </span>
                   </div>
                 </div>
