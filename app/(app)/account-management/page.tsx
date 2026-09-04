@@ -340,7 +340,7 @@ export default function AccountManagementPage() {
       setMessage(`Akses Syntrix untuk ${createForm.email.trim()} berhasil dibuat. Jika email ini pernah diverifikasi, statusnya akan langsung Verified.`);
       showResponseDialog(
         "Create Account Berhasil",
-        `Akses Syntrix untuk ${createForm.email.trim()} berhasil dibuat. Jika email ini pernah diverifikasi di Nhost Auth, akun akan langsung berstatus Verified. Jika belum, gunakan tombol Resend untuk mengirim email verifikasi.`,
+        `Akses Syntrix untuk ${createForm.email.trim()} berhasil dibuat. Jika email ini pernah diverifikasi, akun akan langsung berstatus Verified. Jika belum, gunakan tombol Resend untuk mengirim email verifikasi.`,
         "success",
       );
     } catch (error) {
@@ -460,7 +460,7 @@ export default function AccountManagementPage() {
     try {
       await apiFetch(`/users/${deleteTarget.id}`, { method: "DELETE", token });
       await refreshUsersAndRegions();
-      setMessage(`Akses Syntrix untuk ${deleteTarget.email} berhasil dihapus. Identitas Nhost Auth tetap disimpan.`);
+      setMessage(`Akses Syntrix untuk ${deleteTarget.email} berhasil dihapus.`);
       setDeleteOpen(false);
       setDeleteTarget(null);
     } catch (error) {
@@ -595,7 +595,6 @@ export default function AccountManagementPage() {
               <AlertDialogTitle>Hapus Akses Syntrix?</AlertDialogTitle>
               <AlertDialogDescription>
                 Akses Syntrix untuk <span className="font-medium">{deleteTarget?.email || "-"}</span> akan dihapus dari aplikasi.
-                Identitas Nhost Auth dan status verifikasi email tetap disimpan.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
