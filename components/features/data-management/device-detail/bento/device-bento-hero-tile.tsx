@@ -19,6 +19,9 @@ type DeviceBentoHeroTileProps = {
   regionName?: string | null;
   tenantName?: string | null;
   projectName?: string | null;
+  installationDate?: string | null;
+  updatedAt?: string | null;
+  notes?: string | null;
   tags?: string[] | null;
 };
 
@@ -35,6 +38,9 @@ export function DeviceBentoHeroTile({
   regionName,
   tenantName,
   projectName,
+  installationDate,
+  updatedAt,
+  notes,
   tags,
 }: DeviceBentoHeroTileProps) {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -44,6 +50,20 @@ export function DeviceBentoHeroTile({
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
+  }
+
+  function formatDate(value?: string | null) {
+    if (!value) return "-";
+    try {
+      const d = new Date(value);
+      return d.toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return value;
+    }
   }
 
   const valUi = mapValidationStatus(validationStatus);
@@ -86,10 +106,17 @@ export function DeviceBentoHeroTile({
             </Badge>
           </div>
 
-          <Badge variant="outline" className={`rounded-full font-mono text-[10px] uppercase tracking-wider ${valUi.className}`}>
-            <ShieldCheck className="mr-1 size-3" />
-            {valUi.label}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {updatedAt ? (
+              <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
+                Update: {formatDate(updatedAt)}
+              </span>
+            ) : null}
+            <Badge variant="outline" className={`rounded-full font-mono text-[10px] uppercase tracking-wider ${valUi.className}`}>
+              <ShieldCheck className="mr-1 size-3" />
+              {valUi.label}
+            </Badge>
+          </div>
         </div>
 
         {/* Title / Name */}
@@ -100,7 +127,7 @@ export function DeviceBentoHeroTile({
           </h1>
         </div>
 
-        {/* Technical IDs (Inventory ID & Code) */}
+        {/* Technical IDs (Inventory ID & Code) & Install Date */}
         <div className="flex flex-wrap items-center gap-2">
           {inventoryId ? (
             <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/20 px-2.5 py-1 text-xs">
@@ -150,7 +177,37 @@ export function DeviceBentoHeroTile({
               </Button>
             </div>
           ) : null}
+
+          {installationDate ? (
+            <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/20 px-2.5 py-1 text-xs">
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Pasang:</span>
+              <span className="font-mono tabular-nums font-medium text-foreground">{formatDate(installationDate)}</span>
+            </div>
+          ) : null}
         </div>
+
+        {/* Device Notes if present */}
+        {notes ? (
+          <div className="rounded-xl border border-border/40 bg-muted/15 p-2.5 text-xs text-muted-foreground">
+            <span className="font-mono text-[9px] uppercase tracking-widest text-foreground font-semibold mr-1.5">Catatan:</span>
+            <span className="italic">{notes}</span>
+          </div>
+        ) : null}
+
+        {/* Tags if present */}
+        {tags && tags.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1 pt-0.5">
+            <Tag className="size-3 text-muted-foreground mr-1" />
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-md border border-border/50 bg-muted/30 px-2 py-0.5 font-mono text-[10px] text-muted-foreground"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {/* Meta Chips Footer */}

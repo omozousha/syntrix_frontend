@@ -8,6 +8,8 @@ type DeviceBentoCapacityTileProps = {
   usedPorts?: number | string | null;
   capacityCore?: number | string | null;
   usedCore?: number | string | null;
+  splitterRatio?: string | null;
+  odpType?: string | null;
   modelName?: string | null;
   brandName?: string | null;
   manufacturerName?: string | null;
@@ -21,6 +23,8 @@ export function DeviceBentoCapacityTile({
   usedPorts,
   capacityCore,
   usedCore,
+  splitterRatio,
+  odpType,
   modelName,
   brandName,
   manufacturerName,
@@ -102,7 +106,9 @@ export function DeviceBentoCapacityTile({
       <div className="mt-5 grid grid-cols-2 gap-2 border-t border-border/40 pt-4 text-xs">
         <div className="space-y-0.5">
           <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Model / Tipe</p>
-          <p className="truncate font-semibold text-foreground" title={modelName || "-"}>{modelName || "-"}</p>
+          <p className="truncate font-semibold text-foreground" title={modelName || odpType || "-"}>
+            {modelName || odpType || "-"}
+          </p>
         </div>
 
         <div className="space-y-0.5">
@@ -113,9 +119,11 @@ export function DeviceBentoCapacityTile({
         </div>
 
         <div className="space-y-0.5">
-          <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Mounting</p>
-          <p className="truncate font-semibold text-foreground" title={installationType || "-"}>
-            {installationType || "Tiang / Wall"}
+          <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+            {splitterRatio ? "Splitter / Ratio" : "Mounting"}
+          </p>
+          <p className="truncate font-mono tabular-nums font-semibold text-foreground" title={splitterRatio || installationType || "-"}>
+            {splitterRatio ? `Rasio ${splitterRatio}` : installationType || "Tiang / Wall"}
           </p>
         </div>
 

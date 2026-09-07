@@ -2551,6 +2551,9 @@ if (!category) {
                       regionName={relationLabels.region || valueOf(item.region_id)}
                       tenantName={relationLabels.tenant || valueOf(item.tenant_id)}
                       projectName={relationLabels.project || valueOf(item.project_id)}
+                      installationDate={valueOf(item.installation_date)}
+                      updatedAt={valueOf(item.updated_at || item.created_at)}
+                      notes={valueOf(item.notes)}
                       tags={(() => {
                         const rawTags = (item as any)?.tags;
                         return Array.isArray(rawTags) ? rawTags : [];
@@ -2588,6 +2591,8 @@ if (!category) {
                       usedPorts={item.used_ports as any}
                       capacityCore={item.capacity_core as any}
                       usedCore={item.used_core as any}
+                      splitterRatio={valueOf(item.splitter_ratio)}
+                      odpType={valueOf(item.odp_type)}
                       modelName={relationLabels.model || valueOf(item.model_id)}
                       brandName={relationLabels.brand || valueOf(item.brand_id)}
                       manufacturerName={relationLabels.manufacturer}
