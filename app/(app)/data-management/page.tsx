@@ -959,10 +959,14 @@ function buildDataQualityReport(
     (port) => hasAnyValue(port, ["customer_id", "ont_device_id"]) && port.status !== "used",
   ).length;
   const downOrMaintenancePorts = odpPorts.filter((port) => port.status === "down" || port.status === "maintenance").length;
-  const issueBaseHref = `/data-management/odp-quality${regionId === "all" ? "" : `?region_id=${encodeURIComponent(regionId)}`}`;
-  const withIssueHref = (issueKey: string) =>
-    `${issueBaseHref}${issueBaseHref.includes("?") ? "&" : "?"}issue=${encodeURIComponent(issueKey)}`;
-  const topologyHref = `/data-management/topology${regionId === "all" ? "" : `?region_id=${encodeURIComponent(regionId)}`}`;
+  const issueBaseHref = `/data-management/list/odp${regionId === "all" ? "" : `?region_id=${encodeURIComponent(regionId)}`}`;
+  const withIssueHref = (issueKey: string) => {
+    if (issueKey === "odp-pending-validation") {
+      return `${issueBaseHref}${issueBaseHref.includes("?") ? "&" : "?"}validation_status=unvalidated`;
+    }
+    return issueBaseHref;
+  };
+  const topologyHref = `/data-management${regionId === "all" ? "" : `?region_id=${encodeURIComponent(regionId)}`}`;
   const metric = (key: keyof NonNullable<TopologyIntegrityResponse["data"]["metrics"]>) => topologyMetrics?.[key] ?? 0;
 
   const kpis: DataQualityKpi[] = [

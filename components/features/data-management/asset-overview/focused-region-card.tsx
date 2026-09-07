@@ -136,9 +136,9 @@ export function FocusedRegionCard({
                     variant="outline"
                   />
                   <QuickActionCard
-                    href={`/data-management/odp-quality?region_id=${encodeURIComponent(focusedRegion.id)}`}
-                    label="ODP Quality"
-                    description="Pantau kualitas data ODP"
+                    href={`/data-management/list/odp?validation_status=unvalidated&region_id=${encodeURIComponent(focusedRegion.id)}`}
+                    label="ODP Unvalidated"
+                    description="Pantau ODP belum valid"
                     icon={ShieldCheck}
                     variant="outline"
                   />
@@ -153,9 +153,9 @@ export function FocusedRegionCard({
                     variant="default"
                   />
                   <QuickActionCard
-                    href={`/data-management/odp-quality?region_id=${encodeURIComponent(focusedRegion.id)}`}
-                    label="Issue ODP"
-                    description="Laporkan temuan di lapangan"
+                    href="/requests"
+                    label="Requests"
+                    description="Pantau request validasi"
                     icon={ShieldCheck}
                     variant="outline"
                   />

@@ -1620,18 +1620,9 @@ export default function DataManagementListPage() {
               error={odpSummaryError}
               onRetry={() => setRefreshSeed((prev) => prev + 1)}
             />
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "list" | "quality")}>
-              <TabsList className="w-full justify-start md:w-auto">
-                <TabsTrigger value="list">Data ODP</TabsTrigger>
-                <TabsTrigger value="quality" asChild>
-                  <Link href="/data-management/odp-quality">ODP Quality Issues</Link>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
           </>
         ) : null}
 
-        {!isOdpCategory || activeTab === "list" ? (
         <div className="rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-xs dark:bg-white/[0.02]">
         <Card className="rounded-[calc(2rem-0.5rem)] border-border/60 shadow-xs glass-inset">
           <CardHeader className="pb-3">
@@ -1968,13 +1959,6 @@ export default function DataManagementListPage() {
           </CardContent>
         </Card>
         </div>
-        ) : null}
-
-        {isOdpCategory && activeTab === "quality" ? (
-          <Link href="/data-management/odp-quality" className="flex w-full items-center justify-center rounded-md border border-dashed p-6 text-sm text-muted-foreground hover:bg-muted/40">
-            Buka halaman ODP Quality Issues
-          </Link>
-        ) : null}
       </div>
 
       <MasterDataRenameDialog

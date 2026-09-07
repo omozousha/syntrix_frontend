@@ -9,26 +9,19 @@ import { ArrowLeft, CheckCircle2, ChevronDown, CircleHelp, Download, ImagePlus, 
 import { AppLoading } from "@/components/app-loading-new";
 import { ResponseDialog } from "@/components/response-dialog";
 import {
+  DeviceDetailHeader,
+  DeviceBentoHeroTile,
+  DeviceBentoQrTile,
+  DeviceBentoLocationTile,
+  DeviceBentoCapacityTile,
+  DeviceBentoGalleryTile,
+  DeviceBentoValidationHistoryTile,
   DeviceFormSelection,
+  DeviceGallerySection,
+  GenericDeviceRawSection,
   OdcCoreChainSummarySection,
   OtbCoreChainSummarySection,
-  DeviceDetailHeader,
-  DeviceGallerySection,
-  DeviceOperationalSummary,
-  DevicePortSummarySection,
-  DeviceQrActionPanel,
-  DeviceValidationHistorySection,
-  GenericDeviceRawSection,
-  OdpFrontReassignDialog,
-  OdpCoreChainSummarySection,
-  OdpOperationsShell,
-  OdpPortMetrics,
-  OdpPortSection,
-  OdpValidationHistorySection,
   ValidationReminderDialog,
-  PortAssignmentDrawer,
-  type PeerDeviceOption,
-  type PeerPortOption,
 } from "@/components/features/data-management/device-detail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,36 +42,6 @@ import { DeviceNavigationModal } from "@/components/features/maps/device-navigat
 import { deviceTypeKeyToSlug, getCategoryBySlug } from "@/lib/data-management-config";
 import { buildCustomerRelationDisplay, buildDeviceQrRelationDisplay } from "@/lib/display-adapters/device-display-adapter";
 import { useReferenceData } from "@/hooks/use-reference-data";
-import dynamic from "next/dynamic";
-
-const DeviceTechnicalSummarySection = dynamic(
-  () => import("@/components/features/data-management/device-detail").then((mod) => mod.DeviceTechnicalSummarySection),
-  { ssr: false, loading: () => <Skeleton className="h-32 w-full rounded-xl" /> }
-);
-const OdcDistributionCablesSection = dynamic(
-  () => import("@/components/features/data-management/device-detail").then((mod) => mod.OdcDistributionCablesSection),
-  { ssr: false, loading: () => <Skeleton className="h-32 w-full rounded-xl" /> }
-);
-const DeviceTopologyChainVisualizer = dynamic(
-  () => import("@/components/features/data-management/device-detail").then((mod) => mod.DeviceTopologyChainVisualizer),
-  { ssr: false, loading: () => <Skeleton className="h-64 w-full rounded-xl" /> }
-);
-const DeviceLinkBudgetSection = dynamic(
-  () => import("@/components/features/data-management/device-detail").then((mod) => mod.DeviceLinkBudgetSection),
-  { ssr: false, loading: () => <Skeleton className="h-32 w-full rounded-xl" /> }
-);
-const PortTrayContainer = dynamic(
-  () => import("@/components/features/data-management/device-detail").then((mod) => mod.PortTrayContainer),
-  { ssr: false, loading: () => <Skeleton className="h-[400px] w-full rounded-xl" /> }
-);
-const OltPortContainer = dynamic(
-  () => import("@/components/features/data-management/device-detail").then((mod) => mod.OltPortContainer),
-  { ssr: false, loading: () => <Skeleton className="h-[400px] w-full rounded-xl" /> }
-);
-const SwitchPortContainer = dynamic(
-  () => import("@/components/features/data-management/device-detail").then((mod) => mod.SwitchPortContainer),
-  { ssr: false, loading: () => <Skeleton className="h-[400px] w-full rounded-xl" /> }
-);
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
 import { buildDeviceQrHref, buildQrLabelPngDataUrl, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
@@ -2480,21 +2443,6 @@ if (!category) {
           backHref={backToListHref}
           actions={
             <>
-              {canOpenTopology && item ? (
-                <Button asChild variant="outline">
-                  <Link href={topologyHref}>{category.resource === "devices" ? "Trace Topology" : "Open Topology"}</Link>
-                </Button>
-              ) : null}
-              {canOpenTopology && category.resource === "devices" && item ? (
-                <Button asChild variant="outline">
-                  <Link href={topologyConnectionHref}>Create Connection</Link>
-                </Button>
-              ) : null}
-              {canOpenAsBuilt && category?.resource === "devices" && item ? (
-                <Button asChild variant="outline">
-                  <Link href={asBuiltHref}>Open As-Built</Link>
-                </Button>
-              ) : null}
               {category?.resource === "devices" && item &&
                Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude)) ? (
                 <Button
@@ -2503,6 +2451,16 @@ if (!category) {
                   onClick={() => setNavModalOpen(true)}
                 >
                   Navigasi Rute
+                </Button>
+              ) : null}
+              {editable && !isEditing ? (
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Pencil className="mr-1.5 size-3.5" />
+                  Edit Data
                 </Button>
               ) : null}
             </>
@@ -2516,347 +2474,228 @@ if (!category) {
         {!loading && item ? (
           <>
             {category.resource === "devices" ? (
-              <DeviceOperationalSummary
-                item={item}
-                relationLabels={relationLabels}
-                relationLoading={relationLabelsLoading}
-                effectiveValidationStatus={detailValidationStatus}
-              />
-            ) : null}
-
-            <Collapsible open={isOdpDevice ? odpInfoOpen : true} onOpenChange={isOdpDevice ? setOdpInfoOpen : undefined}>
-              <Card>
-              <CardHeader>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <CardTitle>{isOdpDevice ? "Informasi ODP" : `Informasi ${category.label}`}</CardTitle>
-                    
-          {/* Fase 2b --- Port Assignment Drawer untuk OTB */}
-          {isOtbDevice && (
-            <PortAssignmentDrawer
-              open={trayDrawerOpen}
-              onOpenChange={setTrayDrawerOpen}
-              port={traySelectedPort}
-              deviceTypeKey={valueOf(item?.device_type_key)}
-              direction={trayDirection}
-              onDirectionChange={handleTrayDirectionChange}
-              peerDevices={trayPeerDevices}
-              peerDeviceValue={trayPeerDeviceValue}
-              onPeerDeviceChange={handleTrayPeerDeviceChange}
-              peerPorts={trayPeerPorts}
-              peerPortValue={trayPeerPortValue}
-              onPeerPortChange={handleTrayPeerPortChange}
-              onAssign={handleAssign}
-              onDisconnect={handleDisconnect}
-              loading={trayAssignLoading}
-            />
-          )}
-{isOdpDevice ? (
-                      <CollapsibleTrigger asChild>
-                        <Button type="button" variant="ghost" size="icon" className="size-8">
-                          <ChevronDown className={`size-4 transition-transform ${odpInfoOpen ? "rotate-180" : ""}`} />
-                        </Button>
-                      </CollapsibleTrigger>
-                    ) : null}
-                  {/* SWITCH-style grid layout (driven by layout_type) */}
-                  {resolvedLayoutType === "switch_grid" ? (
-                    <SwitchPortContainer
-                      devicePorts={odpPorts}
-                      connections={devicePortConnections}
-                      totalPorts={Math.max(Number(valueOf(item?.total_ports)) || 0, Number(valueOf(item?.capacity_core)) || 0) || 0}
-                      accessPortCount={(() => {
-                        const specs = (item as any)?.specifications;
-                        return specs?.access_port_count ? Number(specs.access_port_count) : undefined;
-                      })()}
-                      uplinkPortCount={(() => {
-                        const specs = (item as any)?.specifications;
-                        return specs?.uplink_port_count ? Number(specs.uplink_port_count) : undefined;
-                      })()}
-                      loading={loadingOdpPorts}
-                      onPortClick={handlePortClick}
-                    />
-                  ) : null}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {editable && !isEditing ? (
-                      <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
-                        <Pencil className="mr-2 size-4" />
-                        Edit
-                      </Button>
-                    ) : null}
-                    {category.resource === "pops" ? <Badge variant="outline">{valueOf(item.status_pop)}</Badge> : null}
-                    {category.resource === "devices" ? <Badge variant="outline">{valueOf(item.status)}</Badge> : null}
-                    {category.resource !== "customers" ? (
-                      <Badge variant="outline" className={mapValidationStatus(detailValidationStatus).className}>
-                        {mapValidationStatus(detailValidationStatus).label}
-                      </Badge>
-                    ) : null}
-                  </div>
-                </div>
-                {category.resource !== "customers" ? (
-                  <CardDescription>
-                    Updated: {formatDateTime(valueOf(item.updated_at || item.created_at))}
-                  </CardDescription>
-                ) : null}
-              </CardHeader>
-              <CollapsibleContent>
-                <CardContent className="space-y-5">
-                  {category.resource === "pops" ? (
-                    <PopDetailForm
-                      form={form}
-                      onChange={setForm}
-                      editing={isEditing}
-                      relationLabels={relationLabels}
-                      relationLoading={relationLabelsLoading}
-                    />
-                  ) : null}
-
-              {category.resource === "customers" ? (
-                <CustomerDetailForm item={item} relationLabels={relationLabels} relationLoading={relationLabelsLoading} />
-              ) : null}
-
-              {category.resource === "devices" ? (
-                <DeviceFormSelection
-                  form={form}
-                  onChange={setForm}
-                  editing={isEditing}
-                  relationLabels={relationLabels}
-                  relationLoading={relationLabelsLoading}
-                  deviceTypeKey={valueOf(item?.device_type_key)}
-                  splitterProfiles={splitterProfiles}
-                  odpTypes={odpTypes}
-                  installationTypes={installationTypes}
-                  tenants={tenants}
-                  popOptions={popOptions}
-                  projectOptions={projectOptions}
-                  projectHref={buildProjectDetailHref(valueOf(item.project_id), valueOf(item.region_id))}
-                  latestFieldValidation={latestApprovedOdpValidation?.payload?.field_validation || null}
-                  effectiveValidationStatus={detailValidationStatus}
-                  provinces={[]}
-                  cities={[]}
-                  topologyLookup={topologyLookupData}
-                  topologySummary={deviceTopologySummary}
-                  coreCapacities={[]}
-                  cableTypes={cableTypes}
-                  routeTypes={routeTypes}
-                  deviceCoreCapacities={deviceCoreCapacities}
-                  closureTypes={closureTypes}
-                  odcChainSummary={isOdcDevice ? odcChainSummary : undefined}
-                  odcChainLoading={isOdcDevice ? loadingOdcChainSummary : undefined}
-                  otbChainSummary={isOtbDevice ? otbChainSummary : undefined}
-                  otbChainLoading={isOtbDevice ? loadingOtbChainSummary : undefined}
-                />
-              ) : null}
-
-              {category.resource === "projects" ? (
-                <ProjectDetailForm
-                  item={item}
-                  relationLabels={relationLabels}
-                  relationLoading={relationLabelsLoading}
-                  projectAssets={projectAssets}
-                  projectRoutes={projectRoutes}
-                  projectAsBuiltDocuments={projectAsBuiltDocuments}
-                  projectCoreRelations={projectCoreRelations}
-                  projectRelationDevices={projectRelationDevices}
-                  loadingProjectAssets={loadingProjectAssets}
-                />
-              ) : null}
-
-              {category.resource === "routes" ? (
-                <RouteDetailForm item={item} relationLabels={relationLabels} relationLoading={relationLabelsLoading} />
-              ) : null}
-
-              {category.resource === "devices" && !isOdpDevice ? (
-                <div className="space-y-3">
-                  <DeviceTechnicalSummarySection
-                    item={item}
-                    topologySummary={deviceTopologySummary}
-                    loading={loadingOdpPorts}
-                  />
-                  {isOdcDevice && <OdcDistributionCablesSection deviceId={item.id} token={token} />}
-                  {(isOdcDevice || isOtbDevice) && (
-                    <DeviceTopologyChainVisualizer deviceId={item.id} token={token} />
-                  )}
-                  <DeviceLinkBudgetSection deviceId={item.id} regionId={valueOf(item.region_id)} token={token} />
-                  {/* OLT-style slot layout (driven by layout_type) */}
-                  {resolvedLayoutType === "olt_slot" ? (
-                    <OltPortContainer
-                      devicePorts={odpPorts}
-                      connections={devicePortConnections}
-                      totalPorts={Math.max(Number(valueOf(item?.total_ports)) || 0, Number(valueOf(item?.capacity_core)) || 0) || 0}
-                      ponPortCount={(() => {
-                        const specs = (item as any)?.specifications;
-                        return specs?.pon_port_count ? Number(specs.pon_port_count) : undefined;
-                      })()}
-                      uplinkPortCount={(() => {
-                        const specs = (item as any)?.specifications;
-                        return specs?.uplink_port_count ? Number(specs.uplink_port_count) : undefined;
-                      })()}
-                      loading={loadingOdpPorts}
-                      onPortClick={handlePortClick}
-                    />
-                  ) : null}
-                  {/* Port Tray untuk OTB/ODC/JC / Summary Grid untuk lainnya */}
-                  {showPortTray ? (
-                    <PortTrayContainer
-                      devicePorts={odpPorts}
-                      connections={devicePortConnections}
-                      totalPorts={Math.max(Number(valueOf(item?.total_ports)) || 0, Number(valueOf(item?.capacity_core)) || 0) || 0}
-                      usedCore={Number(valueOf(item?.used_core)) || 0}
-                      deviceTypeKey={valueOf(item?.device_type_key)}
-                      deviceTypeLabel={valueOf(item?.device_type_key)}
-                      loading={loadingOdpPorts}
-                      trayConfigPayload={(() => {
-                        if (!item || category?.resource !== "devices") return undefined;
-                        const mId = valueOf(item.model_id);
-                        if (!mId) return undefined;
-                        const mdl = relationReferenceMaps.models.get(mId);
-                        if (!mdl) return undefined;
-                        // Langsung baca tray_config dari asset_model response
-                        return (mdl as Record<string, unknown>)["tray_config"] as Record<string, unknown> | undefined;
-                      })()}
-                      onPortClick={handlePortClick}
-                    />
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
-                      <div className="lg:max-w-[280px]">
-                        <DeviceQrActionPanel
-                          qrDataUrl={qrDataUrl}
-                          logoDataUrl={qrLabelLogoDataUrl}
-                          logoReady={qrLabelReady}
-                          deviceTypeLabel={valueOf(item.device_type_key, "Device")}
-                          showReminder={false}
-                          reminderDisabled
-                          onOpenReminder={() => undefined}
-                          onDownloadQrLabel={handleDownloadQrLabel}
-                        />
+              <div className="space-y-4">
+                {editable && isEditing ? (
+                  <Card className="rounded-2xl border border-border/60 bg-card p-4 sm:p-6 shadow-xs glass-inset">
+                    <CardHeader className="p-0 pb-4 border-b border-border/40">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <CardTitle className="text-base font-bold">Edit Informasi Perangkat</CardTitle>
+                          <CardDescription className="text-xs">Ubah data aset, lokasi, atau informasi operasional.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setForm(buildEditableForm(item, category.resource, deviceTopologySummary));
+                              setNewImageFiles([]);
+                              setIsEditing(false);
+                            }}
+                            disabled={saving}
+                          >
+                            Batal
+                          </Button>
+                          <Button size="sm" onClick={() => void handleSave()} disabled={saving}>
+                            <Save className="mr-1.5 size-3.5" />
+                            {saving ? "Menyimpan..." : "Simpan Perubahan"}
+                          </Button>
+                        </div>
                       </div>
-                      <DevicePortSummarySection
-                        deviceTypeLabel={valueOf(item.device_type_key, "Device")}
-                        ports={odpPorts}
-                        connections={devicePortConnections}
-                        coreSummary={deviceTopologySummary?.core_management?.summary || null}
-                        fiberSummary={deviceTopologySummary?.fiber_cores?.summary || null}
-                        readiness={deviceTopologySummary?.readiness || null}
-                        loading={loadingOdpPorts}
+                    </CardHeader>
+                    <CardContent className="p-0 pt-4">
+                      <DeviceFormSelection
+                        form={form}
+                        onChange={setForm}
+                        editing={isEditing}
+                        relationLabels={relationLabels}
+                        relationLoading={relationLabelsLoading}
+                        deviceTypeKey={valueOf(item?.device_type_key)}
+                        splitterProfiles={splitterProfiles}
+                        odpTypes={odpTypes}
+                        installationTypes={installationTypes}
+                        tenants={tenants}
+                        popOptions={popOptions}
+                        projectOptions={projectOptions}
+                        projectHref={buildProjectDetailHref(valueOf(item.project_id), valueOf(item.region_id))}
+                        latestFieldValidation={latestApprovedOdpValidation?.payload?.field_validation || null}
+                        effectiveValidationStatus={detailValidationStatus}
+                        provinces={[]}
+                        cities={[]}
+                        topologyLookup={topologyLookupData}
+                        topologySummary={deviceTopologySummary}
+                        coreCapacities={[]}
+                        cableTypes={cableTypes}
+                        routeTypes={routeTypes}
+                        deviceCoreCapacities={deviceCoreCapacities}
+                        closureTypes={closureTypes}
                       />
-                    </div>
-                  )}
+                    </CardContent>
+                  </Card>
+                ) : null}
+
+                {/* 6-TILE BENTO GRID */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+                  {/* TILE 1: Main Identity & Status (8 Cols Desktop / 7 Tablet / 12 Mobile) */}
+                  <div className="sm:col-span-7 lg:col-span-8">
+                    <DeviceBentoHeroTile
+                      deviceName={valueOf(item.device_name)}
+                      deviceId={valueOf(item.device_id) || item.id}
+                      deviceCode={valueOf(item.device_code)}
+                      inventoryId={valueOf(item.inventory_id)}
+                      deviceTypeKey={valueOf(item.device_type_key)}
+                      deviceTypeLabel={valueOf(item.device_type_key)}
+                      operationalStatus={valueOf(item.status, "active")}
+                      validationStatus={detailValidationStatus}
+                      popName={relationLabels.pop || valueOf(item.pop_id)}
+                      regionName={relationLabels.region || valueOf(item.region_id)}
+                      tenantName={relationLabels.tenant || valueOf(item.tenant_id)}
+                      projectName={relationLabels.project || valueOf(item.project_id)}
+                      tags={(() => {
+                        const rawTags = (item as any)?.tags;
+                        return Array.isArray(rawTags) ? rawTags : [];
+                      })()}
+                    />
+                  </div>
+
+                  {/* TILE 2: QR Code Action (4 Cols Desktop / 5 Tablet / 12 Mobile) */}
+                  <div className="sm:col-span-5 lg:col-span-4">
+                    <DeviceBentoQrTile
+                      qrDataUrl={qrDataUrl}
+                      deviceTypeLabel={valueOf(item.device_type_key, "Device")}
+                      onDownloadQrLabel={handleDownloadQrLabel}
+                      publicUrl={deviceDirectHref}
+                    />
+                  </div>
+
+                  {/* TILE 3: Lokasi & Geotagging (7 Cols Desktop / 6 Tablet / 12 Mobile) */}
+                  <div className="sm:col-span-6 lg:col-span-7">
+                    <DeviceBentoLocationTile
+                      latitude={item.latitude as any}
+                      longitude={item.longitude as any}
+                      address={valueOf(item.address)}
+                      popName={relationLabels.pop || valueOf(item.pop_id)}
+                      cityName={relationLabels.city}
+                      provinceName={relationLabels.province}
+                      onOpenMapModal={() => setNavModalOpen(true)}
+                    />
+                  </div>
+
+                  {/* TILE 4: Kapasitas Dasar & Spesifikasi Aset (5 Cols Desktop / 6 Tablet / 12 Mobile) */}
+                  <div className="sm:col-span-6 lg:col-span-5">
+                    <DeviceBentoCapacityTile
+                      totalPorts={item.total_ports as any}
+                      usedPorts={item.used_ports as any}
+                      capacityCore={item.capacity_core as any}
+                      usedCore={item.used_core as any}
+                      modelName={relationLabels.model || valueOf(item.model_id)}
+                      brandName={relationLabels.brand || valueOf(item.brand_id)}
+                      manufacturerName={relationLabels.manufacturer}
+                      installationType={valueOf(item.installation_type)}
+                      serialNumber={valueOf(item.serial_number)}
+                      deviceTypeKey={valueOf(item.device_type_key)}
+                    />
+                  </div>
+
+                  {/* TILE 5: Galeri Foto Aset (12 Cols Full Width) */}
+                  <div className="col-span-1 sm:col-span-12">
+                    <DeviceBentoGalleryTile
+                      deviceTypeLabel={valueOf(item.device_type_key, "device")}
+                      attachments={galleryImageAttachments}
+                      imagePreviewUrls={imagePreviewUrls}
+                      attachmentNames={attachmentNames}
+                      loadingImagePreviews={loadingImagePreviews}
+                      editing={editable && isEditing}
+                      maxImageAttachments={MAX_IMAGE_ATTACHMENTS}
+                      newImageFiles={newImageFiles}
+                      newImagePreviewUrls={newImagePreviewUrls}
+                      onOpenGallery={openGalleryAt}
+                      onNewImageFilesChange={handleNewImageFilesChange}
+                      onClearNewImages={() => setNewImageFiles([])}
+                      onRemoveNewImage={removeNewImageAt}
+                    />
+                  </div>
+
+                  {/* TILE 6: Riwayat Validasi Lapangan (12 Cols Full Width) */}
+                  <div className="col-span-1 sm:col-span-12">
+                    <DeviceBentoValidationHistoryTile
+                      deviceTypeLabel={valueOf(item.device_type_key, "device")}
+                      records={odpValidations}
+                      loading={loadingOdpValidations}
+                    />
+                  </div>
                 </div>
-              ) : null}
-
-              {category.resource === "devices" && !isOdpDevice ? (
-                <DeviceValidationHistorySection
-                  deviceTypeLabel={valueOf(item.device_type_key, "Device")}
-                  records={odpValidations}
-                  loading={loadingOdpValidations}
-                  onDownloadEvidence={(record) => void handleDownloadValidationEvidence(record as OdpValidationRecord)}
-                />
-              ) : null}
-
-              {category.resource !== "pops" && category.resource !== "devices" && category.resource !== "customers" && category.resource !== "projects" && category.resource !== "routes" ? (
-                <GenericDeviceRawSection item={item} />
-              ) : null}
-
-              {showServicePortRelations ? (
-                <ServicePortRelationsPanel
-                  title={category.resource === "customers" ? "ODP Service Link" : "ONT Upstream ODP"}
-                  description={
-                    category.resource === "customers"
-                      ? "Port ODP yang terhubung ke customer ini."
-                      : "Port ODP yang mengarah ke ONT ini."
-                  }
-                  relations={servicePortRelations}
-                  loading={loadingServicePortRelations}
-                />
-              ) : null}
-
-              <DeviceGallerySection
-                deviceTypeLabel={category.resource === "devices" ? valueOf(item.device_type_key, "device") : category.label}
-                attachments={galleryImageAttachments}
-                imagePreviewUrls={imagePreviewUrls}
-                attachmentNames={attachmentNames}
-                loadingImagePreviews={loadingImagePreviews}
-                editing={editable && isEditing}
-                maxImageAttachments={MAX_IMAGE_ATTACHMENTS}
-                newImageFiles={newImageFiles}
-                newImagePreviewUrls={newImagePreviewUrls}
-                onOpenGallery={openGalleryAt}
-                onNewImageFilesChange={handleNewImageFilesChange}
-                onClearNewImages={() => setNewImageFiles([])}
-                onRemoveNewImage={removeNewImageAt}
-              />
-
-                  {editable && isEditing ? (
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setForm(buildEditableForm(item, category.resource, deviceTopologySummary));
-                          setNewImageFiles([]);
-                          setIsEditing(false);
-                        }}
-                        disabled={saving}
-                      >
-                        Batal
-                      </Button>
-                      <Button onClick={() => void handleSave()} disabled={saving}>
-                        <Save className="mr-2 size-4" />
-                        {saving ? "Menyimpan..." : "Simpan Perubahan"}
-                      </Button>
+              </div>
+            ) : (
+              /* Non-device forms (pops, customers, projects, routes) */
+              <div className="rounded-[2rem] border border-border/40 bg-muted/10 p-2 sm:p-3 shadow-xs">
+                <Card className="rounded-[calc(2rem-0.5rem)] border-border/60 shadow-xs glass-inset">
+                  <CardHeader>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <CardTitle>Informasi {category.label}</CardTitle>
+                      {editable && !isEditing ? (
+                        <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                          <Pencil className="mr-2 size-4" />
+                          Edit
+                        </Button>
+                      ) : null}
                     </div>
-                  ) : null}
-                </CardContent>
-              </CollapsibleContent>
-              </Card>
-            </Collapsible>
-            {isOdpDevice && odpPorts.length > 0 && (
-              <OdpFrontReassignDialog
-                odpDeviceId={item.id}
-                odpPortId={odpPorts[0].id}
-                token={token}
-              />
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {category.resource === "pops" ? (
+                      <PopDetailForm
+                        form={form}
+                        onChange={setForm}
+                        editing={isEditing}
+                        relationLabels={relationLabels}
+                        relationLoading={relationLabelsLoading}
+                      />
+                    ) : null}
+                    {category.resource === "customers" ? (
+                      <CustomerDetailForm item={item} relationLabels={relationLabels} relationLoading={relationLabelsLoading} />
+                    ) : null}
+                    {category.resource === "projects" ? (
+                      <ProjectDetailForm
+                        item={item}
+                        relationLabels={relationLabels}
+                        relationLoading={relationLabelsLoading}
+                        projectAssets={projectAssets}
+                        projectRoutes={projectRoutes}
+                        projectAsBuiltDocuments={projectAsBuiltDocuments}
+                        projectCoreRelations={projectCoreRelations}
+                        projectRelationDevices={projectRelationDevices}
+                        loadingProjectAssets={loadingProjectAssets}
+                      />
+                    ) : null}
+                    {category.resource === "routes" ? (
+                      <RouteDetailForm item={item} relationLabels={relationLabels} relationLoading={relationLabelsLoading} />
+                    ) : null}
+                    {category.resource !== "pops" && category.resource !== "customers" && category.resource !== "projects" && category.resource !== "routes" ? (
+                      <GenericDeviceRawSection item={item} />
+                    ) : null}
+
+                    {editable && isEditing ? (
+                      <div className="flex justify-end gap-2 pt-4 border-t border-border/40">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setForm(buildEditableForm(item, category.resource, deviceTopologySummary));
+                            setIsEditing(false);
+                          }}
+                          disabled={saving}
+                        >
+                          Batal
+                        </Button>
+                        <Button onClick={() => void handleSave()} disabled={saving}>
+                          <Save className="mr-2 size-4" />
+                          {saving ? "Menyimpan..." : "Simpan Perubahan"}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              </div>
             )}
-            {isOdpDevice ? (
-              <OdpOperationsPanel
-                device={item}
-                ports={odpPorts}
-                customers={odpCustomers}
-                ontDevices={odpOntDevices}
-                splitterProfiles={splitterProfiles}
-                loadingPorts={loadingOdpPorts}
-                loadingLookups={loadingOdpLookups}
-                provisioning={provisioningPorts}
-                updatingPortId={updatingPortId}
-                validationDraft={odpValidationDraft}
-                validationHistory={odpValidations}
-                loadingValidationHistory={loadingOdpValidations}
-                submittingValidation={submittingOdpValidation}
-                qrDataUrl={qrDataUrl}
-                qrLabelLogoDataUrl={qrLabelLogoDataUrl}
-                qrLabelReady={qrLabelReady}
-                onProvisionPorts={() => void handleProvisionOdpPorts()}
-                onUpdatePort={(port, changes) => void handleUpdateOdpPort(port, changes)}
-                onValidationDraftChange={setOdpValidationDraft}
-                onSubmitValidation={() => void handleSubmitOdpValidation()}
-                onDownloadValidationEvidence={(record) => void handleDownloadValidationEvidence(record)}
-                validators={validatorOptions}
-                loadingValidators={loadingValidators}
-                onOpenReminder={openReminderDialog}
-                onDownloadQrLabel={handleDownloadQrLabel}
-                onArchiveDevice={() => void handleArchiveOdpDevice()}
-                onArchivePort={(port) => void handleArchiveOdpPort(port)}
-                coreChainSummary={odpCoreChainSummary}
-                topologySummary={deviceTopologySummary}
-                loadingCoreChainSummary={loadingOdpCoreChainSummary}
-                creatingDraftLink={creatingDraftLink}
-                cableDevices={odpCableDevices}
-                onCreateDraftLink={(nextPayload) => void handleCreateDraftLink(nextPayload)}
-                editing={isEditing}
-                onStartEdit={() => setIsEditing(true)}
-                token={token}
-              />
-            ) : null}
           </>
         ) : null}
       </div>
@@ -3005,428 +2844,6 @@ if (!category) {
         />
       )}
     </ScrollArea>
-  );
-}
-
-function OdpTopologyReadinessSummary({
-  summary,
-  loading,
-}: {
-  summary: DeviceTopologySummary | null;
-  loading: boolean;
-}) {
-  if (loading && !summary) {
-    return (
-      <div className="rounded-lg border bg-muted/20 p-3">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <Skeleton className="h-4 w-36" />
-          <Skeleton className="h-5 w-24 rounded-full" />
-        </div>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-16 rounded-md" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  const portTotal = Number(summary?.ports?.summary?.total ?? summary?.ports?.items?.length ?? 0);
-  const connectionTotal = Number(summary?.connections?.summary?.total ?? summary?.connections?.items?.length ?? 0);
-  const coreCount = Number(summary?.core_management?.summary?.core_count ?? 0);
-  const usedCoreCount = Number(summary?.core_management?.summary?.used_count ?? 0);
-  const reservedCoreCount = Number(summary?.core_management?.summary?.reserved_count ?? 0);
-  const fiberCoreTotal = Number(summary?.fiber_cores?.summary?.total ?? 0);
-  const fiberLossWarnings = Number(summary?.fiber_cores?.summary?.loss_warnings ?? 0);
-  const fiberDamaged = Number(summary?.fiber_cores?.summary?.damaged ?? 0);
-  const readiness = summary?.readiness || {};
-  const readinessItems = [
-    { label: "Port", ready: Boolean(readiness.has_ports) },
-    { label: "Connection", ready: Boolean(readiness.has_connections) },
-    { label: "Core summary", ready: Boolean(readiness.has_core_summary) },
-    { label: "Fiber core", ready: Boolean(readiness.has_fiber_core_inventory) },
-  ];
-
-  return (
-    <div className="rounded-lg border bg-background p-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold">Topology Readiness</p>
-          <p className="text-xs text-muted-foreground">Ringkasan port, connection, core, dan fiber dari inventory.</p>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {readinessItems.map((item) => (
-            <Badge key={item.label} variant="outline" className={item.ready ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-600"}>
-              {item.label}: {item.ready ? "ready" : "pending"}
-            </Badge>
-          ))}
-        </div>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-        <OdpTopologyMetric label="Port" value={portTotal} description="Provisioned endpoint" />
-        <OdpTopologyMetric label="Connection" value={connectionTotal} description="Relasi port aktif/planned" />
-        <OdpTopologyMetric label="Core" value={coreCount} description={`${usedCoreCount} used, ${reservedCoreCount} reserved`} />
-        <OdpTopologyMetric label="Fiber Core" value={fiberCoreTotal} description={`${fiberLossWarnings} warning, ${fiberDamaged} damaged`} />
-      </div>
-    </div>
-  );
-}
-
-function OdpTopologyMetric({
-  label,
-  value,
-  description,
-}: {
-  label: string;
-  value: number;
-  description: string;
-}) {
-  return (
-    <div className="min-w-0 rounded-md border bg-muted/20 px-3 py-2">
-      <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 text-lg font-semibold leading-none">{Number.isFinite(value) ? value : 0}</p>
-      <p className="mt-1 truncate text-[11px] text-muted-foreground">{description}</p>
-    </div>
-  );
-}
-
-function OdpOperationsPanel({
-  device,
-  ports,
-  customers,
-  ontDevices,
-  splitterProfiles = [],
-  loadingPorts,
-  loadingLookups,
-  provisioning,
-  updatingPortId,
-  validationDraft,
-  validationHistory,
-  loadingValidationHistory,
-  submittingValidation,
-  qrDataUrl,
-  qrLabelLogoDataUrl,
-  qrLabelReady,
-  onProvisionPorts,
-  onUpdatePort,
-  onValidationDraftChange,
-  onSubmitValidation,
-  onDownloadValidationEvidence,
-  validators,
-  loadingValidators,
-  onOpenReminder,
-  onDownloadQrLabel,
-  onArchiveDevice,
-  onArchivePort,
-  coreChainSummary,
-  topologySummary,
-  loadingCoreChainSummary,
-  creatingDraftLink,
-  cableDevices,
-  onCreateDraftLink,
-  editing,
-  onStartEdit,
-  token,
-}: {
-  device: GenericItem;
-  ports: DevicePort[];
-  customers: OdpCustomerOption[];
-  ontDevices: OdpOntOption[];
-  splitterProfiles?: SplitterProfileOption[];
-  loadingPorts: boolean;
-  loadingLookups: boolean;
-  provisioning: boolean;
-  updatingPortId: string;
-  validationDraft: OdpValidationDraft;
-  validationHistory: OdpValidationRecord[];
-  loadingValidationHistory: boolean;
-  submittingValidation: boolean;
-  qrDataUrl: string;
-  qrLabelLogoDataUrl: string;
-  qrLabelReady: boolean;
-  onProvisionPorts: () => void;
-  onUpdatePort: (port: DevicePort, changes: Partial<DevicePort>) => void;
-  onValidationDraftChange: (next: OdpValidationDraft | ((prev: OdpValidationDraft) => OdpValidationDraft)) => void;
-  onSubmitValidation: () => void;
-  onDownloadValidationEvidence: (record: OdpValidationRecord) => void;
-  validators: ValidatorOption[];
-  loadingValidators: boolean;
-  onOpenReminder: () => void;
-  onDownloadQrLabel: () => void;
-  onArchiveDevice: () => void;
-  onArchivePort: (port: DevicePort) => void;
-  coreChainSummary: OdpCoreChainSummary | null;
-  topologySummary: DeviceTopologySummary | null;
-  loadingCoreChainSummary: boolean;
-  creatingDraftLink: boolean;
-  cableDevices: OdpCableOption[];
-  editing: boolean;
-  onStartEdit: () => void;
-  token: string | null;
-  onCreateDraftLink: (payload: {
-    upstreamPortId: string;
-    odpPortId: string;
-    cableDeviceId?: string;
-    coreStart?: number;
-    coreEnd?: number;
-    fiberCount?: number;
-  }) => void;
-}) {
-  const totalPorts = ports.length || Number(device.total_ports || 0) || 0;
-  const usedPorts = ports.filter((port) => port.status === "used").length || Number(device.used_ports || 0) || 0;
-  const reservedPorts = ports.filter((port) => port.status === "reserved").length;
-  const downPorts = ports.filter((port) => port.status === "down" || port.status === "maintenance").length;
-  const idlePorts = Math.max(0, totalPorts - usedPorts - reservedPorts - downPorts);
-  const latestValidationRecord = validationHistory[0] || null;
-  const latestRequestStatus = latestValidationRecord?.request_status || null;
-  const effectiveDeviceValidationStatus = getEffectiveDeviceValidationStatus(
-    device,
-    latestRequestStatus,
-    latestValidationRecord ? isFinalValidationRecord(latestValidationRecord) : false,
-  );
-  const currentDeviceValidationUi = mapValidationStatus(effectiveDeviceValidationStatus);
-  const latestRejectNote =
-    latestValidationRecord?.superadmin_review_note ||
-    latestValidationRecord?.adminregion_review_note ||
-    "";
-  const odpPortOptions = ports.map((port) => ({
-    value: port.id,
-    label: `${port.port_label || `Port ${port.port_index}`} (${port.status || "idle"})`,
-  }));
-  const cableOptions = [
-    { value: "__none__", label: "Tanpa cable device" },
-    ...cableDevices.map((cable) => ({
-      value: cable.id,
-      label: [cable.device_name, cable.device_id].filter(Boolean).join(" - ") || "Cable device tidak tersedia",
-    })),
-  ];
-  const [draftTargetPortId, setDraftTargetPortId] = useState("");
-  const [draftCableDeviceId, setDraftCableDeviceId] = useState("__none__");
-  const [draftCoreStart, setDraftCoreStart] = useState("");
-  const [draftCoreEnd, setDraftCoreEnd] = useState("");
-  const [operationsOpen, setOperationsOpen] = useState(true);
-  const [validationOpen, setValidationOpen] = useState(false);
-  const defaultOdpPortId = (ports.find((port) => (port.status || "").toLowerCase() === "idle") || ports[0])?.id || "";
-  const effectiveDraftTargetPortId = draftTargetPortId || defaultOdpPortId;
-  const latestPortSnapshotByIndex = useMemo(() => {
-    const latest = validationHistory.find((record) => isFinalValidationRecord(record) && record.payload?.device_ports?.length);
-    return new Map((latest?.payload?.device_ports || []).map((port) => [Number(port.port_index), port]));
-  }, [validationHistory]);
-
-  return (
-    <div className="space-y-3">
-      <OdpOperationsShell
-        open={operationsOpen}
-        editing={editing}
-        provisioning={provisioning}
-        onOpenChange={setOperationsOpen}
-        onStartEdit={onStartEdit}
-        onProvisionPorts={onProvisionPorts}
-        onArchiveDevice={onArchiveDevice}
-      >
-          <OdpPortMetrics
-            totalPorts={totalPorts}
-            usedPorts={usedPorts}
-            idlePorts={idlePorts}
-            reservedPorts={reservedPorts}
-            downPorts={downPorts}
-          />
-
-          <OdpCoreChainSummarySection
-            coreChainSummary={coreChainSummary}
-            loading={loadingCoreChainSummary}
-            odpPortOptions={odpPortOptions}
-            cableOptions={cableOptions}
-            effectiveDraftTargetPortId={effectiveDraftTargetPortId}
-            draftCableDeviceId={draftCableDeviceId}
-            draftCoreStart={draftCoreStart}
-            draftCoreEnd={draftCoreEnd}
-            creatingDraftLink={creatingDraftLink}
-            onDraftTargetPortChange={setDraftTargetPortId}
-            onDraftCableDeviceChange={setDraftCableDeviceId}
-            onDraftCoreStartChange={setDraftCoreStart}
-            onDraftCoreEndChange={setDraftCoreEnd}
-            onCreateDraftLink={onCreateDraftLink}
-           />
-
-          <DeviceTopologyChainVisualizer deviceId={device.id} token={token} />
-
-          <OdpTopologyReadinessSummary summary={topologySummary} loading={loadingPorts} />
-
-          <DeviceLinkBudgetSection deviceId={device.id} regionId={valueOf(device.region_id)} token={token || ""} />
-
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[260px_1fr]">
-            <DeviceQrActionPanel
-              qrDataUrl={qrDataUrl}
-              logoDataUrl={qrLabelLogoDataUrl}
-              logoReady={qrLabelReady}
-              deviceTypeLabel={valueOf(device.device_type_key, "ODP")}
-              reminderDisabled={loadingValidators || validators.length === 0}
-              onOpenReminder={onOpenReminder}
-              onDownloadQrLabel={onDownloadQrLabel}
-            />
-
-            <OdpPortSection
-              ports={ports}
-              customers={customers}
-              ontDevices={ontDevices}
-              splitterProfiles={splitterProfiles}
-              loadingPorts={loadingPorts}
-              loadingLookups={loadingLookups}
-              updatingPortId={updatingPortId}
-              editing={editing}
-              latestPortSnapshotByIndex={latestPortSnapshotByIndex}
-              onUpdatePort={onUpdatePort}
-              onArchivePort={onArchivePort}
-            />
-          </div>
-      </OdpOperationsShell>
-
-      <Card>
-        <Collapsible open={validationOpen} onOpenChange={setValidationOpen}>
-          <CardHeader className="px-3 py-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                <div>
-                  <CardTitle className="text-sm">Validasi Lapangan</CardTitle>
-                  <CardDescription>Simpan status validasi dan catatan lapangan.</CardDescription>
-                </div>
-                <CollapsibleTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon" className="size-8">
-                    <ChevronDown className={`size-4 transition-transform ${validationOpen ? "rotate-180" : ""}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                </div>
-                <div className="flex items-center gap-2">
-                  {!editing ? (
-                    <Button type="button" variant="outline" size="sm" onClick={onStartEdit}>
-                      <Pencil className="mr-2 size-4" />
-                      Edit
-                    </Button>
-                  ) : null}
-                  <Badge variant="outline" className={currentDeviceValidationUi.className}>
-                    Current: {currentDeviceValidationUi.label}
-                  </Badge>
-                </div>
-              </div>
-          </CardHeader>
-          <CollapsibleContent>
-            <CardContent className="space-y-3 px-3 pb-3 pt-0">
-              <div className="grid grid-cols-1 gap-2 lg:grid-cols-[180px_1fr_240px_auto]">
-                <Combobox
-                  value={validationDraft.status}
-                  onValueChange={(status) =>
-                    onValidationDraftChange((prev) => ({ ...prev, status: status as OdpValidationDraft["status"] }))
-                  }
-                  disabled={submittingValidation || !editing}
-                  triggerClassName="h-9 text-xs"
-                  options={[
-                    { value: "valid", label: "Valid" },
-                    { value: "warning", label: "Warning" },
-                    { value: "invalid", label: "Invalid" },
-                  ]}
-                />
-                <Input
-                  value={validationDraft.findings}
-                  onChange={(event) => onValidationDraftChange((prev) => ({ ...prev, findings: event.target.value }))}
-                  disabled={submittingValidation || !editing}
-                  placeholder="Temuan lapangan atau catatan validasi"
-                  className="h-9 text-xs"
-                />
-                <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                  Checklist format baru tersedia di halaman Field Validation.
-                </div>
-                <Button type="button" onClick={onSubmitValidation} disabled={submittingValidation || !editing} className="h-9">
-                  <ImagePlus className="mr-2 size-4" />
-                  {submittingValidation ? "Menyimpan..." : "Submit"}
-                </Button>
-              </div>
-
-              <OdpValidationHistorySection
-                records={validationHistory}
-                validators={validators}
-                loading={loadingValidationHistory}
-                latestRequestStatus={latestRequestStatus}
-                latestUpdatedAt={latestValidationRecord?.validated_at || latestValidationRecord?.updated_at || null}
-                latestRejectNote={latestRejectNote}
-                onDownloadEvidence={(record) => onDownloadValidationEvidence(record)}
-              />
-            </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
-    </div>
-  );
-}
-
-function ServicePortRelationsPanel({
-  title,
-  description,
-  relations,
-  loading,
-}: {
-  title: string;
-  description: string;
-  relations: ServicePortRelation[];
-  loading: boolean;
-}) {
-  return (
-    <Card>
-      <CardHeader className="px-3 py-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <CardTitle className="text-sm">{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </div>
-          <Badge variant="outline">{relations.length} link</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2 px-3 pb-3 pt-0">
-        {loading ? (
-          <AppLoading label="Memuat relasi ODP..." />
-        ) : relations.length ? (
-          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
-            {relations.map((port) => {
-              const odp = port.odpDevice;
-              return (
-                <div key={port.id} className="rounded-md border bg-background p-3">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`h-3 w-3 shrink-0 rounded-full ${getOdpPortStatusClass(port.status)}`} />
-                        <p className="truncate text-sm font-medium">{odp?.device_name || "ODP"}</p>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">{odp?.device_id || port.device_id || "-"}</p>
-                    </div>
-                    <Badge variant="secondary">{port.status || "idle"}</Badge>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <RelationInfo label="Port" value={port.port_label || `Port ${port.port_index}`} />
-                    <RelationInfo label="Customer" value={port.customer_number || port.customer_name || "-"} />
-                    <RelationInfo label="Occupied" value={formatDate(valueOf(port.occupied_at))} />
-                    <RelationInfo label="Port ID" value={port.port_id || "-"} />
-                  </div>
-                  {port.notes ? <p className="mt-2 text-xs text-muted-foreground">{port.notes}</p> : null}
-
-                  {odp?.id ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/data-management/list/odp/${odp.id}`}>Open ODP</Link>
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-            Belum ada port ODP yang terhubung ke data ini.
-          </div>
-        )}
-      </CardContent>
-    </Card>
   );
 }
 

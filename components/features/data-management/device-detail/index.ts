@@ -1,4 +1,12 @@
 export { DeviceDetailHeader } from "@/components/features/data-management/device-detail/device-detail-header";
+export {
+  DeviceBentoHeroTile,
+  DeviceBentoQrTile,
+  DeviceBentoLocationTile,
+  DeviceBentoCapacityTile,
+  DeviceBentoGalleryTile,
+  DeviceBentoValidationHistoryTile,
+} from "@/components/features/data-management/device-detail/bento";
 export { DeviceFormSelection, type DeviceFormSelectionProps } from "@/components/features/data-management/device-detail/device-form-selection";
 export {
   GenericDeviceForm,

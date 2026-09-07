@@ -472,10 +472,10 @@ function ValidatorOverviewDashboard({
             <Link href={`/data-management/list/odp${singleRegionScope ? `?region_id=${encodeURIComponent(singleRegionScope)}` : ""}`}>Open ODP Queue</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href={`/data-management/odp-quality?issue=odp-pending-validation${regionSuffix}`}>ODP Belum Valid</Link>
+            <Link href={`/data-management/list/odp?validation_status=unvalidated${regionSuffix}`}>ODP Belum Valid</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href={`/data-management/odp-quality?issue=odp-rejected-adminregion${regionSuffix}`}>Rejected</Link>
+            <Link href="/requests">Requests</Link>
           </Button>
         </CardContent>
       </Card>
@@ -699,9 +699,9 @@ function AdminregionDashboard({ data, loading, singleRegionScope }: { data: Dash
           title="Field Quality Queue"
           description="Issue lapangan yang perlu ditindaklanjuti oleh tim regional."
           items={[
-            qualityItem("ODP belum tervalidasi", odpStats.unvalidated, `/data-management/odp-quality?issue=odp-pending-validation${regionSuffix}`, "medium"),
-            qualityItem("Evidence kurang", data.evidenceMissing.length, `/data-management/odp-quality?issue=odp-evidence-missing${regionSuffix}`, "high"),
-            qualityItem("Port down/maintenance", portStats.downMaintenance, `/data-management/odp-quality?issue=odp-down-maintenance${regionSuffix}`, "medium"),
+            qualityItem("ODP belum tervalidasi", odpStats.unvalidated, `/data-management/list/odp?validation_status=unvalidated${regionSuffix}`, "medium"),
+            qualityItem("Evidence kurang", data.evidenceMissing.length, "/requests", "high"),
+            qualityItem("Port down/maintenance", portStats.downMaintenance, `/data-management/list/odp${regionSuffix}`, "medium"),
           ].filter(Boolean) as DashboardQueueItem[]}
           emptyLabel="Tidak ada issue field utama dari data yang tersedia."
           icon={AlertTriangle}
@@ -758,10 +758,10 @@ function ValidatorDashboard({ data, loading, singleRegionScope }: { data: Dashbo
             <Link href={`/data-management/list/odp${singleRegionScope ? `?region_id=${encodeURIComponent(singleRegionScope)}` : ""}`}>Open ODP Queue</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href={`/data-management/odp-quality?issue=odp-pending-validation${regionSuffix}`}>ODP Belum Valid</Link>
+            <Link href={`/data-management/list/odp?validation_status=unvalidated${regionSuffix}`}>ODP Belum Valid</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href={`/data-management/odp-quality?issue=odp-rejected-adminregion${regionSuffix}`}>Rejected Validation</Link>
+            <Link href="/requests">Requests</Link>
           </Button>
         </CardContent>
       </Card>
@@ -1088,9 +1088,9 @@ function buildRiskItems(data: DashboardData) {
   const odpStats = getOdpStatsFromSummary(data.summary);
   const portStats = getPortStatsFromSummary(data.summary);
   return [
-    qualityItem("ODP belum tervalidasi", odpStats.unvalidated, "/data-management/odp-quality?issue=odp-pending-validation", "medium"),
-    qualityItem("Evidence kurang", data.evidenceMissing.length, "/data-management/odp-quality?issue=odp-evidence-missing", "high"),
-    qualityItem("Port issue", portStats.problem, "/data-management/odp-quality?issue=odp-down-maintenance", "high"),
+    qualityItem("ODP belum tervalidasi", odpStats.unvalidated, "/data-management/list/odp?validation_status=unvalidated", "medium"),
+    qualityItem("Evidence kurang", data.evidenceMissing.length, "/requests", "high"),
+    qualityItem("Port issue", portStats.problem, "/data-management/list/odp", "high"),
     qualityItem("Rejected workflow", data.rejectedAdminregion.length + data.rejectedSuperadmin.length, "/requests", "high"),
   ].filter(Boolean) as DashboardQueueItem[];
 }
