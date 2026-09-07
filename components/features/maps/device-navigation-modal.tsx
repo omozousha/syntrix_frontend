@@ -14,13 +14,23 @@ import {
 import { useOsrmRouting } from "@/hooks/use-osrm-routing";
 import type { OsgmRouteResult } from "@/lib/api";
 
-const GoogleMapsCanvas = dynamic(
-  () =>
-    import("@/components/features/maps/google-maps-canvas").then(
-      (mod) => mod.GoogleMapsCanvas,
-    ),
-  { ssr: false, loading: () => <div className="flex h-64 items-center justify-center text-xs text-muted-foreground">Memuat Google Maps...</div> },
-);
+import { MapContainer, Marker, Polyline, TileLayer } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+const DEVICE_PIN_ICON = L.divIcon({
+  className: "",
+  html: `<div style="width:16px;height:16px;border-radius:50%;background:#0EA5E9;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.4)"></div>`,
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+});
+
+const ORIGIN_PIN_ICON = L.divIcon({
+  className: "",
+  html: `<div style="width:16px;height:16px;border-radius:50%;background:#22C55E;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.4)"></div>`,
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+});
 
 type DeviceNavigationModalProps = {
   open: boolean;
@@ -88,15 +98,30 @@ export function DeviceNavigationModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Peta Mini */}
+        {/* Peta Mini Leaflet OpenStreetMap */}
         <div className="h-56 w-full overflow-hidden rounded-xl border border-border/60 bg-muted/10">
-          <GoogleMapsCanvas
-            devices={deviceNode as any}
-            routes={[]}
-            connections={[]}
-            osrmRoute={route}
-            showConnections={false}
-          />
+          <MapContainer
+            center={[deviceLat, deviceLng]}
+            zoom={14}
+            scrollWheelZoom={false}
+            style={{ height: "100%", width: "100%" }}
+            attributionControl={false}
+          >
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            />
+            <Marker position={[deviceLat, deviceLng]} icon={DEVICE_PIN_ICON} />
+            {origin ? (
+              <Marker position={[origin.latitude, origin.longitude]} icon={ORIGIN_PIN_ICON} />
+            ) : null}
+            {route?.geometry?.coordinates?.length ? (
+              <Polyline
+                positions={route.geometry.coordinates.map((c) => [c[1], c[0]])}
+                pathOptions={{ color: "#3B82F6", weight: 4, opacity: 0.8 }}
+              />
+            ) : null}
+          </MapContainer>
         </div>
 
         {/* Action Row */}

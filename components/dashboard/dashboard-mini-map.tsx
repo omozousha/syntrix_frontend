@@ -53,9 +53,7 @@ export function DashboardMiniMap({
     setMounted(true);
   }, []);
 
-  const tileUrl = resolvedTheme === "dark"
-    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+  const tileUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
   return (
     <Card className="min-w-0 overflow-hidden">
@@ -77,6 +75,7 @@ export function DashboardMiniMap({
             >
               <TileLayer
                 url={tileUrl}
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               />
               {markers.map((m) => (
                 <Marker
