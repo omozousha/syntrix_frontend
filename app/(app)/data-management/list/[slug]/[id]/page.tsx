@@ -64,6 +64,7 @@ type EditableForm = Record<string, string>;
 type AttachmentRef = {
   id: string;
   name?: string;
+  timestamp?: string;
 };
 type UploadResult = {
   id: string;
@@ -822,7 +823,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   }, [item, category]);
 
   const infoImageAttachments = useMemo(
-    () => extractImageAttachments(item?.image_attachments, valueOf(item?.image_attachment_id)),
+    () => extractImageAttachments(item?.image_attachments, valueOf(item?.image_attachment_id), valueOf(item?.created_at)),
     [item],
   );
   const galleryImageAttachments = useMemo<AttachmentRef[]>(
@@ -4047,34 +4048,35 @@ function currentDateISO() {
   return `${year}-${month}-${day}`;
 }
 
-function extractImageAttachments(value: unknown, primaryId: string): AttachmentRef[] {
+function extractImageAttachments(value: unknown, primaryId: string, fallbackTimestamp?: string): AttachmentRef[] {
   const refs: AttachmentRef[] = [];
   const seen = new Set<string>();
 
-  const pushRef = (id: string, name?: string) => {
+  const pushRef = (id: string, name?: string, timestamp?: string) => {
     const cleanId = valueOf(id);
     if (!cleanId || seen.has(cleanId)) return;
     seen.add(cleanId);
-    refs.push({ id: cleanId, name: name ? valueOf(name) : undefined });
+    refs.push({ id: cleanId, name: name ? valueOf(name) : undefined, timestamp });
   };
 
   if (Array.isArray(value)) {
     for (const item of value) {
       if (typeof item === "string") {
-        pushRef(item);
+        pushRef(item, undefined, fallbackTimestamp);
         continue;
       }
       if (item && typeof item === "object") {
         const row = item as Record<string, unknown>;
         const attachmentId = valueOf(row.id || row.attachment_id);
         const attachmentName = valueOf(row.file_name || row.filename || row.original_name);
-        if (attachmentId) pushRef(attachmentId, attachmentName || undefined);
+        const ts = valueOf(row.created_at || row.uploaded_at || fallbackTimestamp);
+        if (attachmentId) pushRef(attachmentId, attachmentName || undefined, ts || undefined);
       }
     }
   }
 
   if (primaryId) {
-    pushRef(primaryId);
+    pushRef(primaryId, undefined, fallbackTimestamp);
   }
 
   return refs;
@@ -4085,7 +4087,7 @@ function mergeAttachmentRefs(refs: AttachmentRef[]) {
   refs.forEach((ref) => {
     const id = valueOf(ref.id);
     if (!id || merged.has(id)) return;
-    merged.set(id, { id, name: ref.name });
+    merged.set(id, { id, name: ref.name, timestamp: ref.timestamp });
   });
   return Array.from(merged.values());
 }
@@ -4093,39 +4095,51 @@ function mergeAttachmentRefs(refs: AttachmentRef[]) {
 function extractValidationEvidenceAttachments(record: OdpValidationRecord): AttachmentRef[] {
   const refs: AttachmentRef[] = [];
   const seen = new Set<string>();
+  const recordTimestamp = valueOf(record.validated_at || record.updated_at || record.created_at);
 
-  const pushRef = (id: unknown, name?: unknown) => {
+  const pushRef = (id: unknown, name?: unknown, timestamp?: unknown) => {
     const cleanId = valueOf(id);
     if (!cleanId || seen.has(cleanId)) return;
     seen.add(cleanId);
-    refs.push({ id: cleanId, name: valueOf(name) || undefined });
+    refs.push({
+      id: cleanId,
+      name: valueOf(name) || undefined,
+      timestamp: valueOf(timestamp) || recordTimestamp || undefined,
+    });
   };
 
   (record.evidence_attachments || []).forEach((attachment, index) => {
+    const attObj = attachment as Record<string, unknown>;
     pushRef(
       attachment.id || attachment.attachment_id,
       attachment.name || `validation-evidence-${index + 1}`,
+      attObj?.created_at || attObj?.uploaded_at || recordTimestamp,
     );
   });
-  pushRef(record.evidence_attachment_id, "validation-evidence");
+  pushRef(record.evidence_attachment_id, "validation-evidence", recordTimestamp);
 
   const inspection = record.payload?.field_inspection || {};
   Object.values(inspection.initial_photos || {}).forEach((item) => {
-    pushInspectionAttachmentRef(item, pushRef);
+    pushInspectionAttachmentRef(item, pushRef, recordTimestamp);
   });
   Object.values(inspection.condition_checks || {}).forEach((item) => {
-    pushInspectionAttachmentRef(item, pushRef);
+    pushInspectionAttachmentRef(item, pushRef, recordTimestamp);
   });
 
   return refs;
 }
 
 function pushInspectionAttachmentRef(
-  item: { label?: string; attachment?: { id?: string | null; attachment_id?: string | null; name?: string | null } } | undefined,
-  pushRef: (id: unknown, name?: unknown) => void,
+  item: { label?: string; attachment?: { id?: string | null; attachment_id?: string | null; name?: string | null; created_at?: string | null } } | undefined,
+  pushRef: (id: unknown, name?: unknown, timestamp?: unknown) => void,
+  fallbackTimestamp?: string,
 ) {
   if (!item) return;
-  pushRef(item.attachment?.id || item.attachment?.attachment_id, item.attachment?.name || item.label);
+  pushRef(
+    item.attachment?.id || item.attachment?.attachment_id,
+    item.attachment?.name || item.label,
+    item.attachment?.created_at || fallbackTimestamp,
+  );
 }
 
 async function uploadAttachment({

@@ -10,6 +10,7 @@ import { OptimizedImage } from "@/components/ui/optimized-image";
 type AttachmentRef = {
   id: string;
   name?: string;
+  timestamp?: string;
 };
 
 type DeviceBentoGalleryTileProps = {
@@ -43,6 +44,22 @@ export function DeviceBentoGalleryTile({
   onClearNewImages,
   onRemoveNewImage,
 }: DeviceBentoGalleryTileProps) {
+  function formatTime(val?: string) {
+    if (!val) return null;
+    try {
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return null;
+    }
+  }
   return (
     <div className="flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-5 sm:p-6 shadow-xs glass-inset transition-all duration-300">
       <div className="space-y-4">
@@ -71,10 +88,11 @@ export function DeviceBentoGalleryTile({
               {attachments.map((attachment, index) => {
                 const src = imagePreviewUrls[attachment.id];
                 const fileName = attachmentNames[attachment.id] || attachment.name || "Foto Perangkat";
+                const formattedDate = formatTime(attachment.timestamp);
                 return (
                   <div
                     key={attachment.id}
-                    className="group relative flex flex-col gap-1 rounded-xl border border-border/60 bg-card p-1 shadow-2xs glass-inset transition-all duration-200 hover:border-primary/50 hover:shadow-xs"
+                    className="group relative flex flex-col justify-between gap-1 rounded-xl border border-border/60 bg-card p-1.5 shadow-2xs glass-inset transition-all duration-200 hover:border-primary/50 hover:shadow-xs"
                   >
                     <OptimizedImage
                       src={src}
@@ -85,9 +103,16 @@ export function DeviceBentoGalleryTile({
                       className="h-20 sm:h-24 w-full rounded-lg cursor-pointer transition-transform duration-200 group-hover:scale-[1.02]"
                       onClick={() => onOpenGallery(index)}
                     />
-                    <p className="truncate px-1 text-[10px] font-mono text-muted-foreground" title={fileName}>
-                      {fileName}
-                    </p>
+                    <div className="px-1 pt-0.5 space-y-0.5">
+                      <p className="truncate text-[10px] font-mono text-foreground font-medium" title={fileName}>
+                        {fileName}
+                      </p>
+                      {formattedDate ? (
+                        <p className="truncate text-[9px] font-mono tabular-nums text-muted-foreground">
+                          {formattedDate}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
                 );
               })}
