@@ -93,22 +93,22 @@ export function DeviceBentoLocationTile({
         {hasCoords ? (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${numLat},${numLng}`}
+              href={`https://www.google.com/maps/search/?api=1&query=${numLat},${numLng}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/20 px-3 text-xs font-mono font-medium text-foreground transition-all duration-200 hover:border-primary/50 hover:bg-primary/5 active:scale-[0.98]"
             >
               <MapPin className="size-3.5 text-primary" />
-              <span>Google Maps</span>
+              <span>Titik Google Maps</span>
             </a>
             <a
-              href={`https://waze.com/ul?ll=${numLat},${numLng}&navigate=yes`}
+              href={`https://waze.com/ul?ll=${numLat},${numLng}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/20 px-3 text-xs font-mono font-medium text-foreground transition-all duration-200 hover:border-sky-500/50 hover:bg-sky-500/5 active:scale-[0.98]"
             >
               <Navigation className="size-3.5 text-sky-500" />
-              <span>Buka Waze</span>
+              <span>Titik Waze</span>
             </a>
           </div>
         ) : (
