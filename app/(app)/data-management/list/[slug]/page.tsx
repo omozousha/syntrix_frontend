@@ -480,23 +480,34 @@ export default function DataManagementListPage() {
     setPage(1);
   }, [debouncedSearch, search]);
 
-  // Sync page ke URL (keputusan user Phase 0: pagination URL sync)
-  useEffect(() => {
-    const nextParams = new URLSearchParams(queryString);
-    if (page > 1) nextParams.set("page", String(page));
-    else nextParams.delete("page");
-    const nextQuery = nextParams.toString();
-    if (nextQuery === queryString) return;
-    router.replace(`/data-management/list/${slug}${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
-  }, [page, queryString, router, slug]);
+  const navigateToPage = useCallback(
+    (nextPage: number) => {
+      const targetPage = Math.max(1, nextPage);
+      setPage(targetPage);
+      const nextParams = new URLSearchParams(searchParams.toString());
+      if (targetPage > 1) {
+        nextParams.set("page", String(targetPage));
+      } else {
+        nextParams.delete("page");
+      }
+      const nextQuery = nextParams.toString();
+      router.replace(`/data-management/list/${slug}${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
+    },
+    [router, searchParams, slug],
+  );
 
-  // Baca page dari URL saat back/forward browser
+  // Baca page dari URL HANYA saat searchParams berubah dari eksternal (browser back/forward)
+  const lastKnownUrlPageRef = useRef(searchParams.get("page"));
   useEffect(() => {
-    const urlPage = Number(searchParams.get("page") || "1");
-    if (Number.isFinite(urlPage) && urlPage > 0 && urlPage !== page) {
-      setPage(urlPage);
+    const currentUrlPageStr = searchParams.get("page");
+    if (currentUrlPageStr !== lastKnownUrlPageRef.current) {
+      lastKnownUrlPageRef.current = currentUrlPageStr;
+      const urlPage = Number(currentUrlPageStr || "1");
+      if (Number.isFinite(urlPage) && urlPage > 0) {
+        setPage(urlPage);
+      }
     }
-  }, [searchParams, page]);
+  }, [searchParams]);
 
   useEffect(() => {
     if (category?.slug === "odp" && searchParams.get("triggerCreate") === "true") {
@@ -1937,7 +1948,7 @@ export default function DataManagementListPage() {
                   variant="outline"
                   size="sm"
                   disabled={page <= 1 || loading}
-                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  onClick={() => navigateToPage(page - 1)}
                 >
                   Prev
                 </Button>
@@ -1948,7 +1959,7 @@ export default function DataManagementListPage() {
                   variant="outline"
                   size="sm"
                   disabled={loading || page * limit >= total}
-                  onClick={() => setPage((prev) => prev + 1)}
+                  onClick={() => navigateToPage(page + 1)}
                 >
                   Next
                 </Button>

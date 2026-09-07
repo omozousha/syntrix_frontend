@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, memo } from "react";
 import { useParams } from "next/navigation";
 import { ArrowDown, ArrowRight, Download, ExternalLink, MapPin, Navigation, QrCode, ShieldCheck, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,28 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch } from "@/lib/api";
 import { buildQrFallbackDisplay } from "@/lib/display-adapters/qr-fallback-display-adapter";
+
+const FullPageSkeleton = memo(() => (
+  <div className="min-h-dvh bg-background flex items-center justify-center">
+    <div className="w-full max-w-7xl mx-auto p-6 space-y-8">
+      <div className="h-12 bg-muted/50 rounded-2xl animate-pulse" />
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-7 space-y-6">
+          <div className="h-20 bg-muted/50 rounded-3xl animate-pulse" />
+          <div className="h-32 bg-muted/50 rounded-3xl animate-pulse" />
+          <div className="grid grid-cols-3 gap-4">
+            <div className="h-24 bg-muted/50 rounded-2xl animate-pulse" />
+            <div className="h-24 bg-muted/50 rounded-2xl animate-pulse" />
+            <div className="h-24 bg-muted/50 rounded-2xl animate-pulse" />
+          </div>
+        </div>
+        <div className="col-span-5">
+          <div className="h-[520px] bg-muted/50 rounded-3xl animate-pulse" />
+        </div>
+      </div>
+    </div>
+  </div>
+));
 
 type DeviceQrContext = {
   id: string;

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Trash2 } from "lucide-react";
 
 import { AppLoading } from "@/components/app-loading-new";
@@ -76,32 +77,39 @@ export function OdpPortSection({
   onUpdatePort: (port: DevicePort, changes: Partial<DevicePort>) => void;
   onArchivePort: (port: DevicePort) => void;
 }) {
-  const splitterOptions = [
+  const splitterOptions = useMemo(() => [
     { value: "__none__", label: "Tanpa splitter" },
     ...splitterProfiles.map((s) => ({
       value: s.id,
       label: s.output_port_count ? `${s.ratio_label} (${s.output_port_count} port)` : s.ratio_label,
     })),
-  ];
-  const splitterRoleOptions = [
+  ], [splitterProfiles]);
+
+  const splitterRoleOptions = useMemo(() => [
     { value: "input", label: "Input" },
     { value: "output", label: "Output" },
     { value: "bidirectional", label: "Bidirectional" },
-  ];
-  const customerOptions = [
+  ], []);
+
+  const customerOptions = useMemo(() => [
     { value: "__none__", label: "Tanpa customer" },
     ...customers.map((customer) => ({
       value: customer.id,
       label: [customer.customer_name, customer.customer_number].filter(Boolean).join(" - ") || "Customer tidak tersedia",
     })),
-  ];
-  const ontOptions = [
+  ], [customers]);
+
+  const ontOptions = useMemo(() => [
     { value: "__none__", label: "Tanpa ONT" },
     ...ontDevices.map((device) => ({
       value: device.id,
       label: [device.device_name, device.device_id].filter(Boolean).join(" - ") || "ONT tidak tersedia",
     })),
-  ];
+  ], [ontDevices]);
+
+  const customerMap = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers]);
+  const ontMap = useMemo(() => new Map(ontDevices.map((d) => [d.id, d])), [ontDevices]);
+  const splitterMap = useMemo(() => new Map(splitterProfiles.map((s) => [s.id, s])), [splitterProfiles]);
 
   return (
     <div className="space-y-2 rounded-md border p-3">
@@ -132,8 +140,9 @@ export function OdpPortSection({
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
           {ports.map((port) => {
             const portSnapshot = latestPortSnapshotByIndex.get(Number(port.port_index));
-            const assignedCustomer = customers.find((customer) => customer.id === port.customer_id);
-            const assignedOnt = ontDevices.find((device) => device.id === port.ont_device_id);
+            const assignedCustomer = port.customer_id ? customerMap.get(port.customer_id) : undefined;
+            const assignedOnt = port.ont_device_id ? ontMap.get(port.ont_device_id) : undefined;
+            const assignedSplitter = port.splitter_profile_id ? splitterMap.get(port.splitter_profile_id) : undefined;
             return (
               <div key={port.id} className="rounded-md border bg-background p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
@@ -143,17 +152,19 @@ export function OdpPortSection({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`h-3 w-3 shrink-0 rounded-full ${getOdpPortStatusClass(port.status)}`} />
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="size-7 text-destructive hover:text-destructive"
-                      disabled={updatingPortId === port.id || !editing}
-                      onClick={() => onArchivePort(port)}
-                      title="Archive Port"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+                    {editing ? (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-7 text-destructive hover:text-destructive"
+                        disabled={updatingPortId === port.id}
+                        onClick={() => onArchivePort(port)}
+                        title="Archive Port"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
                 <div className="mb-2 grid grid-cols-2 gap-2 text-xs">
@@ -166,77 +177,83 @@ export function OdpPortSection({
                     value={portSnapshot?.attenuation_db == null ? "-" : `${portSnapshot.attenuation_db} dB`}
                   />
                   <RelationInfo label="Status Validasi" value={portSnapshot?.status || "-"} />
+                  <RelationInfo
+                    label="Splitter"
+                    value={assignedSplitter?.ratio_label ? `${assignedSplitter.ratio_label}${port.splitter_role ? ` (${port.splitter_role})` : ""}` : "-"}
+                  />
                   <RelationInfo label="Catatan" value={portSnapshot?.notes || port.notes || "-"} />
                 </div>
-                <div className="grid grid-cols-1 gap-2">
-                  <Combobox
-                    value={port.status || "idle"}
-                    onValueChange={(status) => onUpdatePort(port, { status })}
-                    disabled={updatingPortId === port.id || !editing}
-                    triggerClassName="h-9"
-                    options={ODP_PORT_STATUS_OPTIONS.map((status) => ({ value: status, label: status }))}
-                  />
-                  <Combobox
-                    value={port.customer_id || "__none__"}
-                    onValueChange={(value) => {
-                      const customerId = value === "__none__" ? null : value;
-                      const changes: Partial<DevicePort> = { customer_id: customerId };
-                      if (customerId) changes.status = "used";
-                      if (!customerId && !port.ont_device_id) changes.status = "idle";
-                      onUpdatePort(port, changes);
-                    }}
-                    disabled={updatingPortId === port.id || loadingLookups || !editing}
-                    triggerClassName="h-9"
-                    searchPlaceholder="Cari customer..."
-                    emptyText="Customer tidak ditemukan."
-                    options={customerOptions}
-                  />
-                  <Combobox
-                    value={port.ont_device_id || "__none__"}
-                    onValueChange={(value) => {
-                      const ontDeviceId = value === "__none__" ? null : value;
-                      const changes: Partial<DevicePort> = { ont_device_id: ontDeviceId };
-                      if (ontDeviceId) changes.status = "used";
-                      if (!ontDeviceId && !port.customer_id) changes.status = "idle";
-                      onUpdatePort(port, changes);
-                    }}
-                    disabled={updatingPortId === port.id || loadingLookups || !editing}
-                    triggerClassName="h-9"
-                    searchPlaceholder="Cari ONT..."
-                    emptyText="ONT tidak ditemukan."
-                    options={ontOptions}
-                  />
-                  <Input
-                    key={`${port.id}-notes-${port.notes || ""}`}
-                    defaultValue={port.notes || ""}
-                    onBlur={(event) => {
-                      if (event.target.value !== (port.notes || "")) {
-                        onUpdatePort(port, { notes: event.target.value });
-                      }
-                    }}
-                    disabled={updatingPortId === port.id || !editing}
-                    placeholder="Catatan port"
-                    className="h-9"
-                  />
-                  <Combobox
-                    value={port.splitter_profile_id || "__none__"}
-                    onValueChange={(value) => onUpdatePort(port, { splitter_profile_id: value === "__none__" ? null : value })}
-                    disabled={updatingPortId === port.id || !editing}
-                    triggerClassName="h-9"
-                    placeholder="Splitter profile"
-                    options={splitterOptions}
-                  />
-                  {port.splitter_profile_id ? (
+                {editing ? (
+                  <div className="grid grid-cols-1 gap-2 pt-2 border-t border-border/40">
                     <Combobox
-                      value={port.splitter_role || "__none__"}
-                      onValueChange={(value) => onUpdatePort(port, { splitter_role: value === "__none__" ? null : value })}
-                      disabled={updatingPortId === port.id || !editing}
+                      value={port.status || "idle"}
+                      onValueChange={(status) => onUpdatePort(port, { status })}
+                      disabled={updatingPortId === port.id}
                       triggerClassName="h-9"
-                      placeholder="Splitter role"
-                      options={[{ value: "__none__", label: "Pilih role" }, ...splitterRoleOptions]}
+                      options={ODP_PORT_STATUS_OPTIONS.map((status) => ({ value: status, label: status }))}
                     />
-                  ) : null}
-                </div>
+                    <Combobox
+                      value={port.customer_id || "__none__"}
+                      onValueChange={(value) => {
+                        const customerId = value === "__none__" ? null : value;
+                        const changes: Partial<DevicePort> = { customer_id: customerId };
+                        if (customerId) changes.status = "used";
+                        if (!customerId && !port.ont_device_id) changes.status = "idle";
+                        onUpdatePort(port, changes);
+                      }}
+                      disabled={updatingPortId === port.id || loadingLookups}
+                      triggerClassName="h-9"
+                      searchPlaceholder="Cari customer..."
+                      emptyText="Customer tidak ditemukan."
+                      options={customerOptions}
+                    />
+                    <Combobox
+                      value={port.ont_device_id || "__none__"}
+                      onValueChange={(value) => {
+                        const ontDeviceId = value === "__none__" ? null : value;
+                        const changes: Partial<DevicePort> = { ont_device_id: ontDeviceId };
+                        if (ontDeviceId) changes.status = "used";
+                        if (!ontDeviceId && !port.customer_id) changes.status = "idle";
+                        onUpdatePort(port, changes);
+                      }}
+                      disabled={updatingPortId === port.id || loadingLookups}
+                      triggerClassName="h-9"
+                      searchPlaceholder="Cari ONT..."
+                      emptyText="ONT tidak ditemukan."
+                      options={ontOptions}
+                    />
+                    <Input
+                      key={`${port.id}-notes-${port.notes || ""}`}
+                      defaultValue={port.notes || ""}
+                      onBlur={(event) => {
+                        if (event.target.value !== (port.notes || "")) {
+                          onUpdatePort(port, { notes: event.target.value });
+                        }
+                      }}
+                      disabled={updatingPortId === port.id}
+                      placeholder="Catatan port"
+                      className="h-9"
+                    />
+                    <Combobox
+                      value={port.splitter_profile_id || "__none__"}
+                      onValueChange={(value) => onUpdatePort(port, { splitter_profile_id: value === "__none__" ? null : value })}
+                      disabled={updatingPortId === port.id}
+                      triggerClassName="h-9"
+                      placeholder="Splitter profile"
+                      options={splitterOptions}
+                    />
+                    {port.splitter_profile_id ? (
+                      <Combobox
+                        value={port.splitter_role || "__none__"}
+                        onValueChange={(value) => onUpdatePort(port, { splitter_role: value === "__none__" ? null : value })}
+                        disabled={updatingPortId === port.id}
+                        triggerClassName="h-9"
+                        placeholder="Splitter role"
+                        options={[{ value: "__none__", label: "Pilih role" }, ...splitterRoleOptions]}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             );
           })}

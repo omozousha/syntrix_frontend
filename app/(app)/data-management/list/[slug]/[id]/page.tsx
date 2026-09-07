@@ -17,10 +17,8 @@ import {
   DeviceOperationalSummary,
   DevicePortSummarySection,
   DeviceQrActionPanel,
-  DeviceTechnicalSummarySection,
   DeviceValidationHistorySection,
   GenericDeviceRawSection,
-  OdcDistributionCablesSection,
   OdpFrontReassignDialog,
   OdpCoreChainSummarySection,
   OdpOperationsShell,
@@ -28,11 +26,6 @@ import {
   OdpPortSection,
   OdpValidationHistorySection,
   ValidationReminderDialog,
-  DeviceTopologyChainVisualizer,
-  DeviceLinkBudgetSection,
-  PortTrayContainer,
-  OltPortContainer,
-  SwitchPortContainer,
   PortAssignmentDrawer,
   type PeerDeviceOption,
   type PeerPortOption,
@@ -51,17 +44,49 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
-import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-utils";
-import { resolveAttachment } from "@/lib/attachment-utils";
+import { downloadAttachmentFile, fetchAttachmentBlob, resolveAttachment } from "@/lib/attachment-utils";
 import { DeviceNavigationModal } from "@/components/features/maps/device-navigation-modal";
 import { deviceTypeKeyToSlug, getCategoryBySlug } from "@/lib/data-management-config";
 import { buildCustomerRelationDisplay, buildDeviceQrRelationDisplay } from "@/lib/display-adapters/device-display-adapter";
 import { useReferenceData } from "@/hooks/use-reference-data";
+import dynamic from "next/dynamic";
+
+const DeviceTechnicalSummarySection = dynamic(
+  () => import("@/components/features/data-management/device-detail").then((mod) => mod.DeviceTechnicalSummarySection),
+  { ssr: false, loading: () => <Skeleton className="h-32 w-full rounded-xl" /> }
+);
+const OdcDistributionCablesSection = dynamic(
+  () => import("@/components/features/data-management/device-detail").then((mod) => mod.OdcDistributionCablesSection),
+  { ssr: false, loading: () => <Skeleton className="h-32 w-full rounded-xl" /> }
+);
+const DeviceTopologyChainVisualizer = dynamic(
+  () => import("@/components/features/data-management/device-detail").then((mod) => mod.DeviceTopologyChainVisualizer),
+  { ssr: false, loading: () => <Skeleton className="h-64 w-full rounded-xl" /> }
+);
+const DeviceLinkBudgetSection = dynamic(
+  () => import("@/components/features/data-management/device-detail").then((mod) => mod.DeviceLinkBudgetSection),
+  { ssr: false, loading: () => <Skeleton className="h-32 w-full rounded-xl" /> }
+);
+const PortTrayContainer = dynamic(
+  () => import("@/components/features/data-management/device-detail").then((mod) => mod.PortTrayContainer),
+  { ssr: false, loading: () => <Skeleton className="h-[400px] w-full rounded-xl" /> }
+);
+const OltPortContainer = dynamic(
+  () => import("@/components/features/data-management/device-detail").then((mod) => mod.OltPortContainer),
+  { ssr: false, loading: () => <Skeleton className="h-[400px] w-full rounded-xl" /> }
+);
+const SwitchPortContainer = dynamic(
+  () => import("@/components/features/data-management/device-detail").then((mod) => mod.SwitchPortContainer),
+  { ssr: false, loading: () => <Skeleton className="h-[400px] w-full rounded-xl" /> }
+);
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
 import { buildDeviceQrHref, buildQrLabelPngDataUrl, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
 import { TopologyLookupData, emptyTopologyLookup, DeviceLookupOption, RouteLookupOption, PortLookupOption } from "@/components/features/data-management/device-detail/sections/device-topology-helpers";
 const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() || "";
+
+const attachmentUrlCache = new Map<string, string>();
+const failedAttachmentCache = new Set<string>();
 
 type GenericItem = Record<string, unknown> & {
   id: string;
@@ -844,6 +869,10 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     ]),
     [infoImageAttachments, odpValidations],
   );
+  const galleryAttachmentIdsKey = useMemo(
+    () => galleryImageAttachments.map((a) => a.id).join(","),
+    [galleryImageAttachments],
+  );
   const latestOdpValidation = useMemo(
     () => (odpValidations || [])[0] || null,
     [odpValidations],
@@ -882,56 +911,43 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     }
 
     let cancelled = false;
-    const objectUrls: string[] = [];
 
     async function loadImagePreviews() {
       setLoadingImagePreviews(true);
       const nextMap: Record<string, string> = {};
       const nextNames: Record<string, string> = {};
-      await Promise.all(
-        galleryImageAttachments.map(async (attachment) => {
-          const resolvedIds = await resolveAttachmentIds(attachment.id, token);
-          const candidates = resolvedIds.length ? resolvedIds : [attachment.id];
-          const resolvedMeta = await resolveAttachment(attachment.id, token);
-          try {
-            if (resolvedMeta?.original_name) {
-              nextNames[attachment.id] = resolvedMeta.original_name;
-            } else if (attachment.name) {
-              nextNames[attachment.id] = attachment.name;
-            }
-          } catch {
-            if (attachment.name) {
-              nextNames[attachment.id] = attachment.name;
-            }
-          }
 
-          try {
-            let response: Response | null = null;
-            for (const candidateId of candidates) {
-              try {
-                const result = await fetchAttachmentBlob(candidateId, token, "preview");
-                response = new Response(result.blob, { status: 200 });
-                break;
-              } catch {
-                try {
-                  const result = await fetchAttachmentBlob(candidateId, token, "download");
-                  response = new Response(result.blob, { status: 200 });
-                  break;
-                } catch {
-                  // try next
-                }
-              }
+      for (const attachment of galleryImageAttachments) {
+        if (!attachment.id) continue;
+        const attId = attachment.id;
+        nextNames[attId] = attachment.name || attId;
+
+        if (attachmentUrlCache.has(attId)) {
+          nextMap[attId] = attachmentUrlCache.get(attId)!;
+          continue;
+        }
+        if (failedAttachmentCache.has(attId)) {
+          continue;
+        }
+
+        try {
+          const result = await fetchAttachmentBlob(attId, token, "preview");
+          if (result?.blob) {
+            const url = URL.createObjectURL(result.blob);
+            attachmentUrlCache.set(attId, url);
+            nextMap[attId] = url;
+            if (result.filename) {
+              nextNames[attId] = result.filename;
             }
-            if (!response || !response.ok) return;
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            objectUrls.push(url);
-            nextMap[attachment.id] = url;
-          } catch {
-            // Skip broken preview silently to keep detail page stable.
+          } else {
+            failedAttachmentCache.add(attId);
           }
-        }),
-      );
+        } catch {
+          // Legacy or missing attachment in storage: cache failure to avoid repeated requests
+          failedAttachmentCache.add(attId);
+        }
+      }
+
       if (cancelled) return;
       setImagePreviewUrls(nextMap);
       setAttachmentNames(nextNames);
@@ -941,9 +957,8 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     void loadImagePreviews();
     return () => {
       cancelled = true;
-      objectUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [galleryImageAttachments, token]);
+  }, [galleryAttachmentIdsKey, token]);
 
   useEffect(() => {
     if (!item || !category || !token) {
@@ -1261,7 +1276,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     return () => {
       cancelled = true;
     };
-  }, [isOdpDevice, item, token]);
+  }, [isOdpDevice, item?.id, valueOf(item?.region_id), token]);
   // ── Fetch topology lookup data (ODC devices, routes, ports) ──────────────
   useEffect(() => {
     if (category?.resource !== "devices" || !item || !token) {
@@ -1321,7 +1336,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     return () => {
       cancelled = true;
     };
-  }, [category?.resource, item, token]);
+  }, [category?.resource, item?.id, valueOf(item?.region_id), token]);
 
 
   useEffect(() => {
@@ -1365,7 +1380,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     return () => {
       cancelled = true;
     };
-  }, [isOdpDevice, item, token]);
+  }, [isOdpDevice, item?.id, valueOf(item?.region_id), token]);
 
   useEffect(() => {
     if (category?.resource !== "devices" || !item || !token) {
@@ -1456,7 +1471,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     return () => {
       cancelled = true;
     };
-  }, [category?.resource, item, token]);
+  }, [category?.resource, item?.id, token]);
 
   useEffect(() => {
     if (!isOdpDevice || !item || !token) {
@@ -1486,7 +1501,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     return () => {
       cancelled = true;
     };
-  }, [isOdpDevice, item, token]);
+  }, [isOdpDevice, item?.id, token]);
 
   // ── Fetch ODC chain summary ───────────────────────────────────────────────
   useEffect(() => {
