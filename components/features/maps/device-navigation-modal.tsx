@@ -72,8 +72,8 @@ export function DeviceNavigationModal({
     [deviceId, deviceLat, deviceLng],
   );
 
-  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${deviceLat},${deviceLng}`;
-  const wazeUrl = `https://waze.com/ul?ll=${deviceLat},${deviceLng}&navigate=yes`;
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${deviceLat},${deviceLng}`;
+  const wazeUrl = `https://waze.com/ul?ll=${deviceLat},${deviceLng}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
