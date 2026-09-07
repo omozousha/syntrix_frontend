@@ -3608,6 +3608,7 @@ function buildEditableForm(item: GenericItem, resource: string, topologySummary?
       splitter_ratio: valueOf(item.splitter_ratio),
       odp_type: valueOf(item.odp_type),
       installation_type: valueOf(item.installation_type),
+      notes: valueOf(item.notes),
       address: valueOf(item.address),
       longitude: valueOf(item.longitude),
       latitude: valueOf(item.latitude),
@@ -3745,6 +3746,7 @@ function buildUpdatePayload(form: EditableForm, resource: string, originalItem?:
       // ODC port count fields
       feeder_port_count: numberOrNull(form.feeder_port_count),
       distribution_port_count: numberOrNull(form.distribution_port_count),
+      notes: nullIfEmpty(form.notes),
       address: nullIfEmpty(form.address),
       longitude: numberOrNull(form.longitude),
       latitude: numberOrNull(form.latitude),

@@ -29,6 +29,7 @@ export type DeviceBaseForm = {
   model_id: string;
   serial_number: string;
   address: string;
+  notes?: string;
   province_id: string;
   city_id: string;
   longitude: string;

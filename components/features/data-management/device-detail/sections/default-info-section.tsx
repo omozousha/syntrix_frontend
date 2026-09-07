@@ -297,15 +297,16 @@ function DeviceLocationSection({
   );
 }
 
-// ── Tags Section ───────────────────────────────────────────────────────────
+// ── Tags & Notes Section ───────────────────────────────────────────────────
 
 function DeviceTagsSection({ form, onChange, editing }: Pick<DefaultInfoSectionProps, "form" | "onChange" | "editing">) {
   return (
     <Card>
       <CardHeader className="px-3 py-2">
-        <CardTitle className="text-sm">Tags</CardTitle>
+        <CardTitle className="text-sm">Catatan &amp; Tags</CardTitle>
       </CardHeader>
-      <CardContent className="px-3 pb-3 pt-0">
+      <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2">
+        <Field label="Catatan Perangkat" value={form.notes || ""} onChange={(value) => onChange((prev) => ({ ...prev, notes: value }))} disabled={!editing} compact />
         <Field label="Tags (CSV)" value={form.tags} onChange={(value) => onChange((prev) => ({ ...prev, tags: value }))} disabled={!editing} compact />
       </CardContent>
     </Card>
