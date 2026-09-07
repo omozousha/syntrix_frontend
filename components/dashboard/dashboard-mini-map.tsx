@@ -65,12 +65,12 @@ export function DashboardMiniMap({
         {loading ? (
           <Skeleton className="h-[240px] w-full rounded-none" />
         ) : mounted && markers.length ? (
-          <div className="h-[240px] w-full">
+          <div className="h-[240px] w-full relative [&_.leaflet-tile]:brightness-[0.6] [&_.leaflet-tile]:invert [&_.leaflet-tile]:contrast-[3] [&_.leaflet-tile]:hue-rotate-[200deg] [&_.leaflet-tile]:saturate-[0.3] bg-[#18181b]">
             <MapContainer
               center={defaultCenter}
               zoom={defaultZoom}
               scrollWheelZoom={false}
-              style={{ height: "100%", width: "100%" }}
+              style={{ height: "100%", width: "100%", background: "#18181b" }}
               attributionControl={false}
             >
               <TileLayer

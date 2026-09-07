@@ -98,13 +98,13 @@ export function DeviceNavigationModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Peta Mini Leaflet OpenStreetMap */}
-        <div className="h-56 w-full overflow-hidden rounded-xl border border-border/60 bg-muted/10">
+        {/* Peta Mini Leaflet OpenStreetMap (Dark Mode) */}
+        <div className="h-56 w-full overflow-hidden rounded-xl border border-border/60 bg-[#18181b] relative [&_.leaflet-tile]:brightness-[0.6] [&_.leaflet-tile]:invert [&_.leaflet-tile]:contrast-[3] [&_.leaflet-tile]:hue-rotate-[200deg] [&_.leaflet-tile]:saturate-[0.3]">
           <MapContainer
             center={[deviceLat, deviceLng]}
             zoom={14}
             scrollWheelZoom={false}
-            style={{ height: "100%", width: "100%" }}
+            style={{ height: "100%", width: "100%", background: "#18181b" }}
             attributionControl={false}
           >
             <TileLayer
