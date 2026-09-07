@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Navigation, MapPin, ExternalLink, Copy, Check, Compass } from "lucide-react";
+import { Navigation, MapPin, Copy, Check, Compass } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 type DeviceBentoLocationTileProps = {
@@ -39,8 +40,8 @@ export function DeviceBentoLocationTile({
   }
 
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-5 sm:p-6 shadow-xs glass-inset transition-all duration-300">
-      <div className="space-y-4">
+    <Card className="flex flex-col justify-between rounded-2xl border-border/60 shadow-xs glass-inset transition-all duration-300">
+      <CardContent className="p-5 sm:p-6 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
@@ -86,37 +87,41 @@ export function DeviceBentoLocationTile({
             ) : null}
           </div>
         </div>
-      </div>
 
-      {/* Navigation Actions */}
-      <div className="mt-5 pt-3 border-t border-border/40">
-        {hasCoords ? (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${numLat},${numLng}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/20 px-3 text-xs font-mono font-medium text-foreground transition-all duration-200 hover:border-primary/50 hover:bg-primary/5 active:scale-[0.98]"
-            >
-              <MapPin className="size-3.5 text-primary" />
-              <span>Titik Google Maps</span>
-            </a>
-            <a
-              href={`https://waze.com/ul?ll=${numLat},${numLng}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/20 px-3 text-xs font-mono font-medium text-foreground transition-all duration-200 hover:border-sky-500/50 hover:bg-sky-500/5 active:scale-[0.98]"
-            >
-              <Navigation className="size-3.5 text-sky-500" />
-              <span>Titik Waze</span>
-            </a>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 p-2.5 text-center text-xs text-muted-foreground">
-            Koordinat GPS belum diatur pada aset ini.
-          </div>
-        )}
-      </div>
-    </div>
+        {/* Navigation Actions */}
+        <div className="pt-2 border-t border-border/40">
+          {hasCoords ? (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Button asChild variant="outline" className="h-10 rounded-xl border-border/60 bg-muted/20 text-xs font-mono font-medium hover:border-primary/50 hover:bg-primary/5 active:scale-[0.98]">
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${numLat},${numLng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="gap-2"
+                >
+                  <MapPin className="size-3.5 text-primary" />
+                  <span>Titik Google Maps</span>
+                </a>
+              </Button>
+              <Button asChild variant="outline" className="h-10 rounded-xl border-border/60 bg-muted/20 text-xs font-mono font-medium hover:border-sky-500/50 hover:bg-sky-500/5 active:scale-[0.98]">
+                <a
+                  href={`https://waze.com/ul?ll=${numLat},${numLng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="gap-2"
+                >
+                  <Navigation className="size-3.5 text-sky-500" />
+                  <span>Titik Waze</span>
+                </a>
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 p-2.5 text-center text-xs text-muted-foreground">
+              Koordinat GPS belum diatur pada aset ini.
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { HardDrive, Layers, Cpu, Server, CheckCircle2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 type DeviceBentoCapacityTileProps = {
@@ -43,8 +44,8 @@ export function DeviceBentoCapacityTile({
   const coreUtilPercent = totCores > 0 ? Math.min(100, Math.round((uCores / totCores) * 100)) : 0;
 
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-5 sm:p-6 shadow-xs glass-inset transition-all duration-300">
-      <div className="space-y-4">
+    <Card className="flex flex-col justify-between rounded-2xl border-border/60 shadow-xs glass-inset transition-all duration-300">
+      <CardContent className="p-5 sm:p-6 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
@@ -100,40 +101,40 @@ export function DeviceBentoCapacityTile({
             </div>
           ) : null}
         </div>
-      </div>
 
-      {/* Hardware Details Grid */}
-      <div className="mt-5 grid grid-cols-2 gap-2 border-t border-border/40 pt-4 text-xs">
-        <div className="space-y-0.5">
-          <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Model / Tipe</p>
-          <p className="truncate font-semibold text-foreground" title={modelName || odpType || "-"}>
-            {modelName || odpType || "-"}
-          </p>
-        </div>
+        {/* Hardware Details Grid */}
+        <div className="mt-5 grid grid-cols-2 gap-2 border-t border-border/40 pt-4 text-xs">
+          <div className="space-y-0.5">
+            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Model / Tipe</p>
+            <p className="truncate font-semibold text-foreground" title={modelName || odpType || "-"}>
+              {modelName || odpType || "-"}
+            </p>
+          </div>
 
-        <div className="space-y-0.5">
-          <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Brand / Vendor</p>
-          <p className="truncate font-semibold text-foreground" title={brandName || manufacturerName || "-"}>
-            {[brandName, manufacturerName].filter(Boolean).join(" · ") || "-"}
-          </p>
-        </div>
+          <div className="space-y-0.5">
+            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Brand / Vendor</p>
+            <p className="truncate font-semibold text-foreground" title={brandName || manufacturerName || "-"}>
+              {[brandName, manufacturerName].filter(Boolean).join(" · ") || "-"}
+            </p>
+          </div>
 
-        <div className="space-y-0.5">
-          <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-            {splitterRatio ? "Splitter / Ratio" : "Mounting"}
-          </p>
-          <p className="truncate font-mono tabular-nums font-semibold text-foreground" title={splitterRatio || installationType || "-"}>
-            {splitterRatio ? `Rasio ${splitterRatio}` : installationType || "Tiang / Wall"}
-          </p>
-        </div>
+          <div className="space-y-0.5">
+            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+              {splitterRatio ? "Splitter / Ratio" : "Mounting"}
+            </p>
+            <p className="truncate font-mono tabular-nums font-semibold text-foreground" title={splitterRatio || installationType || "-"}>
+              {splitterRatio ? `Rasio ${splitterRatio}` : installationType || "Tiang / Wall"}
+            </p>
+          </div>
 
-        <div className="space-y-0.5">
-          <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Serial Number</p>
-          <p className="truncate font-mono tabular-nums font-semibold text-foreground" title={serialNumber || "-"}>
-            {serialNumber || "-"}
-          </p>
+          <div className="space-y-0.5">
+            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Serial Number</p>
+            <p className="truncate font-mono tabular-nums font-semibold text-foreground" title={serialNumber || "-"}>
+              {serialNumber || "-"}
+            </p>
+          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

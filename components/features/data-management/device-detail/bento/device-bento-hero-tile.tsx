@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Copy, Check, Building2, MapPin, Briefcase, FolderKanban, ShieldCheck, Tag } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { mapValidationStatus } from "@/lib/validation-status";
@@ -78,8 +79,8 @@ export function DeviceBentoHeroTile({
       : "bg-muted text-muted-foreground border-border/60";
 
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-5 sm:p-6 shadow-xs glass-inset transition-all duration-300">
-      <div className="space-y-4">
+    <Card className="flex flex-col justify-between rounded-2xl border-border/60 shadow-xs glass-inset transition-all duration-300">
+      <CardContent className="p-5 sm:p-6 space-y-4">
         {/* Top Badges */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -208,42 +209,44 @@ export function DeviceBentoHeroTile({
             ))}
           </div>
         ) : null}
-      </div>
+      </CardContent>
 
       {/* Meta Chips Footer */}
-      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 border-t border-border/40 pt-4 text-xs">
-        <div className="flex items-center gap-2 rounded-xl bg-muted/15 p-2.5">
-          <Building2 className="size-4 shrink-0 text-primary" />
-          <div className="min-w-0">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">POP</p>
-            <p className="truncate font-semibold text-foreground" title={popName || "-"}>{popName || "-"}</p>
+      <CardContent className="p-5 sm:p-6 pt-0">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 border-t border-border/40 pt-4 text-xs">
+          <div className="flex items-center gap-2 rounded-xl bg-muted/15 p-2.5">
+            <Building2 className="size-4 shrink-0 text-primary" />
+            <div className="min-w-0">
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">POP</p>
+              <p className="truncate font-semibold text-foreground" title={popName || "-"}>{popName || "-"}</p>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2 rounded-xl bg-muted/15 p-2.5">
-          <MapPin className="size-4 shrink-0 text-sky-500" />
-          <div className="min-w-0">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Region</p>
-            <p className="truncate font-semibold text-foreground" title={regionName || "-"}>{regionName || "-"}</p>
+          <div className="flex items-center gap-2 rounded-xl bg-muted/15 p-2.5">
+            <MapPin className="size-4 shrink-0 text-sky-500" />
+            <div className="min-w-0">
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Region</p>
+              <p className="truncate font-semibold text-foreground" title={regionName || "-"}>{regionName || "-"}</p>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2 rounded-xl bg-muted/15 p-2.5">
-          <Briefcase className="size-4 shrink-0 text-amber-500" />
-          <div className="min-w-0">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Tenant</p>
-            <p className="truncate font-semibold text-foreground" title={tenantName || "-"}>{tenantName || "-"}</p>
+          <div className="flex items-center gap-2 rounded-xl bg-muted/15 p-2.5">
+            <Briefcase className="size-4 shrink-0 text-amber-500" />
+            <div className="min-w-0">
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Tenant</p>
+              <p className="truncate font-semibold text-foreground" title={tenantName || "-"}>{tenantName || "-"}</p>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2 rounded-xl bg-muted/15 p-2.5">
-          <FolderKanban className="size-4 shrink-0 text-violet-500" />
-          <div className="min-w-0">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Project</p>
-            <p className="truncate font-semibold text-foreground" title={projectName || "-"}>{projectName || "-"}</p>
+          <div className="flex items-center gap-2 rounded-xl bg-muted/15 p-2.5">
+            <FolderKanban className="size-4 shrink-0 text-violet-500" />
+            <div className="min-w-0">
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Project</p>
+              <p className="truncate font-semibold text-foreground" title={projectName || "-"}>{projectName || "-"}</p>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

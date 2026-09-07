@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Images, ImagePlus, Trash2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,8 +62,8 @@ export function DeviceBentoGalleryTile({
     }
   }
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-5 sm:p-6 shadow-xs glass-inset transition-all duration-300">
-      <div className="space-y-4">
+    <Card className="flex flex-col justify-between rounded-2xl border-border/60 shadow-xs glass-inset transition-all duration-300">
+      <CardContent className="p-5 sm:p-6 space-y-4">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
           <div className="flex items-center gap-2">
@@ -178,7 +179,7 @@ export function DeviceBentoGalleryTile({
             ) : null}
           </div>
         ) : null}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
