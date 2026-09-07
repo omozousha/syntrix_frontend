@@ -227,7 +227,6 @@ function MapsHostContent({ visible }: { visible: boolean }) {
     if (!token) return;
     let cancelled = false;
     async function loadMap() {
-      const startTime = Date.now();
       setLoading(true);
       setError("");
       try {
@@ -241,15 +240,7 @@ function MapsHostContent({ visible }: { visible: boolean }) {
         if (cutMode === "cable" && cutTarget) params.set("cut_cable_device_id", cutTarget);
         const response = await apiFetch<TopologyMapsResponse>(`/topology/maps?${params.toString()}`, { token });
         if (cancelled) return;
-
-        // Ensure a minimum 3-second loader display when filter changes for visual feedback
-        const elapsed = Date.now() - startTime;
-        const remainingDelay = Math.max(0, 3000 - elapsed);
-        if (remainingDelay > 0) {
-          await new Promise((resolve) => setTimeout(resolve, remainingDelay));
-        }
-
-        if (!cancelled) setData(response.data);
+        setData(response.data);
       } catch (err) {
         if (!cancelled) setError((err as Error).message || "Gagal memuat topology map.");
       } finally {
