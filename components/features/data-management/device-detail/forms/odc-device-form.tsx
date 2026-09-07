@@ -146,25 +146,6 @@ export function OdcDeviceForm(props: OdcDeviceFormProps) {
           />
         </CardContent>
       </Card>
-
-      <OdcTopologySection
-        form={props.form}
-        onChange={props.onChange}
-        editing={props.editing}
-        topologyLookup={props.topologyLookup || emptyTopologyLookup()}
-      />
-
-      <OdcOutgoingCableSection
-        downstream={props.topologySummary?.odc_relations?.downstream as any || null}
-        portSummary={props.topologySummary?.odc_relations?.port_summary as any || null}
-        coreSummary={props.topologySummary?.odc_relations?.core_summary as any || null}
-      />
-
-      <OdcCoreChainSummarySection
-        chainSummary={props.odcChainSummary ?? null}
-        loading={props.odcChainLoading ?? false}
-        onRefresh={props.onOdcChainRefresh}
-      />
     </div>
   );
 }

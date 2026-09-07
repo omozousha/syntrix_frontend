@@ -34,7 +34,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob, resolveAttachment } from "@/lib/attachment-utils";
@@ -45,7 +45,17 @@ import { useReferenceData } from "@/hooks/use-reference-data";
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
 import { buildDeviceQrHref, buildQrLabelPngDataUrl, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
-import { TopologyLookupData, emptyTopologyLookup, DeviceLookupOption, RouteLookupOption, PortLookupOption } from "@/components/features/data-management/device-detail/sections/device-topology-helpers";
+import {
+  TopologyLookupData,
+  emptyTopologyLookup,
+  DeviceLookupOption,
+  RouteLookupOption,
+  PortLookupOption,
+} from "@/components/features/data-management/device-detail/sections/device-topology-helpers";
+import {
+  type ProvinceOption,
+  type CityOption,
+} from "@/components/features/data-management/device-detail/sections/device-technical-helpers";
 const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() || "";
 
 const attachmentUrlCache = new Map<string, string>();
@@ -553,6 +563,8 @@ export default function DataManagementDetailPage() {
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
+  const [provinces, setProvinces] = useState<ProvinceOption[]>([]);
+  const [cities, setCities] = useState<CityOption[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [newImagePreviewUrls, setNewImagePreviewUrls] = useState<string[]>([]);
   const [renamingAttachmentId, setRenamingAttachmentId] = useState("");
@@ -1059,7 +1071,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     let cancelled = false;
     async function loadDeviceMasterData() {
       try {
-        const [splitterResponse, deviceTypesResponse, topologyRelationRulesResponse, odpTypesResponse, installationTypesResponse, tenantsResponse, deviceCoreCapacitiesResponse, closureTypesResponse, cableTypesResponse, routeTypesResponse] = await Promise.allSettled([
+        const [splitterResponse, deviceTypesResponse, topologyRelationRulesResponse, odpTypesResponse, installationTypesResponse, tenantsResponse, deviceCoreCapacitiesResponse, closureTypesResponse, cableTypesResponse, routeTypesResponse, provincesResponse, citiesResponse] = await Promise.allSettled([
           apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<DeviceTypeMasterOption>>("/deviceTypes?page=1&limit=300&is_active=true", { token }),
           apiFetch<PaginatedResponse<TopologyRelationRuleOption>>("/topologyRelationRules?page=1&limit=500&is_active=true", { token }),
@@ -1070,6 +1082,8 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           apiFetch<PaginatedResponse<{ id: string; closure_type_name: string; closure_type_code?: string | null; max_core_capacity?: number | null; max_splice_capacity?: number | null; supports_pass_through?: boolean | null; supports_branching?: boolean | null }>>("/closureTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<{ id: string; cable_type_code: string; cable_type_name: string; core_count?: number | null }>>("/cableTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<{ id: string; route_type_code?: string | null; route_type_name: string }>>("/routeTypes?page=1&limit=200&is_active=true", { token }),
+          apiFetch<PaginatedResponse<ProvinceOption>>("/provinces?page=1&limit=200", { token }),
+          apiFetch<PaginatedResponse<CityOption>>("/cities?page=1&limit=500", { token }),
         ]);
         if (cancelled) return;
         setSplitterProfiles(splitterResponse.status === "fulfilled" ? splitterResponse.value.data || [] : []);
@@ -1082,6 +1096,8 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         setClosureTypes(closureTypesResponse.status === "fulfilled" ? closureTypesResponse.value.data || [] : []);
         setCableTypes(cableTypesResponse.status === "fulfilled" ? cableTypesResponse.value.data || [] : []);
         setRouteTypes(routeTypesResponse.status === "fulfilled" ? routeTypesResponse.value.data || [] : []);
+        setProvinces(provincesResponse.status === "fulfilled" ? provincesResponse.value.data || [] : []);
+        setCities(citiesResponse.status === "fulfilled" ? citiesResponse.value.data || [] : []);
       } catch {
         if (cancelled) return;
         setSplitterProfiles([]);
@@ -1204,103 +1220,17 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   }, [form.pop_id, isEditing, popOptions]);
 
 
+  // ── Bersihkan fetch lookups topologi yang tidak lagi digunakan ──
   useEffect(() => {
-    if (!isOdpDevice || !item || !token) {
-      setOdpCustomers([]);
-      setOdpOntDevices([]);
-      setOdpCableDevices([]);
-      setLoadingOdpLookups(false);
-      return;
-    }
+    setOdpCustomers([]);
+    setOdpOntDevices([]);
+    setOdpCableDevices([]);
+    setLoadingOdpLookups(false);
+  }, []);
 
-    const activeRegionId = valueOf(item.region_id);
-    const regionQuery = activeRegionId ? `&region_id=${encodeURIComponent(activeRegionId)}` : "";
-    let cancelled = false;
-
-    async function loadOdpLookups() {
-      setLoadingOdpLookups(true);
-      try {
-        const [customers, onts, cables] = await Promise.all([
-          apiFetch<PaginatedResponse<OdpCustomerOption>>(`/customers?page=1&limit=500${regionQuery}`, { token }),
-          apiFetch<PaginatedResponse<OdpOntOption>>(`/devices?page=1&limit=500&device_type_key=ONT${regionQuery}`, { token }),
-          apiFetch<PaginatedResponse<OdpCableOption>>(`/devices?page=1&limit=500&device_type_key=CABLE${regionQuery}`, { token }),
-        ]);
-        if (cancelled) return;
-        setOdpCustomers(customers.data || []);
-        setOdpOntDevices(onts.data || []);
-        setOdpCableDevices(cables.data || []);
-      } catch (err) {
-        if (!cancelled) setError((err as Error).message || "Gagal memuat lookup customer/ONT.");
-      } finally {
-        if (!cancelled) setLoadingOdpLookups(false);
-      }
-    }
-
-    void loadOdpLookups();
-    return () => {
-      cancelled = true;
-    };
-  }, [isOdpDevice, item?.id, valueOf(item?.region_id), token]);
-  // ── Fetch topology lookup data (ODC devices, routes, ports) ──────────────
   useEffect(() => {
-    if (category?.resource !== "devices" || !item || !token) {
-      setTopologyLookupData(emptyTopologyLookup());
-      return;
-    }
-
-    const activeRegionId = valueOf(item.region_id);
-    const regionQuery = activeRegionId ? `&region_id=${encodeURIComponent(activeRegionId)}` : "";
-    let cancelled = false;
-
-    async function loadTopologyLookups() {
-      setTopologyLookupData((prev) => ({ ...prev, loadingDevices: true, loadingPorts: true, loadingRoutes: true }));
-      try {
-        const deviceTypeFilter = "device_type_key=ODC";
-        const [devicesResult, routesResult] = await Promise.all([
-          apiFetch<PaginatedResponse<DeviceLookupOption>>(`/devices?page=1&limit=500&${deviceTypeFilter}${regionQuery}`, { token }),
-          apiFetch<PaginatedResponse<RouteLookupOption>>(`/routes?page=1&limit=500${regionQuery}`, { token }),
-        ]);
-        if (cancelled) return;
-
-        const devices = devicesResult.data || [];
-        const routes = routesResult.data || [];
-        const deviceIds = new Set(devices.map((d) => d.id));
-
-        // Fetch ports for all fetched ODC devices in one query
-        let ports: PortLookupOption[] = [];
-        if (deviceIds.size > 0) {
-          const portsResult = await apiFetch<PaginatedResponse<PortLookupOption>>(
-            `/devicePorts?page=1&limit=1000${regionQuery}`,
-            { token },
-          );
-          if (!cancelled) {
-            ports = (portsResult.data || []).filter((p) => p.device_id && deviceIds.has(p.device_id));
-          }
-        }
-
-        if (!cancelled) {
-          setTopologyLookupData({
-            devices,
-            ports,
-            routes,
-            customers: [],
-            loadingDevices: false,
-            loadingPorts: false,
-            loadingRoutes: false,
-          });
-        }
-      } catch {
-        if (!cancelled) {
-          setTopologyLookupData(emptyTopologyLookup());
-        }
-      }
-    }
-
-    void loadTopologyLookups();
-    return () => {
-      cancelled = true;
-    };
-  }, [category?.resource, item?.id, valueOf(item?.region_id), token]);
+    setTopologyLookupData(emptyTopologyLookup());
+  }, []);
 
 
   useEffect(() => {
@@ -2521,8 +2451,8 @@ if (!category) {
                         projectHref={buildProjectDetailHref(valueOf(item.project_id), valueOf(item.region_id))}
                         latestFieldValidation={latestApprovedOdpValidation?.payload?.field_validation || null}
                         effectiveValidationStatus={detailValidationStatus}
-                        provinces={[]}
-                        cities={[]}
+                        provinces={provinces}
+                        cities={cities}
                         topologyLookup={topologyLookupData}
                         topologySummary={deviceTopologySummary}
                         coreCapacities={[]}
@@ -2705,12 +2635,12 @@ if (!category) {
           </>
         ) : null}
       </div>
-      <AlertDialog open={galleryOpen} onOpenChange={setGalleryOpen}>
-        <AlertDialogContent className="!w-[min(96vw,1200px)] !max-w-[min(96vw,1200px)] p-3 sm:p-4">
-          <AlertDialogTitle className="sr-only">Preview Gambar Attachment</AlertDialogTitle>
-          <AlertDialogDescription className="sr-only">
+      <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}>
+        <DialogContent className="!w-[min(96vw,1200px)] !max-w-[min(96vw,1200px)] p-3 sm:p-4 rounded-2xl border-border/60 glass-inset">
+          <DialogTitle className="sr-only">Preview Gambar Attachment</DialogTitle>
+          <DialogDescription className="sr-only">
             Dialog untuk melihat, navigasi, dan mengelola nama file image attachment.
-          </AlertDialogDescription>
+          </DialogDescription>
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-medium">
@@ -2813,8 +2743,8 @@ if (!category) {
               </div>
             </div>
           </div>
-        </AlertDialogContent>
-      </AlertDialog>
+        </DialogContent>
+      </Dialog>
       <ValidationReminderDialog
         open={reminderDialogOpen}
         validators={validatorOptions}

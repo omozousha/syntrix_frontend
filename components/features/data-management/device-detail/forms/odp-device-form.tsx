@@ -166,13 +166,6 @@ export function OdpDeviceForm(props: OdpDeviceFormProps) {
           />
         </CardContent>
       </Card>
-
-      <OdpTopologySection
-        form={props.form}
-        onChange={props.onChange}
-        editing={props.editing}
-        topologyLookup={props.topologyLookup || emptyTopologyLookup()}
-      />
     </div>
   );
 }
