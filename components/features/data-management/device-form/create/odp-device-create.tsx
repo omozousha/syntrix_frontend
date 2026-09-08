@@ -30,13 +30,18 @@ export type OdpCreateFormValues = {
   brand_id: string;
   model_id: string;
   serial_number: string;
-  capacity_core: string;
-  used_core: string;
-  front_device_id: string;
-  front_port_id: string;
-  rear_device_id: string;
-  rear_port_id: string;
+  capacity_core?: string;
+  used_core?: string;
+  total_ports?: string;
+  used_ports?: string;
+  splitter_ratio?: string;
+  front_device_id?: string;
+  front_port_id?: string;
+  rear_device_id?: string;
+  rear_port_id?: string;
 };
+
+type SplitterProfileOption = { ratio_label: string; output_port_count?: number | null };
 
 /**
  * ODP Create Form - aligned with classic ODC styling patterns.
@@ -50,20 +55,17 @@ export function OdpDeviceCreate({
   manufacturers,
   brands,
   assetModels,
-  topologyFrontDevices = [],
-  frontDevicePorts = [],
-  loadingTopology = false,
-  frontRelationLabel = "Hulu",
-  rearRelationLabel = "Hilir",
+  splitterProfiles = [],
   onChange,
-  }: {
+}: {
   values: OdpCreateFormValues;
-odpTypes: OdpTypeOption[];
+  odpTypes: OdpTypeOption[];
   installationTypes: InstallationTypeOption[];
   tenants: TenantOption[];
-manufacturers: ManufacturerOption[];
+  manufacturers: ManufacturerOption[];
   brands: BrandOption[];
   assetModels: AssetModelOption[];
+  splitterProfiles?: SplitterProfileOption[];
   topologyFrontDevices?: TopologyDeviceOption[];
   frontDevicePorts?: TopologyPortOption[];
   loadingTopology?: boolean;
@@ -82,54 +84,43 @@ manufacturers: ManufacturerOption[];
       />
 
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border bg-muted/40 px-3 py-1.5">
-        Relasi Topologi
+        Spesifikasi Port &amp; Splitter ODP
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label={`Front Port (${frontRelationLabel})`} tooltip="Pilih perangkat ODC di POP yang sama sebagai sumber koneksi hulu." />
+        <FieldLabel label="Rasio Splitter" tooltip="Pilih rasio splitter optik terpasang pada ODP." />
         <Combobox
-          value={values.front_device_id || "__none__"}
-          onValueChange={(v) => {
-            const deviceId = v === "__none__" ? "" : v;
-            onChange({ front_device_id: deviceId, front_port_id: "" });
+          value={values.splitter_ratio || "__none__"}
+          onValueChange={(val) => {
+            const nextRatio = val === "__none__" ? "" : val;
+            const profile = (splitterProfiles || []).find((p) => p.ratio_label === nextRatio);
+            const autoPorts = profile?.output_port_count ? String(profile.output_port_count) : values.total_ports || "";
+            onChange({ splitter_ratio: nextRatio, total_ports: autoPorts });
           }}
           options={[
-            { value: "__none__", label: values.pop_id ? "Pilih ODC hulu" : "Pilih POP terlebih dahulu" },
-            ...topologyFrontDevices.map((d) => ({
-              value: d.id,
-              label: `${d.device_name} (${d.device_type_key})`,
+            { value: "__none__", label: "Pilih rasio splitter" },
+            ...(splitterProfiles || []).map((p) => ({
+              value: p.ratio_label,
+              label: `Splitter ${p.ratio_label} (${p.output_port_count || 0} port)`,
             })),
           ]}
-          placeholder={values.pop_id ? "Pilih ODC hulu" : "Pilih POP terlebih dahulu"}
-          searchPlaceholder="Cari ODC hulu..."
-          disabled={loadingTopology || values.pop_id === ""}
+          placeholder="Pilih rasio splitter"
+          searchPlaceholder="Cari rasio splitter..."
         />
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label="Port ODC" tooltip="Pilih port idle dari ODC yang terpilih." />
-        <Combobox
-          value={values.front_port_id || "__none__"}
-          onValueChange={(v) => onChange({ front_port_id: v === "__none__" ? "" : v })}
-          options={[
-            { value: "__none__", label: values.front_device_id ? "Pilih port ODC" : "Pilih ODC terlebih dahulu" },
-            ...frontDevicePorts.map((port) => ({
-              value: port.id,
-              label: port.port_label || `Port #${port.port_index}`,
-            })),
-          ]}
-          placeholder={values.front_device_id ? "Pilih port ODC" : "Pilih ODC terlebih dahulu"}
-          searchPlaceholder="Cari port ODC..."
-          disabled={!values.front_device_id}
+        <FieldLabel label="Kapasitas Port Distribusi" tooltip="Total port ODP yang dapat melayani sambungan drop pelanggan." />
+        <Input
+          type="number"
+          value={values.total_ports || ""}
+          onChange={(e) => onChange({ total_ports: e.target.value })}
+          placeholder="8 atau 16"
         />
-      </div>
-
-      <div className="col-span-full rounded-md border border-blue-200 bg-blue-50/50 px-3 py-2 text-xs text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-200">
-        <span className="font-semibold">Rear Port (ONT-Customer):</span> Atur di <strong>detail device ODP → ODP Operations</strong>. Front port yang dipilih di sini akan otomatis tersambung ke operasi ODP.
       </div>
 
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border bg-muted/40 px-3 py-1.5">
-        Identitas Perangkat
+        Identitas Perangkat &amp; Vendor
       </div>
 
       <DeviceHardwareFields
@@ -144,11 +135,6 @@ manufacturers: ManufacturerOption[];
         assetModels={assetModels}
         onChange={onChange}
       />
-
-      <div className="space-y-1.5">
-        <FieldLabel label="Capacity Core" tooltip="Kapasitas core diisi otomatis dari core chain dan tidak bisa diedit manual." />
-        <Input value={values.capacity_core} disabled />
-      </div>
     </>
   );
 }

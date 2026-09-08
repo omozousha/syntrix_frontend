@@ -35,6 +35,9 @@ export type DefaultInfoSectionProps = {
   effectiveValidationStatus: string;
   provinces?: ProvinceOption[];
   cities?: CityOption[];
+  manufacturers?: Array<{ id: string; manufacturer_name: string; manufacturer_code?: string | null }>;
+  brands?: Array<{ id: string; brand_name: string; brand_code?: string | null; manufacturer_id?: string | null }>;
+  assetModels?: Array<{ id: string; model_name: string; model_code?: string | null; brand_id?: string | null; manufacturer_id?: string | null; capacity_core?: number | null; total_ports?: number | null }>;
 };
 
 // ── Default Info Section (Section 1) ───────────────────────────────────────
@@ -137,6 +140,9 @@ function DeviceRelationSection({
   popOptions,
   projectOptions,
   projectHref,
+  manufacturers,
+  brands,
+  assetModels,
 }: DefaultInfoSectionProps) {
   const filteredProjectOptions = projectOptions
     .filter((project) => !form.region_id || !project.region_id || project.region_id === form.region_id)
@@ -168,7 +174,7 @@ function DeviceRelationSection({
         )}
         {editing ? (
           <ComboboxField
-            label="Project"
+            label="Project Reference"
             value={form.project_id || "__none__"}
             onValueChange={(value) => onChange((prev) => ({ ...prev, project_id: value === "__none__" ? "" : value }))}
             searchPlaceholder="Cari project..."
@@ -181,7 +187,7 @@ function DeviceRelationSection({
             ]}
           />
         ) : (
-          <LinkedDisplayField label="Project" value={relationLabels.project || "-"} href={projectHref} loading={relationLoading} compact />
+          <LinkedDisplayField label="Project Reference" value={relationLabels.project || "-"} href={projectHref} loading={relationLoading} compact />
         )}
         {editing ? (
           <ComboboxField
@@ -200,9 +206,60 @@ function DeviceRelationSection({
         ) : (
           <DisplayField label="Tenant" value={relationLabels.tenant || "-"} loading={relationLoading} compact />
         )}
-        <DisplayField label="Manufacturer" value={relationLabels.manufacturer || "-"} loading={relationLoading} compact />
-        <DisplayField label="Brand" value={relationLabels.brand || "-"} loading={relationLoading} compact />
-        <DisplayField label="Model" value={relationLabels.model || "-"} loading={relationLoading} compact />
+        {editing && manufacturers?.length ? (
+          <ComboboxField
+            label="Manufacturer"
+            value={form.manufacturer_id || "__none__"}
+            onValueChange={(value) => {
+              const nextVal = value === "__none__" ? "" : value;
+              onChange((prev) => ({ ...prev, manufacturer_id: nextVal, brand_id: "", model_id: "" }));
+            }}
+            searchPlaceholder="Cari manufacturer..."
+            options={[
+              { value: "__none__", label: "Tidak ada manufacturer" },
+              ...manufacturers.map((m) => ({ value: m.id, label: m.manufacturer_name })),
+            ]}
+          />
+        ) : (
+          <DisplayField label="Manufacturer" value={relationLabels.manufacturer || "-"} loading={relationLoading} compact />
+        )}
+
+        {editing && brands?.length ? (
+          <ComboboxField
+            label="Brand"
+            value={form.brand_id || "__none__"}
+            onValueChange={(value) => {
+              const nextVal = value === "__none__" ? "" : value;
+              onChange((prev) => ({ ...prev, brand_id: nextVal, model_id: "" }));
+            }}
+            searchPlaceholder="Cari brand..."
+            options={[
+              { value: "__none__", label: "Tidak ada brand" },
+              ...brands
+                .filter((b) => !form.manufacturer_id || b.manufacturer_id === form.manufacturer_id)
+                .map((b) => ({ value: b.id, label: b.brand_name })),
+            ]}
+          />
+        ) : (
+          <DisplayField label="Brand" value={relationLabels.brand || "-"} loading={relationLoading} compact />
+        )}
+
+        {editing && assetModels?.length ? (
+          <ComboboxField
+            label="Model"
+            value={form.model_id || "__none__"}
+            onValueChange={(value) => onChange((prev) => ({ ...prev, model_id: value === "__none__" ? "" : value }))}
+            searchPlaceholder="Cari model..."
+            options={[
+              { value: "__none__", label: "Tidak ada model" },
+              ...assetModels
+                .filter((m) => !form.brand_id || m.brand_id === form.brand_id)
+                .map((m) => ({ value: m.id, label: m.model_name })),
+            ]}
+          />
+        ) : (
+          <DisplayField label="Model" value={relationLabels.model || "-"} loading={relationLoading} compact />
+        )}
         <Field
           label="Serial Number"
           value={form.serial_number}

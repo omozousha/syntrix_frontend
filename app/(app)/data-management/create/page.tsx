@@ -117,6 +117,7 @@ type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
 type ServiceTypeOption = { id: string; service_type_name: string; service_type_code?: string | null };
 type TenantOption = { id: string; tenant_name: string; tenant_code?: string | null };
+type ClosureTypeOption = { id: string; closure_type_name: string; closure_type_code?: string | null; max_core_capacity?: number | null; max_splice_capacity?: number | null; supports_pass_through?: boolean | null; supports_branching?: boolean | null };
 type DeviceTypeMasterOption = {
   id: string;
   device_type_key: string;
@@ -246,6 +247,7 @@ export default function CreateDataManagementPage() {
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeOption[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
   const [splitterProfiles, setSplitterProfiles] = useState<SplitterProfileOption[]>([]);
+  const [closureTypes, setClosureTypes] = useState<ClosureTypeOption[]>([]);
   const [topologyFrontDevices, setTopologyFrontDevices] = useState<Array<{ id: string; device_name: string; device_type_key: string }>>([]);
   const [topologyRearDevices, setTopologyRearDevices] = useState<Array<{ id: string; device_name: string; device_type_key: string }>>([]);
   const [frontDevicePorts, setFrontDevicePorts] = useState<Array<{ id: string; port_label?: string | null; port_index: number; status: string }>>([]);
@@ -325,6 +327,10 @@ export default function CreateDataManagementPage() {
       odp_type: "",
       installation_type: "",
       management_ip: "",
+      vlan: "",
+      closure_type_id: "",
+      rack_unit_position: "",
+      u_height: "1",
       feeder_port_count: "",
       distribution_port_count: "",
       cable_type: "",
@@ -406,11 +412,11 @@ export default function CreateDataManagementPage() {
         const needsCustomerMasterData = isCustomer;
         const needsTenantMasterData = isDevice || isPop;
 
-        const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, cableTypeRes, coreCapacityRes, deviceCoreCapacityRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, deviceTypesRes, topologyRelationRulesRes, odpTypesRes, installationTypesRes, serviceTypesRes, tenantsRes, splitterProfilesRes] = await Promise.all([
+        const [regionsRes, popsRes, projectsRes, customersRes, popTypesRes, routeTypesRes, cableTypeRes, coreCapacityRes, deviceCoreCapacityRes, provincesRes, citiesAll, manufacturersRes, brandsRes, modelsRes, deviceTypesRes, topologyRelationRulesRes, odpTypesRes, installationTypesRes, serviceTypesRes, tenantsRes, splitterProfilesRes, closureTypesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
           optionalPaginatedRequest<PopOption>(needsPops, () => apiFetch<PaginatedResponse<PopOption>>("/pops?page=1&limit=500", { token })),
           optionalPaginatedRequest<ProjectOption>(needsProjects, () => apiFetch<PaginatedResponse<ProjectOption>>("/projects?page=1&limit=500", { token })),
-          emptyPaginatedResponse<CustomerOption>(),
+          optionalPaginatedRequest<CustomerOption>(isCustomer || deviceType === "ONT", () => apiFetch<PaginatedResponse<CustomerOption>>("/customers?page=1&limit=500", { token })),
           optionalPaginatedRequest<PopTypeOption>(isPop, () => apiFetch<PaginatedResponse<PopTypeOption>>("/popTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<RouteTypeOption>(deviceType === "CABLE" || deviceType === "ODC", () => apiFetch<PaginatedResponse<RouteTypeOption>>("/routeTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<CableTypeMasterOption>(deviceType === "CABLE" || deviceType === "ODC", () => apiFetch<PaginatedResponse<CableTypeMasterOption>>("/cableTypes?page=1&limit=200&is_active=true", { token })),
@@ -428,6 +434,7 @@ export default function CreateDataManagementPage() {
           optionalPaginatedRequest<ServiceTypeOption>(needsCustomerMasterData, () => apiFetch<PaginatedResponse<ServiceTypeOption>>("/serviceTypes?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<TenantOption>(needsTenantMasterData, () => apiFetch<PaginatedResponse<TenantOption>>("/tenants?page=1&limit=200&is_active=true", { token })),
           optionalPaginatedRequest<SplitterProfileOption>(needsDeviceMasterData, () => apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token })),
+          optionalPaginatedRequest<ClosureTypeOption>(deviceType === "JC", () => apiFetch<PaginatedResponse<ClosureTypeOption>>("/closureTypes?page=1&limit=200&is_active=true", { token })),
         ]);
 
         if (cancelled) return;
@@ -446,6 +453,7 @@ export default function CreateDataManagementPage() {
         setCableTypes(cableTypeRes?.data || []);
         setCoreCapacities(coreCapacityRes?.data || []);
         setDeviceCoreCapacities(deviceCoreCapacityRes?.data || []);
+        setClosureTypes(closureTypesRes?.data || []);
         setProvinces(provincesRes.data || []);
         setCities(citiesAll || []);
         setManufacturers(manufacturersRes.data || []);
@@ -867,6 +875,7 @@ export default function CreateDataManagementPage() {
     if (!form.device_name) identitasMissing.push("Device Name");
     if (!form.region_id) identitasMissing.push("Region");
     if (!form.pop_id) identitasMissing.push("POP");
+    if (!form.project_id) identitasMissing.push("Project Reference");
     if (form.device_type_key === "ODP") {
       if (!form.odp_type) identitasMissing.push("Tipe ODP");
       if (!form.installation_type) identitasMissing.push("Jenis Instalasi");
@@ -1357,7 +1366,7 @@ export default function CreateDataManagementPage() {
               </div>
 
               <div className="space-y-1.5">
-                <FieldLabel label="Project (opsional)" tooltip="Hubungkan device ke project." />
+                <FieldLabel label="Project Reference" tooltip="Hubungkan device ke project pengadaan/instalasi." required />
                 <Combobox
                   value={form.project_id || "__none__"}
                   onValueChange={(value) => setForm((p) => ({ ...p, project_id: value === "__none__" ? "" : value }))}
@@ -1517,6 +1526,10 @@ export default function CreateDataManagementPage() {
                     frontRelationLabel={frontRelationLabel}
                     rearRelationLabel={rearRelationLabel}
                     cableConnections={cableConnections}
+                    closureTypes={closureTypes}
+                    coreCapacities={coreCapacities}
+                    deviceCoreCapacities={deviceCoreCapacities}
+                    splitterProfiles={splitterProfiles}
                     onCableConnectionsChange={setCableConnections}
                     onChange={(patch) => setForm((previous) => ({ ...previous, ...patch }))}
                   />

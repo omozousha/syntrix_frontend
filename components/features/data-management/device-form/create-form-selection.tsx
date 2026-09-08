@@ -26,6 +26,8 @@ type CableTypeOption = { id: string; cable_type_code: string; cable_type_name: s
 type TopologyDeviceOption = { id: string; device_name: string; device_type_key: string };
 type TopologyPortOption = { id: string; port_label?: string | null; port_index: number; status: string };
 type CableConnectionDraft = { route_type: string; cable_type: string; cable_length_m: string; route_name: string };
+type ClosureTypeOption = { id: string; closure_type_name: string; closure_type_code?: string | null; max_core_capacity?: number | null; max_splice_capacity?: number | null };
+type CustomerOption = { id: string; customer_name: string; customer_number?: string | null; pop_id?: string | null; region_id?: string | null };
 
 export type CreateFormSelectionProps = {
   deviceTypeKey: string;
@@ -46,6 +48,11 @@ export type CreateFormSelectionProps = {
   frontRelationLabel?: string;
   rearRelationLabel?: string;
   cableConnections?: CableConnectionDraft[];
+  closureTypes?: ClosureTypeOption[];
+  customers?: CustomerOption[];
+  coreCapacities?: Array<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>;
+  deviceCoreCapacities?: Array<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>;
+  splitterProfiles?: SplitterProfileOption[];
   onCableConnectionsChange?: (next: CableConnectionDraft[]) => void;
   onChange: (patch: Record<string, string>) => void;
 };
@@ -69,6 +76,11 @@ export function CreateFormSelection({
   frontRelationLabel = "Hulu",
   rearRelationLabel = "Hilir",
   cableConnections = [],
+  closureTypes = [],
+  customers = [],
+  coreCapacities = [],
+  deviceCoreCapacities = [],
+  splitterProfiles = [],
   onCableConnectionsChange,
   onChange,
 }: CreateFormSelectionProps) {
@@ -81,20 +93,10 @@ export function CreateFormSelection({
         odpTypes={odpTypes}
         installationTypes={installationTypes}
         tenants={tenants}
-        routeTypes={routeTypes}
-        cableTypes={cableTypes}
         manufacturers={manufacturers}
         brands={brands}
         assetModels={assetModels}
-        topologyFrontDevices={topologyFrontDevices}
-        topologyRearDevices={topologyRearDevices}
-        frontDevicePorts={frontDevicePorts}
-        rearDevicePorts={rearDevicePorts}
-        loadingTopology={loadingTopology}
-        frontRelationLabel={frontRelationLabel}
-        rearRelationLabel={rearRelationLabel}
-        cableConnections={cableConnections}
-        onCableConnectionsChange={onCableConnectionsChange}
+        deviceCoreCapacities={deviceCoreCapacities}
         onChange={onChange}
       />
     );
@@ -110,11 +112,7 @@ export function CreateFormSelection({
         manufacturers={manufacturers}
         brands={brands}
         assetModels={assetModels}
-        topologyFrontDevices={topologyFrontDevices}
-        frontDevicePorts={frontDevicePorts}
-        loadingTopology={loadingTopology}
-        frontRelationLabel={frontRelationLabel}
-        rearRelationLabel={rearRelationLabel}
+        splitterProfiles={splitterProfiles}
         onChange={onChange}
       />
     );
@@ -129,16 +127,10 @@ export function CreateFormSelection({
         tenants={tenants}
         routeTypes={routeTypes}
         cableTypes={cableTypes}
+        coreCapacities={coreCapacities}
         manufacturers={manufacturers}
         brands={brands}
         assetModels={assetModels}
-        topologyFrontDevices={topologyFrontDevices}
-        topologyRearDevices={topologyRearDevices}
-        frontDevicePorts={frontDevicePorts}
-        rearDevicePorts={rearDevicePorts}
-        loadingTopology={loadingTopology}
-        frontRelationLabel={frontRelationLabel}
-        rearRelationLabel={rearRelationLabel}
         onChange={onChange}
       />
     );
@@ -154,13 +146,8 @@ export function CreateFormSelection({
       manufacturers={manufacturers}
       brands={brands}
       assetModels={assetModels}
-      topologyFrontDevices={topologyFrontDevices}
-      topologyRearDevices={topologyRearDevices}
-      frontDevicePorts={frontDevicePorts}
-      rearDevicePorts={rearDevicePorts}
-      loadingTopology={loadingTopology}
-      frontRelationLabel={frontRelationLabel}
-      rearRelationLabel={rearRelationLabel}
+      closureTypes={closureTypes}
+      deviceCoreCapacities={deviceCoreCapacities}
       onChange={onChange}
     />
   );

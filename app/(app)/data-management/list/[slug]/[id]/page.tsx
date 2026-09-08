@@ -23,6 +23,17 @@ import {
   OtbCoreChainSummarySection,
   ValidationReminderDialog,
 } from "@/components/features/data-management/device-detail";
+import {
+  PopBentoHeroTile,
+  PopBentoLocationTile,
+  PopBentoRackKpiTile,
+  PopRackElevationCanvas,
+  PopUnmountedTray,
+  PopRackMountModal,
+  type DeviceToMount,
+  type RackOption,
+} from "@/components/features/data-management/pop-detail";
+import { getStoredPopVisibleDeviceTypes } from "@/lib/pop-device-config";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -497,6 +508,7 @@ type RelationLabels = {
   pop?: string;
   project?: string;
   serviceType?: string;
+  customer?: string;
   manufacturer?: string;
   brand?: string;
   model?: string;
@@ -560,6 +572,7 @@ export default function DataManagementDetailPage() {
   const [deviceTypeMasters, setDeviceTypeMasters] = useState<DeviceTypeMasterOption[]>([]);
   const [topologyRelationRules, setTopologyRelationRules] = useState<TopologyRelationRuleOption[]>([]);
   const [deviceCoreCapacities, setDeviceCoreCapacities] = useState<Array<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>>([]);
+  const [coreCapacities, setCoreCapacities] = useState<Array<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>>([]);
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
@@ -593,6 +606,17 @@ export default function DataManagementDetailPage() {
   const [loadingOdpLookups, setLoadingOdpLookups] = useState(false);
   const [topologyLookupData, setTopologyLookupData] = useState<TopologyLookupData>(emptyTopologyLookup());
   const [navModalOpen, setNavModalOpen] = useState(false);
+
+  // POP Rack & Device States
+  const [popDevices, setPopDevices] = useState<any[]>([]);
+  const [loadingPopDevices, setLoadingPopDevices] = useState(false);
+  const [selectedPopRackId, setSelectedPopRackId] = useState("");
+  const [popMountModalOpen, setPopMountModalOpen] = useState(false);
+  const [popMountTargetU, setPopMountTargetU] = useState(1);
+  const [popDeviceToMount, setPopDeviceToMount] = useState<DeviceToMount | null>(null);
+  const [visiblePopDeviceTypes, setVisiblePopDeviceTypes] = useState<string[]>(() =>
+    getStoredPopVisibleDeviceTypes((me?.app_user as any)?.metadata)
+  );
   const relationReferenceMaps = useMemo(() => {
     const data = relationReferenceQuery.data?.data || {};
     return {
@@ -610,6 +634,65 @@ export default function DataManagementDetailPage() {
     () => Array.from(relationReferenceMaps.projects.values()) as ProjectLookupOption[],
     [relationReferenceMaps.projects],
   );
+  const manufacturerOptions = useMemo(
+    () => Array.from(relationReferenceMaps.manufacturers.values()) as Array<{ id: string; manufacturer_name: string; manufacturer_code?: string | null }>,
+    [relationReferenceMaps.manufacturers],
+  );
+  const brandOptions = useMemo(
+    () => Array.from(relationReferenceMaps.brands.values()) as Array<{ id: string; brand_name: string; brand_code?: string | null; manufacturer_id?: string | null }>,
+    [relationReferenceMaps.brands],
+  );
+  const modelOptions = useMemo(
+    () => Array.from(relationReferenceMaps.models.values()) as Array<{ id: string; model_name: string; model_code?: string | null; brand_id?: string | null; manufacturer_id?: string | null; capacity_core?: number | null; total_ports?: number | null }>,
+    [relationReferenceMaps.models],
+  );
+
+  const popRacks = useMemo<RackOption[]>(() => {
+    if (category?.resource !== "pops") return [];
+    return popDevices
+      .filter((d) => d.device_type_key === "RACK")
+      .map((d) => ({
+        id: d.id,
+        device_name: d.device_name || "Rack",
+        rack_u_height: Number(d.specifications?.rack_u_height) || 42,
+      }));
+  }, [category?.resource, popDevices]);
+
+  const activePopRackId = selectedPopRackId || popRacks[0]?.id || "";
+
+  const popMountedDevices = useMemo<DeviceToMount[]>(() => {
+    if (category?.resource !== "pops" || !activePopRackId) return [];
+    return popDevices.filter(
+      (d) => d.device_type_key !== "RACK" && d.specifications?.rack_device_id === activePopRackId
+    );
+  }, [category?.resource, popDevices, activePopRackId]);
+
+  const popUnmountedDevices = useMemo<DeviceToMount[]>(() => {
+    if (category?.resource !== "pops") return [];
+    return popDevices.filter(
+      (d) => d.device_type_key !== "RACK" && !d.specifications?.rack_device_id
+    );
+  }, [category?.resource, popDevices]);
+
+  const popDeviceTypeCounts = useMemo(() => {
+    if (category?.resource !== "pops") return {};
+    const counts: Record<string, number> = {};
+    popDevices.forEach((d) => {
+      const k = String(d.device_type_key || "").toUpperCase();
+      counts[k] = (counts[k] || 0) + 1;
+    });
+    return counts;
+  }, [category?.resource, popDevices]);
+
+  const totalPopU = useMemo(() => {
+    return popRacks.reduce((sum, r) => sum + (r.rack_u_height || 42), 0);
+  }, [popRacks]);
+
+  const usedPopU = useMemo(() => {
+    return popDevices
+      .filter((d) => d.device_type_key !== "RACK" && d.specifications?.rack_device_id)
+      .reduce((sum, d) => sum + (Number(d.specifications?.u_height) || 1), 0);
+  }, [popDevices]);
 
   useEffect(() => {
     if (category?.resource !== "devices" || !form.project_id) return;
@@ -1071,7 +1154,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     let cancelled = false;
     async function loadDeviceMasterData() {
       try {
-        const [splitterResponse, deviceTypesResponse, topologyRelationRulesResponse, odpTypesResponse, installationTypesResponse, tenantsResponse, deviceCoreCapacitiesResponse, closureTypesResponse, cableTypesResponse, routeTypesResponse, provincesResponse, citiesResponse] = await Promise.allSettled([
+        const [splitterResponse, deviceTypesResponse, topologyRelationRulesResponse, odpTypesResponse, installationTypesResponse, tenantsResponse, deviceCoreCapacitiesResponse, closureTypesResponse, cableTypesResponse, routeTypesResponse, provincesResponse, citiesResponse, coreCapacitiesResponse] = await Promise.allSettled([
           apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<DeviceTypeMasterOption>>("/deviceTypes?page=1&limit=300&is_active=true", { token }),
           apiFetch<PaginatedResponse<TopologyRelationRuleOption>>("/topologyRelationRules?page=1&limit=500&is_active=true", { token }),
@@ -1084,6 +1167,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           apiFetch<PaginatedResponse<{ id: string; route_type_code?: string | null; route_type_name: string }>>("/routeTypes?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<ProvinceOption>>("/provinces?page=1&limit=200", { token }),
           apiFetch<PaginatedResponse<CityOption>>("/cities?page=1&limit=500", { token }),
+          apiFetch<PaginatedResponse<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>>("/coreCapacities?page=1&limit=200&is_active=true", { token }),
         ]);
         if (cancelled) return;
         setSplitterProfiles(splitterResponse.status === "fulfilled" ? splitterResponse.value.data || [] : []);
@@ -1098,6 +1182,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         setRouteTypes(routeTypesResponse.status === "fulfilled" ? routeTypesResponse.value.data || [] : []);
         setProvinces(provincesResponse.status === "fulfilled" ? provincesResponse.value.data || [] : []);
         setCities(citiesResponse.status === "fulfilled" ? citiesResponse.value.data || [] : []);
+        setCoreCapacities(coreCapacitiesResponse.status === "fulfilled" ? coreCapacitiesResponse.value.data || [] : []);
       } catch {
         if (cancelled) return;
         setSplitterProfiles([]);
@@ -1231,6 +1316,120 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   useEffect(() => {
     setTopologyLookupData(emptyTopologyLookup());
   }, []);
+
+  useEffect(() => {
+    if (category?.resource !== "pops" || !item?.id || !token) {
+      setPopDevices([]);
+      return;
+    }
+    const popItemId = item.id;
+    let cancelled = false;
+    async function loadPopDevices() {
+      setLoadingPopDevices(true);
+      try {
+        const res = await apiFetch<PaginatedResponse<any>>(
+          `/devices?page=1&limit=500&pop_id=${encodeURIComponent(popItemId)}`,
+          { token }
+        );
+        if (!cancelled) {
+          const rows = res.data || [];
+          setPopDevices(rows);
+          const racks = rows.filter((d: any) => d.device_type_key === "RACK");
+          if (racks.length > 0) {
+            setSelectedPopRackId((prev) => (prev && racks.some((r: any) => r.id === prev) ? prev : racks[0].id));
+          }
+        }
+      } catch {
+        if (!cancelled) setPopDevices([]);
+      } finally {
+        if (!cancelled) setLoadingPopDevices(false);
+      }
+    }
+    void loadPopDevices();
+    return () => {
+      cancelled = true;
+    };
+  }, [category?.resource, item?.id, token]);
+
+  async function handleCreateNewPopRack() {
+    if (!item?.id || !token) return;
+    const nextNumber = String(popRacks.length + 1).padStart(2, "0");
+    const rackName = `Rack ${nextNumber}`;
+    try {
+      const newRack = await apiFetch<{ data?: { id?: string } }>("/devices", {
+        method: "POST",
+        token,
+        body: {
+          device_name: rackName,
+          device_type_key: "RACK",
+          asset_group: "passive",
+          status: "installed",
+          region_id: valueOf(item.region_id),
+          pop_id: item.id,
+          specifications: {
+            rack_u_height: 42,
+            rack_width_inches: 19,
+            rack_type: "closed_cabinet",
+          },
+        },
+      });
+      setMessage(`Rak ${rackName} berhasil dibuat.`);
+      const res = await apiFetch<PaginatedResponse<any>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
+      setPopDevices(res.data || []);
+      if (newRack?.data?.id) setSelectedPopRackId(newRack.data.id);
+    } catch (err) {
+      setError((err as Error).message || "Gagal membuat rak baru.");
+    }
+  }
+
+  async function handleMountPopDevice(deviceId: string, rackId: string, uPos: number, uHeight: number) {
+    if (!token || !item?.id) return;
+    const targetDev = popDevices.find((d) => d.id === deviceId);
+    const updatedSpecs = {
+      ...(targetDev?.specifications || {}),
+      rack_device_id: rackId,
+      rack_unit_position: uPos,
+      u_height: uHeight,
+    };
+    try {
+      await apiFetch(`/devices/${deviceId}`, {
+        method: "PATCH",
+        token,
+        body: {
+          specifications: updatedSpecs,
+        },
+      });
+      setMessage(`Perangkat berhasil dipasang di U${uPos}.`);
+      const res = await apiFetch<PaginatedResponse<any>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
+      setPopDevices(res.data || []);
+    } catch (err) {
+      setError((err as Error).message || "Gagal memasang perangkat ke rak.");
+    }
+  }
+
+  async function handleUnmountPopDevice(deviceId: string) {
+    if (!token || !item?.id) return;
+    const targetDev = popDevices.find((d) => d.id === deviceId);
+    const updatedSpecs = {
+      ...(targetDev?.specifications || {}),
+      rack_device_id: null,
+      rack_unit_position: null,
+    };
+    try {
+      await apiFetch(`/devices/${deviceId}`, {
+        method: "PATCH",
+        token,
+        body: {
+          specifications: updatedSpecs,
+        },
+      });
+      setMessage("Perangkat berhasil dilepas dari rak.");
+      const res = await apiFetch<PaginatedResponse<any>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
+      setPopDevices(res.data || []);
+    } catch (err) {
+      setError((err as Error).message || "Gagal melepas perangkat dari rak.");
+    }
+  }
 
 
   useEffect(() => {
@@ -2374,7 +2573,7 @@ if (!category) {
           backHref={backToListHref}
           actions={
             <>
-              {category?.resource === "devices" && item &&
+              {(category?.resource === "devices" || category?.resource === "pops") && item &&
                Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude)) ? (
                 <Button
                   type="button"
@@ -2453,9 +2652,12 @@ if (!category) {
                         effectiveValidationStatus={detailValidationStatus}
                         provinces={provinces}
                         cities={cities}
+                        manufacturers={manufacturerOptions}
+                        brands={brandOptions}
+                        assetModels={modelOptions}
                         topologyLookup={topologyLookupData}
                         topologySummary={deviceTopologySummary}
-                        coreCapacities={[]}
+                        coreCapacities={coreCapacities}
                         cableTypes={cableTypes}
                         routeTypes={routeTypes}
                         deviceCoreCapacities={deviceCoreCapacities}
@@ -2478,10 +2680,10 @@ if (!category) {
                       deviceTypeLabel={valueOf(item.device_type_key)}
                       operationalStatus={valueOf(item.status, "active")}
                       validationStatus={detailValidationStatus}
-                      popName={relationLabels.pop || valueOf(item.pop_id)}
-                      regionName={relationLabels.region || valueOf(item.region_id)}
-                      tenantName={relationLabels.tenant || valueOf(item.tenant_id)}
-                      projectName={relationLabels.project || valueOf(item.project_id)}
+                      popName={relationLabels.pop}
+                      regionName={relationLabels.region}
+                      tenantName={relationLabels.tenant}
+                      projectName={relationLabels.project}
                       installationDate={valueOf(item.installation_date)}
                       updatedAt={valueOf(item.updated_at || item.created_at)}
                       notes={valueOf(item.notes)}
@@ -2511,7 +2713,7 @@ if (!category) {
                       latitude={item.latitude as any}
                       longitude={item.longitude as any}
                       address={valueOf(item.address)}
-                      popName={relationLabels.pop || valueOf(item.pop_id)}
+                      popName={relationLabels.pop}
                       cityName={relationLabels.city}
                       provinceName={relationLabels.province}
                       onOpenMapModal={() => setNavModalOpen(true)}
@@ -2527,12 +2729,24 @@ if (!category) {
                       usedCore={item.used_core as any}
                       splitterRatio={valueOf(item.splitter_ratio)}
                       odpType={valueOf(item.odp_type)}
-                      modelName={relationLabels.model || valueOf(item.model_id)}
-                      brandName={relationLabels.brand || valueOf(item.brand_id)}
+                      modelName={relationLabels.model}
+                      brandName={relationLabels.brand}
                       manufacturerName={relationLabels.manufacturer}
                       installationType={valueOf(item.installation_type)}
                       serialNumber={valueOf(item.serial_number)}
                       deviceTypeKey={valueOf(item.device_type_key)}
+                      managementIp={valueOf(item.management_ip)}
+                      vlan={valueOf(item.vlan)}
+                      closureTypeName={closureTypes.find((c) => c.id === valueOf(item.closure_type_id))?.closure_type_name || undefined}
+                      trayCount={(item.specifications as any)?.tray_count || undefined}
+                      cableLengthM={item.cable_length_m as any}
+                      cableType={valueOf(item.cable_type)}
+                      routeType={valueOf(item.route_type)}
+                      customerName={relationLabels.customer || (item as any).customer_name}
+                      customerNumber={(item as any).customer_number}
+                      uHeight={(item as any).u_height || (item.specifications as any)?.u_height}
+                      feederPortCount={item.feeder_port_count as any}
+                      operationalStatus={valueOf(item.status, "active")}
                     />
                   </div>
 
@@ -2565,8 +2779,162 @@ if (!category) {
                   </div>
                 </div>
               </div>
+            ) : category.resource === "pops" ? (
+              <div className="space-y-4">
+                {editable && isEditing ? (
+                  <Card className="rounded-2xl border border-border/60 bg-card p-4 sm:p-6 shadow-xs glass-inset">
+                    <CardHeader className="p-0 pb-4 border-b border-border/40">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <CardTitle className="text-base font-bold">Edit Informasi POP</CardTitle>
+                          <CardDescription className="text-xs">Ubah data site, lokasi, atau informasi operasional POP.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setForm(buildEditableForm(item, category.resource, deviceTopologySummary));
+                              setIsEditing(false);
+                            }}
+                            disabled={saving}
+                          >
+                            Batal
+                          </Button>
+                          <Button size="sm" onClick={() => void handleSave()} disabled={saving}>
+                            <Save className="mr-1.5 size-3.5" />
+                            {saving ? "Menyimpan..." : "Simpan Perubahan"}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0 pt-4">
+                      <PopDetailForm
+                        form={form}
+                        onChange={setForm}
+                        editing={isEditing}
+                        relationLabels={relationLabels}
+                        relationLoading={relationLabelsLoading}
+                      />
+                    </CardContent>
+                  </Card>
+                ) : null}
+
+                {/* 6-TILE BENTO GRID POP + RACK ELEVATION */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+                  {/* TILE 1: POP Hero & Status & Power (7 Cols Desktop / 12 Mobile) */}
+                  <div className="sm:col-span-7 lg:col-span-7">
+                    <PopBentoHeroTile
+                      popName={valueOf(item.pop_name)}
+                      popCode={valueOf(item.pop_code)}
+                      popType={relationLabels.popType || valueOf(item.pop_type)}
+                      regionName={relationLabels.region}
+                      statusPop={valueOf(item.status_pop, "active")}
+                      validationStatus={detailValidationStatus}
+                      tanggalPopAktif={valueOf(item.tanggal_pop_aktif)}
+                      tenant={valueOf(item.tenant)}
+                      plnCidNumber={valueOf(item.pln_cid_number)}
+                      plnPaymentMethod={valueOf(item.pln_payment_method)}
+                      plnPhase={valueOf(item.pln_phase)}
+                      plnWattage={item.pln_wattage as any}
+                      updatedAt={valueOf(item.updated_at || item.created_at)}
+                      tags={(() => {
+                        const rawTags = (item as any)?.tags;
+                        return Array.isArray(rawTags) ? rawTags : [];
+                      })()}
+                    />
+                  </div>
+
+                  {/* TILE 2: Peta & Lokasi POP (5 Cols Desktop / 12 Mobile) */}
+                  <div className="sm:col-span-5 lg:col-span-5">
+                    <PopBentoLocationTile
+                      latitude={item.latitude as any}
+                      longitude={item.longitude as any}
+                      address={valueOf(item.address)}
+                      popName={valueOf(item.pop_name)}
+                      cityName={relationLabels.city}
+                      provinceName={relationLabels.province}
+                      onOpenMapModal={() => setNavModalOpen(true)}
+                    />
+                  </div>
+
+                  {/* TILE 3: KPI Utilisasi Rak & Breakdown Perangkat Terfilter (12 Cols Full Width) */}
+                  <div className="col-span-1 sm:col-span-12">
+                    <PopBentoRackKpiTile
+                      totalRacks={popRacks.length}
+                      totalU={totalPopU}
+                      usedU={usedPopU}
+                      popId={item.id}
+                      deviceTypeCounts={popDeviceTypeCounts}
+                      visibleDeviceTypes={visiblePopDeviceTypes}
+                      token={token || undefined}
+                      onVisibleTypesChange={setVisiblePopDeviceTypes}
+                    />
+                  </div>
+
+                  {/* TILE 4: Interactive Rack Elevation Canvas (8 Cols Desktop / 12 Mobile) */}
+                  <div className="sm:col-span-12 lg:col-span-8">
+                    <PopRackElevationCanvas
+                      racks={popRacks}
+                      selectedRackId={activePopRackId}
+                      mountedDevices={popMountedDevices}
+                      onSelectRackId={setSelectedPopRackId}
+                      onCreateNewRack={() => void handleCreateNewPopRack()}
+                      onMountDevice={handleMountPopDevice}
+                      onUnmountDevice={handleUnmountPopDevice}
+                      onEmptySlotClick={(u) => {
+                        setPopMountTargetU(u);
+                        setPopDeviceToMount(null);
+                        setPopMountModalOpen(true);
+                      }}
+                    />
+                  </div>
+
+                  {/* TILE 5: Unmounted Devices Tray (4 Cols Desktop / 12 Mobile) */}
+                  <div className="sm:col-span-12 lg:col-span-4">
+                    <PopUnmountedTray
+                      devices={popUnmountedDevices}
+                      onSelectDeviceToMount={(dev) => {
+                        setPopDeviceToMount(dev);
+                        setPopMountTargetU(1);
+                        setPopMountModalOpen(true);
+                      }}
+                    />
+                  </div>
+
+                  {/* TILE 6: Galeri Foto Ruang/Site POP (12 Cols Full Width) */}
+                  <div className="col-span-1 sm:col-span-12">
+                    <DeviceBentoGalleryTile
+                      deviceTypeLabel="Site POP"
+                      attachments={galleryImageAttachments}
+                      imagePreviewUrls={imagePreviewUrls}
+                      attachmentNames={attachmentNames}
+                      loadingImagePreviews={loadingImagePreviews}
+                      editing={editable && isEditing}
+                      maxImageAttachments={MAX_IMAGE_ATTACHMENTS}
+                      newImageFiles={newImageFiles}
+                      newImagePreviewUrls={newImagePreviewUrls}
+                      onOpenGallery={openGalleryAt}
+                      onNewImageFilesChange={handleNewImageFilesChange}
+                      onClearNewImages={() => setNewImageFiles([])}
+                      onRemoveNewImage={removeNewImageAt}
+                    />
+                  </div>
+                </div>
+
+                <PopRackMountModal
+                  open={popMountModalOpen}
+                  onOpenChange={setPopMountModalOpen}
+                  racks={popRacks}
+                  selectedRackId={activePopRackId}
+                  initialU={popMountTargetU}
+                  initialDevice={popDeviceToMount}
+                  unmountedDevices={popUnmountedDevices}
+                  onMount={handleMountPopDevice}
+                />
+              </div>
             ) : (
-              /* Non-device forms (pops, customers, projects, routes) */
+              /* Non-device forms (customers, projects, routes) */
               <div className="rounded-[2rem] border border-border/40 bg-muted/10 p-2 sm:p-3 shadow-xs">
                 <Card className="rounded-[calc(2rem-0.5rem)] border-border/60 shadow-xs glass-inset">
                   <CardHeader>
@@ -2581,15 +2949,6 @@ if (!category) {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {category.resource === "pops" ? (
-                      <PopDetailForm
-                        form={form}
-                        onChange={setForm}
-                        editing={isEditing}
-                        relationLabels={relationLabels}
-                        relationLoading={relationLabelsLoading}
-                      />
-                    ) : null}
                     {category.resource === "customers" ? (
                       <CustomerDetailForm item={item} relationLabels={relationLabels} relationLoading={relationLabelsLoading} />
                     ) : null}
@@ -2609,7 +2968,7 @@ if (!category) {
                     {category.resource === "routes" ? (
                       <RouteDetailForm item={item} relationLabels={relationLabels} relationLoading={relationLabelsLoading} />
                     ) : null}
-                    {category.resource !== "pops" && category.resource !== "customers" && category.resource !== "projects" && category.resource !== "routes" ? (
+                    {category.resource !== "customers" && category.resource !== "projects" && category.resource !== "routes" ? (
                       <GenericDeviceRawSection item={item} />
                     ) : null}
 
@@ -2778,7 +3137,7 @@ if (!category) {
           onOpenChange={setNavModalOpen}
           token={token || ""}
           deviceId={String(item.id)}
-          deviceName={String(item.device_name || item.device_id || "")}
+          deviceName={String(item.device_name || (item as any).pop_name || item.device_id || (item as any).pop_code || "")}
           deviceLat={Number(item.latitude)}
           deviceLng={Number(item.longitude)}
         />

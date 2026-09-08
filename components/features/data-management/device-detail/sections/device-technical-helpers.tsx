@@ -176,6 +176,7 @@ export type RelationLabels = {
   brand?: string;
   model?: string;
   tenant?: string;
+  customer?: string;
   province?: string;
   city?: string;
 };

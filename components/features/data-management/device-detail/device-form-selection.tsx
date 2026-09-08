@@ -52,6 +52,9 @@ export type DeviceFormSelectionProps = {
   coreCapacities?: Array<{ core_capacity_value: number; label: string }>;
   deviceCoreCapacities?: Array<{ core_capacity_value: number; label: string; allowed_device_type_keys?: string[] | null }>;
   closureTypes?: Array<{ id: string; closure_type_name: string; closure_type_code?: string | null; max_core_capacity?: number | null; max_splice_capacity?: number | null; supports_pass_through?: boolean | null; supports_branching?: boolean | null }>;
+  manufacturers?: Array<{ id: string; manufacturer_name: string; manufacturer_code?: string | null }>;
+  brands?: Array<{ id: string; brand_name: string; brand_code?: string | null; manufacturer_id?: string | null }>;
+  assetModels?: Array<{ id: string; model_name: string; model_code?: string | null; brand_id?: string | null; manufacturer_id?: string | null; capacity_core?: number | null; total_ports?: number | null }>;
   // ODC chain summary props
   odcChainSummary?: OdcDeviceFormProps["odcChainSummary"];
   odcChainLoading?: boolean;
@@ -84,6 +87,9 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
         effectiveValidationStatus={props.effectiveValidationStatus}
         provinces={props.provinces}
         cities={props.cities}
+        manufacturers={props.manufacturers}
+        brands={props.brands}
+        assetModels={props.assetModels}
         odpTypes={props.odpTypes}
         installationTypes={props.installationTypes}
         latestFieldValidation={props.latestFieldValidation}
@@ -108,6 +114,9 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
         effectiveValidationStatus={props.effectiveValidationStatus}
         provinces={props.provinces}
         cities={props.cities}
+        manufacturers={props.manufacturers}
+        brands={props.brands}
+        assetModels={props.assetModels}
         topologyLookup={topologyLookup}
         cableTypes={props.cableTypes}
         routeTypes={props.routeTypes}
@@ -132,6 +141,9 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
         effectiveValidationStatus={props.effectiveValidationStatus}
         provinces={props.provinces}
         cities={props.cities}
+        manufacturers={props.manufacturers}
+        brands={props.brands}
+        assetModels={props.assetModels}
         topologyLookup={topologyLookup}
         deviceCoreCapacities={props.deviceCoreCapacities}
         otbChainSummary={props.otbChainSummary}
@@ -157,6 +169,9 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
         effectiveValidationStatus={props.effectiveValidationStatus}
         provinces={props.provinces}
         cities={props.cities}
+        manufacturers={props.manufacturers}
+        brands={props.brands}
+        assetModels={props.assetModels}
         topologyLookup={topologyLookup}
         topologySummary={props.topologySummary as any || null}
         deviceCoreCapacities={props.deviceCoreCapacities}
@@ -183,6 +198,9 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
         effectiveValidationStatus={props.effectiveValidationStatus}
         provinces={props.provinces}
         cities={props.cities}
+        manufacturers={props.manufacturers}
+        brands={props.brands}
+        assetModels={props.assetModels}
         topologyLookup={topologyLookup}
         deviceCoreCapacities={props.deviceCoreCapacities}
         closureTypes={props.closureTypes}
@@ -205,6 +223,9 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
       effectiveValidationStatus={props.effectiveValidationStatus}
       provinces={props.provinces}
       cities={props.cities}
+      manufacturers={props.manufacturers}
+      brands={props.brands}
+      assetModels={props.assetModels}
       topologyLookup={topologyLookup}
       deviceCoreCapacities={props.deviceCoreCapacities}
     />

@@ -20,6 +20,8 @@ type CableTypeOption = { id: string; cable_type_code: string; cable_type_name: s
 type TopologyDeviceOption = { id: string; device_name: string; device_type_key: string };
 type TopologyPortOption = { id: string; port_label?: string | null; port_index: number; status: string };
 
+type CoreCapacityOption = { core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null };
+
 export type CableCreateFormValues = {
   device_type_key: string;
   device_name: string;
@@ -33,6 +35,7 @@ export type CableCreateFormValues = {
   brand_id: string;
   model_id: string;
   serial_number: string;
+  capacity_core?: string;
   cable_type: string;
   cable_length_m: string;
   cable_length: string;
@@ -40,10 +43,10 @@ export type CableCreateFormValues = {
   route_type: string;
   route_coordinates: string;
   route_file_url: string;
-  front_device_id: string;
-  front_port_id: string;
-  rear_device_id: string;
-  rear_port_id: string;
+  front_device_id?: string;
+  front_port_id?: string;
+  rear_device_id?: string;
+  rear_port_id?: string;
 };
 
 export function CableDeviceCreate({
@@ -56,24 +59,19 @@ export function CableDeviceCreate({
   assetModels,
   routeTypes,
   cableTypes = [],
-  topologyFrontDevices = [],
-  topologyRearDevices = [],
-  frontDevicePorts = [],
-  rearDevicePorts = [],
-  loadingTopology = false,
-  frontRelationLabel = "Hulu",
-  rearRelationLabel = "Hilir",
+  coreCapacities = [],
   onChange,
-  }: {
+}: {
   values: CableCreateFormValues;
-odpTypes: OdpTypeOption[];
+  odpTypes: OdpTypeOption[];
   installationTypes: InstallationTypeOption[];
   tenants: TenantOption[];
-routeTypes: RouteTypeOption[];
+  routeTypes: RouteTypeOption[];
   cableTypes?: CableTypeOption[];
   manufacturers: ManufacturerOption[];
   brands: BrandOption[];
   assetModels: AssetModelOption[];
+  coreCapacities?: CoreCapacityOption[];
   topologyFrontDevices?: TopologyDeviceOption[];
   topologyRearDevices?: TopologyDeviceOption[];
   frontDevicePorts?: TopologyPortOption[];
@@ -83,6 +81,15 @@ routeTypes: RouteTypeOption[];
   rearRelationLabel?: string;
   onChange: (patch: Record<string, string>) => void;
 }) {
+  // Filter core capacities based on selected route type
+  const routeType = values.route_type || "";
+  const filteredCoreCapacities = coreCapacities.filter((item) => {
+    const allowedKeys = item.allowed_route_type_keys || [];
+    if (!allowedKeys.length) return true;
+    if (allowedKeys.includes("_NONE_")) return false;
+    if (!routeType) return true;
+    return allowedKeys.includes(routeType);
+  });
   return (
     <>
       {/* ═══ 1. INFORMASI DEVICE + AFILIASI JARINGAN ═══ */}
@@ -132,6 +139,24 @@ routeTypes: RouteTypeOption[];
           ]}
           placeholder="Pilih tipe kabel"
           searchPlaceholder="Cari tipe kabel..."
+        />
+      </div>
+
+      {/* Kapasitas Core */}
+      <div className="space-y-1.5">
+        <FieldLabel label="Kapasitas Core" tooltip="Pilih total core optik dalam kabel." required />
+        <Combobox
+          value={values.capacity_core || "__none__"}
+          onValueChange={(v) => onChange({ capacity_core: v === "__none__" ? "" : v })}
+          options={[
+            { value: "__none__", label: "Pilih kapasitas core" },
+            ...filteredCoreCapacities.map((c) => ({
+              value: String(c.core_capacity_value),
+              label: `${c.core_capacity_value} Core${c.label ? ` — ${c.label}` : ""}`,
+            })),
+          ]}
+          placeholder="Pilih kapasitas core"
+          searchPlaceholder="Cari kapasitas core..."
         />
       </div>
 
@@ -186,76 +211,7 @@ routeTypes: RouteTypeOption[];
         onChange={onChange}
       />
 
-      {/* ═══ 5. RELASI TOPOLOGY DEVICE ═══ */}
-      <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border bg-muted/40 px-3 py-1.5">
-        Relasi Topologi Kabel
-      </div>
-
-      <div className="space-y-1.5">
-        <FieldLabel label={`Front Port (${frontRelationLabel})`} tooltip="Pilih perangkat OTB di POP yang sama sebagai sumber koneksi hulu (feeder/backbone)." />
-        <Combobox
-          value={values.front_device_id || "__none__"}
-          onValueChange={(v) => {
-            const deviceId = v === "__none__" ? "" : v;
-            onChange({ front_device_id: deviceId, front_port_id: "" });
-          }}
-          options={[
-            { value: "__none__", label: values.pop_id ? "Pilih OTB hulu" : "Pilih POP terlebih dahulu" },
-            ...topologyFrontDevices.map((d) => ({ value: d.id, label: `${d.device_name} (${d.device_type_key})` })),
-          ]}
-          placeholder={values.pop_id ? "Pilih OTB hulu" : "Pilih POP terlebih dahulu"}
-          searchPlaceholder="Cari OTB hulu..."
-          disabled={loadingTopology || values.pop_id === ""}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <FieldLabel label="Port OTB" tooltip="Pilih port idle dari OTB yang terpilih." />
-        <Combobox
-          value={values.front_port_id || "__none__"}
-          onValueChange={(v) => onChange({ front_port_id: v === "__none__" ? "" : v })}
-          options={[
-            { value: "__none__", label: values.front_device_id ? "Pilih port OTB" : "Pilih OTB terlebih dahulu" },
-            ...frontDevicePorts.map((port) => ({ value: port.id, label: port.port_label || `Port #${port.port_index}` })),
-          ]}
-          placeholder={values.front_device_id ? "Pilih port OTB" : "Pilih OTB terlebih dahulu"}
-          searchPlaceholder="Cari port OTB..."
-          disabled={!values.front_device_id}
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <FieldLabel label={`Rear Port (${rearRelationLabel})`} tooltip="Pilih perangkat ODC atau JC di POP yang sama sebagai tujuan koneksi hilir kabel." />
-        <Combobox
-          value={values.rear_device_id || "__none__"}
-          onValueChange={(v) => {
-            const deviceId = v === "__none__" ? "" : v;
-            onChange({ rear_device_id: deviceId, rear_port_id: "" });
-          }}
-          options={[
-            { value: "__none__", label: values.pop_id ? "Pilih ODC/JC hilir" : "Pilih POP terlebih dahulu" },
-            ...topologyRearDevices.map((d) => ({ value: d.id, label: `${d.device_name} (${d.device_type_key})` })),
-          ]}
-          placeholder={values.pop_id ? "Pilih ODC/JC hilir" : "Pilih POP terlebih dahulu"}
-          searchPlaceholder="Cari device hilir..."
-          disabled={loadingTopology || values.pop_id === ""}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <FieldLabel label="Port ODC/JC" tooltip="Pilih port idle dari device hilir yang terpilih." />
-        <Combobox
-          value={values.rear_port_id || "__none__"}
-          onValueChange={(v) => onChange({ rear_port_id: v === "__none__" ? "" : v })}
-          options={[
-            { value: "__none__", label: values.rear_device_id ? "Pilih port hilir" : "Pilih device hilir terlebih dahulu" },
-            ...rearDevicePorts.map((port) => ({ value: port.id, label: port.port_label || `Port #${port.port_index}` })),
-          ]}
-          placeholder={values.rear_device_id ? "Pilih port hilir" : "Pilih device hilir terlebih dahulu"}
-          searchPlaceholder="Cari port hilir..."
-          disabled={!values.rear_device_id}
-        />
-      </div>
-
-      {/* ═══ 6. DOKUMENTASI ═══ */}
+      {/* ═══ 5. DOKUMENTASI ═══ */}
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border border-dashed bg-muted/20 px-3 py-1.5">
         Dokumentasi
         <span className="ml-2 font-normal normal-case text-muted-foreground">— Tambah gambar/attachment setelah device tersimpan, melalui halaman detail CABLE.</span>
