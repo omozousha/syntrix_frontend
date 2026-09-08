@@ -3233,18 +3233,7 @@ if (!category) {
                     <PopBentoPropertyTile property={popPropertyData} />
                   </div>
 
-                  {/* TILE 4: Berkas & Dokumen Site POP (PDF, PBB, Kontrak, PBG) (12 Cols Full Width) */}
-                  <div className="col-span-1 sm:col-span-12">
-                    <PopBentoDocumentsTile
-                      documents={popDocuments}
-                      token={token || undefined}
-                      canEdit={editable}
-                      onUploadDocument={handleUploadPopDocument}
-                      onDeleteDocument={handleDeletePopDocument}
-                    />
-                  </div>
-
-                  {/* TILE 5: KPI Utilisasi Rak & Breakdown Perangkat Terfilter (12 Cols Full Width) */}
+                  {/* TILE 4: KPI Utilisasi Rak & Breakdown Perangkat Terfilter (12 Cols Full Width) */}
                   <div className="col-span-1 sm:col-span-12">
                     <PopBentoRackKpiTile
                       totalRacks={popRacks.length}
@@ -3258,7 +3247,7 @@ if (!category) {
                     />
                   </div>
 
-                  {/* TILE 6: Interactive Rack Elevation Canvas (Adaptive 8 or 12 Cols) */}
+                  {/* TILE 5: Interactive Rack Elevation Canvas (Adaptive 8 or 12 Cols) */}
                   <div className={showUnmountedTray ? "sm:col-span-12 lg:col-span-8" : "col-span-1 sm:col-span-12 lg:col-span-12"}>
                     <PopRackElevationCanvas
                       racks={popRacks}
@@ -3313,6 +3302,17 @@ if (!category) {
                       onNewImageFilesChange={handleNewImageFilesChange}
                       onClearNewImages={() => setNewImageFiles([])}
                       onRemoveNewImage={removeNewImageAt}
+                    />
+                  </div>
+
+                  {/* TILE 8: Berkas & Dokumen Site POP (PDF, PBB, Kontrak, PBG) (12 Cols Full Width) - Terletak di bawah Galeri */}
+                  <div className="col-span-1 sm:col-span-12">
+                    <PopBentoDocumentsTile
+                      documents={popDocuments}
+                      token={token || undefined}
+                      canEdit={editable}
+                      onUploadDocument={handleUploadPopDocument}
+                      onDeleteDocument={handleDeletePopDocument}
                     />
                   </div>
                 </div>
