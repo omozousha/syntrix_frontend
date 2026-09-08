@@ -1234,7 +1234,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
 
 
   useEffect(() => {
-    if (!isOdpDevice || !item || !token) {
+    if (category?.resource !== "devices" || !item || !token) {
       setValidatorOptions([]);
       setSelectedReminderValidatorId("");
       setLoadingValidators(false);
@@ -1274,7 +1274,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     return () => {
       cancelled = true;
     };
-  }, [isOdpDevice, item?.id, valueOf(item?.region_id), token]);
+  }, [category?.resource, item?.id, valueOf(item?.region_id), token]);
 
   useEffect(() => {
     if (category?.resource !== "devices" || !item || !token) {
@@ -2499,6 +2499,9 @@ if (!category) {
                       deviceTypeLabel={valueOf(item.device_type_key, "Device")}
                       onDownloadQrLabel={handleDownloadQrLabel}
                       publicUrl={deviceDirectHref}
+                      onOpenReminder={openReminderDialog}
+                      reminderDisabled={loadingValidators || validatorOptions.length === 0}
+                      canSendReminder={canEditAsset}
                     />
                   </div>
 
@@ -2752,6 +2755,7 @@ if (!category) {
         sendingReminder={sendingReminder}
         selectedValidatorId={selectedReminderValidatorId}
         error={reminderError}
+        deviceTypeLabel={valueOf(item?.device_type_key, "Perangkat")}
         onOpenChange={setReminderDialogOpen}
         onSelectedValidatorChange={setSelectedReminderValidatorId}
         onSend={() => void handleSendValidationReminder()}

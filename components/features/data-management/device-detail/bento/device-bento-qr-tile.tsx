@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Download, QrCode, Copy, Check } from "lucide-react";
+import { Download, QrCode, Copy, Check, BellRing } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +11,9 @@ type DeviceBentoQrTileProps = {
   deviceTypeLabel?: string;
   onDownloadQrLabel?: () => void;
   publicUrl?: string;
+  onOpenReminder?: () => void;
+  reminderDisabled?: boolean;
+  canSendReminder?: boolean;
 };
 
 export function DeviceBentoQrTile({
@@ -18,6 +21,9 @@ export function DeviceBentoQrTile({
   deviceTypeLabel = "Device",
   onDownloadQrLabel,
   publicUrl,
+  onOpenReminder,
+  reminderDisabled = false,
+  canSendReminder = true,
 }: DeviceBentoQrTileProps) {
   const [copied, setCopied] = useState(false);
 
@@ -76,6 +82,19 @@ export function DeviceBentoQrTile({
             >
               <Download className="mr-2 size-4" />
               <span>Unduh Label QR (PNG)</span>
+            </Button>
+          ) : null}
+
+          {canSendReminder && onOpenReminder ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-9 rounded-xl border-border/60 bg-muted/20 text-xs font-medium hover:bg-muted/40 hover:border-primary/40 active:scale-[0.98] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] disabled:opacity-50"
+              onClick={onOpenReminder}
+              disabled={reminderDisabled}
+            >
+              <BellRing className="mr-2 size-3.5 text-primary" />
+              <span>Kirim Reminder Validasi</span>
             </Button>
           ) : null}
 

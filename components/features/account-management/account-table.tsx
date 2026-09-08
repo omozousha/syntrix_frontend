@@ -14,7 +14,6 @@ export type AccountUserRow = {
   role_name?: string | null;
   default_region_id?: string | null;
   is_active?: boolean | null;
-  nhost_email_verified?: boolean | null;
   email_verified?: boolean | null;
   verification_status?: string | null;
 };

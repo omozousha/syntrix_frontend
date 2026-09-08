@@ -1,7 +1,6 @@
 export type NormalizedRole = "superadmin" | "adminregion" | "validator" | string;
 
 export type VerificationInput = {
-  nhost_email_verified?: boolean | null;
   email_verified?: boolean | null;
   verification_status?: string | null;
 };
@@ -57,10 +56,6 @@ export function valueText(value: unknown, fallback = "-") {
 }
 
 export function getVerificationState(user: VerificationInput): VerificationState {
-  if (typeof user.nhost_email_verified === "boolean") {
-    if (user.nhost_email_verified) return "verified";
-    return user.verification_status === "pending" ? "pending" : "unverified";
-  }
   if (user.verification_status === "verified") return "verified";
   if (user.verification_status === "pending") return "pending";
   if (user.verification_status === "unverified") return "unverified";
