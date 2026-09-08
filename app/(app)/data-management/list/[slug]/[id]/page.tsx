@@ -33,7 +33,7 @@ import {
   type DeviceToMount,
   type RackOption,
 } from "@/components/features/data-management/pop-detail";
-import { getStoredPopVisibleDeviceTypes } from "@/lib/pop-device-config";
+import { getStoredPopVisibleDeviceTypes, isRackMountable } from "@/lib/pop-device-config";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -663,14 +663,14 @@ export default function DataManagementDetailPage() {
   const popMountedDevices = useMemo<DeviceToMount[]>(() => {
     if (category?.resource !== "pops" || !activePopRackId) return [];
     return popDevices.filter(
-      (d) => d.device_type_key !== "RACK" && d.specifications?.rack_device_id === activePopRackId
+      (d) => isRackMountable(d) && d.specifications?.rack_device_id === activePopRackId
     );
   }, [category?.resource, popDevices, activePopRackId]);
 
   const popUnmountedDevices = useMemo<DeviceToMount[]>(() => {
     if (category?.resource !== "pops") return [];
     return popDevices.filter(
-      (d) => d.device_type_key !== "RACK" && !d.specifications?.rack_device_id
+      (d) => isRackMountable(d) && !d.specifications?.rack_device_id
     );
   }, [category?.resource, popDevices]);
 
@@ -690,7 +690,7 @@ export default function DataManagementDetailPage() {
 
   const usedPopU = useMemo(() => {
     return popDevices
-      .filter((d) => d.device_type_key !== "RACK" && d.specifications?.rack_device_id)
+      .filter((d) => isRackMountable(d) && d.specifications?.rack_device_id)
       .reduce((sum, d) => sum + (Number(d.specifications?.u_height) || 1), 0);
   }, [popDevices]);
 
@@ -1385,6 +1385,10 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   async function handleMountPopDevice(deviceId: string, rackId: string, uPos: number, uHeight: number) {
     if (!token || !item?.id) return;
     const targetDev = popDevices.find((d) => d.id === deviceId);
+    if (!targetDev || !isRackMountable(targetDev)) {
+      setError("Hanya perangkat aktif dan OTB yang dapat dipasang ke dalam rak.");
+      return;
+    }
     const updatedSpecs = {
       ...(targetDev?.specifications || {}),
       rack_device_id: rackId,

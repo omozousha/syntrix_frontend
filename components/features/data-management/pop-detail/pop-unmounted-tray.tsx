@@ -50,7 +50,7 @@ export function PopUnmountedTray({ devices, onSelectDeviceToMount }: PopUnmounte
         </div>
 
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Tarik kartu perangkat langsung ke slot rak di sebelah kiri, atau klik tombol <strong>Pasang</strong> untuk menentukan posisi U secara manual.
+          Hanya perangkat aktif (OLT, Switch, Router, Rectifier) dan OTB yang dapat dipasang ke dalam rak. Tarik kartu langsung ke slot rak atau klik <strong>Pasang</strong>.
         </p>
 
         {/* Devices List */}

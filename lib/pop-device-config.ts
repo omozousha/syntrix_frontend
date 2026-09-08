@@ -19,6 +19,30 @@ export const POP_ALL_PRESET = POP_DEVICE_TYPES.map((t) => t.key);
 export const DEFAULT_POP_VISIBLE_DEVICE_TYPES = POP_INDOOR_PRESET;
 const STORAGE_KEY = "syntrix_pop_visible_device_types";
 
+export const RACK_MOUNTABLE_DEVICE_TYPES = new Set([
+  "OTB",
+  "OLT",
+  "SWITCH",
+  "ROUTER",
+  "RECTIFIER",
+  "SERVER",
+  "UPS",
+  "DDF",
+]);
+
+/**
+ * Hanya perangkat aktif (OLT, SWITCH, ROUTER, RECTIFIER, dll.)
+ * dan perangkat pasif OTB yang diizinkan masuk ke dalam rak.
+ * Perangkat lain seperti ODC, ODP, CABLE, JC dilarang masuk rak.
+ */
+export function isRackMountable(device: { device_type_key?: string | null; asset_group?: string | null }): boolean {
+  const typeKey = String(device.device_type_key || "").toUpperCase();
+  if (typeKey === "RACK") return false;
+  if (typeKey === "OTB") return true;
+  if (device.asset_group === "active") return true;
+  return RACK_MOUNTABLE_DEVICE_TYPES.has(typeKey);
+}
+
 export function getStoredPopVisibleDeviceTypes(userMetadata?: Record<string, unknown> | null): string[] {
   // 1. Prioritaskan metadata profil user di database
   if (userMetadata && Array.isArray(userMetadata.pop_visible_device_types)) {

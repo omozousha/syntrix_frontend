@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
+import { isRackMountable } from "@/lib/pop-device-config";
 
 export type DeviceToMount = {
   id: string;
@@ -88,10 +89,12 @@ export function PopRackMountModal({
 
   const deviceOptions = initialDevice
     ? [{ value: initialDevice.id, label: `${initialDevice.device_name} (${initialDevice.device_type_key})` }]
-    : unmountedDevices.map((d) => ({
-        value: d.id,
-        label: `${d.device_name} (${d.device_type_key})`,
-      }));
+    : unmountedDevices
+        .filter(isRackMountable)
+        .map((d) => ({
+          value: d.id,
+          label: `${d.device_name} (${d.device_type_key})`,
+        }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
