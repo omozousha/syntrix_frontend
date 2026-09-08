@@ -131,7 +131,7 @@ export function PopRackElevationCanvas({
     setDragCollides(false);
   }
 
-  async function handleDrop(e: React.DragEvent, targetU: number) {
+  function handleDrop(e: React.DragEvent, targetU: number) {
     e.preventDefault();
     setDragOverU(null);
     setDragCollides(false);
@@ -143,23 +143,17 @@ export function PopRackElevationCanvas({
       const h = Number(uHeight) || 1;
 
       if (!canFit(targetU, h, deviceId)) {
-        alert(`Slot U${targetU} bentrok dengan perangkat lain atau melebihi tinggi rak!`);
         return;
       }
 
-      await onMountDevice(deviceId, activeRack.id, targetU, h);
+      void onMountDevice(deviceId, activeRack.id, targetU, h);
     } catch (err) {
       console.warn("Drop mount failed:", err);
     }
   }
 
-  async function handleUnmount(deviceId: string) {
-    setUnmountingId(deviceId);
-    try {
-      await onUnmountDevice(deviceId);
-    } finally {
-      setUnmountingId(null);
-    }
+  function handleUnmount(deviceId: string) {
+    void onUnmountDevice(deviceId);
   }
 
   async function handleConfirmReset() {

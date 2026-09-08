@@ -1480,9 +1480,29 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       (d) => (d.specifications as Record<string, unknown> | undefined)?.rack_device_id === rackId
     );
     if (!devicesInRack.length) {
-      setMessage("Rak ini sudah kosong.");
       return;
     }
+
+    // 1. Instant optimistic UI update
+    const previousDevices = [...popDevices];
+    setPopDevices((prev) =>
+      prev.map((d) => {
+        const specs = (d.specifications as Record<string, unknown> | undefined) || {};
+        if (specs.rack_device_id === rackId) {
+          return {
+            ...d,
+            specifications: {
+              ...specs,
+              rack_device_id: null,
+              rack_unit_position: null,
+            },
+          };
+        }
+        return d;
+      })
+    );
+
+    // 2. Background server persistence
     try {
       await Promise.all(
         devicesInRack.map((dev) => {
@@ -1500,10 +1520,8 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           });
         })
       );
-      setMessage(`${devicesInRack.length} perangkat berhasil dilepas dari rak.`);
-      const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
-      setPopDevices(res.data || []);
     } catch (err) {
+      setPopDevices(previousDevices);
       setError((err as Error).message || "Gagal mereset slot rak.");
     }
   }
@@ -1563,6 +1581,14 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       rack_unit_position: uPos,
       u_height: uHeight,
     };
+
+    // 1. Instant optimistic UI update (0ms latency)
+    const previousDevices = [...popDevices];
+    setPopDevices((prev) =>
+      prev.map((d) => (d.id === deviceId ? { ...d, specifications: updatedSpecs } : d))
+    );
+
+    // 2. Background server persistence
     try {
       await apiFetch(`/devices/${deviceId}`, {
         method: "PATCH",
@@ -1571,10 +1597,8 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           specifications: updatedSpecs,
         },
       });
-      setMessage(`Perangkat berhasil dipasang di U${uPos}.`);
-      const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
-      setPopDevices(res.data || []);
     } catch (err) {
+      setPopDevices(previousDevices);
       setError((err as Error).message || "Gagal memasang perangkat ke rak.");
     }
   }
@@ -1588,6 +1612,14 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       rack_device_id: null,
       rack_unit_position: null,
     };
+
+    // 1. Instant optimistic UI update (0ms latency)
+    const previousDevices = [...popDevices];
+    setPopDevices((prev) =>
+      prev.map((d) => (d.id === deviceId ? { ...d, specifications: updatedSpecs } : d))
+    );
+
+    // 2. Background server persistence
     try {
       await apiFetch(`/devices/${deviceId}`, {
         method: "PATCH",
@@ -1596,10 +1628,8 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           specifications: updatedSpecs,
         },
       });
-      setMessage("Perangkat berhasil dilepas dari rak.");
-      const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
-      setPopDevices(res.data || []);
     } catch (err) {
+      setPopDevices(previousDevices);
       setError((err as Error).message || "Gagal melepas perangkat dari rak.");
     }
   }
