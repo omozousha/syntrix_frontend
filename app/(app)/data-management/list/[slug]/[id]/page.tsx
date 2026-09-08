@@ -576,6 +576,7 @@ export default function DataManagementDetailPage() {
   const [odpTypes, setOdpTypes] = useState<OdpTypeOption[]>([]);
   const [installationTypes, setInstallationTypes] = useState<InstallationTypeOption[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
+  const [popTypes, setPopTypes] = useState<Array<{ id: string; pop_type_name: string; pop_type_code?: string | null }>>([]);
   const [provinces, setProvinces] = useState<ProvinceOption[]>([]);
   const [cities, setCities] = useState<CityOption[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
@@ -1154,7 +1155,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     let cancelled = false;
     async function loadDeviceMasterData() {
       try {
-        const [splitterResponse, deviceTypesResponse, topologyRelationRulesResponse, odpTypesResponse, installationTypesResponse, tenantsResponse, deviceCoreCapacitiesResponse, closureTypesResponse, cableTypesResponse, routeTypesResponse, provincesResponse, citiesResponse, coreCapacitiesResponse] = await Promise.allSettled([
+        const [splitterResponse, deviceTypesResponse, topologyRelationRulesResponse, odpTypesResponse, installationTypesResponse, tenantsResponse, deviceCoreCapacitiesResponse, closureTypesResponse, cableTypesResponse, routeTypesResponse, provincesResponse, citiesResponse, coreCapacitiesResponse, popTypesResponse] = await Promise.allSettled([
           apiFetch<PaginatedResponse<SplitterProfileOption>>("/splitterProfiles?page=1&limit=200&is_active=true", { token }),
           apiFetch<PaginatedResponse<DeviceTypeMasterOption>>("/deviceTypes?page=1&limit=300&is_active=true", { token }),
           apiFetch<PaginatedResponse<TopologyRelationRuleOption>>("/topologyRelationRules?page=1&limit=500&is_active=true", { token }),
@@ -1168,6 +1169,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           apiFetch<PaginatedResponse<ProvinceOption>>("/provinces?page=1&limit=200", { token }),
           apiFetch<PaginatedResponse<CityOption>>("/cities?page=1&limit=500", { token }),
           apiFetch<PaginatedResponse<{ core_capacity_value: number; label: string; allowed_route_type_keys?: string[] | null }>>("/coreCapacities?page=1&limit=200&is_active=true", { token }),
+          apiFetch<PaginatedResponse<{ id: string; pop_type_name: string; pop_type_code?: string | null }>>("/popTypes?page=1&limit=200&is_active=true", { token }),
         ]);
         if (cancelled) return;
         setSplitterProfiles(splitterResponse.status === "fulfilled" ? splitterResponse.value.data || [] : []);
@@ -1183,6 +1185,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         setProvinces(provincesResponse.status === "fulfilled" ? provincesResponse.value.data || [] : []);
         setCities(citiesResponse.status === "fulfilled" ? citiesResponse.value.data || [] : []);
         setCoreCapacities(coreCapacitiesResponse.status === "fulfilled" ? coreCapacitiesResponse.value.data || [] : []);
+        setPopTypes(popTypesResponse?.status === "fulfilled" ? popTypesResponse.value.data || [] : []);
       } catch {
         if (cancelled) return;
         setSplitterProfiles([]);
@@ -2819,6 +2822,7 @@ if (!category) {
                         editing={isEditing}
                         relationLabels={relationLabels}
                         relationLoading={relationLabelsLoading}
+                        popTypes={popTypes}
                       />
                     </CardContent>
                   </Card>
@@ -3631,12 +3635,14 @@ function PopDetailForm({
   editing,
   relationLabels,
   relationLoading = false,
+  popTypes = [],
 }: {
   form: EditableForm;
   onChange: (next: EditableForm | ((prev: EditableForm) => EditableForm)) => void;
   editing: boolean;
   relationLabels: RelationLabels;
   relationLoading?: boolean;
+  popTypes?: Array<{ id: string; pop_type_name: string; pop_type_code?: string | null }>;
 }) {
   return (
     <div className="space-y-3">
@@ -3648,7 +3654,33 @@ function PopDetailForm({
           <Field label="POP Name" value={form.pop_name} onChange={(v) => onChange((p) => ({ ...p, pop_name: v }))} disabled={!editing} compact />
           <Field label="POP Code" value={form.pop_code} onChange={(v) => onChange((p) => ({ ...p, pop_code: v.toUpperCase() }))} disabled={!editing} compact />
           <DisplayField label="Region" value={relationLabels.region || "-"} loading={relationLoading} compact />
-          <DisplayField label="POP Type" value={relationLabels.popType || form.pop_type || "-"} loading={relationLoading} compact />
+          {editing && popTypes.length > 0 ? (
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">POP Type</label>
+              <Combobox
+                value={form.pop_type_id || "__none__"}
+                onValueChange={(val: string) => {
+                  const nextVal = val === "__none__" ? "" : val;
+                  const matched = popTypes.find((p) => p.id === nextVal);
+                  onChange((p) => ({
+                    ...p,
+                    pop_type_id: nextVal,
+                    pop_type: matched?.pop_type_name || p.pop_type,
+                  }));
+                }}
+                searchPlaceholder="Cari tipe POP..."
+                options={[
+                  { value: "__none__", label: "Pilih tipe POP" },
+                  ...popTypes.map((pt) => ({
+                    value: pt.id,
+                    label: pt.pop_type_code ? `${pt.pop_type_name} (${pt.pop_type_code})` : pt.pop_type_name,
+                  })),
+                ]}
+              />
+            </div>
+          ) : (
+            <DisplayField label="POP Type" value={relationLabels.popType || form.pop_type || "-"} loading={relationLoading} compact />
+          )}
           <Field label="Tanggal POP Aktif" type="date" value={form.tanggal_pop_aktif} onChange={(v) => onChange((p) => ({ ...p, tanggal_pop_aktif: v }))} disabled={!editing} compact />
         </CardContent>
       </Card>
