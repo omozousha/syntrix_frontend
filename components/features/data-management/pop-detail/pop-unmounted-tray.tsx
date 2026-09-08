@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { GripVertical, Plus, Layers, Server } from "lucide-react";
+import { GripVertical, Plus, Layers, Server, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import type { DeviceToMount } from "./pop-rack-mount-modal";
 type PopUnmountedTrayProps = {
   devices: DeviceToMount[];
   onSelectDeviceToMount: (device: DeviceToMount) => void;
+  onClose?: () => void;
 };
 
 function getDeviceTypeBadgeStyle(typeKey: string) {
@@ -21,7 +22,7 @@ function getDeviceTypeBadgeStyle(typeKey: string) {
   return "border-border/60 bg-muted/30 text-muted-foreground";
 }
 
-export function PopUnmountedTray({ devices, onSelectDeviceToMount }: PopUnmountedTrayProps) {
+export function PopUnmountedTray({ devices, onSelectDeviceToMount, onClose }: PopUnmountedTrayProps) {
   function handleDragStart(e: React.DragEvent, device: DeviceToMount) {
     e.dataTransfer.setData(
       "application/json",
@@ -44,9 +45,23 @@ export function PopUnmountedTray({ devices, onSelectDeviceToMount }: PopUnmounte
             <Layers className="size-4 text-primary" />
             <span>Perangkat Belum Terpasang</span>
           </div>
-          <Badge variant="outline" className="font-mono tabular-nums text-[10px] uppercase">
-            {devices.length} Aset
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="font-mono tabular-nums text-[10px] uppercase">
+              {devices.length} Aset
+            </Badge>
+            {onClose ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-6 rounded-md hover:bg-muted p-0 text-muted-foreground"
+                onClick={onClose}
+                title="Sembunyikan Tray"
+              >
+                <X className="size-3.5" />
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         <p className="text-[11px] text-muted-foreground leading-relaxed">

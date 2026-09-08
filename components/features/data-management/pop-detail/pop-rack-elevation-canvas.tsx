@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Server, Plus, Unlink, ExternalLink, GripVertical, MoreVertical, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { Server, Plus, Unlink, ExternalLink, GripVertical, MoreVertical, Pencil, RotateCcw, Trash2, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,9 @@ type PopRackElevationCanvasProps = {
   onMountDevice: (deviceId: string, rackId: string, uPosition: number, uHeight: number) => Promise<void>;
   onUnmountDevice: (deviceId: string) => Promise<void>;
   onEmptySlotClick: (u: number) => void;
+  showUnmountedTray?: boolean;
+  unmountedCount?: number;
+  onToggleUnmountedTray?: () => void;
 };
 
 function getDeviceTypeBadgeStyle(typeKey: string) {
@@ -61,6 +64,9 @@ export function PopRackElevationCanvas({
   onMountDevice,
   onUnmountDevice,
   onEmptySlotClick,
+  showUnmountedTray = true,
+  unmountedCount = 0,
+  onToggleUnmountedTray,
 }: PopRackElevationCanvasProps) {
   const activeRack = racks.find((r) => r.id === selectedRackId) || racks[0];
   const maxU = activeRack?.rack_u_height || 42;
@@ -254,16 +260,41 @@ export function PopRackElevationCanvas({
             )}
           </div>
 
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 rounded-xl border-border/60 bg-muted/20 text-xs font-semibold hover:bg-muted/40 active:scale-[0.98]"
-            onClick={onCreateNewRack}
-          >
-            <Plus className="mr-1.5 size-3.5" />
-            <span>Tambah Rak Baru</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            {onToggleUnmountedTray ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 rounded-xl border-border/60 bg-muted/20 text-xs font-mono font-medium hover:bg-muted/40 active:scale-[0.98]"
+                onClick={onToggleUnmountedTray}
+                title={showUnmountedTray ? "Sembunyikan Tray Perangkat" : "Tampilkan Tray Perangkat"}
+              >
+                {showUnmountedTray ? (
+                  <>
+                    <PanelRightClose className="mr-1.5 size-3.5 text-muted-foreground" />
+                    <span>Sembunyikan Tray ({unmountedCount})</span>
+                  </>
+                ) : (
+                  <>
+                    <PanelRightOpen className="mr-1.5 size-3.5 text-primary" />
+                    <span>Perangkat Belum Terpasang ({unmountedCount})</span>
+                  </>
+                )}
+              </Button>
+            ) : null}
+
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-xl border-border/60 bg-muted/20 text-xs font-semibold hover:bg-muted/40 active:scale-[0.98]"
+              onClick={onCreateNewRack}
+            >
+              <Plus className="mr-1.5 size-3.5" />
+              <span>Tambah Rak Baru</span>
+            </Button>
+          </div>
         </div>
 
         {/* Rack Elevation Cabinet Frame (Double-Bezel Standard) */}

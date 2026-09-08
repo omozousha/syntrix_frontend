@@ -620,9 +620,26 @@ export default function DataManagementDetailPage() {
   const [visiblePopDeviceTypes, setVisiblePopDeviceTypes] = useState<string[]>(() =>
     getStoredPopVisibleDeviceTypes((me?.app_user as Record<string, unknown> | undefined)?.metadata as Record<string, unknown> | undefined)
   );
+  const [showUnmountedTray, setShowUnmountedTray] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = window.localStorage.getItem("syntrix_pop_show_unmounted_tray");
+      return saved !== null ? saved === "true" : true;
+    }
+    return true;
+  });
   const [createRackDialogOpen, setCreateRackDialogOpen] = useState(false);
   const [editRackDialogOpen, setEditRackDialogOpen] = useState(false);
   const [rackToEdit, setRackToEdit] = useState<(RackOption & { rack_type?: string }) | null>(null);
+
+  function toggleShowUnmountedTray() {
+    setShowUnmountedTray((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("syntrix_pop_show_unmounted_tray", String(next));
+      }
+      return next;
+    });
+  }
   const relationReferenceMaps = useMemo(() => {
     const data = relationReferenceQuery.data?.data || {};
     return {
@@ -3075,8 +3092,8 @@ if (!category) {
                     />
                   </div>
 
-                  {/* TILE 5: Interactive Rack Elevation Canvas (8 Cols Desktop / 12 Mobile) */}
-                  <div className="sm:col-span-12 lg:col-span-8">
+                  {/* TILE 5: Interactive Rack Elevation Canvas (Adaptive 8 or 12 Cols) */}
+                  <div className={showUnmountedTray ? "sm:col-span-12 lg:col-span-8" : "col-span-1 sm:col-span-12 lg:col-span-12"}>
                     <PopRackElevationCanvas
                       racks={popRacks}
                       selectedRackId={activePopRackId}
@@ -3093,20 +3110,26 @@ if (!category) {
                         setPopDeviceToMount(null);
                         setPopMountModalOpen(true);
                       }}
+                      showUnmountedTray={showUnmountedTray}
+                      unmountedCount={popUnmountedDevices.length}
+                      onToggleUnmountedTray={toggleShowUnmountedTray}
                     />
                   </div>
 
-                  {/* TILE 6: Unmounted Devices Tray (4 Cols Desktop / 12 Mobile) */}
-                  <div className="sm:col-span-12 lg:col-span-4">
-                    <PopUnmountedTray
-                      devices={popUnmountedDevices}
-                      onSelectDeviceToMount={(dev) => {
-                        setPopDeviceToMount(dev);
-                        setPopMountTargetU(1);
-                        setPopMountModalOpen(true);
-                      }}
-                    />
-                  </div>
+                  {/* TILE 6: Unmounted Devices Tray (4 Cols Desktop / 12 Mobile, conditionally rendered) */}
+                  {showUnmountedTray ? (
+                    <div className="sm:col-span-12 lg:col-span-4">
+                      <PopUnmountedTray
+                        devices={popUnmountedDevices}
+                        onSelectDeviceToMount={(dev) => {
+                          setPopDeviceToMount(dev);
+                          setPopMountTargetU(1);
+                          setPopMountModalOpen(true);
+                        }}
+                        onClose={toggleShowUnmountedTray}
+                      />
+                    </div>
+                  ) : null}
 
                   {/* TILE 7: Galeri Foto Ruang/Site POP (12 Cols Full Width) */}
                   <div className="col-span-1 sm:col-span-12">
