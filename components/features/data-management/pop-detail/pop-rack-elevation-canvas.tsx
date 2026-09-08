@@ -2,10 +2,27 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Server, Plus, Unlink, ExternalLink, GripVertical } from "lucide-react";
+import { Server, Plus, Unlink, ExternalLink, GripVertical, MoreVertical, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { deviceTypeKeyToSlug } from "@/lib/data-management-config";
 import type { DeviceToMount, RackOption } from "./pop-rack-mount-modal";
 
@@ -15,6 +32,9 @@ type PopRackElevationCanvasProps = {
   mountedDevices: DeviceToMount[];
   onSelectRackId: (id: string) => void;
   onCreateNewRack: () => void;
+  onEditRack?: (rack: RackOption) => void;
+  onResetRack?: (rackId: string) => Promise<void>;
+  onDeleteRack?: (rackId: string) => Promise<void>;
   onMountDevice: (deviceId: string, rackId: string, uPosition: number, uHeight: number) => Promise<void>;
   onUnmountDevice: (deviceId: string) => Promise<void>;
   onEmptySlotClick: (u: number) => void;
@@ -35,6 +55,9 @@ export function PopRackElevationCanvas({
   mountedDevices,
   onSelectRackId,
   onCreateNewRack,
+  onEditRack,
+  onResetRack,
+  onDeleteRack,
   onMountDevice,
   onUnmountDevice,
   onEmptySlotClick,
@@ -46,8 +69,12 @@ export function PopRackElevationCanvas({
   const [dragCollides, setDragCollides] = useState(false);
   const [unmountingId, setUnmountingId] = useState<string | null>(null);
 
+  // Modals for Reset & Delete
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
   // Map each U to device if occupied
-  // A device at position P with height H occupies slots: P, P+1, ..., P+H-1
   const slotOccupancy = new Map<number, { device: DeviceToMount; isBase: boolean; uIndex: number }>();
 
   mountedDevices.forEach((dev) => {
@@ -135,31 +162,101 @@ export function PopRackElevationCanvas({
     }
   }
 
+  async function handleConfirmReset() {
+    if (!activeRack || !onResetRack) return;
+    setActionLoading(true);
+    try {
+      await onResetRack(activeRack.id);
+      setConfirmResetOpen(false);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!activeRack || !onDeleteRack) return;
+    setActionLoading(true);
+    try {
+      await onDeleteRack(activeRack.id);
+      setConfirmDeleteOpen(false);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   // Render U slots from top (maxU) to bottom (1)
   const uSlots = Array.from({ length: maxU }, (_, i) => maxU - i);
 
   return (
     <Card className="rounded-2xl border-border/60 shadow-xs glass-inset transition-all duration-300">
       <CardContent className="p-5 sm:p-6 space-y-4">
-        {/* Rack Selector Tabs & Add Rack */}
+        {/* Rack Selector Tabs, Action Menu, & Add Rack */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
           <div className="flex flex-wrap items-center gap-1.5">
             {racks.length === 0 ? (
               <span className="text-xs text-muted-foreground">Belum ada Rak Cabinet di POP ini.</span>
             ) : (
-              racks.map((rack) => (
-                <Button
-                  key={rack.id}
-                  type="button"
-                  size="sm"
-                  variant={rack.id === activeRack?.id ? "default" : "outline"}
-                  className="h-8 rounded-xl text-xs font-mono font-medium"
-                  onClick={() => onSelectRackId(rack.id)}
-                >
-                  <Server className="mr-1.5 size-3.5" />
-                  <span>{rack.device_name} ({rack.rack_u_height}U)</span>
-                </Button>
-              ))
+              racks.map((rack) => {
+                const isActive = rack.id === activeRack?.id;
+                return (
+                  <div key={rack.id} className="flex items-center">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={isActive ? "default" : "outline"}
+                      className={`h-8 text-xs font-mono font-medium ${isActive ? "rounded-r-none border-r-0" : "rounded-xl"}`}
+                      onClick={() => onSelectRackId(rack.id)}
+                    >
+                      <Server className="mr-1.5 size-3.5" />
+                      <span>{rack.device_name} ({rack.rack_u_height}U)</span>
+                    </Button>
+
+                    {/* Context menu attached to the active rack tab */}
+                    {isActive ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="default"
+                            className="h-8 w-7 rounded-l-none px-0 border-l border-primary-foreground/20"
+                            title="Opsi Rak"
+                          >
+                            <MoreVertical className="size-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-48 rounded-xl border-border/60">
+                          {onEditRack ? (
+                            <DropdownMenuItem onClick={() => onEditRack(activeRack)}>
+                              <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+                              <span>Edit Nama &amp; Ukuran</span>
+                            </DropdownMenuItem>
+                          ) : null}
+
+                          {onResetRack ? (
+                            <DropdownMenuItem onClick={() => setConfirmResetOpen(true)}>
+                              <RotateCcw className="mr-2 size-3.5 text-amber-500" />
+                              <span>Reset Slot Rak</span>
+                            </DropdownMenuItem>
+                          ) : null}
+
+                          <DropdownMenuSeparator />
+
+                          {onDeleteRack ? (
+                            <DropdownMenuItem
+                              onClick={() => setConfirmDeleteOpen(true)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 size-3.5" />
+                              <span>Hapus Rak Cabinet</span>
+                            </DropdownMenuItem>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : null}
+                  </div>
+                );
+              })
             )}
           </div>
 
@@ -194,7 +291,7 @@ export function PopRackElevationCanvas({
               {/* Cabinet Top Header Strip */}
               <div className="flex items-center justify-between bg-muted/40 px-4 py-2 border-b border-border/60 font-mono text-[10px] text-muted-foreground">
                 <span>EIA-310 19&quot; STANDARD CABINET</span>
-                <span className="font-semibold text-foreground">{activeRack.device_name}</span>
+                <span className="font-semibold text-foreground">{activeRack.device_name} ({activeRack.rack_u_height}U)</span>
                 <span>TOP OF RACK</span>
               </div>
 
@@ -207,9 +304,6 @@ export function PopRackElevationCanvas({
                   if (occ) {
                     const { device, uIndex } = occ;
                     const h = Number(device.u_height) || 1;
-
-                    // If it's not the top of the multi-U block (render merged visually)
-                    // Note: base is at bottom, highest slot is base + h - 1.
                     const isTopSlot = uIndex === h - 1;
 
                     return (
@@ -224,7 +318,7 @@ export function PopRackElevationCanvas({
                           U{u}
                         </div>
 
-                        {/* Device Content (renders details at top slot or middle) */}
+                        {/* Device Content */}
                         <div
                           draggable={isTopSlot}
                           onDragStart={(e) => {
@@ -336,6 +430,54 @@ export function PopRackElevationCanvas({
           </div>
         )}
       </CardContent>
+
+      {/* Alert Dialog: Confirm Reset Rack */}
+      <AlertDialog open={confirmResetOpen} onOpenChange={setConfirmResetOpen}>
+        <AlertDialogContent className="max-w-md rounded-2xl border-border/60 shadow-lg glass-inset p-5 sm:p-6 space-y-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold text-foreground">
+              Reset Semua Slot {activeRack?.device_name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
+              Semua perangkat yang terpasang di dalam rak ini akan dilepas dan dikembalikan ke <strong>Perangkat Belum Terpasang</strong>. Perangkat tidak akan terhapus dari POP.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-2 border-t border-border/40">
+            <AlertDialogCancel className="rounded-xl border-border/60 text-xs">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700"
+              onClick={() => void handleConfirmReset()}
+              disabled={actionLoading}
+            >
+              {actionLoading ? "Mereset..." : "Ya, Kosongkan Rak"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Alert Dialog: Confirm Delete Rack */}
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent className="max-w-md rounded-2xl border-border/60 shadow-lg glass-inset p-5 sm:p-6 space-y-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold text-destructive">
+              Hapus Rak {activeRack?.device_name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
+              Rak cabinet ini akan dihapus dari inventaris POP. Perangkat yang berada di dalamnya akan otomatis dilepas (unmounted) terlebih dahulu sehingga data perangkat tetap aman.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-2 border-t border-border/40">
+            <AlertDialogCancel className="rounded-xl border-border/60 text-xs">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl bg-destructive text-destructive-foreground text-xs font-semibold hover:bg-destructive/90"
+              onClick={() => void handleConfirmDelete()}
+              disabled={actionLoading}
+            >
+              {actionLoading ? "Menghapus..." : "Ya, Hapus Rak"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

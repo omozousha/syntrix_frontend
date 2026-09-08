@@ -27,7 +27,9 @@ import {
   PopBentoHeroTile,
   PopBentoLocationTile,
   PopBentoRackKpiTile,
+  PopBentoPropertyTile,
   PopRackElevationCanvas,
+  PopRackFormDialog,
   PopUnmountedTray,
   PopRackMountModal,
   type DeviceToMount,
@@ -618,6 +620,9 @@ export default function DataManagementDetailPage() {
   const [visiblePopDeviceTypes, setVisiblePopDeviceTypes] = useState<string[]>(() =>
     getStoredPopVisibleDeviceTypes((me?.app_user as Record<string, unknown> | undefined)?.metadata as Record<string, unknown> | undefined)
   );
+  const [createRackDialogOpen, setCreateRackDialogOpen] = useState(false);
+  const [editRackDialogOpen, setEditRackDialogOpen] = useState(false);
+  const [rackToEdit, setRackToEdit] = useState<(RackOption & { rack_type?: string }) | null>(null);
   const relationReferenceMaps = useMemo(() => {
     const data = relationReferenceQuery.data?.data || {};
     return {
@@ -648,7 +653,7 @@ export default function DataManagementDetailPage() {
     [relationReferenceMaps.models],
   );
 
-  const popRacks = useMemo<RackOption[]>(() => {
+  const popRacks = useMemo<Array<RackOption & { rack_type?: string }>>(() => {
     if (category?.resource !== "pops") return [];
     return popDevices
       .filter((d) => d.device_type_key === "RACK")
@@ -658,9 +663,26 @@ export default function DataManagementDetailPage() {
           id: d.id,
           device_name: String(d.device_name || "Rack"),
           rack_u_height: Number(specs?.rack_u_height) || 42,
+          rack_type: (specs?.rack_type as string) || "closed_cabinet",
         };
       });
   }, [category?.resource, popDevices]);
+
+  const popPropertyData = useMemo(() => {
+    if (category?.resource !== "pops" || !item) return null;
+    const custom = (item.custom_fields || {}) as Record<string, unknown>;
+    return {
+      pbb_nop: (custom.pbb_nop as string) || null,
+      building_status: (custom.building_status as string) || null,
+      lease_start_date: (custom.lease_start_date as string) || null,
+      lease_end_date: (custom.lease_end_date as string) || null,
+      annual_lease_cost: (custom.annual_lease_cost as string | number) || null,
+      landlord_name: (custom.landlord_name as string) || null,
+      landlord_contact: (custom.landlord_contact as string) || null,
+      permit_number: (custom.permit_number as string) || null,
+      legal_notes: (custom.legal_notes as string) || null,
+    };
+  }, [category?.resource, item]);
 
   const activePopRackId = selectedPopRackId || popRacks[0]?.id || "";
 
@@ -1389,34 +1411,141 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     };
   }, [category?.resource, item?.id, token]);
 
-  async function handleCreateNewPopRack() {
+  function handleCreateNewPopRack() {
+    setCreateRackDialogOpen(true);
+  }
+
+  async function handleCreateNewPopRackSubmit(data: { device_name: string; rack_u_height: number; rack_type: string }) {
     if (!item?.id || !token) return;
-    const nextNumber = String(popRacks.length + 1).padStart(2, "0");
-    const rackName = `Rack ${nextNumber}`;
     try {
       const newRack = await apiFetch<{ data?: { id?: string } }>("/devices", {
         method: "POST",
         token,
         body: {
-          device_name: rackName,
+          device_name: data.device_name,
           device_type_key: "RACK",
           asset_group: "passive",
           status: "installed",
           region_id: valueOf(item.region_id),
           pop_id: item.id,
           specifications: {
-            rack_u_height: 42,
+            rack_u_height: data.rack_u_height,
             rack_width_inches: 19,
-            rack_type: "closed_cabinet",
+            rack_type: data.rack_type,
           },
         },
       });
-      setMessage(`Rak ${rackName} berhasil dibuat.`);
+      setMessage(`Rak ${data.device_name} (${data.rack_u_height}U) berhasil dibuat.`);
       const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
       setPopDevices(res.data || []);
       if (newRack?.data?.id) setSelectedPopRackId(newRack.data.id);
     } catch (err) {
       setError((err as Error).message || "Gagal membuat rak baru.");
+    }
+  }
+
+  function handleEditPopRack(rack: RackOption & { rack_type?: string }) {
+    setRackToEdit(rack);
+    setEditRackDialogOpen(true);
+  }
+
+  async function handleEditPopRackSubmit(data: { device_name: string; rack_u_height: number; rack_type: string }) {
+    if (!rackToEdit?.id || !token || !item?.id) return;
+    const currentDev = popDevices.find((d) => d.id === rackToEdit.id);
+    const specs = (currentDev?.specifications as Record<string, unknown> | undefined) || {};
+    try {
+      await apiFetch(`/devices/${rackToEdit.id}`, {
+        method: "PATCH",
+        token,
+        body: {
+          device_name: data.device_name,
+          specifications: {
+            ...specs,
+            rack_u_height: data.rack_u_height,
+            rack_type: data.rack_type,
+          },
+        },
+      });
+      setMessage(`Konfigurasi ${data.device_name} berhasil diperbarui.`);
+      const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
+      setPopDevices(res.data || []);
+    } catch (err) {
+      setError((err as Error).message || "Gagal memperbarui konfigurasi rak.");
+    }
+  }
+
+  async function handleResetPopRack(rackId: string) {
+    if (!token || !item?.id) return;
+    const devicesInRack = popDevices.filter(
+      (d) => (d.specifications as Record<string, unknown> | undefined)?.rack_device_id === rackId
+    );
+    if (!devicesInRack.length) {
+      setMessage("Rak ini sudah kosong.");
+      return;
+    }
+    try {
+      await Promise.all(
+        devicesInRack.map((dev) => {
+          const specs = (dev.specifications as Record<string, unknown> | undefined) || {};
+          return apiFetch(`/devices/${dev.id}`, {
+            method: "PATCH",
+            token,
+            body: {
+              specifications: {
+                ...specs,
+                rack_device_id: null,
+                rack_unit_position: null,
+              },
+            },
+          });
+        })
+      );
+      setMessage(`${devicesInRack.length} perangkat berhasil dilepas dari rak.`);
+      const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
+      setPopDevices(res.data || []);
+    } catch (err) {
+      setError((err as Error).message || "Gagal mereset slot rak.");
+    }
+  }
+
+  async function handleDeletePopRack(rackId: string) {
+    if (!token || !item?.id) return;
+    try {
+      // 1. Unmount all devices in rack first
+      const devicesInRack = popDevices.filter(
+        (d) => (d.specifications as Record<string, unknown> | undefined)?.rack_device_id === rackId
+      );
+      if (devicesInRack.length) {
+        await Promise.all(
+          devicesInRack.map((dev) => {
+            const specs = (dev.specifications as Record<string, unknown> | undefined) || {};
+            return apiFetch(`/devices/${dev.id}`, {
+              method: "PATCH",
+              token,
+              body: {
+                specifications: {
+                  ...specs,
+                  rack_device_id: null,
+                  rack_unit_position: null,
+                },
+              },
+            });
+          })
+        );
+      }
+      // 2. Delete rack device
+      await apiFetch(`/devices/${rackId}`, {
+        method: "DELETE",
+        token,
+      });
+      setMessage("Rak cabinet berhasil dihapus.");
+      const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
+      const nextRows = res.data || [];
+      setPopDevices(nextRows);
+      const remainingRacks = nextRows.filter((d) => d.device_type_key === "RACK");
+      setSelectedPopRackId(remainingRacks[0]?.id || "");
+    } catch (err) {
+      setError((err as Error).message || "Gagal menghapus rak.");
     }
   }
 
@@ -2897,7 +3026,12 @@ if (!category) {
                     />
                   </div>
 
-                  {/* TILE 3: KPI Utilisasi Rak & Breakdown Perangkat Terfilter (12 Cols Full Width) */}
+                  {/* TILE 3: Legalitas Site, Pajak PBB & Kontrak Sewa (12 Cols Full Width) */}
+                  <div className="col-span-1 sm:col-span-12">
+                    <PopBentoPropertyTile property={popPropertyData} />
+                  </div>
+
+                  {/* TILE 4: KPI Utilisasi Rak & Breakdown Perangkat Terfilter (12 Cols Full Width) */}
                   <div className="col-span-1 sm:col-span-12">
                     <PopBentoRackKpiTile
                       totalRacks={popRacks.length}
@@ -2911,14 +3045,17 @@ if (!category) {
                     />
                   </div>
 
-                  {/* TILE 4: Interactive Rack Elevation Canvas (8 Cols Desktop / 12 Mobile) */}
+                  {/* TILE 5: Interactive Rack Elevation Canvas (8 Cols Desktop / 12 Mobile) */}
                   <div className="sm:col-span-12 lg:col-span-8">
                     <PopRackElevationCanvas
                       racks={popRacks}
                       selectedRackId={activePopRackId}
                       mountedDevices={popMountedDevices}
                       onSelectRackId={setSelectedPopRackId}
-                      onCreateNewRack={() => void handleCreateNewPopRack()}
+                      onCreateNewRack={handleCreateNewPopRack}
+                      onEditRack={handleEditPopRack}
+                      onResetRack={handleResetPopRack}
+                      onDeleteRack={handleDeletePopRack}
                       onMountDevice={handleMountPopDevice}
                       onUnmountDevice={handleUnmountPopDevice}
                       onEmptySlotClick={(u) => {
@@ -2929,7 +3066,7 @@ if (!category) {
                     />
                   </div>
 
-                  {/* TILE 5: Unmounted Devices Tray (4 Cols Desktop / 12 Mobile) */}
+                  {/* TILE 6: Unmounted Devices Tray (4 Cols Desktop / 12 Mobile) */}
                   <div className="sm:col-span-12 lg:col-span-4">
                     <PopUnmountedTray
                       devices={popUnmountedDevices}
@@ -2941,7 +3078,7 @@ if (!category) {
                     />
                   </div>
 
-                  {/* TILE 6: Galeri Foto Ruang/Site POP (12 Cols Full Width) */}
+                  {/* TILE 7: Galeri Foto Ruang/Site POP (12 Cols Full Width) */}
                   <div className="col-span-1 sm:col-span-12">
                     <DeviceBentoGalleryTile
                       deviceTypeLabel="Site POP"
@@ -2970,6 +3107,22 @@ if (!category) {
                   initialDevice={popDeviceToMount}
                   unmountedDevices={popUnmountedDevices}
                   onMount={handleMountPopDevice}
+                />
+
+                <PopRackFormDialog
+                  open={createRackDialogOpen}
+                  onOpenChange={setCreateRackDialogOpen}
+                  mode="create"
+                  defaultNextName={`Rack ${String(popRacks.length + 1).padStart(2, "0")}`}
+                  onSubmit={handleCreateNewPopRackSubmit}
+                />
+
+                <PopRackFormDialog
+                  open={editRackDialogOpen}
+                  onOpenChange={setEditRackDialogOpen}
+                  mode="edit"
+                  rack={rackToEdit}
+                  onSubmit={handleEditPopRackSubmit}
                 />
               </div>
             ) : (
@@ -3748,6 +3901,81 @@ function PopDetailForm({
 
       <Card>
         <CardHeader className="px-3 py-2">
+          <CardTitle className="text-sm">Legalitas Site, Pajak PBB &amp; Kontrak Sewa</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
+          <Field
+            label="PBB / NOP"
+            value={form.pbb_nop || ""}
+            onChange={(v) => onChange((p) => ({ ...p, pbb_nop: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Status Lahan / Gedung"
+            value={form.building_status || ""}
+            onChange={(v) => onChange((p) => ({ ...p, building_status: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Mulai Sewa"
+            type="date"
+            value={form.lease_start_date || ""}
+            onChange={(v) => onChange((p) => ({ ...p, lease_start_date: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Akhir Sewa"
+            type="date"
+            value={form.lease_end_date || ""}
+            onChange={(v) => onChange((p) => ({ ...p, lease_end_date: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Biaya Sewa / Tahun (Rp)"
+            type="number"
+            value={form.annual_lease_cost || ""}
+            onChange={(v) => onChange((p) => ({ ...p, annual_lease_cost: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Nama Pemilik Lahan (Landlord)"
+            value={form.landlord_name || ""}
+            onChange={(v) => onChange((p) => ({ ...p, landlord_name: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Kontak Pemilik Lahan"
+            value={form.landlord_contact || ""}
+            onChange={(v) => onChange((p) => ({ ...p, landlord_contact: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Nomor Izin / PBG / IMB"
+            value={form.permit_number || ""}
+            onChange={(v) => onChange((p) => ({ ...p, permit_number: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            className="md:col-span-2 xl:col-span-3"
+            label="Catatan Legalitas"
+            value={form.legal_notes || ""}
+            onChange={(v) => onChange((p) => ({ ...p, legal_notes: v }))}
+            disabled={!editing}
+            compact
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="px-3 py-2">
           <CardTitle className="text-sm">Lokasi</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
@@ -3913,6 +4141,7 @@ function SelectField({
 
 function buildEditableForm(item: GenericItem, resource: string, topologySummary?: DeviceTopologySummary | null): EditableForm {
   if (resource === "pops") {
+    const custom = (item.custom_fields || {}) as Record<string, unknown>;
     return {
       pop_id: valueOf(item.pop_id),
       pop_name: valueOf(item.pop_name),
@@ -3922,6 +4151,7 @@ function buildEditableForm(item: GenericItem, resource: string, topologySummary?
       validation_date: valueOf(item.validation_date),
       tenant: valueOf(item.tenant),
       pop_type: valueOf(item.pop_type),
+      pop_type_id: valueOf(item.pop_type_id),
       tanggal_pop_aktif: valueOf(item.tanggal_pop_aktif),
       pln_cid_number: valueOf(item.pln_cid_number),
       pln_payment_method: valueOf(item.pln_payment_method),
@@ -3933,6 +4163,15 @@ function buildEditableForm(item: GenericItem, resource: string, topologySummary?
       longitude: valueOf(item.longitude),
       latitude: valueOf(item.latitude),
       tags: arrayToCsv(item.tags),
+      pbb_nop: valueOf(custom.pbb_nop),
+      building_status: valueOf(custom.building_status),
+      lease_start_date: valueOf(custom.lease_start_date),
+      lease_end_date: valueOf(custom.lease_end_date),
+      annual_lease_cost: valueOf(custom.annual_lease_cost),
+      landlord_name: valueOf(custom.landlord_name),
+      landlord_contact: valueOf(custom.landlord_contact),
+      permit_number: valueOf(custom.permit_number),
+      legal_notes: valueOf(custom.legal_notes),
     };
   }
 
@@ -4014,6 +4253,20 @@ function buildUpdatePayload(form: EditableForm, resource: string, originalItem?:
       throw new Error("POP Code harus tepat 3 huruf A-Z (contoh: CBO).");
     }
 
+    const originalCustom = (originalItem?.custom_fields || {}) as Record<string, unknown>;
+    const customFields = {
+      ...originalCustom,
+      pbb_nop: nullIfEmpty(form.pbb_nop),
+      building_status: nullIfEmpty(form.building_status),
+      lease_start_date: nullIfEmpty(form.lease_start_date),
+      lease_end_date: nullIfEmpty(form.lease_end_date),
+      annual_lease_cost: numberOrNull(form.annual_lease_cost),
+      landlord_name: nullIfEmpty(form.landlord_name),
+      landlord_contact: nullIfEmpty(form.landlord_contact),
+      permit_number: nullIfEmpty(form.permit_number),
+      legal_notes: nullIfEmpty(form.legal_notes),
+    };
+
     return {
       pop_name: normalizePopName(form.pop_name) || null,
       pop_code: normalizedPopCode,
@@ -4022,6 +4275,7 @@ function buildUpdatePayload(form: EditableForm, resource: string, originalItem?:
       validation_date: normalizedValidation.validation_date,
       tenant: nullIfEmpty(form.tenant),
       pop_type: nullIfEmpty(form.pop_type),
+      pop_type_id: nullIfEmpty(form.pop_type_id),
       tanggal_pop_aktif: nullIfEmpty(form.tanggal_pop_aktif),
       pln_cid_number: nullIfEmpty(form.pln_cid_number),
       pln_payment_method: nullIfEmpty(form.pln_payment_method),
@@ -4033,6 +4287,7 @@ function buildUpdatePayload(form: EditableForm, resource: string, originalItem?:
       longitude: numberOrNull(form.longitude),
       latitude: numberOrNull(form.latitude),
       tags: csvToArray(form.tags),
+      custom_fields: Object.keys(customFields).length > 0 ? customFields : null,
     };
   }
 
