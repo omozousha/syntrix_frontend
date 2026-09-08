@@ -16,9 +16,9 @@ import {
   type SessionUser,
 } from "@/lib/session";
 
-const SESSION_CHECK_INTERVAL_MS = 15_000;
-const SESSION_REFRESH_BUFFER_MS = 60_000;
-const IDLE_WINDOW_MS = 2 * 60_000;
+const SESSION_CHECK_INTERVAL_MS = 60_000;
+const SESSION_REFRESH_BUFFER_MS = 5 * 60_000;
+const IDLE_WINDOW_MS = 30 * 60_000;
 const SYNTRIX_ONE_APP_URL = "io.syntrixone.app://login";
 
 export function ProtectedLayoutClient({ children }: { children: React.ReactNode }) {
@@ -126,23 +126,19 @@ export function ProtectedLayoutClient({ children }: { children: React.ReactNode 
     let refreshing = false;
     const interval = window.setInterval(async () => {
       if (refreshing) return;
-      const expiresAt = tokenExpiresAt || getStoredTokenExpiresAt();
-      if (!expiresAt) return;
 
       const now = Date.now();
-      const remainingMs = expiresAt - now;
-
-      if (remainingMs > SESSION_REFRESH_BUFFER_MS) return;
-
       const idleMs = now - lastActivityAtRef.current;
-      const isIdle = idleMs >= IDLE_WINDOW_MS;
-
-      if (remainingMs <= 0 && isIdle) {
-        window.location.reload();
+      if (idleMs >= IDLE_WINDOW_MS) {
+        logout();
         return;
       }
 
-      if (isIdle) return;
+      const expiresAt = tokenExpiresAt || getStoredTokenExpiresAt();
+      if (!expiresAt) return;
+
+      const remainingMs = expiresAt - now;
+      if (remainingMs > SESSION_REFRESH_BUFFER_MS) return;
 
       try {
         refreshing = true;

@@ -71,7 +71,7 @@ export async function loginWithPassword(email: string, password: string): Promis
 
   const expiresIn = Number.isFinite(accessTokenExpiresIn) && accessTokenExpiresIn > 0
     ? accessTokenExpiresIn
-    : 900;
+    : 86400;
 
   return {
     accessToken,
