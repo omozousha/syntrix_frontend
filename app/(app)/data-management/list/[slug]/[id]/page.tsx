@@ -28,12 +28,14 @@ import {
   PopBentoLocationTile,
   PopBentoRackKpiTile,
   PopBentoPropertyTile,
+  PopBentoDocumentsTile,
   PopRackElevationCanvas,
   PopRackFormDialog,
   PopUnmountedTray,
   PopRackMountModal,
   type DeviceToMount,
   type RackOption,
+  type PopDocumentRef,
 } from "@/components/features/data-management/pop-detail";
 import { getStoredPopVisibleDeviceTypes, isRackMountable } from "@/lib/pop-device-config";
 import { Badge } from "@/components/ui/badge";
@@ -630,6 +632,8 @@ export default function DataManagementDetailPage() {
   const [createRackDialogOpen, setCreateRackDialogOpen] = useState(false);
   const [editRackDialogOpen, setEditRackDialogOpen] = useState(false);
   const [rackToEdit, setRackToEdit] = useState<(RackOption & { rack_type?: string }) | null>(null);
+  const [popDocuments, setPopDocuments] = useState<PopDocumentRef[]>([]);
+  const [loadingPopDocuments, setLoadingPopDocuments] = useState(false);
 
   function toggleShowUnmountedTray() {
     setShowUnmountedTray((prev) => {
@@ -1648,6 +1652,157 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     } catch (err) {
       setPopDevices(previousDevices);
       setError((err as Error).message || "Gagal melepas perangkat dari rak.");
+    }
+  }
+
+  useEffect(() => {
+    if (category?.resource !== "pops" || !item?.id || !token) {
+      setPopDocuments([]);
+      return;
+    }
+    const popItemId = item.id;
+    const rawSupportDoc = item.support_doc;
+    let cancelled = false;
+
+    async function loadPopDocs() {
+      setLoadingPopDocuments(true);
+      try {
+        const res = await apiFetch<PaginatedResponse<GenericItem>>(
+          `/attachments?entity_type=pop&entity_id=${encodeURIComponent(popItemId)}&limit=100`,
+          { token }
+        ).catch(() => null);
+
+        if (cancelled) return;
+
+        const supportDocObj = (rawSupportDoc as Record<string, unknown> | undefined) || {};
+        const supportAttachments = Array.isArray(supportDocObj.attachments)
+          ? (supportDocObj.attachments as Array<Record<string, unknown>>)
+          : Array.isArray(rawSupportDoc)
+          ? (rawSupportDoc as Array<Record<string, unknown>>)
+          : [];
+
+        const serverAttachments: PopDocumentRef[] = (res?.data || []).map((a) => ({
+          id: a.id,
+          original_name: String(a.original_name || "Dokumen"),
+          mime_type: a.mime_type as string | null | undefined,
+          file_category: a.file_category as string | null | undefined,
+          size_bytes: a.size_bytes as number | null | undefined,
+          created_at: a.created_at as string | null | undefined,
+          document_tag: ((a.metadata as Record<string, unknown> | undefined)?.document_tag as string) || null,
+        }));
+
+        const docMap = new Map<string, PopDocumentRef>();
+        supportAttachments.forEach((doc) => {
+          if (doc?.id) {
+            docMap.set(String(doc.id), {
+              id: String(doc.id),
+              original_name: String(doc.original_name || "Dokumen"),
+              mime_type: (doc.mime_type as string) || null,
+              file_category: (doc.file_category as string) || "document",
+              size_bytes: (doc.size_bytes as number) || null,
+              document_tag: (doc.document_tag as string) || null,
+            });
+          }
+        });
+        serverAttachments.forEach((doc) => {
+          if (doc?.id) {
+            docMap.set(doc.id, {
+              ...docMap.get(doc.id),
+              ...doc,
+            });
+          }
+        });
+
+        const docs = Array.from(docMap.values()).filter(
+          (d) => d.file_category === "document" || !d.mime_type?.startsWith("image/")
+        );
+        setPopDocuments(docs);
+      } catch {
+        if (!cancelled) setPopDocuments([]);
+      } finally {
+        if (!cancelled) setLoadingPopDocuments(false);
+      }
+    }
+
+    void loadPopDocs();
+    return () => {
+      cancelled = true;
+    };
+  }, [category?.resource, item?.id, item?.support_doc, token]);
+
+  async function handleUploadPopDocument(file: File, categoryTag: string) {
+    if (!token || !item?.id || !category) return;
+    try {
+      const uploaded = await uploadAttachment({
+        token,
+        file,
+        fileCategory: "document",
+        entityType: "pop",
+        entityId: item.id,
+      });
+
+      const newDoc: PopDocumentRef = {
+        id: uploaded.id,
+        original_name: uploaded.original_name || file.name,
+        mime_type: uploaded.mime_type || file.type,
+        file_category: "document",
+        size_bytes: uploaded.size_bytes || file.size,
+        document_tag: categoryTag,
+      };
+
+      const currentSupportDoc = (item.support_doc as Record<string, unknown> | undefined) || {};
+      const currentList = Array.isArray(currentSupportDoc.attachments)
+        ? (currentSupportDoc.attachments as Array<Record<string, unknown>>)
+        : [];
+      const nextList = [newDoc, ...currentList];
+
+      await apiFetch(`/${category.resource}/${item.id}`, {
+        method: "PATCH",
+        token,
+        body: {
+          support_doc: {
+            ...currentSupportDoc,
+            attachments: nextList,
+          },
+        },
+      });
+
+      setPopDocuments((prev) => [newDoc, ...prev]);
+      setMessage(`Berkas "${file.name}" berhasil diunggah.`);
+    } catch (err) {
+      setError((err as Error).message || "Gagal mengunggah berkas dokumen.");
+    }
+  }
+
+  async function handleDeletePopDocument(docId: string) {
+    if (!token || !item?.id || !category) return;
+    try {
+      await apiFetch(`/attachments/${docId}`, {
+        method: "DELETE",
+        token,
+      });
+
+      const currentSupportDoc = (item.support_doc as Record<string, unknown> | undefined) || {};
+      const currentList = Array.isArray(currentSupportDoc.attachments)
+        ? (currentSupportDoc.attachments as Array<Record<string, unknown>>)
+        : [];
+      const nextList = currentList.filter((d) => d.id !== docId);
+
+      await apiFetch(`/${category.resource}/${item.id}`, {
+        method: "PATCH",
+        token,
+        body: {
+          support_doc: {
+            ...currentSupportDoc,
+            attachments: nextList,
+          },
+        },
+      });
+
+      setPopDocuments((prev) => prev.filter((d) => d.id !== docId));
+      setMessage("Berkas dokumen berhasil dihapus.");
+    } catch (err) {
+      setError((err as Error).message || "Gagal menghapus berkas dokumen.");
     }
   }
 
@@ -3078,7 +3233,18 @@ if (!category) {
                     <PopBentoPropertyTile property={popPropertyData} />
                   </div>
 
-                  {/* TILE 4: KPI Utilisasi Rak & Breakdown Perangkat Terfilter (12 Cols Full Width) */}
+                  {/* TILE 4: Berkas & Dokumen Site POP (PDF, PBB, Kontrak, PBG) (12 Cols Full Width) */}
+                  <div className="col-span-1 sm:col-span-12">
+                    <PopBentoDocumentsTile
+                      documents={popDocuments}
+                      token={token || undefined}
+                      canEdit={editable}
+                      onUploadDocument={handleUploadPopDocument}
+                      onDeleteDocument={handleDeletePopDocument}
+                    />
+                  </div>
+
+                  {/* TILE 5: KPI Utilisasi Rak & Breakdown Perangkat Terfilter (12 Cols Full Width) */}
                   <div className="col-span-1 sm:col-span-12">
                     <PopBentoRackKpiTile
                       totalRacks={popRacks.length}
@@ -3092,7 +3258,7 @@ if (!category) {
                     />
                   </div>
 
-                  {/* TILE 5: Interactive Rack Elevation Canvas (Adaptive 8 or 12 Cols) */}
+                  {/* TILE 6: Interactive Rack Elevation Canvas (Adaptive 8 or 12 Cols) */}
                   <div className={showUnmountedTray ? "sm:col-span-12 lg:col-span-8" : "col-span-1 sm:col-span-12 lg:col-span-12"}>
                     <PopRackElevationCanvas
                       racks={popRacks}
