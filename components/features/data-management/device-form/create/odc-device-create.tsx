@@ -2,7 +2,7 @@
 
 import { DeviceCreateForm } from "@/components/features/data-management/device-form/device-create-form";
 import { DeviceHardwareFields } from "@/components/features/data-management/device-form/device-hardware-fields";
-import { Field, FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
+import { FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 
@@ -58,17 +58,6 @@ export function OdcDeviceCreate({
   brands: BrandOption[];
   assetModels: AssetModelOption[];
   deviceCoreCapacities?: DeviceCoreCapacityOption[];
-  routeTypes?: any[];
-  cableTypes?: any[];
-  topologyFrontDevices?: any[];
-  topologyRearDevices?: any[];
-  frontDevicePorts?: any[];
-  rearDevicePorts?: any[];
-  loadingTopology?: boolean;
-  frontRelationLabel?: string;
-  rearRelationLabel?: string;
-  cableConnections?: any[];
-  onCableConnectionsChange?: (next: any[]) => void;
   onChange: (patch: Record<string, string>) => void;
 }) {
   const filteredCoreCapacities = deviceCoreCapacities.filter((item) => {

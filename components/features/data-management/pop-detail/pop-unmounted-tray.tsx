@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { GripVertical, Plus, Layers, Cpu, Server, Radio, ArrowUpRight } from "lucide-react";
+import { GripVertical, Plus, Layers, Server } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Server, Plus, Unlink, ExternalLink, GripVertical, AlertTriangle } from "lucide-react";
+import { Server, Plus, Unlink, ExternalLink, GripVertical } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -193,7 +193,7 @@ export function PopRackElevationCanvas({
             <div className="rounded-xl border border-border/80 bg-background/95 overflow-hidden shadow-xs">
               {/* Cabinet Top Header Strip */}
               <div className="flex items-center justify-between bg-muted/40 px-4 py-2 border-b border-border/60 font-mono text-[10px] text-muted-foreground">
-                <span>EIA-310 19" STANDARD CABINET</span>
+                <span>EIA-310 19&quot; STANDARD CABINET</span>
                 <span className="font-semibold text-foreground">{activeRack.device_name}</span>
                 <span>TOP OF RACK</span>
               </div>
@@ -205,7 +205,7 @@ export function PopRackElevationCanvas({
 
                   // If slot is occupied by device
                   if (occ) {
-                    const { device, isBase, uIndex } = occ;
+                    const { device, uIndex } = occ;
                     const h = Number(device.u_height) || 1;
 
                     // If it's not the top of the multi-U block (render merged visually)

@@ -173,7 +173,7 @@ export function DeviceFormSelection(props: DeviceFormSelectionProps) {
         brands={props.brands}
         assetModels={props.assetModels}
         topologyLookup={topologyLookup}
-        topologySummary={props.topologySummary as any || null}
+        topologySummary={(props.topologySummary as OdcDeviceFormProps["topologySummary"]) || null}
         deviceCoreCapacities={props.deviceCoreCapacities}
         odcChainSummary={props.odcChainSummary}
         odcChainLoading={props.odcChainLoading}

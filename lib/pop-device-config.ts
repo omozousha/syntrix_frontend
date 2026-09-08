@@ -35,11 +35,11 @@ export const RACK_MOUNTABLE_DEVICE_TYPES = new Set([
  * dan perangkat pasif OTB yang diizinkan masuk ke dalam rak.
  * Perangkat lain seperti ODC, ODP, CABLE, JC dilarang masuk rak.
  */
-export function isRackMountable(device: { device_type_key?: string | null; asset_group?: string | null }): boolean {
+export function isRackMountable(device: { device_type_key?: unknown; asset_group?: unknown; [key: string]: unknown }): boolean {
   const typeKey = String(device.device_type_key || "").toUpperCase();
   if (typeKey === "RACK") return false;
   if (typeKey === "OTB") return true;
-  if (device.asset_group === "active") return true;
+  if (String(device.asset_group || "").toLowerCase() === "active") return true;
   return RACK_MOUNTABLE_DEVICE_TYPES.has(typeKey);
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Server, ArrowUpRight } from "lucide-react";
+import { Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";

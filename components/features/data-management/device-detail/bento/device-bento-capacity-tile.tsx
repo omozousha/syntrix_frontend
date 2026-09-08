@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Layers, Cpu, Server, Network, UserCheck, Copy, Check, GitCommit, Cable } from "lucide-react";
+import { Layers, Cpu, Network, UserCheck, Copy, Check, GitCommit } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

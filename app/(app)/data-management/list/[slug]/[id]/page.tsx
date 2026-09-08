@@ -609,14 +609,14 @@ export default function DataManagementDetailPage() {
   const [navModalOpen, setNavModalOpen] = useState(false);
 
   // POP Rack & Device States
-  const [popDevices, setPopDevices] = useState<any[]>([]);
+  const [popDevices, setPopDevices] = useState<GenericItem[]>([]);
   const [loadingPopDevices, setLoadingPopDevices] = useState(false);
   const [selectedPopRackId, setSelectedPopRackId] = useState("");
   const [popMountModalOpen, setPopMountModalOpen] = useState(false);
   const [popMountTargetU, setPopMountTargetU] = useState(1);
   const [popDeviceToMount, setPopDeviceToMount] = useState<DeviceToMount | null>(null);
   const [visiblePopDeviceTypes, setVisiblePopDeviceTypes] = useState<string[]>(() =>
-    getStoredPopVisibleDeviceTypes((me?.app_user as any)?.metadata)
+    getStoredPopVisibleDeviceTypes((me?.app_user as Record<string, unknown> | undefined)?.metadata as Record<string, unknown> | undefined)
   );
   const relationReferenceMaps = useMemo(() => {
     const data = relationReferenceQuery.data?.data || {};
@@ -652,27 +652,56 @@ export default function DataManagementDetailPage() {
     if (category?.resource !== "pops") return [];
     return popDevices
       .filter((d) => d.device_type_key === "RACK")
-      .map((d) => ({
-        id: d.id,
-        device_name: d.device_name || "Rack",
-        rack_u_height: Number(d.specifications?.rack_u_height) || 42,
-      }));
+      .map((d) => {
+        const specs = d.specifications as Record<string, unknown> | undefined;
+        return {
+          id: d.id,
+          device_name: String(d.device_name || "Rack"),
+          rack_u_height: Number(specs?.rack_u_height) || 42,
+        };
+      });
   }, [category?.resource, popDevices]);
 
   const activePopRackId = selectedPopRackId || popRacks[0]?.id || "";
 
   const popMountedDevices = useMemo<DeviceToMount[]>(() => {
     if (category?.resource !== "pops" || !activePopRackId) return [];
-    return popDevices.filter(
-      (d) => isRackMountable(d) && d.specifications?.rack_device_id === activePopRackId
-    );
+    return popDevices
+      .filter((d) => {
+        const specs = d.specifications as Record<string, unknown> | undefined;
+        return isRackMountable(d) && specs?.rack_device_id === activePopRackId;
+      })
+      .map((d) => {
+        const specs = d.specifications as Record<string, unknown> | undefined;
+        return {
+          id: d.id,
+          device_name: String(d.device_name || ""),
+          device_type_key: String(d.device_type_key || ""),
+          u_height: (specs?.u_height as number | string | undefined) ?? 1,
+          rack_unit_position: specs?.rack_unit_position as number | string | undefined,
+          rack_device_id: specs?.rack_device_id as string | undefined,
+        };
+      });
   }, [category?.resource, popDevices, activePopRackId]);
 
   const popUnmountedDevices = useMemo<DeviceToMount[]>(() => {
     if (category?.resource !== "pops") return [];
-    return popDevices.filter(
-      (d) => isRackMountable(d) && !d.specifications?.rack_device_id
-    );
+    return popDevices
+      .filter((d) => {
+        const specs = d.specifications as Record<string, unknown> | undefined;
+        return isRackMountable(d) && !specs?.rack_device_id;
+      })
+      .map((d) => {
+        const specs = d.specifications as Record<string, unknown> | undefined;
+        return {
+          id: d.id,
+          device_name: String(d.device_name || ""),
+          device_type_key: String(d.device_type_key || ""),
+          u_height: (specs?.u_height as number | string | undefined) ?? 1,
+          rack_unit_position: specs?.rack_unit_position as number | string | undefined,
+          rack_device_id: specs?.rack_device_id as string | undefined,
+        };
+      });
   }, [category?.resource, popDevices]);
 
   const popDeviceTypeCounts = useMemo(() => {
@@ -691,8 +720,14 @@ export default function DataManagementDetailPage() {
 
   const usedPopU = useMemo(() => {
     return popDevices
-      .filter((d) => isRackMountable(d) && d.specifications?.rack_device_id)
-      .reduce((sum, d) => sum + (Number(d.specifications?.u_height) || 1), 0);
+      .filter((d) => {
+        const specs = d.specifications as Record<string, unknown> | undefined;
+        return isRackMountable(d) && specs?.rack_device_id;
+      })
+      .reduce((sum, d) => {
+        const specs = d.specifications as Record<string, unknown> | undefined;
+        return sum + (Number(specs?.u_height) || 1);
+      }, 0);
   }, [popDevices]);
 
   useEffect(() => {
@@ -1330,16 +1365,16 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     async function loadPopDevices() {
       setLoadingPopDevices(true);
       try {
-        const res = await apiFetch<PaginatedResponse<any>>(
+        const res = await apiFetch<PaginatedResponse<GenericItem>>(
           `/devices?page=1&limit=500&pop_id=${encodeURIComponent(popItemId)}`,
           { token }
         );
         if (!cancelled) {
           const rows = res.data || [];
           setPopDevices(rows);
-          const racks = rows.filter((d: any) => d.device_type_key === "RACK");
+          const racks = rows.filter((d) => d.device_type_key === "RACK");
           if (racks.length > 0) {
-            setSelectedPopRackId((prev) => (prev && racks.some((r: any) => r.id === prev) ? prev : racks[0].id));
+            setSelectedPopRackId((prev) => (prev && racks.some((r) => r.id === prev) ? prev : racks[0].id));
           }
         }
       } catch {
@@ -1377,7 +1412,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         },
       });
       setMessage(`Rak ${rackName} berhasil dibuat.`);
-      const res = await apiFetch<PaginatedResponse<any>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
+      const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
       setPopDevices(res.data || []);
       if (newRack?.data?.id) setSelectedPopRackId(newRack.data.id);
     } catch (err) {
@@ -1392,8 +1427,9 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       setError("Hanya perangkat aktif dan OTB yang dapat dipasang ke dalam rak.");
       return;
     }
+    const specs = (targetDev.specifications as Record<string, unknown> | undefined) || {};
     const updatedSpecs = {
-      ...(targetDev?.specifications || {}),
+      ...specs,
       rack_device_id: rackId,
       rack_unit_position: uPos,
       u_height: uHeight,
@@ -1407,7 +1443,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         },
       });
       setMessage(`Perangkat berhasil dipasang di U${uPos}.`);
-      const res = await apiFetch<PaginatedResponse<any>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
+      const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
       setPopDevices(res.data || []);
     } catch (err) {
       setError((err as Error).message || "Gagal memasang perangkat ke rak.");
@@ -1417,8 +1453,9 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   async function handleUnmountPopDevice(deviceId: string) {
     if (!token || !item?.id) return;
     const targetDev = popDevices.find((d) => d.id === deviceId);
+    const specs = (targetDev?.specifications as Record<string, unknown> | undefined) || {};
     const updatedSpecs = {
-      ...(targetDev?.specifications || {}),
+      ...specs,
       rack_device_id: null,
       rack_unit_position: null,
     };
@@ -1431,7 +1468,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         },
       });
       setMessage("Perangkat berhasil dilepas dari rak.");
-      const res = await apiFetch<PaginatedResponse<any>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
+      const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
       setPopDevices(res.data || []);
     } catch (err) {
       setError((err as Error).message || "Gagal melepas perangkat dari rak.");
@@ -2694,10 +2731,7 @@ if (!category) {
                       installationDate={valueOf(item.installation_date)}
                       updatedAt={valueOf(item.updated_at || item.created_at)}
                       notes={valueOf(item.notes)}
-                      tags={(() => {
-                        const rawTags = (item as any)?.tags;
-                        return Array.isArray(rawTags) ? rawTags : [];
-                      })()}
+                      tags={Array.isArray(item.tags) ? (item.tags as string[]) : []}
                     />
                   </div>
 
@@ -2717,8 +2751,8 @@ if (!category) {
                   {/* TILE 3: Lokasi & Geotagging (7 Cols Desktop / 6 Tablet / 12 Mobile) */}
                   <div className="sm:col-span-6 lg:col-span-7">
                     <DeviceBentoLocationTile
-                      latitude={item.latitude as any}
-                      longitude={item.longitude as any}
+                      latitude={item.latitude as number | string | null | undefined}
+                      longitude={item.longitude as number | string | null | undefined}
                       address={valueOf(item.address)}
                       popName={relationLabels.pop}
                       cityName={relationLabels.city}
@@ -2730,10 +2764,10 @@ if (!category) {
                   {/* TILE 4: Kapasitas Dasar & Spesifikasi Aset (5 Cols Desktop / 6 Tablet / 12 Mobile) */}
                   <div className="sm:col-span-6 lg:col-span-5">
                     <DeviceBentoCapacityTile
-                      totalPorts={item.total_ports as any}
-                      usedPorts={item.used_ports as any}
-                      capacityCore={item.capacity_core as any}
-                      usedCore={item.used_core as any}
+                      totalPorts={item.total_ports as number | string | null | undefined}
+                      usedPorts={item.used_ports as number | string | null | undefined}
+                      capacityCore={item.capacity_core as number | string | null | undefined}
+                      usedCore={item.used_core as number | string | null | undefined}
                       splitterRatio={valueOf(item.splitter_ratio)}
                       odpType={valueOf(item.odp_type)}
                       modelName={relationLabels.model}
@@ -2745,14 +2779,14 @@ if (!category) {
                       managementIp={valueOf(item.management_ip)}
                       vlan={valueOf(item.vlan)}
                       closureTypeName={closureTypes.find((c) => c.id === valueOf(item.closure_type_id))?.closure_type_name || undefined}
-                      trayCount={(item.specifications as any)?.tray_count || undefined}
-                      cableLengthM={item.cable_length_m as any}
+                      trayCount={(item.specifications as Record<string, unknown> | undefined)?.tray_count as number | string | undefined}
+                      cableLengthM={item.cable_length_m as number | string | null | undefined}
                       cableType={valueOf(item.cable_type)}
                       routeType={valueOf(item.route_type)}
-                      customerName={relationLabels.customer || (item as any).customer_name}
-                      customerNumber={(item as any).customer_number}
-                      uHeight={(item as any).u_height || (item.specifications as any)?.u_height}
-                      feederPortCount={item.feeder_port_count as any}
+                      customerName={relationLabels.customer || (item.customer_name as string | undefined)}
+                      customerNumber={item.customer_number as string | undefined}
+                      uHeight={(item.u_height as string | undefined) || ((item.specifications as Record<string, unknown> | undefined)?.u_height as string | undefined)}
+                      feederPortCount={item.feeder_port_count as number | string | null | undefined}
                       operationalStatus={valueOf(item.status, "active")}
                     />
                   </div>
@@ -2844,20 +2878,17 @@ if (!category) {
                       plnCidNumber={valueOf(item.pln_cid_number)}
                       plnPaymentMethod={valueOf(item.pln_payment_method)}
                       plnPhase={valueOf(item.pln_phase)}
-                      plnWattage={item.pln_wattage as any}
+                      plnWattage={item.pln_wattage as number | string | null | undefined}
                       updatedAt={valueOf(item.updated_at || item.created_at)}
-                      tags={(() => {
-                        const rawTags = (item as any)?.tags;
-                        return Array.isArray(rawTags) ? rawTags : [];
-                      })()}
+                      tags={Array.isArray(item.tags) ? (item.tags as string[]) : []}
                     />
                   </div>
 
                   {/* TILE 2: Peta & Lokasi POP (5 Cols Desktop / 12 Mobile) */}
                   <div className="sm:col-span-5 lg:col-span-5">
                     <PopBentoLocationTile
-                      latitude={item.latitude as any}
-                      longitude={item.longitude as any}
+                      latitude={item.latitude as number | string | null | undefined}
+                      longitude={item.longitude as number | string | null | undefined}
                       address={valueOf(item.address)}
                       popName={valueOf(item.pop_name)}
                       cityName={relationLabels.city}
@@ -3145,7 +3176,7 @@ if (!category) {
           onOpenChange={setNavModalOpen}
           token={token || ""}
           deviceId={String(item.id)}
-          deviceName={String(item.device_name || (item as any).pop_name || item.device_id || (item as any).pop_code || "")}
+          deviceName={String(item.device_name || item.pop_name || item.device_id || item.pop_code || "")}
           deviceLat={Number(item.latitude)}
           deviceLng={Number(item.longitude)}
         />

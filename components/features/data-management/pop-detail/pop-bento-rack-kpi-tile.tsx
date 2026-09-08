@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Server, SlidersHorizontal, Check, Layers, Cpu, Radio, Network, HardDrive, Filter } from "lucide-react";
+import { Server, SlidersHorizontal } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
