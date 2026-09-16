@@ -6,10 +6,16 @@ import {
   useJsApiLoader,
   MarkerF,
   PolylineF,
+  PolygonF,
   OverlayViewF,
   OVERLAY_MOUSE_TARGET,
 } from "@react-google-maps/api";
+import type { Feature, Polygon, MultiPolygon } from "geojson";
 import type { OsgmRouteResult } from "@/lib/api";
+import {
+  calculateIndividualDeviceHomepassed,
+  type HomepassedCalculationConfig,
+} from "@/lib/gis/homepassed-calculator";
 import type { MapConnection, MapDevice, MapRoute } from "./topology-map-canvas";
 
 export type OverpassPOI = {
@@ -30,6 +36,8 @@ export type GoogleMapsCanvasProps = {
   poiMarkers?: OverpassPOI[];
   userGpsPosition?: { lat: number; lng: number } | null;
   searchSelection?: { lat: number; lng: number; label: string } | null;
+  homepassedCoveragePolygon?: Feature<Polygon | MultiPolygon> | null;
+  homepassedConfig?: HomepassedCalculationConfig;
   showDevices?: boolean;
   showLabels?: boolean;
   showCables?: boolean;
@@ -56,12 +64,34 @@ const MARKER_COLORS: Record<string, string> = {
 
 const fallbackColor = "#64748b";
 
-function svgMarker(color: string): string {
+function getMarkerGlyphSvg(status: string): string {
+  switch (status) {
+    case "healthy":
+      return `<path d="M9.5 14l3 3 6-6" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    case "warning":
+      return `<path d="M14 9.5v5M14 17.5h.01" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>`;
+    case "critical":
+    case "impacted":
+      return `<path d="M14 8.5v5.5M14 17.5v.01" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>`;
+    case "unvalidated":
+    default:
+      return `<circle cx="14" cy="14" r="3.5" fill="none" stroke="#ffffff" stroke-width="1.6"/><path d="M14 8.5v2M14 17.5v2M8.5 14h2M17.5 14h2" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round"/>`;
+  }
+}
+
+function svgMarker(statusOrColor: string): string {
+  // ponytail: support both status key and raw hex color for OSRM endpoints
+  const isHex = statusOrColor.startsWith("#");
+  const color = isHex ? statusOrColor : (MARKER_COLORS[statusOrColor] || fallbackColor);
   const encoded = encodeURIComponent(color);
+  const glyph = isHex
+    ? `<circle cx="14" cy="14" r="4" fill="#ffffff" fill-opacity="0.9"/>`
+    : getMarkerGlyphSvg(statusOrColor);
+
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
        <circle cx="14" cy="14" r="10" fill="${encoded}" stroke="#ffffff" stroke-width="2.5"/>
-       <circle cx="14" cy="14" r="4" fill="#ffffff" fill-opacity="0.85"/>
+       ${glyph}
      </svg>`,
   )}`;
 }
@@ -100,16 +130,28 @@ const DeviceMarker = React.memo(
     device,
     icon,
     showLabel,
+    homepassedConfig,
     onClick,
   }: {
     device: MapDevice;
     icon: google.maps.Icon | string;
     showLabel: boolean;
+    homepassedConfig?: HomepassedCalculationConfig;
     onClick: (device: MapDevice, isMulti: boolean) => void;
   }) => {
+    const [isHovered, setIsHovered] = React.useState(false);
     const lat = Number(device.latitude);
     const lng = Number(device.longitude);
     const labelText = device.device_name || device.device_id || "";
+
+    const individualHomepassed = React.useMemo(() => {
+      if (!isHovered) return null;
+      return calculateIndividualDeviceHomepassed(
+        device,
+        homepassedConfig?.odpRadiusMeters ?? 250,
+        homepassedConfig?.densityPerSqMeter ?? 0.003
+      );
+    }, [isHovered, device, homepassedConfig]);
 
     return (
       <>
@@ -121,9 +163,55 @@ const DeviceMarker = React.memo(
             const domEvent = e.domEvent as MouseEvent | undefined;
             onClick(device, Boolean(domEvent?.shiftKey));
           }}
+          onMouseOver={() => setIsHovered(true)}
+          onMouseOut={() => setIsHovered(false)}
         />
 
-        {showLabel && labelText && (
+        {/* Hover Tooltip: ODP Details & Individual Homepassed Count */}
+        {isHovered && individualHomepassed && (
+          <OverlayViewF
+            position={{ lat, lng }}
+            mapPaneName={OVERLAY_MOUSE_TARGET}
+            getPixelPositionOffset={(width, height) => ({
+              x: -(width / 2),
+              y: -95,
+            })}
+          >
+            <div className="pointer-events-none z-50 min-w-[170px] space-y-1 rounded-2xl border border-border/60 bg-card/95 p-2.5 shadow-lg backdrop-blur-md glass-inset">
+              <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-1">
+                <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-rose-500">
+                  {device.device_type_key || "DEVICE"}
+                </span>
+                <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.2 font-mono text-[8px] font-bold text-emerald-500">
+                  R={individualHomepassed.radiusMeters}m
+                </span>
+              </div>
+              <p className="truncate font-semibold text-xs text-foreground">
+                {labelText}
+              </p>
+              {individualHomepassed.isInWater ? (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-1.5 font-mono text-[9px] font-semibold text-amber-500">
+                  ⚠️ {individualHomepassed.waterWarning || "Koordinat di Perairan / Laut"}
+                </div>
+              ) : (
+                <div className="flex items-center justify-between font-mono text-[9px] text-muted-foreground pt-0.5">
+                  <span>Kapasitas:</span>
+                  <span className="font-bold text-foreground tabular-nums">{individualHomepassed.portCapacity} Port</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-0.5 text-[10px] border-t border-border/30">
+                <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Homepassed:
+                </span>
+                <span className={`font-mono tabular-nums font-bold ${individualHomepassed.isInWater ? "text-amber-500" : "text-cyan-500"}`}>
+                  {individualHomepassed.estimatedHomepassed} Unit
+                </span>
+              </div>
+            </div>
+          </OverlayViewF>
+        )}
+
+        {showLabel && !isHovered && labelText && (
           <OverlayViewF
             position={{ lat, lng }}
             mapPaneName={OVERLAY_MOUSE_TARGET}
@@ -153,6 +241,8 @@ export function GoogleMapsCanvas({
   poiMarkers = [],
   userGpsPosition,
   searchSelection,
+  homepassedCoveragePolygon,
+  homepassedConfig,
   showDevices = true,
   showLabels = true,
   showCables = true,
@@ -173,10 +263,10 @@ export function GoogleMapsCanvas({
   // Icons memoized once per marker status (avoids `new google.maps.Size/Point` on every render)
   const deviceIcons = React.useMemo(() => {
     if (!isLoaded || typeof google === "undefined" || !google.maps) return {};
-    const entries = Object.entries(MARKER_COLORS).map(([status, color]) => [
+    const entries = Object.keys(MARKER_COLORS).map((status) => [
       status,
       {
-        url: svgMarker(color),
+        url: svgMarker(status),
         scaledSize: new google.maps.Size(28, 28),
         anchor: new google.maps.Point(14, 14),
         labelOrigin: new google.maps.Point(14, -10),
@@ -188,16 +278,15 @@ export function GoogleMapsCanvas({
   const getIcon = React.useCallback(
     (status: string) => {
       if (deviceIcons[status]) return deviceIcons[status];
-      const color = MARKER_COLORS[status] || fallbackColor;
       if (typeof google !== "undefined" && google.maps) {
         return {
-          url: svgMarker(color),
+          url: svgMarker(status),
           scaledSize: new google.maps.Size(28, 28),
           anchor: new google.maps.Point(14, 14),
           labelOrigin: new google.maps.Point(14, -10),
         } as google.maps.Icon;
       }
-      return svgMarker(color);
+      return svgMarker(status);
     },
     [deviceIcons],
   );
@@ -308,7 +397,11 @@ export function GoogleMapsCanvas({
   }, [onMapIdle]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-muted/10">
+    <div
+      role="region"
+      aria-label="Peta Operasional Google Maps"
+      className="relative h-full w-full overflow-hidden bg-muted/10"
+    >
       {!apiKey ? (
         <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
           Google Maps API key belum dikonfigurasi di .env.local
@@ -392,6 +485,7 @@ export function GoogleMapsCanvas({
                       device={device}
                       icon={getIcon(markerStatus)}
                       showLabel={canShowLabel}
+                      homepassedConfig={homepassedConfig}
                       onClick={(d, isMulti) => onDeviceSelect?.(d, isMulti)}
                     />
                   );
@@ -440,6 +534,22 @@ export function GoogleMapsCanvas({
             {/* User GPS position */}
             {userGpsPosition && (
               <MarkerF position={userGpsPosition} icon={gpsMarkerUrl} title="Posisi GPS Anda" />
+            )}
+
+            {/* GIS Homepassed Coverage Union Polygon Layer */}
+            {homepassedCoveragePolygon && (
+              <PolygonF
+                paths={geoJsonPolygonToGooglePaths(homepassedCoveragePolygon)}
+                options={{
+                  fillColor: "#06b6d4",
+                  fillOpacity: 0.18,
+                  strokeColor: "#10b981",
+                  strokeOpacity: 0.85,
+                  strokeWeight: 2,
+                  clickable: false,
+                  zIndex: 1,
+                }}
+              />
             )}
 
             {/* Nominatim search result */}
@@ -510,4 +620,24 @@ function flattenCoords(value: unknown): FlatPoint[] {
       return { lat, lng };
     })
     .filter((point): point is FlatPoint => point !== null);
+}
+
+function geoJsonPolygonToGooglePaths(
+  feature?: Feature<Polygon | MultiPolygon> | null
+): Array<Array<{ lat: number; lng: number }>> {
+  if (!feature || !feature.geometry) return [];
+  const paths: Array<Array<{ lat: number; lng: number }>> = [];
+
+  if (feature.geometry.type === "Polygon") {
+    feature.geometry.coordinates.forEach((ring) => {
+      paths.push(ring.map(([lng, lat]) => ({ lat, lng })));
+    });
+  } else if (feature.geometry.type === "MultiPolygon") {
+    feature.geometry.coordinates.forEach((poly) => {
+      poly.forEach((ring) => {
+        paths.push(ring.map(([lng, lat]) => ({ lat, lng })));
+      });
+    });
+  }
+  return paths;
 }

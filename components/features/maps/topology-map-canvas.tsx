@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import type { Feature, Polygon, MultiPolygon } from "geojson";
 import type { OsgmRouteResult } from "@/lib/api";
 
 export type MapDevice = {
@@ -16,6 +17,10 @@ export type MapDevice = {
   longitude?: number | null;
   latitude?: number | null;
   has_coordinates?: boolean;
+  total_ports?: number | null;
+  used_ports?: number | null;
+  capacity_core?: number | null;
+  splitter_ratio?: string | null;
 };
 
 export type MapRoute = {
@@ -40,6 +45,7 @@ type TopologyMapCanvasProps = {
   impactedDeviceIds?: string[];
   impactedConnectionIds?: string[];
   osrmRoute?: OsgmRouteResult | null;
+  homepassedCoveragePolygon?: Feature<Polygon | MultiPolygon> | null;
 };
 
 const BASE_STYLE = {
@@ -62,6 +68,7 @@ export function TopologyMapCanvas({
   impactedDeviceIds = [],
   impactedConnectionIds = [],
   osrmRoute,
+  homepassedCoveragePolygon,
 }: TopologyMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -135,7 +142,7 @@ export function TopologyMapCanvas({
         type: "circle",
         source: "devices",
         paint: {
-          "circle-radius": 7,
+          "circle-radius": 8,
           "circle-color": [
             "match",
             ["get", "marker_status"],
@@ -147,6 +154,28 @@ export function TopologyMapCanvas({
           ],
           "circle-stroke-color": "#ffffff",
           "circle-stroke-width": 2,
+        },
+      });
+      map.addLayer({
+        id: "devices-symbol",
+        type: "symbol",
+        source: "devices",
+        layout: {
+          "text-field": [
+            "match",
+            ["get", "marker_status"],
+            "healthy", "✓",
+            "warning", "▲",
+            "critical", "!",
+            "impacted", "!",
+            "⚙",
+          ],
+          "text-size": 9,
+          "text-allow-overlap": true,
+          "text-ignore-placement": true,
+        },
+        paint: {
+          "text-color": "#ffffff",
         },
       });
 
@@ -216,6 +245,32 @@ export function TopologyMapCanvas({
         }
       }
 
+      if (homepassedCoveragePolygon) {
+        map.addSource("homepassed-coverage", {
+          type: "geojson",
+          data: homepassedCoveragePolygon,
+        });
+        map.addLayer({
+          id: "homepassed-coverage-fill",
+          type: "fill",
+          source: "homepassed-coverage",
+          paint: {
+            "fill-color": "#06b6d4",
+            "fill-opacity": 0.18,
+          },
+        });
+        map.addLayer({
+          id: "homepassed-coverage-stroke",
+          type: "line",
+          source: "homepassed-coverage",
+          paint: {
+            "line-color": "#10b981",
+            "line-width": 2,
+            "line-opacity": 0.85,
+          },
+        });
+      }
+
       map.on("click", "devices", (event) => {
         const feature = event.features?.[0];
         const coordinates = (feature?.geometry as { coordinates?: [number, number] } | undefined)?.coordinates;
@@ -244,7 +299,14 @@ export function TopologyMapCanvas({
     return () => map.remove();
   }, [connections, devices, impactedConnectionIds, impactedDeviceIds, osrmRoute, routes]);
 
-  return <div ref={containerRef} className="h-full min-h-[320px] w-full md:min-h-[420px]" aria-label="Topology operational map" />;
+  return (
+    <div
+      ref={containerRef}
+      role="region"
+      aria-label="Peta Operasional Topologi MapLibre"
+      className="h-full min-h-[320px] w-full md:min-h-[420px]"
+    />
+  );
 }
 
 function hasCoordinates(device?: MapDevice | null) {

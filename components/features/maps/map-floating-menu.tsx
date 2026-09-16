@@ -23,16 +23,26 @@ import {
   Keyboard,
   SlidersHorizontal,
   Info,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 
 type MapFloatingMenuProps = {
   fullscreenRef: React.RefObject<HTMLDivElement | null>;
   screenshotRef: React.RefObject<HTMLDivElement | null>;
+  isZenMode?: boolean;
+  onToggleZenMode?: () => void;
   className?: string;
 };
 
-export function MapFloatingMenu({ fullscreenRef, screenshotRef, className }: MapFloatingMenuProps) {
+export function MapFloatingMenu({
+  fullscreenRef,
+  screenshotRef,
+  isZenMode = false,
+  onToggleZenMode,
+  className,
+}: MapFloatingMenuProps) {
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const [shortcutOpen, setShortcutOpen] = React.useState(false);
   const [isCapturing, setIsCapturing] = React.useState(false);
@@ -48,7 +58,7 @@ export function MapFloatingMenu({ fullscreenRef, screenshotRef, className }: Map
     };
   }, []);
 
-  // Global hotkeys (Alt+F for Fullscreen, Alt+S for Screenshot, ? for Shortcuts)
+  // Global hotkeys (Z for Zen mode, Alt+F for Fullscreen, Alt+S for Screenshot, ? for Shortcuts)
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't trigger when user is typing in input or textarea
@@ -66,6 +76,12 @@ export function MapFloatingMenu({ fullscreenRef, screenshotRef, className }: Map
       } else if (e.altKey && e.key.toLowerCase() === "s") {
         e.preventDefault();
         captureScreenshot();
+      } else if (
+        (e.key.toLowerCase() === "z" && !e.ctrlKey && !e.metaKey) ||
+        (e.altKey && e.key.toLowerCase() === "z")
+      ) {
+        e.preventDefault();
+        onToggleZenMode?.();
       } else if (e.key === "?" || (e.shiftKey && e.key === "/")) {
         e.preventDefault();
         setShortcutOpen((prev) => !prev);
@@ -76,7 +92,7 @@ export function MapFloatingMenu({ fullscreenRef, screenshotRef, className }: Map
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  });
+  }, [onToggleZenMode]);
 
   const toggleFullscreen = React.useCallback(async () => {
     try {
@@ -179,6 +195,21 @@ export function MapFloatingMenu({ fullscreenRef, screenshotRef, className }: Map
             <DropdownMenuSeparator className="my-1 bg-border/40" />
 
             <DropdownMenuItem
+              onClick={onToggleZenMode}
+              className="flex items-center justify-between cursor-pointer rounded-xl px-2.5 py-2 text-xs transition-colors hover:bg-muted/60"
+            >
+              <div className="flex items-center gap-2 font-medium">
+                {isZenMode ? (
+                  <Eye className="size-4 text-primary" />
+                ) : (
+                  <EyeOff className="size-4 text-primary" />
+                )}
+                <span>{isZenMode ? "Tampilkan HUD" : "Mode Fokus (Zen)"}</span>
+              </div>
+              <Kbd>Z</Kbd>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
               onClick={toggleFullscreen}
               className="flex items-center justify-between cursor-pointer rounded-xl px-2.5 py-2 text-xs transition-colors hover:bg-muted/60"
             >
@@ -242,6 +273,7 @@ export function MapFloatingMenu({ fullscreenRef, screenshotRef, className }: Map
           </DialogHeader>
 
           <div className="mt-3 space-y-2 text-xs">
+            <ShortcutRow label="Mode Fokus / Zen (Sembunyikan HUD)" keys={["Z"]} />
             <ShortcutRow label="Inspeksi Multi-Device (Maks 3)" keys={["Shift", "Klik Marker"]} />
             <ShortcutRow label="Inspeksi Single Device" keys={["Klik Marker"]} />
             <ShortcutRow label="Buka / Tutup Layar Penuh" keys={["Alt", "F"]} />

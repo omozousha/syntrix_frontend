@@ -98,18 +98,18 @@ export function DeviceNavigationModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Peta Mini Leaflet OpenStreetMap (Dark Mode) */}
-        <div className="h-56 w-full overflow-hidden rounded-xl border border-border/60 bg-[#18181b] relative [&_.leaflet-tile]:brightness-[0.6] [&_.leaflet-tile]:invert [&_.leaflet-tile]:contrast-[3] [&_.leaflet-tile]:hue-rotate-[200deg] [&_.leaflet-tile]:saturate-[0.3]">
+        {/* Peta Mini Leaflet OpenStreetMap (CartoDB Dark Matter) */}
+        <div className="h-56 w-full overflow-hidden rounded-xl border border-border/60 bg-[#0f172a] relative">
           <MapContainer
             center={[deviceLat, deviceLng]}
             zoom={14}
             scrollWheelZoom={false}
-            style={{ height: "100%", width: "100%", background: "#18181b" }}
+            style={{ height: "100%", width: "100%", background: "#0f172a" }}
             attributionControl={false}
           >
             <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             />
             <Marker position={[deviceLat, deviceLng]} icon={DEVICE_PIN_ICON} />
             {origin ? (
