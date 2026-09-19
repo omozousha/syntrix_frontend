@@ -5,7 +5,7 @@ import type { OverpassPOI } from "@/components/features/maps/google-maps-canvas"
 
 const OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter";
 const DEBOUNCE_MS = 800;
-const MAX_POI = 100;
+const MAX_POI = 5000;
 
 const POI_QUERIES = [
   'node["man_made"="mast"]',
@@ -14,6 +14,11 @@ const POI_QUERIES = [
   'node["office"="telecommunication"]',
   'node["man_made"="communications_tower"]',
   'node["barrier"="pole"]',
+  'way["building"]',
+  'way["building"="residential"]',
+  'way["building"="house"]',
+  'way["building"="apartments"]',
+  'node["building"]',
 ];
 
 type BoundingBox = {
@@ -32,26 +37,35 @@ function buildBboxString(bbox: BoundingBox): string {
 function buildOverpassQuery(bbox: BoundingBox): string {
   const bboxStr = buildBboxString(bbox);
   const unionParts = POI_QUERIES.map((q) => `${q}(${bboxStr});`).join("\n");
-  return `[out:json][timeout:15];(\n${unionParts}\n);\nout body ${MAX_POI};`;
+  return `[out:json][timeout:15];(\n${unionParts}\n);\nout center body ${MAX_POI};`;
 }
 
 function mapElements(elements: OverpassRawElement[]): OverpassPOI[] {
   return elements
-    .filter((el) => el.type === "node" && Number.isFinite(el.lat) && Number.isFinite(el.lon))
-    .map((el, i) => ({
-      id: el.id || i,
-      lat: el.lat!,
-      lng: el.lon!,
-      label: el.tags?.name || el.tags?.description || `POI #${el.id}`,
-      kind: determineKind(el),
-    }));
+    .filter((el) => {
+      if (el.type === "node" && Number.isFinite(el.lat) && Number.isFinite(el.lon)) return true;
+      if (el.type === "way" && el.center && Number.isFinite(el.center.lat) && Number.isFinite(el.center.lon)) return true;
+      return false;
+    })
+    .map((el, i) => {
+      const kind = determineKind(el);
+      return {
+        id: el.id || i,
+        lat: el.type === "node" ? el.lat! : el.center!.lat,
+        lng: el.type === "node" ? el.lon! : el.center!.lon,
+        label: el.tags?.name || el.tags?.description || (kind === "building" ? `Bangunan #${el.id}` : `POI #${el.id}`),
+        kind,
+        category: kind === "building" ? "building" : "telco",
+      };
+    });
 }
 
-function determineKind(el: OverpassRawElement): "mast" | "pole" | "utility" {
+function determineKind(el: OverpassRawElement): "mast" | "pole" | "utility" | "building" {
   const tags = el.tags || {};
   if (tags["man_made"] === "mast" || tags["man_made"] === "communications_tower") return "mast";
   if (tags["communication"] === "pole") return "pole";
   if (tags["office"] === "telecommunication") return "mast";
+  if (tags["building"]) return "building";
   return "utility";
 }
 
@@ -60,6 +74,7 @@ type OverpassRawElement = {
   id: number;
   lat?: number;
   lon?: number;
+  center?: { lat: number; lon: number };
   tags?: Record<string, string>;
 };
 
@@ -122,5 +137,22 @@ export function useOverpassPOI() {
     lastBoundsRef.current = null;
   }, []);
 
-  return { poiMarkers, loading, error, fetchPOI: debouncedFetchPOI, clearPOI };
+  const buildingPois = React.useMemo(
+    () => poiMarkers.filter((p) => p.kind === "building"),
+    [poiMarkers]
+  );
+  const telcoPois = React.useMemo(
+    () => poiMarkers.filter((p) => p.kind !== "building"),
+    [poiMarkers]
+  );
+
+  return {
+    poiMarkers,
+    buildingPois,
+    telcoPois,
+    loading,
+    error,
+    fetchPOI: debouncedFetchPOI,
+    clearPOI,
+  };
 }

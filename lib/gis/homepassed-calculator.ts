@@ -121,15 +121,21 @@ function getDevicePortCapacity(device: MapDevice): number {
   if (device.capacity_core && Number(device.capacity_core) > 0) {
     return Number(device.capacity_core);
   }
-  // Deterministic port capacity fallback from device ID hash (8, 16, 24, or 32 ports)
-  let hash = 0;
-  const str = device.id || device.device_name || "";
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  const presetPorts = [8, 16, 24, 32];
-  return presetPorts[Math.abs(hash) % presetPorts.length];
+  // Fallback realistic default 8 ports for standard ODP
+  console.warn(
+    `[homepassed-calculator] Missing port data for device "${device.id || device.device_name || "unknown"}", defaulting to 8 ports`,
+  );
+  return 8;
+}
+
+/**
+ * Checks if a device is an ODP (Optical Distribution Point).
+ * Only ODP devices terminate last-mile drop cables directly to customer homepassed.
+ */
+export function isOdpDevice(device: MapDevice): boolean {
+  const type = String(device.device_type_key || "").trim().toUpperCase();
+  if (!type) return true; // legacy untyped fallback
+  return type === "ODP";
 }
 
 /**
@@ -142,6 +148,24 @@ export function calculateIndividualDeviceHomepassed(
   densityPerSqMeter: number = 0.003,
   buildingPois: OverpassPOI[] = []
 ) {
+  const isOdp = isOdpDevice(device);
+  const portCapacity = getDevicePortCapacity(device);
+
+  // Non-ODP devices (OLT, ODC, POP, Closure) do not provide direct homepassed drop coverage
+  if (!isOdp) {
+    return {
+      radiusMeters,
+      areaSqM: 0,
+      areaKm2: 0,
+      estimatedHomepassed: 0,
+      portCapacity,
+      isInWater: false,
+      waterWarning: null,
+      source: "estimate" as const,
+      isOdp: false,
+    };
+  }
+
   const lat = Number(device.latitude);
   const lng = Number(device.longitude);
   
@@ -154,6 +178,8 @@ export function calculateIndividualDeviceHomepassed(
       portCapacity: 0,
       isInWater: true,
       waterWarning: "Koordinat Tidak Valid",
+      source: "estimate" as const,
+      isOdp: true,
     };
   }
 
@@ -164,13 +190,14 @@ export function calculateIndividualDeviceHomepassed(
       areaSqM: 0,
       areaKm2: 0,
       estimatedHomepassed: 0,
-      portCapacity: getDevicePortCapacity(device),
+      portCapacity,
       isInWater: true,
       waterWarning: "Koordinat di Perairan / Laut",
+      source: "estimate" as const,
+      isOdp: true,
     };
   }
 
-  const portCapacity = getDevicePortCapacity(device);
   const pt = turf.point([lng, lat]);
   const buf = turf.buffer(pt, radiusMeters, { units: "meters" });
   const areaSqM = buf ? turf.area(buf) : Math.PI * Math.pow(radiusMeters, 2);
@@ -178,26 +205,39 @@ export function calculateIndividualDeviceHomepassed(
 
   // Check if building POIs exist in circle
   let exactBuildingCount = 0;
-  let hasPoiData = false;
   if (buf && buildingPois.length > 0) {
-    hasPoiData = true;
-    buildingPois.forEach((poi) => {
+    // Fast BBox pre-filter: 1 deg lat ~ 111,320m. Exclude POIs outside square bbox before expensive point-in-polygon
+    const latDelta = radiusMeters / 111_320;
+    const cosLat = Math.cos((lat * Math.PI) / 180);
+    const lngDelta = radiusMeters / (111_320 * (cosLat > 0.001 ? cosLat : 1));
+    const minLat = lat - latDelta;
+    const maxLat = lat + latDelta;
+    const minLng = lng - lngDelta;
+    const maxLng = lng + lngDelta;
+
+    for (let i = 0; i < buildingPois.length; i++) {
+      const poi = buildingPois[i];
+      if (poi.lat < minLat || poi.lat > maxLat || poi.lng < minLng || poi.lng > maxLng) continue;
       const poiPt = turf.point([poi.lng, poi.lat]);
       if (turf.booleanPointInPolygon(poiPt, buf as any)) {
         exactBuildingCount++;
       }
-    });
+    }
   }
 
   let estimatedHomepassed = 0;
-  if (hasPoiData) {
-    // Strict POI count: if building POIs are loaded and 0 building POIs exist in radius -> 0 Homepassed!
+  let source: "poi" | "estimate" = "estimate";
+
+  if (exactBuildingCount > 0) {
+    // Exact building count from OpenStreetMap footprints within ODP radius
     estimatedHomepassed = exactBuildingCount;
+    source = "poi";
   } else {
-    // If POI data not loaded, calculate from port capacity * multiplier scaled by radius
+    // If POI data not loaded or 0 buildings mapped in rural area, fallback to port capacity * 8 * scale
     const multiplier = 8;
     const scale = radiusMeters / 250;
     estimatedHomepassed = Math.round(portCapacity * multiplier * scale);
+    source = "estimate";
   }
 
   return {
@@ -208,6 +248,8 @@ export function calculateIndividualDeviceHomepassed(
     portCapacity,
     isInWater: false,
     waterWarning: null,
+    source,
+    isOdp: true,
   };
 }
 
@@ -264,9 +306,11 @@ export function calculateHomepassedCoverage(
     ? devices.filter((d) => d.region_id === targetRegion)
     : devices;
 
-  // 1. Generate ODP & Device Buffers
+  // 1. Generate ODP Buffers (filtered to ODP devices only)
   if (config.includeOdp && config.odpRadiusMeters > 0) {
     filteredDevices.forEach((device) => {
+      if (!isOdpDevice(device)) return; // Exclude non-ODP devices (OLT, ODC, POP, Closure)
+
       const lat = Number(device.latitude);
       const lng = Number(device.longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) return;
@@ -339,19 +383,25 @@ export function calculateHomepassedCoverage(
   const totalCoverageAreaSqM = turf.area(mergedPolygonFeature);
   const totalCoverageAreaKm2 = totalCoverageAreaSqM / 1_000_000;
 
-  // 5. Point-in-Polygon Exact Building Count
+  // 5. Point-in-Polygon Exact Building Count (with fast BBox pre-filter)
   let exactHomepassedCount = 0;
   if (buildingPois.length > 0 && mergedPolygonFeature) {
-    buildingPois.forEach((poi) => {
+    const [minLng, minLat, maxLng, maxLat] = turf.bbox(mergedPolygonFeature);
+    for (let i = 0; i < buildingPois.length; i++) {
+      const poi = buildingPois[i];
+      if (poi.lat < minLat || poi.lat > maxLat || poi.lng < minLng || poi.lng > maxLng) continue;
       const pt = turf.point([poi.lng, poi.lat]);
-      if (turf.booleanPointInPolygon(pt, mergedPolygonFeature!)) {
+      if (turf.booleanPointInPolygon(pt, mergedPolygonFeature)) {
         exactHomepassedCount++;
       }
-    });
+    }
   }
 
   // 6. Estimated Homepassed Calculation
-  const estimatedHomepassedCount = Math.round(totalCoverageAreaSqM * config.densityPerSqMeter);
+  // Prioritize exact building count when building POIs are available in coverage polygon
+  const estimatedHomepassedCount = exactHomepassedCount > 0
+    ? exactHomepassedCount
+    : Math.round(totalCoverageAreaSqM * config.densityPerSqMeter);
 
   // 7. Deduplication / Overlap Savings Percentage
   const overlapSavingsPercentage = rawUnmergedAreaSqM > 0

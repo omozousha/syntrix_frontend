@@ -10,18 +10,20 @@ import { apiFetch, getReferenceData } from "@/lib/api";
 import { useOsrmRouting } from "@/hooks/use-osrm-routing";
 import { useOverpassPOI } from "@/hooks/use-overpass-poi";
 import { MapStatusDock } from "@/components/features/maps/map-status-dock";
-import { MapLeftSidebar, type LayerToggles } from "@/components/features/maps/map-left-sidebar";
+import { MapLeftSidebar, type LayerToggles, type MapTabType } from "@/components/features/maps/map-left-sidebar";
 import { MapFloatingMenu } from "@/components/features/maps/map-floating-menu";
+import { MapFloatingLayersControl } from "@/components/features/maps/map-floating-layers-control";
+import { TopMapOmnibar } from "@/components/features/maps/top-map-omnibar";
 import {
   calculateHomepassedCoverage,
   DEFAULT_HOMEPASSED_CONFIG,
   type HomepassedCalculationConfig,
 } from "@/lib/gis/homepassed-calculator";
-import type { NominatimResult } from "@/hooks/use-nominatim-search";
 import { cn } from "@/lib/utils";
 import { ChevronUp } from "lucide-react";
-import { DeviceDetailCard } from "@/components/features/maps/cards/device-detail-card";
+import { MapDeviceInspectorDrawer } from "@/components/features/maps/cards/map-device-inspector-drawer";
 import { LocationDevicePickerCard } from "@/components/features/maps/cards/location-device-picker-card";
+import { BottomContextualStudio } from "@/components/features/maps/bottom-contextual-studio";
 
 const GoogleMapsCanvas = dynamic(
   () =>
@@ -163,6 +165,18 @@ function MapsHostContent({ visible }: { visible: boolean }) {
   // Homepassed GIS Coverage State
   const [homepassedEnabled, setHomepassedEnabled] = useState(false);
   const [homepassedConfig, setHomepassedConfig] = useState<HomepassedCalculationConfig>(DEFAULT_HOMEPASSED_CONFIG);
+  const [debouncedHomepassedConfig, setDebouncedHomepassedConfig] = useState(DEFAULT_HOMEPASSED_CONFIG);
+
+  // Active Spatial Map Mode ("overview" | "homepassed" | "osrm" | "fibercut")
+  const [mapMode, setMapMode] = useState<MapTabType>("overview");
+
+  // Debounce heavy spatial Turf union calculation (250ms) during slider drags
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedHomepassedConfig(homepassedConfig);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [homepassedConfig]);
 
   // Status Dock Visibility (default hidden)
   const [dockVisible, setDockVisible] = useState(false);
@@ -174,12 +188,15 @@ function MapsHostContent({ visible }: { visible: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const mapCanvasRef = useRef<HTMLDivElement>(null);
 
-  // Nominatim Search Selection
-  const [searchSelection, setSearchSelection] = useState<{ lat: number; lng: number; label: string } | null>(null);
+  // Search State: Separated between Location Placemark (Addresses) and Searched Device Highlight
+  const [searchLocation, setSearchLocation] = useState<{ lat: number; lng: number; label: string } | null>(null);
+  const [searchedDeviceId, setSearchedDeviceId] = useState<string | null>(null);
+  const [panTarget, setPanTarget] = useState<{ lat: number; lng: number } | null>(null);
 
   // OSRM Routing Hook
   const {
     origin,
+    setOrigin,
     destination,
     setDestination,
     route,
@@ -192,7 +209,7 @@ function MapsHostContent({ visible }: { visible: boolean }) {
   } = useOsrmRouting(token || "");
 
   // Overpass POI Hook
-  const { poiMarkers, fetchPOI, clearPOI } = useOverpassPOI();
+  const { poiMarkers, buildingPois, telcoPois, fetchPOI, clearPOI } = useOverpassPOI();
 
   const handleToggleLayer = useCallback((key: keyof LayerToggles) => {
     setLayerToggles((prev) => {
@@ -206,6 +223,63 @@ function MapsHostContent({ visible }: { visible: boolean }) {
       return next;
     });
   }, [clearPOI, storageKey]);
+
+  const handleSelectDestinationDevice = useCallback(
+    (device: MapDevice) => {
+      setDestination({
+        id: device.id,
+        name: device.device_name || device.device_id || "Device",
+        latitude: Number(device.latitude),
+        longitude: Number(device.longitude),
+        type: "device",
+      });
+    },
+    [setDestination],
+  );
+
+  const handleSelectDeviceFromOmnibar = useCallback((device: MapDevice) => {
+    setInspectDevices([device]);
+    setSearchedDeviceId(device.id);
+    setSearchLocation(null); // Devices do not create separate geographic placemarks
+    const lat = Number(device.latitude);
+    const lng = Number(device.longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      setPanTarget({ lat, lng });
+    }
+  }, []);
+
+  const handleSelectLocationFromOmnibar = useCallback(
+    (result: { lat: number; lng: number; label: string }) => {
+      setSearchLocation(result);
+      setSearchedDeviceId(null);
+      setPanTarget({ lat: result.lat, lng: result.lng });
+    },
+    [],
+  );
+
+  const handleClearSearch = useCallback(() => {
+    setSearchLocation(null);
+    setSearchedDeviceId(null);
+    setPanTarget(null);
+  }, []);
+
+  const handleResetFilters = useCallback(() => {
+    setRegionFilter("__all__");
+    setProjectFilter("__all__");
+    setPopFilter("__all__");
+    setTenantFilter("__all__");
+    setDeviceType("all");
+  }, []);
+
+  const handleModeChange = useCallback((mode: MapTabType) => {
+    setMapMode(mode);
+    if (mode === "homepassed") {
+      setHomepassedEnabled(true);
+    }
+    if (mode === "osrm") {
+      setSidebarOpen(true);
+    }
+  }, []);
 
   // Load Filters
   useEffect(() => {
@@ -278,8 +352,8 @@ function MapsHostContent({ visible }: { visible: boolean }) {
   // Homepassed Spatial Coverage Calculation
   const homepassedResult = useMemo(() => {
     if (!homepassedEnabled) return null;
-    return calculateHomepassedCoverage(devices, routes, poiMarkers, homepassedConfig);
-  }, [homepassedEnabled, devices, routes, poiMarkers, homepassedConfig]);
+    return calculateHomepassedCoverage(devices, routes, buildingPois, debouncedHomepassedConfig);
+  }, [homepassedEnabled, devices, routes, buildingPois, debouncedHomepassedConfig]);
 
   const regionOptions = useMemo(
     () => [
@@ -363,25 +437,15 @@ function MapsHostContent({ visible }: { visible: boolean }) {
     [origin],
   );
 
-  const handleSelectSearchResult = useCallback((res: NominatimResult) => {
-    setSearchSelection({
-      lat: res.lat,
-      lng: res.lon,
-      label: res.short_name,
-    });
-  }, []);
-
-  const handleClearSearchResult = useCallback(() => {
-    setSearchSelection(null);
-  }, []);
-
   const handleMapIdle = useCallback(
-    (bounds: { south: number; west: number; north: number; east: number }) => {
-      if (layerToggles.poi) {
+    (bounds: { south: number; west: number; north: number; east: number }, currentZoom?: number) => {
+      // Guard: only fetch Overpass building POIs when zoomed in (zoom >= 13) to avoid server timeout/rate-limit
+      const effectiveZoom = currentZoom ?? 15;
+      if ((layerToggles.poi || homepassedEnabled) && effectiveZoom >= 13) {
         fetchPOI(bounds);
       }
     },
-    [fetchPOI, layerToggles.poi],
+    [fetchPOI, layerToggles.poi, homepassedEnabled],
   );
 
   return (
@@ -399,40 +463,28 @@ function MapsHostContent({ visible }: { visible: boolean }) {
           <MapLeftSidebar
             isOpen={sidebarOpen}
             onToggleOpen={() => setSidebarOpen((v) => !v)}
-            regionFilter={regionFilter}
-            onRegionChange={setRegionFilter}
-            regionOptions={regionOptions}
-            projectFilter={projectFilter}
-            onProjectChange={setProjectFilter}
-            projectOptions={projectOptions}
-            popFilter={popFilter}
-            onPopChange={setPopFilter}
-            popOptions={popOptions}
-            tenantFilter={tenantFilter}
-            onTenantChange={setTenantFilter}
-            tenantOptions={tenantOptions}
-            deviceType={deviceType}
-            onDeviceTypeChange={setDeviceType}
-            deviceTypeOptions={deviceTypeOptions}
+            activeTab={mapMode}
+            onActiveTabChange={handleModeChange}
             devices={devices}
+            routesCount={routes.length}
+            connectionsCount={connections.length}
+            devicesWithoutCoords={data?.issues.devices_without_coordinates || []}
+            routesWithoutGeometry={data?.issues.routes_without_geometry || []}
+            connectionsWithoutGeometry={data?.issues.connections_without_geometry_context || []}
+            onSelectDevice={handleSelectDeviceFromOmnibar}
             originName={origin?.name || "Lokasi GPS Saya"}
             onSetOriginFromGps={setOriginFromGps}
             isGpsLoading={isGpsLoading}
             selectedDestination={destination ? devices.find((d) => d.id === destination.id) : null}
-            onSelectDestinationDevice={(device) => {
-              setDestination({
-                id: device.id,
-                name: device.device_name || device.device_id || "Device",
-                latitude: Number(device.latitude),
-                longitude: Number(device.longitude),
-                type: "device",
-              });
-            }}
+            onSelectDestinationDevice={handleSelectDestinationDevice}
             onCalculateRoute={calculateRoute}
             isRouteLoading={isRouteLoading}
             routeResult={route}
             routeError={routeError}
             onClearRoute={clearRoute}
+            onPanToLocation={(loc) => setPanTarget(loc)}
+            pops={filterOptions.pops}
+            regions={filterOptions.regions}
             cutMode={cutMode}
             onCutModeChange={(mode) => {
               setCutMode(mode);
@@ -442,11 +494,6 @@ function MapsHostContent({ visible }: { visible: boolean }) {
             onCutTargetChange={setCutTarget}
             cutTargetOptions={cutTargetOptions}
             impactData={impact}
-            devicesWithoutCoords={data?.issues.devices_without_coordinates || []}
-            onSelectSearchResult={handleSelectSearchResult}
-            onClearSearchResult={handleClearSearchResult}
-            layerToggles={layerToggles}
-            onToggleLayer={handleToggleLayer}
             homepassedEnabled={homepassedEnabled}
             onToggleHomepassedEnabled={setHomepassedEnabled}
             homepassedConfig={homepassedConfig}
@@ -472,6 +519,35 @@ function MapsHostContent({ visible }: { visible: boolean }) {
 
         {/* Main Google Maps Full-Page Canvas */}
         <div ref={mapCanvasRef} className="relative h-full w-full flex-1">
+          {/* Top Floating Spatial Omnibar */}
+          {!isZenMode && (
+            <TopMapOmnibar
+              devices={devices}
+              onSelectDevice={handleSelectDeviceFromOmnibar}
+              onSelectLocation={handleSelectLocationFromOmnibar}
+              onClearSearch={handleClearSearch}
+              isSearchActive={Boolean(searchLocation || searchedDeviceId)}
+              regionFilter={regionFilter}
+              onRegionChange={setRegionFilter}
+              regionOptions={regionOptions}
+              projectFilter={projectFilter}
+              onProjectChange={setProjectFilter}
+              projectOptions={projectOptions}
+              popFilter={popFilter}
+              onPopChange={setPopFilter}
+              popOptions={popOptions}
+              tenantFilter={tenantFilter}
+              onTenantChange={setTenantFilter}
+              tenantOptions={tenantOptions}
+              deviceType={deviceType}
+              onDeviceTypeChange={setDeviceType}
+              deviceTypeOptions={deviceTypeOptions}
+              onResetFilters={handleResetFilters}
+              activeMode={mapMode}
+              onModeChange={handleModeChange}
+            />
+          )}
+
           {loading && !data ? (
             <AppLoading label="Memuat Google Maps & topologi fiber..." />
           ) : error ? (
@@ -492,11 +568,17 @@ function MapsHostContent({ visible }: { visible: boolean }) {
                   impactedDeviceIds={(impact?.devices || []).map((item) => item.id)}
                   impactedConnectionIds={(impact?.connections || []).map((item) => item.id)}
                   osrmRoute={route}
-                  poiMarkers={poiMarkers}
+                  poiMarkers={telcoPois}
+                  buildingPois={buildingPois}
                   userGpsPosition={userGpsPosition}
-                  searchSelection={searchSelection}
+                  searchLocation={searchLocation}
+                  searchedDeviceId={searchedDeviceId}
+                  panTarget={panTarget}
+                  onClearSearchLocation={handleClearSearch}
+                  selectedDeviceIds={inspectDevices.map((d) => d.id)}
                   homepassedCoveragePolygon={homepassedResult?.mergedPolygonFeature || null}
-                  homepassedConfig={homepassedConfig}
+                  homepassedConfig={debouncedHomepassedConfig}
+                  homepassedEnabled={homepassedEnabled}
                   showDevices={layerToggles.devices}
                   showLabels={layerToggles.labels}
                   showCables={layerToggles.cables}
@@ -511,7 +593,7 @@ function MapsHostContent({ visible }: { visible: boolean }) {
                           // Toggle off: remove if already selected
                           return prev.filter((d) => d.id !== device.id);
                         }
-                        if (prev.length >= 3) return prev; // Max 3
+                        if (prev.length >= 4) return prev; // Max 4 for comparison
                         return [...prev, device];
                       }
                       // Normal click: single select
@@ -536,14 +618,18 @@ function MapsHostContent({ visible }: { visible: boolean }) {
             </>
           )}
 
-          {/* Floating Maps Actions Menu */}
+          {/* Floating Maps Actions & Layers Menu */}
           <div
             className={cn(
               "absolute right-3 z-20 pointer-events-none sm:right-3",
               !isZenMode && dockVisible ? "bottom-[7.75rem]" : "bottom-28",
             )}
           >
-            <div className="pointer-events-auto">
+            <div className="flex flex-col items-center gap-2 pointer-events-auto">
+              <MapFloatingLayersControl
+                layerToggles={layerToggles}
+                onToggleLayer={handleToggleLayer}
+              />
               <MapFloatingMenu
                 fullscreenRef={hostRef}
                 screenshotRef={mapCanvasRef}
@@ -553,8 +639,30 @@ function MapsHostContent({ visible }: { visible: boolean }) {
             </div>
           </div>
 
+          {/* Zone 3: Bottom Contextual Studio (Active when mode is homepassed or fibercut) */}
+          {!isZenMode && (mapMode === "homepassed" || mapMode === "fibercut") && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[min(980px,calc(100vw-2rem))] pointer-events-none px-2 sm:px-0">
+              <BottomContextualStudio
+                mode={mapMode}
+                onClose={() => setMapMode("overview")}
+                homepassedEnabled={homepassedEnabled}
+                onToggleHomepassedEnabled={setHomepassedEnabled}
+                homepassedConfig={homepassedConfig}
+                onHomepassedConfigChange={setHomepassedConfig}
+                homepassedResult={homepassedResult}
+                regionOptions={regionOptions}
+                cutMode={cutMode}
+                onCutModeChange={setCutMode}
+                cutTarget={cutTarget}
+                onCutTargetChange={setCutTarget}
+                cutTargetOptions={cutTargetOptions}
+                impactData={impact}
+              />
+            </div>
+          )}
+
           {/* Floating Bottom Status Dock (bottom-18 keeps it clear of the Google Maps terms/copyright footer) */}
-          {!isZenMode && (
+          {!isZenMode && mapMode !== "homepassed" && mapMode !== "fibercut" && (
             dockVisible ? (
               <div className="absolute bottom-18 left-3 right-3 z-10 pointer-events-none sm:left-auto sm:right-3">
                 <div className="pointer-events-auto">
@@ -589,26 +697,39 @@ function MapsHostContent({ visible }: { visible: boolean }) {
         </div>
       </div>
 
-      {/* Device Detail Cards: vertical flow with two rows, responsive on small screens */}
+      {/* Right Slide-Over Device Inspector Drawer */}
       {!isZenMode && inspectDevices.length > 0 && (
-        <div
-          className={cn(
-            "absolute right-16 top-3 z-30 grid max-h-[calc(100%-1rem)] max-w-[calc(100%-5.5rem)] grid-flow-col grid-rows-2 gap-2 overflow-x-auto overflow-y-auto pb-1",
-            "max-sm:left-3 max-sm:right-3 max-sm:top-14 max-sm:max-w-none max-sm:grid-flow-row max-sm:grid-cols-1 max-sm:grid-rows-none max-sm:overflow-x-hidden max-sm:overflow-y-auto max-sm:pb-0",
-          )}
-        >
-          {inspectDevices.map((device, idx) => (
-            <DeviceDetailCard
-              key={device.id}
-              device={device}
-              index={idx}
-              total={inspectDevices.length}
-              onClose={(id) => setInspectDevices((prev) => prev.filter((d) => d.id !== id))}
-              regions={filterOptions.regions}
-              pops={filterOptions.pops}
-            />
-          ))}
-        </div>
+        <MapDeviceInspectorDrawer
+          isOpen={inspectDevices.length > 0}
+          devices={inspectDevices}
+          onClose={() => setInspectDevices([])}
+          onRemoveDevice={(id) => setInspectDevices((prev) => prev.filter((d) => d.id !== id))}
+          regions={filterOptions.regions}
+          pops={filterOptions.pops}
+          onSetNavigationDestination={(device) => {
+            handleSelectDestinationDevice(device);
+            setSidebarOpen(true);
+          }}
+          onConnectDevicesRoute={(originDev, destDev) => {
+            setOrigin({
+              id: originDev.id,
+              name: originDev.device_name || originDev.device_id || "Origin",
+              latitude: Number(originDev.latitude),
+              longitude: Number(originDev.longitude),
+              type: "device",
+            });
+            setDestination({
+              id: destDev.id,
+              name: destDev.device_name || destDev.device_id || "Destination",
+              latitude: Number(destDev.latitude),
+              longitude: Number(destDev.longitude),
+              type: "device",
+            });
+            setMapMode("osrm");
+            setSidebarOpen(true);
+          }}
+          isSidebarOpen={sidebarOpen}
+        />
       )}
 
       {/* Location Group Device Picker Card (Double-Bezel overlay when grouped marker clicked) */}
@@ -621,7 +742,7 @@ function MapsHostContent({ visible }: { visible: boolean }) {
               if (isMulti) {
                 const exists = prev.findIndex((d) => d.id === device.id);
                 if (exists >= 0) return prev.filter((d) => d.id !== device.id);
-                if (prev.length >= 3) return prev;
+                if (prev.length >= 4) return prev;
                 return [...prev, device];
               }
               return [device];

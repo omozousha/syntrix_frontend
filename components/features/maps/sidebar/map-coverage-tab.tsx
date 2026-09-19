@@ -189,11 +189,26 @@ export function MapCoverageTab({
                   </span>
                 </div>
                 <div className="rounded-lg border border-border/40 bg-card p-2">
-                  <span className="text-[8px] uppercase tracking-wider text-muted-foreground block">
-                    Est. Homepassed
-                  </span>
-                  <span className="font-bold text-cyan-500">
-                    {homepassedResult.estimatedHomepassedCount.toLocaleString("id-ID")} Unit
+                  <div className="flex items-center justify-between">
+                    <span className="text-[8px] uppercase tracking-wider text-muted-foreground">
+                      {homepassedResult.exactHomepassedCount > 0 ? "Homepassed" : "Est. Homepassed"}
+                    </span>
+                    <span
+                      className={`rounded px-1 font-mono text-[7px] font-bold uppercase ${
+                        homepassedResult.exactHomepassedCount > 0
+                          ? "border border-emerald-500/30 bg-emerald-500/15 text-emerald-500"
+                          : "border border-border/40 bg-muted/40 text-muted-foreground"
+                      }`}
+                    >
+                      {homepassedResult.exactHomepassedCount > 0 ? "POI" : "Density"}
+                    </span>
+                  </div>
+                  <span className="font-bold text-cyan-500 block mt-0.5">
+                    {(homepassedResult.exactHomepassedCount > 0
+                      ? homepassedResult.exactHomepassedCount
+                      : homepassedResult.estimatedHomepassedCount
+                    ).toLocaleString("id-ID")}{" "}
+                    Unit
                   </span>
                 </div>
               </div>

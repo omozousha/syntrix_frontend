@@ -23,7 +23,8 @@ export type OverpassPOI = {
   lat: number;
   lng: number;
   label: string;
-  kind: "mast" | "pole" | "utility";
+  kind: "mast" | "pole" | "utility" | "building";
+  category?: "building" | "telco";
 };
 
 export type GoogleMapsCanvasProps = {
@@ -34,10 +35,17 @@ export type GoogleMapsCanvasProps = {
   impactedConnectionIds?: string[];
   osrmRoute?: OsgmRouteResult | null;
   poiMarkers?: OverpassPOI[];
+  buildingPois?: OverpassPOI[];
   userGpsPosition?: { lat: number; lng: number } | null;
   searchSelection?: { lat: number; lng: number; label: string } | null;
+  searchLocation?: { lat: number; lng: number; label: string } | null;
+  searchedDeviceId?: string | null;
+  panTarget?: { lat: number; lng: number } | null;
+  onClearSearchLocation?: () => void;
+  selectedDeviceIds?: string[];
   homepassedCoveragePolygon?: Feature<Polygon | MultiPolygon> | null;
   homepassedConfig?: HomepassedCalculationConfig;
+  homepassedEnabled?: boolean;
   showDevices?: boolean;
   showLabels?: boolean;
   showCables?: boolean;
@@ -46,7 +54,7 @@ export type GoogleMapsCanvasProps = {
   showPoi?: boolean;
   onDeviceSelect?: (device: MapDevice, isMulti: boolean) => void;
   onGroupSelect?: (devices: MapDevice[]) => void;
-  onMapIdle?: (bounds: { south: number; west: number; north: number; east: number }) => void;
+  onMapIdle?: (bounds: { south: number; west: number; north: number; east: number }, zoom?: number) => void;
   className?: string;
 };
 
@@ -60,12 +68,15 @@ const MARKER_COLORS: Record<string, string> = {
   critical: "#dc2626",
   impacted: "#dc2626",
   unvalidated: "#64748b",
+  searched: "#06b6d4",
 };
 
 const fallbackColor = "#64748b";
 
 function getMarkerGlyphSvg(status: string): string {
   switch (status) {
+    case "searched":
+      return `<circle cx="14" cy="14" r="4.5" fill="#ffffff"/><circle cx="14" cy="14" r="2" fill="#06b6d4"/>`;
     case "healthy":
       return `<path d="M9.5 14l3 3 6-6" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
     case "warning":
@@ -122,6 +133,13 @@ const poiMarkerUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
    </svg>`,
 )}`;
 
+const searchDotMarkerUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+     <circle cx="8" cy="8" r="7" fill="#8b5cf6" fill-opacity="0.25"/>
+     <circle cx="8" cy="8" r="4.5" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"/>
+   </svg>`,
+)}`;
+
 type FlatPoint = { lat: number; lng: number };
 
 // Memoized individual Device Marker component to prevent unnecessary repaints
@@ -131,12 +149,22 @@ const DeviceMarker = React.memo(
     icon,
     showLabel,
     homepassedConfig,
+    homepassedEnabled = false,
+    buildingPois = [],
+    isSelected = false,
+    selectionIndex = 1,
+    isSearched = false,
     onClick,
   }: {
     device: MapDevice;
     icon: google.maps.Icon | string;
     showLabel: boolean;
     homepassedConfig?: HomepassedCalculationConfig;
+    homepassedEnabled?: boolean;
+    buildingPois?: OverpassPOI[];
+    isSelected?: boolean;
+    selectionIndex?: number;
+    isSearched?: boolean;
     onClick: (device: MapDevice, isMulti: boolean) => void;
   }) => {
     const [isHovered, setIsHovered] = React.useState(false);
@@ -145,13 +173,14 @@ const DeviceMarker = React.memo(
     const labelText = device.device_name || device.device_id || "";
 
     const individualHomepassed = React.useMemo(() => {
-      if (!isHovered) return null;
+      if (!homepassedEnabled || !isHovered) return null;
       return calculateIndividualDeviceHomepassed(
         device,
         homepassedConfig?.odpRadiusMeters ?? 250,
-        homepassedConfig?.densityPerSqMeter ?? 0.003
+        homepassedConfig?.densityPerSqMeter ?? 0.003,
+        buildingPois,
       );
-    }, [isHovered, device, homepassedConfig]);
+    }, [homepassedEnabled, isHovered, device, homepassedConfig, buildingPois]);
 
     return (
       <>
@@ -163,12 +192,14 @@ const DeviceMarker = React.memo(
             const domEvent = e.domEvent as MouseEvent | undefined;
             onClick(device, Boolean(domEvent?.shiftKey));
           }}
-          onMouseOver={() => setIsHovered(true)}
+          onMouseOver={() => {
+            if (homepassedEnabled) setIsHovered(true);
+          }}
           onMouseOut={() => setIsHovered(false)}
         />
 
         {/* Hover Tooltip: ODP Details & Individual Homepassed Count */}
-        {isHovered && individualHomepassed && (
+        {homepassedEnabled && isHovered && individualHomepassed && (
           <OverlayViewF
             position={{ lat, lng }}
             mapPaneName={OVERLAY_MOUSE_TARGET}
@@ -182,9 +213,11 @@ const DeviceMarker = React.memo(
                 <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-rose-500">
                   {device.device_type_key || "DEVICE"}
                 </span>
-                <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.2 font-mono text-[8px] font-bold text-emerald-500">
-                  R={individualHomepassed.radiusMeters}m
-                </span>
+                {individualHomepassed.isOdp !== false && (
+                  <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.2 font-mono text-[8px] font-bold text-emerald-500">
+                    R={individualHomepassed.radiusMeters}m
+                  </span>
+                )}
               </div>
               <p className="truncate font-semibold text-xs text-foreground">
                 {labelText}
@@ -199,19 +232,39 @@ const DeviceMarker = React.memo(
                   <span className="font-bold text-foreground tabular-nums">{individualHomepassed.portCapacity} Port</span>
                 </div>
               )}
-              <div className="flex items-center justify-between pt-0.5 text-[10px] border-t border-border/30">
-                <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Homepassed:
-                </span>
-                <span className={`font-mono tabular-nums font-bold ${individualHomepassed.isInWater ? "text-amber-500" : "text-cyan-500"}`}>
-                  {individualHomepassed.estimatedHomepassed} Unit
-                </span>
-              </div>
+              {individualHomepassed.isOdp !== false ? (
+                <div className="flex items-center justify-between pt-0.5 text-[10px] border-t border-border/30">
+                  <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Homepassed:
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`font-mono tabular-nums font-bold ${individualHomepassed.isInWater ? "text-amber-500" : "text-cyan-500"}`}>
+                      {individualHomepassed.estimatedHomepassed} Unit
+                    </span>
+                    {!individualHomepassed.isInWater && (
+                      <span
+                        className={`rounded px-1 py-0.2 font-mono text-[7px] font-bold uppercase ${
+                          individualHomepassed.source === "poi"
+                            ? "border border-emerald-500/30 bg-emerald-500/15 text-emerald-500"
+                            : "border border-border/40 bg-muted/40 text-muted-foreground"
+                        }`}
+                      >
+                        {individualHomepassed.source === "poi" ? "POI" : "Est"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between pt-0.5 text-[9px] border-t border-border/30 font-mono text-muted-foreground">
+                  <span>Distribusi:</span>
+                  <span className="text-foreground">Feeder / Trunk (Non-ODP)</span>
+                </div>
+              )}
             </div>
           </OverlayViewF>
         )}
 
-        {showLabel && !isHovered && labelText && (
+        {showLabel && !isHovered && labelText && !isSelected && (
           <OverlayViewF
             position={{ lat, lng }}
             mapPaneName={OVERLAY_MOUSE_TARGET}
@@ -224,6 +277,52 @@ const DeviceMarker = React.memo(
               {labelText}
             </div>
           </OverlayViewF>
+        )}
+
+        {/* Selected Highlight Badge for Comparative Selection */}
+        {isSelected && (
+          <OverlayViewF
+            position={{ lat, lng }}
+            mapPaneName={OVERLAY_MOUSE_TARGET}
+            getPixelPositionOffset={() => ({
+              x: -10,
+              y: -46,
+            })}
+          >
+            <div className="pointer-events-none flex size-5 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground font-mono text-[10px] font-bold shadow-lg ring-2 ring-primary/60 animate-in zoom-in-75">
+              {selectionIndex}
+            </div>
+          </OverlayViewF>
+        )}
+
+        {/* Searched Device Pulsing Halo & Floating Highlight Badge */}
+        {isSearched && !isSelected && (
+          <>
+            <OverlayViewF
+              position={{ lat, lng }}
+              mapPaneName={OVERLAY_MOUSE_TARGET}
+              getPixelPositionOffset={() => ({
+                x: -16,
+                y: -16,
+              })}
+            >
+              <div className="pointer-events-none size-8 rounded-full border-2 border-cyan-400 bg-cyan-400/25 animate-ping" />
+            </OverlayViewF>
+
+            <OverlayViewF
+              position={{ lat, lng }}
+              mapPaneName={OVERLAY_MOUSE_TARGET}
+              getPixelPositionOffset={(width, height) => ({
+                x: -(width / 2),
+                y: -44,
+              })}
+            >
+              <div className="pointer-events-none flex items-center gap-1 rounded-full border border-cyan-400/80 bg-card/95 px-2.5 py-0.5 font-mono text-[9px] font-bold text-cyan-500 shadow-xl backdrop-blur-md glass-inset whitespace-nowrap animate-in zoom-in-75 ring-2 ring-cyan-400/30">
+                <span>🔍</span>
+                <span>{labelText}</span>
+              </div>
+            </OverlayViewF>
+          </>
         )}
       </>
     );
@@ -239,10 +338,17 @@ export function GoogleMapsCanvas({
   impactedConnectionIds = [],
   osrmRoute,
   poiMarkers = [],
+  buildingPois = [],
   userGpsPosition,
   searchSelection,
+  searchLocation,
+  searchedDeviceId,
+  panTarget,
+  onClearSearchLocation,
+  selectedDeviceIds = [],
   homepassedCoveragePolygon,
   homepassedConfig,
+  homepassedEnabled = false,
   showDevices = true,
   showLabels = true,
   showCables = true,
@@ -291,13 +397,55 @@ export function GoogleMapsCanvas({
     [deviceIcons],
   );
 
-  // Auto-panTo when searchSelection changes
+  const searchDotIcon = React.useMemo(() => {
+    if (!isLoaded || typeof google === "undefined" || !google.maps) return searchDotMarkerUrl;
+    return {
+      url: searchDotMarkerUrl,
+      scaledSize: new google.maps.Size(16, 16),
+      anchor: new google.maps.Point(8, 8),
+    } as google.maps.Icon;
+  }, [isLoaded]);
+
+  // Auto-panTo when panTarget, searchLocation, or searchSelection changes
   React.useEffect(() => {
-    if (searchSelection && mapRef.current) {
-      mapRef.current.panTo({ lat: searchSelection.lat, lng: searchSelection.lng });
-      mapRef.current.setZoom(15);
+    const target = panTarget || searchLocation || searchSelection;
+    if (target && mapRef.current) {
+      mapRef.current.panTo({ lat: target.lat, lng: target.lng });
+      mapRef.current.setZoom(16);
     }
-  }, [searchSelection]);
+  }, [panTarget, searchLocation, searchSelection]);
+
+  // Auto-fit bounds when multi-selecting devices for comparison (with padding for the 380px right drawer)
+  React.useEffect(() => {
+    if (!selectedDeviceIds || selectedDeviceIds.length < 2 || !mapRef.current) return;
+    const selectedDevs = devices.filter((d) => selectedDeviceIds.includes(d.id));
+    if (selectedDevs.length < 2) return;
+    if (typeof google === "undefined" || !google.maps) return;
+
+    const bounds = new google.maps.LatLngBounds();
+    let validCount = 0;
+    selectedDevs.forEach((d) => {
+      const lat = Number(d.latitude);
+      const lng = Number(d.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        bounds.extend({ lat, lng });
+        validCount++;
+      }
+    });
+
+    if (validCount >= 2 && !bounds.isEmpty()) {
+      try {
+        mapRef.current.fitBounds(bounds, {
+          top: 90,
+          right: 90,
+          bottom: 340,
+          left: 90,
+        } as unknown as number);
+      } catch {
+        mapRef.current.fitBounds(bounds, 80);
+      }
+    }
+  }, [selectedDeviceIds, devices]);
 
   const { singleDeviceGroups, multiDeviceGroups } = React.useMemo(() => {
     const groups = new Map<string, Array<{ device: MapDevice; markerStatus: string }>>();
@@ -387,13 +535,14 @@ export function GoogleMapsCanvas({
   const handleIdle = React.useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
-    setZoom(map.getZoom() ?? DEFAULT_ZOOM);
+    const currentZoom = map.getZoom() ?? DEFAULT_ZOOM;
+    setZoom(currentZoom);
     if (!onMapIdle) return;
     const bounds = map.getBounds();
     if (!bounds) return;
     const ne = bounds.getNorthEast();
     const sw = bounds.getSouthWest();
-    onMapIdle({ south: sw.lat(), west: sw.lng(), north: ne.lat(), east: ne.lng() });
+    onMapIdle({ south: sw.lat(), west: sw.lng(), north: ne.lat(), east: ne.lng() }, currentZoom);
   }, [onMapIdle]);
 
   return (
@@ -476,16 +625,24 @@ export function GoogleMapsCanvas({
             {/* Device Markers & Grouped Markers */}
             {showDevices && (
               <>
-                {/* Single devices (memoized, rounded dynamic label badge when enabled & zoom >= 15) */}
+                {/* Single devices (memoized, rounded dynamic label badge when enabled & zoom >= 16) */}
                 {singleDeviceGroups.map(({ device, markerStatus }) => {
-                  const canShowLabel = showLabels && zoom >= 15;
+                  const canShowLabel = showLabels && zoom >= 16;
+                  const isSearched = searchedDeviceId === device.id;
+                  const selIdx = (selectedDeviceIds || []).indexOf(device.id);
+                  const isSelected = selIdx !== -1;
                   return (
                     <DeviceMarker
-                      key={`${device.id}-${canShowLabel}`}
+                      key={`${device.id}-${canShowLabel}-${isSelected}-${isSearched}`}
                       device={device}
-                      icon={getIcon(markerStatus)}
+                      icon={isSearched ? getIcon("searched") : getIcon(markerStatus)}
                       showLabel={canShowLabel}
                       homepassedConfig={homepassedConfig}
+                      homepassedEnabled={homepassedEnabled}
+                      buildingPois={buildingPois}
+                      isSelected={isSelected}
+                      selectionIndex={selIdx + 1}
+                      isSearched={isSearched}
                       onClick={(d, isMulti) => onDeviceSelect?.(d, isMulti)}
                     />
                   );
@@ -520,16 +677,18 @@ export function GoogleMapsCanvas({
               </>
             )}
 
-            {/* POI Overpass layer */}
+            {/* POI Overpass layer (telco infrastructure only) */}
             {showPoi &&
-              poiMarkers.map((poi) => (
-                <MarkerF
-                  key={poi.id}
-                  position={{ lat: poi.lat, lng: poi.lng }}
-                  icon={poiMarkerUrl}
-                  title={poi.label}
-                />
-              ))}
+              poiMarkers
+                .filter((p) => p.kind !== "building")
+                .map((poi) => (
+                  <MarkerF
+                    key={poi.id}
+                    position={{ lat: poi.lat, lng: poi.lng }}
+                    icon={poiMarkerUrl}
+                    title={poi.label}
+                  />
+                ))}
 
             {/* User GPS position */}
             {userGpsPosition && (
@@ -552,14 +711,21 @@ export function GoogleMapsCanvas({
               />
             )}
 
-            {/* Nominatim search result */}
-            {searchSelection && (
-              <MarkerF
-                position={{ lat: searchSelection.lat, lng: searchSelection.lng }}
-                icon={svgMarker("#8b5cf6")}
-                title={searchSelection.label}
-              />
-            )}
+            {/* Geographic Address / Road Search Placemark (Minimal dot marker) */}
+            {(searchLocation || searchSelection) && (() => {
+              const loc = searchLocation || searchSelection;
+              if (!loc) return null;
+              // ponytail: titik ringkas native tooltip, skip overlay card DOM berat. Tambah popover interaktif hanya jika user butuh aksi lanjutan di titik
+              return (
+                <MarkerF
+                  position={{ lat: loc.lat, lng: loc.lng }}
+                  icon={searchDotIcon}
+                  title={loc.label}
+                  zIndex={10}
+                  onClick={onClearSearchLocation}
+                />
+              );
+            })()}
           </GoogleMap>
       )}
 
