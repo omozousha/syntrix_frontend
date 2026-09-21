@@ -196,6 +196,30 @@ export default function AccountManagementPage() {
     };
   }, [canManageAccounts, refreshUsersAndRegions, router]);
 
+  // Polling & focus revalidation to keep user verification status fresh
+  useEffect(() => {
+    if (!canManageAccounts) return;
+
+    const intervalId = setInterval(() => {
+      refreshUsersAndRegions().catch(() => {});
+    }, 30_000);
+
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        refreshUsersAndRegions().catch(() => {});
+      }
+    }
+
+    window.addEventListener("focus", onVisibilityChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("focus", onVisibilityChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [canManageAccounts, refreshUsersAndRegions]);
+
   useEffect(() => {
     if (!isAdminRegion || !regionOptions.length) return;
     setFilterRole("user_region");
