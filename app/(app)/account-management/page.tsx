@@ -518,23 +518,28 @@ export default function AccountManagementPage() {
       <div className="space-y-4 px-3 pb-3 md:px-4 md:pb-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Account Management</h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Manajemen Pengguna</p>
+            <h2 className="mt-0.5 text-2xl font-semibold tracking-tight">Account Management</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">
               {isSuperadmin
                 ? "Kelola akun adminregion dan validator."
                 : "Kelola akun validator di region yang menjadi tanggung jawab Anda."}
             </p>
           </div>
-          <Button size="sm" onClick={openCreateDrawer} className="gap-2">
+          <Button
+            size="sm"
+            onClick={openCreateDrawer}
+            className="gap-2 rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+          >
             <UserPlus className="size-4" />
-            Create Account
+            Buat Akun
           </Button>
         </div>
 
         {message ? (
           <Alert>
             <ShieldCheck className="size-4" />
-            <AlertTitle>Success</AlertTitle>
+            <AlertTitle>Berhasil</AlertTitle>
             <AlertDescription>{message}</AlertDescription>
           </Alert>
         ) : null}

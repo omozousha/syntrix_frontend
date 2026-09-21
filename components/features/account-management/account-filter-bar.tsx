@@ -29,7 +29,7 @@ export function AccountFilterBar({
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
       <div className="space-y-1.5">
-        <Label htmlFor="search_user">Search</Label>
+        <Label htmlFor="search_user" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Pencarian</Label>
         <Input
           id="search_user"
           value={searchTerm}
@@ -39,7 +39,7 @@ export function AccountFilterBar({
       </div>
 
       <div className="space-y-1.5">
-        <Label>Region</Label>
+        <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Region</Label>
         <Combobox
           value={filterRegion}
           onValueChange={onFilterRegionChange}
@@ -50,7 +50,7 @@ export function AccountFilterBar({
       </div>
 
       <div className="space-y-1.5">
-        <Label>Role</Label>
+        <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Role</Label>
         <Combobox
           value={filterRole}
           onValueChange={onFilterRoleChange}
@@ -62,7 +62,12 @@ export function AccountFilterBar({
       </div>
 
       <div className="flex items-end">
-        <Button type="button" variant="outline" className="w-full" onClick={onReset}>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+          onClick={onReset}
+        >
           Reset Filter
         </Button>
       </div>
