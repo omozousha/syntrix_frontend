@@ -53,7 +53,7 @@ export function EditAccountSheet({
 
         <div className="space-y-4 p-4">
           <div className="space-y-1.5">
-            <Label htmlFor="user_full_name">Full Name</Label>
+            <Label htmlFor="user_full_name" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Nama Lengkap</Label>
             <Input
               id="user_full_name"
               value={form.full_name}
@@ -63,7 +63,7 @@ export function EditAccountSheet({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Role</Label>
+            <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Role</Label>
             <Combobox
               value={form.role_name}
               onValueChange={(value) => onFormChange({ ...form, role_name: value })}
@@ -75,7 +75,7 @@ export function EditAccountSheet({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Default Region</Label>
+            <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Default Region</Label>
             <Combobox
               value={form.default_region_id}
               onValueChange={(value) => onFormChange({ ...form, default_region_id: value })}
@@ -84,12 +84,12 @@ export function EditAccountSheet({
               searchPlaceholder="Cari region..."
             />
             <p className="text-xs text-muted-foreground">
-          Daftar region diambil dari Master Data Regions. Admin Region hanya melihat region yang menjadi scope-nya.
+              Daftar region diambil dari Master Data Regions. Admin Region hanya melihat region yang menjadi scope-nya.
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <Label>Status Aktif</Label>
+            <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Status Aktif</Label>
             <Combobox
               value={form.is_active}
               onValueChange={(value) => onFormChange({ ...form, is_active: value as EditAccountFormState["is_active"] })}
@@ -127,12 +127,20 @@ export function EditAccountSheet({
           </p>
         </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <SheetFooter className="gap-2 sm:space-x-0">
+          <Button
+            variant="outline"
+            className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            onClick={() => onOpenChange(false)}
+          >
             Batal
           </Button>
-          <Button onClick={onSubmit} disabled={saving}>
-            {saving ? "Menyimpan..." : "Simpan"}
+          <Button
+            className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            onClick={onSubmit}
+            disabled={saving}
+          >
+            {saving ? "Menyimpan..." : "Simpan Perubahan"}
           </Button>
         </SheetFooter>
       </SheetContent>

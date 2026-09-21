@@ -53,7 +53,7 @@ export function CreateAccountSheet({
 
         <div className="space-y-4 p-4">
           <div className="space-y-1.5">
-            <Label htmlFor="create_full_name">Full Name</Label>
+            <Label htmlFor="create_full_name" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Full Name</Label>
             <Input
               id="create_full_name"
               value={form.full_name}
@@ -63,7 +63,7 @@ export function CreateAccountSheet({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="create_email">Email</Label>
+            <Label htmlFor="create_email" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Email</Label>
             <Input
               id="create_email"
               type="email"
@@ -74,7 +74,7 @@ export function CreateAccountSheet({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Role</Label>
+            <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Role</Label>
             <Combobox
               value={form.role_name}
               onValueChange={(value) => onFormChange({ ...form, role_name: value })}
@@ -86,7 +86,7 @@ export function CreateAccountSheet({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Default Region</Label>
+            <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Default Region</Label>
             <Combobox
               value={form.default_region_id}
               onValueChange={(value) => onFormChange({ ...form, default_region_id: value })}
@@ -120,11 +120,19 @@ export function CreateAccountSheet({
           />
         </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <SheetFooter className="gap-2 sm:space-x-0">
+          <Button
+            variant="outline"
+            className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            onClick={() => onOpenChange(false)}
+          >
             Batal
           </Button>
-          <Button onClick={onSubmit} disabled={saving}>
+          <Button
+            className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            onClick={onSubmit}
+            disabled={saving}
+          >
             {saving ? "Membuat..." : "Create Account"}
           </Button>
         </SheetFooter>
