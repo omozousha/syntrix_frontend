@@ -25,7 +25,6 @@ import { Combobox } from "@/components/ui/combobox";
 import { ContextMenuItem, ContextMenuLabel, ContextMenuSeparator } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { MASTER_DATA_CATEGORIES } from "@/lib/data-management-config";
@@ -36,16 +35,44 @@ type TrashCategory = {
   resource: string;
 };
 
-const ALL_TRASH_CATEGORY: TrashCategory = { slug: "all", label: "All", resource: "all" };
+const ALL_TRASH_CATEGORY: TrashCategory = { slug: "all", label: "All Categories", resource: "all" };
+
+// Whitelist only resources that support softDelete: true in backend registry
+const SOFT_DELETE_RESOURCES = new Set([
+  "devices",
+  "devicePorts",
+  "regions",
+  "deviceTypes",
+  "topologyRelationRules",
+  "popTypes",
+  "routeTypes",
+  "odpTypes",
+  "installationTypes",
+  "serviceTypes",
+  "tenants",
+  "manufacturers",
+  "brands",
+  "assetModels",
+  "cableTypes",
+  "closureTypes",
+  "coreCapacities",
+  "deviceCoreCapacities",
+  "odcDistributionCables",
+  "provinces",
+  "cities",
+]);
 
 const TRASH_RESOURCE_CATEGORIES: TrashCategory[] = [
   { slug: "trash-devices", label: "Devices", resource: "devices" },
   { slug: "trash-device-ports", label: "Device Ports", resource: "devicePorts" },
-  ...MASTER_DATA_CATEGORIES.map((item) => ({
-    slug: item.slug,
-    label: item.label,
-    resource: item.resource,
-  })),
+  { slug: "trash-odc-distribution-cables", label: "ODC Distribution Cables", resource: "odcDistributionCables" },
+  ...MASTER_DATA_CATEGORIES
+    .filter((item) => SOFT_DELETE_RESOURCES.has(item.resource))
+    .map((item) => ({
+      slug: item.slug,
+      label: item.label,
+      resource: item.resource,
+    })),
 ];
 
 const TRASH_CATEGORIES: TrashCategory[] = [ALL_TRASH_CATEGORY, ...TRASH_RESOURCE_CATEGORIES];
@@ -57,6 +84,20 @@ const ENTITY_TYPE_RESOURCE_MAP: Record<string, string> = {
   deviceports: "devicePorts",
   device_port: "devicePorts",
   device_ports: "devicePorts",
+  region: "regions",
+  regions: "regions",
+  manufacturer: "manufacturers",
+  manufacturers: "manufacturers",
+  brand: "brands",
+  brands: "brands",
+  model: "assetModels",
+  models: "assetModels",
+  asset_model: "assetModels",
+  assetmodels: "assetModels",
+  province: "provinces",
+  provinces: "provinces",
+  city: "cities",
+  cities: "cities",
 };
 
 type GenericItem = Record<string, unknown> & {
@@ -110,7 +151,9 @@ export default function TrashPage() {
 
     if (entityType) {
       const normalizedEntityType = ENTITY_TYPE_RESOURCE_MAP[entityType.toLowerCase()] || entityType;
-      const matchedCategory = TRASH_RESOURCE_CATEGORIES.find((item) => item.resource.toLowerCase() === normalizedEntityType.toLowerCase());
+      const matchedCategory = TRASH_RESOURCE_CATEGORIES.find(
+        (item) => item.resource.toLowerCase() === normalizedEntityType.toLowerCase(),
+      );
       if (matchedCategory) {
         setSelectedCategorySlug(matchedCategory.slug);
       }
@@ -200,7 +243,7 @@ export default function TrashPage() {
         setRows((payload.data || []).map((item) => ({ ...item, __trashLabel: selectedCategory.label, __trashResource: selectedCategory.resource })));
         setTotal(payload.meta?.total ?? payload.data?.length ?? 0);
       } catch (err) {
-        if (!cancelled) setError((err as Error).message || "Gagal memuat trash data.");
+        if (!cancelled) setError((err as Error).message || "Gagal memuat data arsip trash.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -230,7 +273,7 @@ export default function TrashPage() {
   const selectAllHeader = useMemo(
     () => (
       <div className="flex items-center justify-center">
-        <span className="sr-only">Pilih</span>
+        <span className="sr-only">Pilih Semua</span>
         <input
           type="checkbox"
           checked={allCurrentRowsSelected}
@@ -256,11 +299,19 @@ export default function TrashPage() {
   );
 
   const headers = useMemo(
-    () => [selectAllHeader, "Data", "Kategori", "Dihapus Pada", "Dihapus Oleh"],
+    () => [
+      selectAllHeader,
+      <span key="h-data" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Data</span>,
+      <span key="h-cat" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Kategori</span>,
+      <span key="h-date" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Dihapus Pada</span>,
+      <span key="h-user" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Dihapus Oleh</span>,
+      <span key="h-act" className="block text-right font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Aksi</span>,
+    ],
     [selectAllHeader],
   );
+
   const columnVisibilityLabels = useMemo(
-    () => ["Pilih", "Data", "Kategori", "Dihapus Pada", "Dihapus Oleh"],
+    () => ["Pilih", "Data", "Kategori", "Dihapus Pada", "Dihapus Oleh", "Aksi"],
     [],
   );
 
@@ -285,16 +336,51 @@ export default function TrashPage() {
           />
         </div>,
         <div key={`data-${item.id}`} className="min-w-0">
-          <p className="truncate font-medium">{getDisplayName(getItemResource(selectedCategory, item), item)}</p>
-          <p className="truncate text-xs text-muted-foreground">{getIdentifier(getItemResource(selectedCategory, item), item)}</p>
+          <p className="truncate font-medium text-foreground">{getDisplayName(getItemResource(selectedCategory, item), item)}</p>
+          <p className="truncate font-mono text-[11px] text-muted-foreground">{getIdentifier(getItemResource(selectedCategory, item), item)}</p>
         </div>,
-        <Badge key={`resource-${item.id}`} variant="outline" className="font-normal">
+        <Badge key={`resource-${item.id}`} variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em]">
           {getItemLabel(selectedCategory, item)}
         </Badge>,
-        formatDateTime(item.deleted_at),
-        resolveUser(item.deleted_by_user_id, userMap),
+        <span key={`date-${item.id}`} className="font-mono text-xs tabular-nums text-muted-foreground">
+          {formatDateTime(item.deleted_at)}
+        </span>,
+        <span key={`user-${item.id}`} className="block max-w-[150px] truncate font-mono text-xs text-foreground">
+          {resolveUser(item.deleted_by_user_id, userMap)}
+        </span>,
+        <div key={`actions-${item.id}`} className="flex items-center justify-end gap-1.5">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 rounded-full px-2.5 font-mono text-[9px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            onClick={(event) => {
+              event.stopPropagation();
+              setRestoreTarget(item);
+            }}
+            disabled={actionLoading}
+          >
+            <RotateCcw className="mr-1 size-3 text-emerald-500" />
+            Restore
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 rounded-full px-2.5 font-mono text-[9px] uppercase tracking-[0.08em] text-destructive hover:bg-destructive/10 hover:text-destructive transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            onClick={(event) => {
+              event.stopPropagation();
+              setPurgeTarget(item);
+              setPurgeConfirmInput("");
+            }}
+            disabled={actionLoading}
+          >
+            <Trash2 className="mr-1 size-3" />
+            Purge
+          </Button>
+        </div>,
       ]),
-    [rows, selectedIds, selectedCategory, userMap],
+    [rows, selectedIds, selectedCategory, userMap, actionLoading],
   );
 
   async function handleRestore(item: GenericItem) {
@@ -315,7 +401,7 @@ export default function TrashPage() {
       setRows((prev) => prev.filter((row) => row.id !== item.id));
       setTotal((prev) => Math.max(0, prev - 1));
       setResultDialogTitle("Restore Berhasil");
-      setResultDialogDescription(`Item ${getDisplayName(getItemResource(selectedCategory, item), item)} berhasil direstore.`);
+      setResultDialogDescription(`Item "${getDisplayName(getItemResource(selectedCategory, item), item)}" berhasil dikembalikan ke data aktif.`);
       setResultDialogOpen(true);
     } catch (err) {
       const message = (err as Error).message || "Gagal restore data.";
@@ -330,26 +416,50 @@ export default function TrashPage() {
 
   async function handleBulkRestore() {
     if (!selectedCategory || selectedIds.size === 0) return;
-    const selectedRows = rows.filter((row) => selectedIds.has(row.id));
-    if (!selectedRows.length) return;
+    const selectedRowsList = rows.filter((row) => selectedIds.has(row.id));
+    if (!selectedRowsList.length) return;
 
     setActionLoading(true);
     setError("");
     try {
-      await Promise.all(
-        selectedRows.map((row) =>
+      const results = await Promise.allSettled(
+        selectedRowsList.map((row) =>
           apiFetch(`/${getItemResource(selectedCategory, row)}/${row.id}/restore`, {
             method: "POST",
             token,
           }),
         ),
       );
+
+      const succeededIds = new Set<string>();
+      let failCount = 0;
+
+      results.forEach((res, index) => {
+        if (res.status === "fulfilled") {
+          succeededIds.add(selectedRowsList[index].id);
+        } else {
+          failCount += 1;
+        }
+      });
+
       setBulkRestoreOpen(false);
-      setRows((prev) => prev.filter((row) => !selectedIds.has(row.id)));
-      setTotal((prev) => Math.max(0, prev - selectedRows.length));
-      setSelectedIds(new Set());
-      setResultDialogTitle("Bulk Restore Berhasil");
-      setResultDialogDescription(`${selectedRows.length} item berhasil direstore.`);
+      if (succeededIds.size > 0) {
+        setRows((prev) => prev.filter((row) => !succeededIds.has(row.id)));
+        setTotal((prev) => Math.max(0, prev - succeededIds.size));
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          succeededIds.forEach((id) => next.delete(id));
+          return next;
+        });
+      }
+
+      if (failCount > 0) {
+        setResultDialogTitle("Sebagian Restore Gagal");
+        setResultDialogDescription(`${succeededIds.size} item berhasil direstore, ${failCount} item gagal.`);
+      } else {
+        setResultDialogTitle("Bulk Restore Berhasil");
+        setResultDialogDescription(`${succeededIds.size} item berhasil dikembalikan ke list aktif.`);
+      }
       setResultDialogOpen(true);
     } catch (err) {
       const message = (err as Error).message || "Gagal bulk restore.";
@@ -382,7 +492,7 @@ export default function TrashPage() {
       setRows((prev) => prev.filter((row) => row.id !== item.id));
       setTotal((prev) => Math.max(0, prev - 1));
       setResultDialogTitle("Purge Berhasil");
-      setResultDialogDescription(`Item ${getDisplayName(getItemResource(selectedCategory, item), item)} berhasil dihapus permanen.`);
+      setResultDialogDescription(`Item "${getDisplayName(getItemResource(selectedCategory, item), item)}" berhasil dihapus permanen dari sistem.`);
       setResultDialogOpen(true);
     } catch (err) {
       const message = (err as Error).message || "Gagal purge permanen.";
@@ -397,28 +507,50 @@ export default function TrashPage() {
 
   async function handleBulkPurge() {
     if (!selectedCategory || selectedIds.size === 0) return;
-    const selectedRows = rows.filter((row) => selectedIds.has(row.id));
-    if (!selectedRows.length) return;
+    const selectedRowsList = rows.filter((row) => selectedIds.has(row.id));
+    if (!selectedRowsList.length) return;
 
     setActionLoading(true);
     setError("");
     try {
-      await Promise.all(
-        selectedRows.map((row) =>
-          apiFetch(`/${getItemResource(selectedCategory, row)}/${row.id}/purge`, {
-            method: "POST",
-            body: JSON.stringify({ confirm: "PURGE" }),
-            token,
-          }),
-        ),
-      );
+      const items = selectedRowsList.map((row) => ({
+        id: row.id,
+        resource: getItemResource(selectedCategory, row),
+      }));
+
+      const response = await apiFetch<{
+        data?: {
+          purgedCount: number;
+          failedCount: number;
+          purgedIds: string[];
+          errors?: Array<{ resource: string; error: string }>;
+        };
+        message?: string;
+      }>("/trash/bulk-purge", {
+        method: "POST",
+        body: JSON.stringify({ items, confirm: "PURGE" }),
+        token,
+      });
+
+      const purgedIdsSet = new Set(response.data?.purgedIds || selectedRowsList.map((r) => r.id));
+      const purgedCount = response.data?.purgedCount ?? purgedIdsSet.size;
+
       setBulkPurgeOpen(false);
       setBulkPurgeConfirmInput("");
-      setRows((prev) => prev.filter((row) => !selectedIds.has(row.id)));
-      setTotal((prev) => Math.max(0, prev - selectedRows.length));
-      setSelectedIds(new Set());
+      setRows((prev) => prev.filter((row) => !purgedIdsSet.has(row.id)));
+      setTotal((prev) => Math.max(0, prev - purgedCount));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        purgedIdsSet.forEach((id) => next.delete(id));
+        return next;
+      });
+
       setResultDialogTitle("Bulk Purge Berhasil");
-      setResultDialogDescription(`${selectedRows.length} item berhasil dihapus permanen.`);
+      setResultDialogDescription(
+        response.data?.failedCount
+          ? `${purgedCount} item berhasil dihapus permanen, ${response.data.failedCount} item terkendala relasi.`
+          : `${purgedCount} item berhasil dihapus permanen dari database.`,
+      );
       setResultDialogOpen(true);
     } catch (err) {
       const message = (err as Error).message || "Gagal bulk purge permanen.";
@@ -434,7 +566,7 @@ export default function TrashPage() {
   if (me.role !== "admin") {
     return (
       <div className="flex h-full items-center justify-center">
-        <Card className="max-w-md">
+        <Card className="max-w-md rounded-2xl border border-border/60 bg-card p-2 shadow-xs glass-inset">
           <CardHeader>
             <CardTitle>Akses Terbatas</CardTitle>
             <CardDescription>Halaman Trash hanya tersedia untuk role admin.</CardDescription>
@@ -446,51 +578,94 @@ export default function TrashPage() {
 
   return (
     <ScrollArea className="h-full min-h-0 w-full">
-      <div className="space-y-4 pr-3">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <Card>
-            <CardContent className="p-3">
-              <p className="text-xs uppercase text-muted-foreground">Kategori</p>
-              <p className="mt-1 text-lg font-semibold">{selectedCategory.label}</p>
-              <p className="text-xs text-muted-foreground">
-                {selectedCategory.slug === ALL_TRASH_CATEGORY.slug ? "Semua kategori trash" : selectedCategory.resource}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <p className="text-xs uppercase text-muted-foreground">Total Arsip</p>
-              <p className="mt-1 text-lg font-semibold">{total}</p>
-              <p className="text-xs text-muted-foreground">{pageStart}-{pageEnd} tampil</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <p className="text-xs uppercase text-muted-foreground">Item Terpilih</p>
-              <p className="mt-1 text-lg font-semibold">{selectedIds.size}</p>
-              <p className="text-xs text-muted-foreground">Terakhir: {formatDateTime(latestDeletedAt)}</p>
-            </CardContent>
-          </Card>
+      <div className="space-y-4 pr-3 pb-8">
+        {/* Header Eyebrow & Title */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">SYSTEM / DATA ARCHIVE</p>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">Data Trash & Arsip</h1>
+            <p className="text-xs text-muted-foreground">
+              Pusat penampungan data terhapus (soft-delete). Item dapat dipulihkan atau dibersihkan permanen oleh Admin.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.12em]">
+              Admin Only
+            </Badge>
+            {activeFilterCount ? (
+              <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em]">
+                {activeFilterCount} filter aktif
+              </Badge>
+            ) : null}
+          </div>
         </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Archive className="size-4" />
-                  Arsip Data
-                </CardTitle>
-                <CardDescription>Pilih kategori, cari item, lalu restore atau purge dari menu aksi.</CardDescription>
+        {/* Metric Summary Cards (Double-Bezel Architecture) */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-[1.5rem] border border-border/40 bg-muted/10 p-1 shadow-2xs dark:bg-white/[0.01]">
+            <div className="flex items-center justify-between gap-3 rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card glass-inset p-3.5">
+              <div className="min-w-0">
+                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Kategori Terpilih</p>
+                <p className="mt-0.5 truncate font-mono text-xl font-semibold text-foreground">{selectedCategory.label}</p>
+                <p className="truncate font-mono text-[11px] text-muted-foreground">
+                  {selectedCategory.slug === ALL_TRASH_CATEGORY.slug ? "Semua Kategori" : selectedCategory.resource}
+                </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">Admin Only</Badge>
-                {activeFilterCount ? <Badge variant="outline">{activeFilterCount} filter aktif</Badge> : null}
+              <div className="shrink-0 rounded-xl border border-border/50 bg-muted/30 p-2 shadow-2xs">
+                <Archive className="size-4 text-sky-500" />
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[220px_1fr_160px_auto_auto]">
+          </div>
+
+          <div className="rounded-[1.5rem] border border-border/40 bg-muted/10 p-1 shadow-2xs dark:bg-white/[0.01]">
+            <div className="flex items-center justify-between gap-3 rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card glass-inset p-3.5">
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Total Arsip</p>
+                <p className="mt-0.5 font-mono text-2xl font-semibold tabular-nums text-foreground">{total}</p>
+                <p className="font-mono text-[11px] tabular-nums text-muted-foreground">{pageStart}-{pageEnd} tampil</p>
+              </div>
+              <div className="shrink-0 rounded-xl border border-border/50 bg-muted/30 p-2 shadow-2xs">
+                <Trash2 className="size-4 text-amber-500" />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-border/40 bg-muted/10 p-1 shadow-2xs dark:bg-white/[0.01]">
+            <div className="flex items-center justify-between gap-3 rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card glass-inset p-3.5">
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Item Terpilih</p>
+                <p className="mt-0.5 font-mono text-2xl font-semibold tabular-nums text-foreground">{selectedIds.size}</p>
+                <p className="font-mono text-[11px] text-muted-foreground">
+                  {selectedIds.size > 0 ? "Siap diproses" : "Belum ada item"}
+                </p>
+              </div>
+              <div className="shrink-0 rounded-xl border border-border/50 bg-muted/30 p-2 shadow-2xs">
+                <ShieldAlert className="size-4 text-blue-500" />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-border/40 bg-muted/10 p-1 shadow-2xs dark:bg-white/[0.01]">
+            <div className="flex items-center justify-between gap-3 rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card glass-inset p-3.5">
+              <div className="min-w-0">
+                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Arsip Terakhir</p>
+                <p className="mt-0.5 truncate font-mono text-xs font-semibold tabular-nums text-foreground">
+                  {formatDateTime(latestDeletedAt)}
+                </p>
+                <p className="font-mono text-[11px] text-muted-foreground">Waktu arsip terbaru</p>
+              </div>
+              <div className="shrink-0 rounded-xl border border-border/50 bg-muted/30 p-2 shadow-2xs">
+                <RotateCcw className="size-4 text-emerald-500" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter & Search Bar Container */}
+        <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-xs glass-inset space-y-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[240px_1fr_160px_auto_auto]">
+            <div className="space-y-1">
+              <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Kategori Arsip</p>
               <Combobox
                 value={selectedCategory.slug}
                 onValueChange={(value) => {
@@ -502,6 +677,10 @@ export default function TrashPage() {
                 placeholder="Pilih kategori"
                 searchPlaceholder="Cari kategori..."
               />
+            </div>
+
+            <div className="space-y-1">
+              <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Pencarian Data</p>
               <Input
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
@@ -513,6 +692,10 @@ export default function TrashPage() {
                 }}
                 placeholder="Cari nama, ID, kode, atau UUID..."
               />
+            </div>
+
+            <div className="space-y-1">
+              <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Baris Per Halaman</p>
               <Combobox
                 value={String(limit)}
                 onValueChange={(value) => {
@@ -520,25 +703,33 @@ export default function TrashPage() {
                   setLimit(Number(value));
                 }}
                 options={[
-                  { value: "10", label: "10 / halaman" },
-                  { value: "20", label: "20 / halaman" },
-                  { value: "50", label: "50 / halaman" },
+                  { value: "10", label: "10 baris" },
+                  { value: "20", label: "20 baris" },
+                  { value: "50", label: "50 baris" },
                 ]}
                 placeholder="Rows"
               />
+            </div>
+
+            <div className="flex items-end">
               <Button
                 type="button"
+                className="w-full sm:w-auto rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                 onClick={() => {
                   setPage(1);
                   setSearch(searchInput.trim());
                 }}
               >
-                <Search className="mr-1 size-4" />
+                <Search className="mr-1.5 size-3.5" />
                 Terapkan
               </Button>
+            </div>
+
+            <div className="flex items-end">
               <Button
                 type="button"
                 variant="outline"
+                className="w-full sm:w-auto rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                 onClick={() => {
                   setSelectedCategorySlug(ALL_TRASH_CATEGORY.slug);
                   setSearchInput("");
@@ -548,178 +739,232 @@ export default function TrashPage() {
                 }}
                 disabled={loading}
               >
-                <X className="mr-1 size-4" />
+                <X className="mr-1.5 size-3.5" />
                 Reset
               </Button>
             </div>
-            {(searchParams.get("entity_type") || searchParams.get("entity_id")) ? (
-              <Alert>
-                <Search className="size-4" />
-                <AlertTitle>Preset dari halaman sebelumnya</AlertTitle>
-                <AlertDescription>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    {searchParams.get("entity_type") ? <Badge variant="outline">entity: {searchParams.get("entity_type")}</Badge> : null}
-                    {searchParams.get("entity_id") ? <Badge variant="outline">id: {searchParams.get("entity_id")}</Badge> : null}
-                  </div>
-                </AlertDescription>
-              </Alert>
-            ) : null}
+          </div>
 
-            <Separator />
+          {(searchParams.get("entity_type") || searchParams.get("entity_id")) ? (
+            <Alert className="rounded-xl border-border/50 bg-muted/20">
+              <Search className="size-4" />
+              <AlertTitle className="font-mono text-xs uppercase tracking-wider">Preset Dari Halaman Sebelumnya</AlertTitle>
+              <AlertDescription>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {searchParams.get("entity_type") ? (
+                    <Badge variant="outline" className="font-mono text-[9px] uppercase">
+                      entity: {searchParams.get("entity_type")}
+                    </Badge>
+                  ) : null}
+                  {searchParams.get("entity_id") ? (
+                    <Badge variant="outline" className="font-mono text-[9px] uppercase">
+                      id: {searchParams.get("entity_id")}
+                    </Badge>
+                  ) : null}
+                </div>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+        </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
-              <div className="space-y-0.5">
-                <p className="font-medium">Bulk Action</p>
-                <p className="text-xs text-muted-foreground">
-                  {selectedIds.size ? `${selectedIds.size} item siap diproses` : "Pilih item dari tabel untuk bulk restore atau purge."}
+        {/* Floating / Sticky Selection Bar (Double-Bezel Pattern) */}
+        {selectedIds.size > 0 && (
+          <div className="rounded-2xl border border-primary/40 bg-primary/5 p-1 shadow-xs animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[calc(1rem-0.25rem)] border border-primary/30 bg-card glass-inset px-4 py-2.5">
+              <div className="flex items-center gap-2.5">
+                <Badge variant="outline" className="border-primary/40 bg-primary/10 font-mono text-[9px] uppercase tracking-[0.12em] text-primary">
+                  <span className="mr-1 font-semibold tabular-nums">{selectedIds.size}</span> item terpilih
+                </Badge>
+                <p className="hidden text-xs text-muted-foreground sm:inline">
+                  Item terpilih siap direstore atau dihapus permanen.
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Button
                   type="button"
-                  variant="outline"
                   size="sm"
-                  disabled={selectedIds.size === 0 || actionLoading}
+                  variant="outline"
+                  className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                  disabled={actionLoading}
                   onClick={() => setBulkRestoreOpen(true)}
                 >
-                  <RotateCcw className="mr-1 size-4" />
-                  Restore
+                  <RotateCcw className="mr-1.5 size-3.5 text-emerald-500" />
+                  Restore Terpilih
                 </Button>
                 <Button
                   type="button"
-                  variant="destructive"
                   size="sm"
-                  disabled={selectedIds.size === 0 || actionLoading}
+                  variant="destructive"
+                  className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                  disabled={actionLoading}
                   onClick={() => setBulkPurgeOpen(true)}
                 >
-                  <Trash2 className="mr-1 size-4" />
-                  Purge
+                  <Trash2 className="mr-1.5 size-3.5" />
+                  Purge Terpilih
                 </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} disabled={selectedIds.size === 0}>
-                  Clear
-                </Button>
-              </div>
-            </div>
-
-            {selectedRows.length ? (
-              <div className="flex flex-wrap gap-1.5">
-                {selectedRows.slice(0, 4).map((row) => (
-                  <Badge key={row.id} variant="secondary" className="max-w-60 truncate font-normal">
-                    {getDisplayName(getItemResource(selectedCategory, row), row)}
-                  </Badge>
-                ))}
-                {selectedRows.length > 4 ? <Badge variant="outline">+{selectedRows.length - 4}</Badge> : null}
-              </div>
-            ) : null}
-
-            {loading ? (
-              <AppLoading label="Memuat data trash..." />
-            ) : error ? (
-              <Alert variant="destructive">
-                <ShieldAlert className="size-4" />
-                <AlertTitle>Gagal memuat trash</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : rows.length === 0 ? (
-              <div className="rounded-md border border-dashed p-8 text-center">
-                <Archive className="mx-auto mb-2 size-8 text-muted-foreground" />
-                <p className="font-medium">Trash kosong untuk filter ini.</p>
-                <p className="mt-1 text-sm text-muted-foreground">Ubah kategori atau kosongkan pencarian untuk melihat data arsip lain.</p>
-              </div>
-            ) : (
-              <SimpleTable
-                headers={headers}
-                rows={tableRows}
-                tableLabel="Kolom Arsip Data"
-                columnVisibilityLabel="Column"
-                columnVisibilityLabels={columnVisibilityLabels}
-                enableColumnVisibility
-                enableSorting
-                disableSortColumns={[0]}
-                rowContextMenu={(rowIndex) => {
-                  const row = rows[rowIndex];
-                  if (!row) return null;
-                  return (
-                    <>
-                      <ContextMenuLabel>Trash Actions</ContextMenuLabel>
-                      <ContextMenuItem
-                        onSelect={() =>
-                          router.push(
-                            `/audit-trail?entity_type=${encodeURIComponent(getItemResource(selectedCategory, row))}&entity_id=${encodeURIComponent(row.id)}`,
-                          )
-                        }
-                      >
-                        Lihat Audit Trail
-                      </ContextMenuItem>
-                      <ContextMenuItem onSelect={() => setRestoreTarget(row)}>
-                        <RotateCcw className="mr-1 size-4" />
-                        Restore
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onSelect={() => {
-                          setPurgeTarget(row);
-                          setPurgeConfirmInput("");
-                        }}
-                      >
-                        <Trash2 className="mr-1 size-4" />
-                        Purge Permanen
-                      </ContextMenuItem>
-                    </>
-                  );
-                }}
-              />
-            )}
-
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-muted-foreground">
-                Menampilkan {pageStart}-{pageEnd} dari {total}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
-                  Prev
-                </Button>
-                <span className="text-sm text-muted-foreground">Page {page}</span>
-                <Button variant="outline" size="sm" disabled={loading || page * limit >= total} onClick={() => setPage((prev) => prev + 1)}>
-                  Next
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Batal
                 </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
+
+        {/* Main Table Container */}
+        <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-xs glass-inset space-y-4">
+          {loading ? (
+            <AppLoading label="Memuat data arsip..." />
+          ) : error ? (
+            <Alert variant="destructive" className="rounded-xl">
+              <ShieldAlert className="size-4" />
+              <AlertTitle>Gagal memuat trash</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : rows.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border/60 p-12 text-center">
+              <Archive className="mx-auto mb-3 size-10 text-muted-foreground/60" />
+              <p className="font-mono text-sm font-semibold uppercase tracking-wider text-foreground">Trash Kosong</p>
+              <p className="mt-1 text-xs text-muted-foreground">Tidak ada data arsip untuk kategori dan pencarian ini.</p>
+            </div>
+          ) : (
+            <SimpleTable
+              headers={headers}
+              rows={tableRows}
+              tableLabel="Kolom Arsip Data"
+              columnVisibilityLabel="Column"
+              columnVisibilityLabels={columnVisibilityLabels}
+              enableColumnVisibility
+              enableSorting
+              disableSortColumns={[0, 5]}
+              rowContextMenu={(rowIndex) => {
+                const row = rows[rowIndex];
+                if (!row) return null;
+                return (
+                  <>
+                    <ContextMenuLabel className="font-mono text-[9px] uppercase tracking-wider">Aksi Arsip</ContextMenuLabel>
+                    <ContextMenuItem
+                      onSelect={() =>
+                        router.push(
+                          `/audit-trail?entity_type=${encodeURIComponent(getItemResource(selectedCategory, row))}&entity_id=${encodeURIComponent(row.id)}`,
+                        )
+                      }
+                    >
+                      Lihat Audit Trail
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => setRestoreTarget(row)}>
+                      <RotateCcw className="mr-1.5 size-3.5 text-emerald-500" />
+                      Restore
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onSelect={() => {
+                        setPurgeTarget(row);
+                        setPurgeConfirmInput("");
+                      }}
+                    >
+                      <Trash2 className="mr-1.5 size-3.5" />
+                      Purge Permanen
+                    </ContextMenuItem>
+                  </>
+                );
+              }}
+            />
+          )}
+
+          {/* Table Pagination */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-3">
+            <p className="font-mono text-xs tabular-nums text-muted-foreground">
+              Menampilkan <span className="font-semibold text-foreground">{pageStart}</span>-
+              <span className="font-semibold text-foreground">{pageEnd}</span> dari{" "}
+              <span className="font-semibold text-foreground">{total}</span> item
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                disabled={page <= 1 || loading}
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              >
+                Prev
+              </Button>
+              <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                Page {page} of {Math.max(1, Math.ceil(total / limit))}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                disabled={loading || page * limit >= total}
+                onClick={() => setPage((prev) => prev + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Single Restore Dialog */}
       <AlertDialog open={Boolean(restoreTarget)} onOpenChange={(open) => !open && setRestoreTarget(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Restore data ini?</AlertDialogTitle>
-            <AlertDialogDescription>Data terarsip akan dikembalikan ke list aktif.</AlertDialogDescription>
+            <AlertDialogDescription>Data terarsip akan dikembalikan ke list data aktif.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Batal</AlertDialogCancel>
-            <AlertDialogAction disabled={actionLoading || !restoreTarget} onClick={() => restoreTarget && void handleRestore(restoreTarget)}>
+            <AlertDialogCancel
+              disabled={actionLoading}
+              className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            >
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={actionLoading || !restoreTarget}
+              onClick={() => restoreTarget && void handleRestore(restoreTarget)}
+              className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            >
               {actionLoading ? "Memproses..." : "Restore"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Bulk Restore Dialog */}
       <AlertDialog open={bulkRestoreOpen} onOpenChange={setBulkRestoreOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Restore item terpilih?</AlertDialogTitle>
-            <AlertDialogDescription>{`Jumlah item: ${selectedIds.size}. Semua data ini akan dikembalikan ke list aktif.`}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {`Jumlah item: ${selectedIds.size}. Seluruh data ini akan dikembalikan ke status aktif.`}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Batal</AlertDialogCancel>
-            <AlertDialogAction disabled={actionLoading || selectedIds.size === 0} onClick={() => void handleBulkRestore()}>
+            <AlertDialogCancel
+              disabled={actionLoading}
+              className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            >
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={actionLoading || selectedIds.size === 0}
+              onClick={() => void handleBulkRestore()}
+              className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            >
               {actionLoading ? "Memproses..." : "Restore Selected"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Single Purge Dialog */}
       <AlertDialog
         open={Boolean(purgeTarget)}
         onOpenChange={(open) => {
@@ -729,34 +974,42 @@ export default function TrashPage() {
           }
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Purge permanen data ini?</AlertDialogTitle>
             <AlertDialogDescription>
-              Data akan dihapus permanen dari sistem dan tidak bisa dipulihkan lagi.
+              Data akan dihapus secara permanen dari database dan tidak bisa dipulihkan kembali.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
-            <p className="font-medium text-destructive">Aksi permanen</p>
-            <p className="text-muted-foreground">
-              Item: <span className="font-medium">{purgeTarget ? getDisplayName(getItemResource(selectedCategory, purgeTarget), purgeTarget) : "-"}</span>
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm">
+            <p className="font-mono text-[9px] uppercase tracking-wider text-destructive font-semibold">Aksi Permanen</p>
+            <p className="mt-0.5 text-muted-foreground">
+              Item: <span className="font-medium text-foreground">{purgeTarget ? getDisplayName(getItemResource(selectedCategory, purgeTarget), purgeTarget) : "-"}</span>
             </p>
           </div>
-          <Input
-            value={purgeConfirmInput}
-            onChange={(event) => setPurgeConfirmInput(event.target.value)}
-            placeholder="Ketik PURGE"
-            autoComplete="off"
-          />
-          <p className={`text-xs ${singlePurgeReady ? "text-emerald-600" : "text-muted-foreground"}`}>
-            Ketik tepat <span className="font-semibold">PURGE</span> untuk mengaktifkan tombol konfirmasi.
-          </p>
+          <div className="space-y-1.5">
+            <Input
+              value={purgeConfirmInput}
+              onChange={(event) => setPurgeConfirmInput(event.target.value)}
+              placeholder="Ketik PURGE"
+              autoComplete="off"
+              className="font-mono uppercase"
+            />
+            <p className={`font-mono text-xs ${singlePurgeReady ? "text-emerald-600 font-medium" : "text-muted-foreground"}`}>
+              Ketik tepat <span className="font-bold">PURGE</span> untuk mengaktifkan tombol konfirmasi.
+            </p>
+          </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Batal</AlertDialogCancel>
+            <AlertDialogCancel
+              disabled={actionLoading}
+              className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            >
+              Batal
+            </AlertDialogCancel>
             <AlertDialogAction
               disabled={actionLoading || !purgeTarget || !singlePurgeReady}
               onClick={() => purgeTarget && void handlePurge(purgeTarget)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
             >
               {actionLoading ? "Memproses..." : "Purge Permanen"}
             </AlertDialogAction>
@@ -764,6 +1017,7 @@ export default function TrashPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Bulk Purge Dialog */}
       <AlertDialog
         open={bulkPurgeOpen}
         onOpenChange={(open) => {
@@ -771,34 +1025,42 @@ export default function TrashPage() {
           if (!open) setBulkPurgeConfirmInput("");
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Purge permanen item terpilih?</AlertDialogTitle>
             <AlertDialogDescription>
-              Hapus permanen seluruh item terpilih dari sistem. Tindakan ini tidak bisa dibatalkan.
+              Hapus permanen seluruh item terpilih dari sistem secara atomik. Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
-            <p className="font-medium text-destructive">Aksi permanen</p>
-            <p className="text-muted-foreground">
-              Jumlah item terpilih: <span className="font-medium">{selectedIds.size}</span>
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm">
+            <p className="font-mono text-[9px] uppercase tracking-wider text-destructive font-semibold">Aksi Permanen</p>
+            <p className="mt-0.5 text-muted-foreground">
+              Jumlah item terpilih: <span className="font-mono font-bold tabular-nums text-foreground">{selectedIds.size}</span> item
             </p>
           </div>
-          <Input
-            value={bulkPurgeConfirmInput}
-            onChange={(event) => setBulkPurgeConfirmInput(event.target.value)}
-            placeholder="Ketik PURGE"
-            autoComplete="off"
-          />
-          <p className={`text-xs ${bulkPurgeReady ? "text-emerald-600" : "text-muted-foreground"}`}>
-            Ketik tepat <span className="font-semibold">PURGE</span> untuk mengaktifkan tombol konfirmasi.
-          </p>
+          <div className="space-y-1.5">
+            <Input
+              value={bulkPurgeConfirmInput}
+              onChange={(event) => setBulkPurgeConfirmInput(event.target.value)}
+              placeholder="Ketik PURGE"
+              autoComplete="off"
+              className="font-mono uppercase"
+            />
+            <p className={`font-mono text-xs ${bulkPurgeReady ? "text-emerald-600 font-medium" : "text-muted-foreground"}`}>
+              Ketik tepat <span className="font-bold">PURGE</span> untuk mengaktifkan tombol konfirmasi.
+            </p>
+          </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Batal</AlertDialogCancel>
+            <AlertDialogCancel
+              disabled={actionLoading}
+              className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            >
+              Batal
+            </AlertDialogCancel>
             <AlertDialogAction
               disabled={actionLoading || selectedIds.size === 0 || !bulkPurgeReady}
               onClick={() => void handleBulkPurge()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
             >
               {actionLoading ? "Memproses..." : "Purge Selected"}
             </AlertDialogAction>
@@ -838,6 +1100,15 @@ function getIdentifier(resource: string, item: GenericItem) {
   if (resource === "assetModels") return pick(item, ["model_code"]);
   if (resource === "provinces") return pick(item, ["province_name"]);
   if (resource === "cities") return pick(item, ["city_code"]);
+  if (resource === "routeTypes") return pick(item, ["route_type_code"]);
+  if (resource === "odpTypes") return pick(item, ["odp_type_code"]);
+  if (resource === "cableTypes") return pick(item, ["cable_type_code"]);
+  if (resource === "closureTypes") return pick(item, ["closure_type_code"]);
+  if (resource === "coreCapacities") return pick(item, ["core_capacity_id", "core_capacity_value"]);
+  if (resource === "deviceCoreCapacities") return pick(item, ["device_core_capacity_id", "core_capacity_value"]);
+  if (resource === "tenants") return pick(item, ["tenant_code"]);
+  if (resource === "installationTypes") return pick(item, ["installation_type_code"]);
+  if (resource === "serviceTypes") return pick(item, ["service_type_code"]);
   return pick(item, ["id"]);
 }
 
@@ -852,6 +1123,15 @@ function getDisplayName(resource: string, item: GenericItem) {
   if (resource === "assetModels") return pick(item, ["model_name", "model_code"]);
   if (resource === "provinces") return pick(item, ["province_name"]);
   if (resource === "cities") return pick(item, ["city_name", "city_code"]);
+  if (resource === "routeTypes") return pick(item, ["route_type_name", "route_type_code"]);
+  if (resource === "odpTypes") return pick(item, ["odp_type_name", "odp_type_code"]);
+  if (resource === "cableTypes") return pick(item, ["cable_type_name", "cable_type_code"]);
+  if (resource === "closureTypes") return pick(item, ["closure_type_name", "closure_type_code"]);
+  if (resource === "coreCapacities") return pick(item, ["label", "description", "core_capacity_value"]);
+  if (resource === "deviceCoreCapacities") return pick(item, ["label", "description", "core_capacity_value"]);
+  if (resource === "tenants") return pick(item, ["tenant_name", "tenant_code"]);
+  if (resource === "installationTypes") return pick(item, ["installation_type_name", "installation_type_code"]);
+  if (resource === "serviceTypes") return pick(item, ["service_type_name", "service_type_code"]);
   return pick(item, ["id"]);
 }
 
