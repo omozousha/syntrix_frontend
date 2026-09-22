@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Network, Radar, ShieldCheck } from "lucide-react";
+import { AppLoading } from "@/components/app-loading-new";
 import { ResponseDialog } from "@/components/response-dialog";
 import { apiFetch } from "@/lib/api";
 import { clearStoredToken, fetchCurrentUser, loginWithPassword, storeSessionTokens, getStoredToken } from "@/lib/session";
@@ -129,12 +130,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-dvh overflow-hidden bg-[linear-gradient(135deg,var(--background),var(--muted)_62%)]">
       {isCheckingSession ? (
-        <div className="flex min-h-dvh w-full items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="size-8 animate-spin text-primary" />
-            <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Memuat...</p>
-          </div>
-        </div>
+        <AppLoading fullscreen label="Memeriksa sesi..." />
       ) : (
     <>
       <div className="mx-auto grid min-h-dvh w-full max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">

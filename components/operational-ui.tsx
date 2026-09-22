@@ -78,14 +78,20 @@ export function OperationalState({
   const Icon = variant === "error" ? AlertTriangle : variant === "loading" ? Loader2 : Database;
 
   return (
-    <div className="flex min-h-32 flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 p-6 text-center">
-      <div className="mb-3 flex size-10 items-center justify-center rounded-lg border bg-background text-muted-foreground">
-        <Icon className={`size-5 ${variant === "loading" ? "animate-spin" : ""}`} />
+    <div className="flex min-h-32 flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/10 p-6 text-center shadow-2xs glass-inset">
+      <div className="mb-3 flex size-10 items-center justify-center rounded-xl border border-border/50 bg-muted/30 text-muted-foreground shadow-2xs">
+        <Icon className={`size-5 ${variant === "loading" ? "animate-spin text-primary" : variant === "error" ? "text-destructive" : ""}`} />
       </div>
-      <p className="text-sm font-semibold">{title}</p>
-      {description ? <p className="mt-1 max-w-md text-sm text-muted-foreground">{description}</p> : null}
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      {description ? <p className="mt-1 max-w-md text-xs text-muted-foreground">{description}</p> : null}
       {actionLabel && onAction ? (
-        <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onAction}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-3 rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+          onClick={onAction}
+        >
           {actionLabel}
         </Button>
       ) : null}
