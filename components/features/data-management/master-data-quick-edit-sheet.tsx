@@ -46,31 +46,58 @@ export function MasterDataQuickEditSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>Quick Edit {categoryLabel}</SheetTitle>
-          <SheetDescription>Ubah data langsung dari list.</SheetDescription>
+          <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+            MASTER DATA / QUICK EDIT
+          </p>
+          <SheetTitle className="text-base font-semibold text-foreground">
+            Quick Edit {categoryLabel}
+          </SheetTitle>
+          <SheetDescription className="text-xs text-muted-foreground">
+            Ubah data langsung dari list tanpa meninggalkan halaman.
+          </SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto thin-scrollbar px-4">
           <div className="grid gap-3">
             {formContent}
             {showStatus ? (
               <div className="space-y-1.5">
-                <Label>Status</Label>
+                <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
+                  Status
+                </Label>
                 <SimpleDropdown
                   value={statusValue}
                   onValueChange={onStatusChange}
-                  options={[{ value: "true", label: "Active" }, { value: "false", label: "Inactive" }]}
+                  options={[
+                    { value: "true", label: "Active" },
+                    { value: "false", label: "Inactive" },
+                  ]}
                 />
               </div>
             ) : null}
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {error ? (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive glass-inset">
+                {error}
+              </div>
+            ) : null}
           </div>
         </div>
-        <SheetFooter className="mt-2 shrink-0 border-t pt-4">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={disabled}>
+        <SheetFooter className="mt-2 shrink-0 border-t border-border/40 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={disabled}
+            className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+          >
             Batal
           </Button>
-          <Button type="button" onClick={onSave} disabled={disabled}>
-            {actionLoading ? "Menyimpan..." : "Simpan"}
+          <Button
+            type="button"
+            onClick={onSave}
+            disabled={disabled}
+            className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+          >
+            {actionLoading ? "Menyimpan..." : "Simpan Perubahan"}
           </Button>
         </SheetFooter>
       </SheetContent>

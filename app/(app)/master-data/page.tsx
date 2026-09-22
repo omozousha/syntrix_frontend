@@ -101,27 +101,16 @@ export default function MasterDataPage() {
     [summaryBySlug],
   );
 
-  const sectionTotals = useMemo(
-    () => MASTER_SECTIONS.map((section) => ({
-      label: section.title.replace("Referensi ", ""),
-      icon: section.icon,
-      count: section.slugs.reduce((acc, slug) => acc + (summaryBySlug[slug] || 0), 0),
-    })),
-    [summaryBySlug],
-  );
-
   if (me.role !== "admin") {
     return (
       <div className="flex h-full items-center justify-center">
-        <Card className="max-w-md">
+        <Card className="max-w-md rounded-2xl border border-border/60 bg-card p-2 shadow-xs glass-inset">
           <CardHeader>
             <CardTitle>Akses Terbatas</CardTitle>
-            <CardDescription>
-              Halaman Master Data hanya tersedia untuk role admin.
-            </CardDescription>
+            <CardDescription>Halaman Master Data hanya tersedia untuk role admin.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
               <Link href="/data-management">Kembali ke Data Management</Link>
             </Button>
           </CardContent>
@@ -132,59 +121,71 @@ export default function MasterDataPage() {
 
   return (
     <ScrollArea className="h-full min-h-0 w-full">
-      <div className="space-y-5 pr-3">
-        <Card className="overflow-hidden border-primary/20 bg-gradient-to-r from-primary/5 to-background">
-          <CardHeader className="pb-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="w-fit gap-1">
-                  <BookMarked className="size-3.5" />
-                  Pusat Master Data
-                </Badge>
-                <Badge variant="outline" className="w-fit">
-                  Admin Only
-                </Badge>
-              </div>
-              <AddDataMenu canCreatePop={false} canCreateDevice={false} canManageMaster />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <MasterDataStatBar totalItems={totalCatalogItems} sectionTotals={sectionTotals} />
-          </CardContent>
-        </Card>
+      <div className="space-y-4 pr-3 pb-8">
+        {/* Header Eyebrow & Title */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">SYSTEM / MASTER REPOSITORIES</p>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">Katalog Master Data</h1>
+            <p className="text-xs text-muted-foreground">
+              Pusat referensi topologi, perangkat, vendor, dan lokasi untuk seluruh inventori jaringan Syntrix.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.12em]">
+              <BookMarked className="mr-1 size-3" />
+              Pusat Master Data
+            </Badge>
+            <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em]">
+              Admin Only
+            </Badge>
+            <AddDataMenu canCreatePop={false} canCreateDevice={false} canManageMaster />
+          </div>
+        </div>
+
+        {/* Double-Bezel Metric Summary */}
+        <MasterDataStatBar
+          totalItems={totalCatalogItems}
+          totalCategories={MASTER_DATA_CATEGORIES.length}
+          failedCount={failedCatalogs.length}
+        />
 
         {loading ? <AppLoading label="Memuat ringkasan master data..." /> : null}
         {!loading && error ? <AppLoading label={error} variant="error" /> : null}
 
         {!loading && !error ? (
           <Tabs defaultValue="references" className="space-y-4">
-            <TabsList className="grid h-auto w-full grid-cols-2 sm:w-fit">
-              <TabsTrigger value="references" className="min-h-10 px-3">
+            <TabsList className="inline-flex h-auto rounded-full border border-border/50 bg-muted/20 p-1">
+              <TabsTrigger
+                value="references"
+                className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
+              >
                 Basis Data Referensi
               </TabsTrigger>
-              <TabsTrigger value="qr-label" className="min-h-10 px-3">
+              <TabsTrigger
+                value="qr-label"
+                className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
+              >
                 Konfigurasi Label QR
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="references" className="space-y-4">
               {failedCatalogs.length ? (
-                <Card className="border-amber-300/60 bg-amber-50/50 dark:bg-amber-950/10">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Beberapa Data Master Belum Tersedia</CardTitle>
-                    <CardDescription>
-                      Terjadi error saat membaca sebagian resource master data. Biasanya karena migrasi/metadata backend belum sinkron.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
+                <div className="rounded-2xl border border-amber-300/60 bg-amber-50/50 p-4 shadow-xs glass-inset dark:bg-amber-950/10">
+                  <p className="font-mono text-[9px] uppercase tracking-[0.18em] font-semibold text-amber-700 dark:text-amber-400">Peringatan Sinkronisasi</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Terjadi error saat membaca sebagian resource master data. Biasanya karena migrasi/metadata backend belum sinkron.
+                  </p>
+                  <div className="mt-2 space-y-1.5">
                     {failedCatalogs.map((item) => (
-                      <div key={item.slug} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                      <div key={item.slug} className="flex items-center justify-between gap-2 rounded-xl border border-border/40 bg-card px-3 py-2 text-sm">
                         <span className="font-medium">{item.label}</span>
-                        <span className="text-xs text-muted-foreground">{item.reason}</span>
+                        <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em]">{item.reason}</Badge>
                       </div>
                     ))}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ) : null}
 
               <MasterDataReferenceSections
