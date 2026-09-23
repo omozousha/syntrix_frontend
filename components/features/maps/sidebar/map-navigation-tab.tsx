@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
-import { ButtonLoader } from "@/components/shared/loading-icon";
+import { ButtonLoader } from "@/components/app-loading-new";
 import type { OsgmRouteResult, OsgmRouteStep } from "@/lib/api";
 import type { MapDevice } from "../topology-map-canvas";
 import { cn } from "@/lib/utils";

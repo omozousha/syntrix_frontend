@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Loader2 } from "lucide-react";
-import { AppLoading } from "@/components/app-loading-new";
+import { Camera } from "lucide-react";
+import { AppLoading, ButtonLoader } from "@/components/app-loading-new";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -443,7 +443,7 @@ export default function ProfilePage() {
                       disabled={busy}
                       className="h-9 rounded-xl px-5 text-xs font-medium transition-all active:scale-[0.98]"
                     >
-                      {savingProfile ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                      {savingProfile ? <ButtonLoader className="mr-2" /> : null}
                       Simpan Profile
                     </Button>
                   </div>
@@ -526,7 +526,7 @@ export default function ProfilePage() {
                         disabled={busy}
                         className="h-9 rounded-xl px-5 text-xs font-medium transition-all active:scale-[0.98]"
                       >
-                        {savingPassword ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                        {savingPassword ? <ButtonLoader className="mr-2" /> : null}
                         Simpan Password Baru
                       </Button>
                     </div>
@@ -553,7 +553,7 @@ export default function ProfilePage() {
                         disabled={busy}
                         className="h-9 rounded-xl border-border/60 text-xs font-medium transition-all active:scale-[0.98]"
                       >
-                        {sendingReset ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                        {sendingReset ? <ButtonLoader className="mr-2" /> : null}
                         Kirim Link Reset Password
                       </Button>
                     </div>

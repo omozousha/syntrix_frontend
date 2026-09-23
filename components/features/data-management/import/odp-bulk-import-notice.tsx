@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, CheckCircle2, Info, Loader2 } from "lucide-react";
-import { InlineLoader, ButtonLoader } from "@/components/shared/loading-icon";
+import { InlineLoader, ButtonLoader } from "@/components/app-loading-new";
 import { cn } from "@/lib/utils";
 
 export const NOTICE_DISMISSED_KEY = "odp-bulk-import-notice-dismissed";

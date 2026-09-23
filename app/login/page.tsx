@@ -2,8 +2,8 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Network, Radar, ShieldCheck } from "lucide-react";
-import { AppLoading } from "@/components/app-loading-new";
+import { ArrowRight, Eye, EyeOff, LockKeyhole, Network, Radar, ShieldCheck } from "lucide-react";
+import { AppLoading, ButtonLoader } from "@/components/app-loading-new";
 import { ResponseDialog } from "@/components/response-dialog";
 import { apiFetch } from "@/lib/api";
 import { clearStoredToken, fetchCurrentUser, loginWithPassword, storeSessionTokens, getStoredToken } from "@/lib/session";
@@ -254,7 +254,7 @@ export default function LoginPage() {
                     </Field>
 
                     <Button type="submit" disabled={loading} className="w-full rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] shadow-sm shadow-primary/20">
-                      {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+                      {loading ? <ButtonLoader className="mr-2" /> : null}
                       {loading ? "Memproses..." : "Login"}
                     </Button>
 
@@ -265,7 +265,7 @@ export default function LoginPage() {
                       disabled={resetLoading}
                       className="w-full rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                     >
-                      {resetLoading ? <Loader2 className="size-4 animate-spin" /> : null}
+                      {resetLoading ? <ButtonLoader className="mr-2" /> : null}
                       {resetLoading ? "Mengirim..." : "Reset Password"}
                     </Button>
 

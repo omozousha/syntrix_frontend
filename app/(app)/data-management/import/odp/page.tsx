@@ -3,7 +3,8 @@
 import * as React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, ArrowLeft, CheckCircle2, AlertTriangle, AlertCircle, FileSpreadsheet, FileText, X, Loader2, ArrowRight } from "lucide-react";
+import { Upload, ArrowLeft, CheckCircle2, AlertTriangle, AlertCircle, FileSpreadsheet, FileText, X, ArrowRight } from "lucide-react";
+import { AppLoading } from "@/components/app-loading-new";
 import * as XLSX from "xlsx";
 import { useSession } from "@/components/session-context";
 import { apiFetch } from "@/lib/api";
@@ -876,15 +877,7 @@ export default function OdpBulkImportPage() {
           )}
 
           {applyState === "loading" && (
-            <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
-              <Loader2 className="size-8 animate-spin text-primary" />
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider font-mono">Sedang Menyimpan Data...</h3>
-                <p className="text-[10px] text-muted-foreground mt-1 max-w-sm">
-                  Backend sedang mendaftarkan data ODP ke database, memproses lookup region, dan memicu sequence inventori. Mohon tunggu.
-                </p>
-              </div>
-            </div>
+            <AppLoading variant="card" label="Sedang Menyimpan Data..." />
           )}
 
           {applyState === "success" && importResult && (

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { InlineLoader } from "@/components/shared/loading-icon";
+import { InlineLoader } from "@/components/app-loading-new";
 import { OperationalState } from "@/components/operational-ui";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";

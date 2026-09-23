@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertCircle, CheckCircle2, Info, Loader2, TriangleAlert } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info, TriangleAlert } from "lucide-react";
+import { ButtonLoader } from "@/components/app-loading-new";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,7 +72,7 @@ export function ResponseDialog({
       <AlertDialogContent className="max-w-sm">
         <AlertDialogHeader>
           <div className={cn("mx-auto mb-2 flex size-12 items-center justify-center rounded-xl", meta.mediaClassName)}>
-            {loading ? <Loader2 className="size-5 animate-spin" /> : <Icon className="size-5" />}
+            {loading ? <ButtonLoader /> : <Icon className="size-5" />}
           </div>
           <AlertDialogTitle className="text-center">{title || "Response"}</AlertDialogTitle>
           {description ? <AlertDialogDescription className="text-center">{description}</AlertDialogDescription> : null}
