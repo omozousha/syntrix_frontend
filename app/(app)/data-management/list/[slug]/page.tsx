@@ -334,7 +334,7 @@ export default function DataManagementListPage() {
   // ODP Summary Hook
   const { data: odpSummary, loading: odpSummaryLoading, error: odpSummaryError } = useOdpSummary({
     regionScopeId: effectiveRegionScopeId,
-    popId: popQueryParam !== "__all" ? popQueryParam : null,
+    popId: popQueryParam !== "__all" && popQueryParam !== "__null__" ? popQueryParam : null,
     projectId: projectQueryParam !== "__all" ? projectQueryParam : null,
     token,
   });
@@ -526,7 +526,7 @@ export default function DataManagementListPage() {
           limit,
           q: search,
           regionScopeId: effectiveRegionScopeId,
-          popId: supportsPopFilter && popQueryParam !== "__all" ? popQueryParam : undefined,
+          popId: supportsPopFilter && popQueryParam !== "__all" && popQueryParam !== "__null__" ? popQueryParam : undefined,
           projectId: supportsProjectFilter && projectQueryParam !== "__all" ? projectQueryParam : undefined,
           ids: search ? undefined : idsFilter,
           validationStatus: validationStatusFilter,
@@ -1479,7 +1479,7 @@ export default function DataManagementListPage() {
           page: 1,
           limit: 500,
           regionScopeId: effectiveRegionScopeId,
-          popId: supportsPopFilter && popQueryParam !== "__all" ? popQueryParam : undefined,
+          popId: supportsPopFilter && popQueryParam !== "__all" && popQueryParam !== "__null__" ? popQueryParam : undefined,
           projectId: supportsProjectFilter && projectQueryParam !== "__all" ? projectQueryParam : undefined,
           ids: idsFilter,
         });
