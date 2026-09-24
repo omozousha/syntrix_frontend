@@ -673,7 +673,7 @@ export default function DataManagementPage() {
         {!loading && !error ? (
           <div className="space-y-3">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3">
-              <TabsList className={`inline-grid w-fit max-w-full overflow-x-auto ${canViewQuality ? "grid-cols-2" : "grid-cols-1"} rounded-full border border-border/50 bg-muted/20 p-1`}>
+              <TabsList className={`inline-grid w-fit ${canViewQuality ? "grid-cols-2" : "grid-cols-1"} rounded-full border border-border/50 bg-muted/20 p-1`}>
                 <TabsTrigger value="overview" className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">{isValidator ? "Validator Home" : "Overview"}</TabsTrigger>
                 {canViewQuality ? <TabsTrigger value="quality" className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">Data Quality</TabsTrigger> : null}
               </TabsList>
