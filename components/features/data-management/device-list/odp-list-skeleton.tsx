@@ -6,7 +6,7 @@ export function OdpListSkeleton() {
   return (
     <div className="space-y-4">
       {/* Header Skeleton */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 shadow-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/60 bg-card p-2.5 shadow-xs glass-inset">
         <div className="flex items-center gap-2">
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-5 w-20 rounded" />
@@ -20,7 +20,7 @@ export function OdpListSkeleton() {
       {/* Summary KPI Strip Skeleton */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs">
+          <div key={i} className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs glass-inset">
             <div className="flex items-center gap-3">
               <Skeleton className="size-9 shrink-0 rounded-md" />
               <div className="flex-1 space-y-1.5">

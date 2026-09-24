@@ -16,7 +16,7 @@ export function OdpListSummaryStrip({ summary, popCount, loading }: OdpListSumma
     return (
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs">
+          <div key={i} className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs glass-inset">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 shrink-0 rounded-md border bg-muted/20" />
               <div className="space-y-2 flex-1">

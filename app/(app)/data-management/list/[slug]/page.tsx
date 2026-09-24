@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -852,37 +852,42 @@ export default function DataManagementListPage() {
     [allCurrentRowsSelected, someCurrentRowsSelected, rows],
   );
 
-  const headers = useMemo(() => {
-    if (!category) return [];
-    if (category.resource === "pops") return [selectAllHeader, "POP ID", "Code", "Name", "Status", "Updated"];
-    if (category.resource === "devices") {
-      if (category.deviceTypeKey === "CABLE") return [selectAllHeader, "Device ID", "Name", "Type", "Kategori", "POP", "Status", "Validation", "Updated"];
-      return [selectAllHeader, "Device ID", "Name", "Type", "POP", "Status", "Validation", "Updated"];
-    }
-    if (category.resource === "poles") return [selectAllHeader, "Pole ID", "Pole Number", "Region", "POP", "Status", "Updated"];
-    if (category.resource === "customers") return [selectAllHeader, "CID", "Name", "Service", "POP", "Status", "Updated"];
-    if (category.resource === "routes") return [selectAllHeader, "Route ID", "Route Name", "Region", "POP", "Status", "Updated"];
-    if (category.resource === "regions") return [selectAllHeader, "Region ID", "Inventory Code", "Region Name", "Color", "Updated"];
-    if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Group", "Topology Role", "Layout", "Assignable", "Status", "Updated"];
-    if (category.resource === "topologyRelationRules") return [selectAllHeader, "Source", "Direction", "Allowed Peer", "Role", "Same POP", "Required on Create", "Status", "Updated"];
-    if (category.resource === "linkBudgetParameters") return [selectAllHeader, "Key", "Label", "Value", "Unit", "Status", "Updated"];
-    if (category.resource === "popTypes") return [selectAllHeader, "Code", "POP Type", "Status", "Updated"];
-    if (category.resource === "routeTypes") return [selectAllHeader, "Code", "Route Type", "Status", "Updated"];
-    if (category.resource === "cableTypes") return [selectAllHeader, "Code", "Cable Type", "Role", "Core Count", "1310nm", "Status", "Updated"];
-    if (category.resource === "closureTypes") return [selectAllHeader, "Code", "Closure Type", "Max Core", "Environment", "Tray", "Status", "Updated"];
-    if (category.resource === "coreCapacities") return [selectAllHeader, "Value", "Label", "Description", "Route Types", "Status", "Updated"];
-    if (category.resource === "deviceCoreCapacities") return [selectAllHeader, "Value", "Label", "Description", "Device Types", "Status", "Updated"];
-    if (category.resource === "odpTypes") return [selectAllHeader, "Code", "ODP Type", "Status", "Updated"];
-    if (category.resource === "installationTypes") return [selectAllHeader, "Code", "Installation Type", "Status", "Updated"];
-    if (category.resource === "serviceTypes") return [selectAllHeader, "Code", "Service Type", "Status", "Updated"];
-    if (category.resource === "tenants") return [selectAllHeader, "Code", "Tenant", "Status", "Updated"];
-    if (category.resource === "manufacturers") return [selectAllHeader, "Code", "Manufacturer", "Updated"];
-    if (category.resource === "brands") return [selectAllHeader, "Code", "Brand", "Manufacturer", "Updated"];
-    if (category.resource === "assetModels") return [selectAllHeader, "Code", "Model", "Brand", "Updated"];
-    if (category.resource === "splitterProfiles") return [selectAllHeader, "Ratio", "Input", "Output", "Loss (dB)", "Device Types", "Status", "Updated"];
-    if (category.resource === "provinces") return [selectAllHeader, "Province", "Status", "Updated"];
-    if (category.resource === "cities") return [selectAllHeader, "Code", "City", "Province", "Updated"];
-    return [selectAllHeader, "Project ID", "Project Name", "Status", "Region", "POP", "Updated"];
+  const [headers, defaultColumnVisibility] = useMemo(() => {
+    const h: ReactNode[] = (() => {
+      if (!category) return [];
+      if (category.resource === "pops") return [selectAllHeader, "POP ID", "Code", "Name", "Status", "Updated"];
+      if (category.resource === "devices") {
+        if (category.deviceTypeKey === "CABLE") return [selectAllHeader, "Device ID", "Name", "Type", "Kategori", "POP", "Status", "Validation", "Updated"];
+        return [selectAllHeader, "Device ID", "Name", "Type", "POP", "Status", "Validation", "Updated"];
+      }
+      if (category.resource === "poles") return [selectAllHeader, "Pole ID", "Pole Number", "Region", "POP", "Status", "Updated"];
+      if (category.resource === "customers") return [selectAllHeader, "CID", "Name", "Service", "POP", "Status", "Updated"];
+      if (category.resource === "routes") return [selectAllHeader, "Route ID", "Route Name", "Region", "POP", "Status", "Updated"];
+      if (category.resource === "regions") return [selectAllHeader, "Region ID", "Inventory Code", "Region Name", "Color", "Updated"];
+      if (category.resource === "deviceTypes") return [selectAllHeader, "Icon", "Type Key", "Type Name", "Group", "Topology Role", "Layout", "Assignable", "Status", "Updated"];
+      if (category.resource === "topologyRelationRules") return [selectAllHeader, "Source", "Direction", "Allowed Peer", "Role", "Same POP", "Required on Create", "Status", "Updated"];
+      if (category.resource === "linkBudgetParameters") return [selectAllHeader, "Key", "Label", "Value", "Unit", "Status", "Updated"];
+      if (category.resource === "popTypes") return [selectAllHeader, "Code", "POP Type", "Status", "Updated"];
+      if (category.resource === "routeTypes") return [selectAllHeader, "Code", "Route Type", "Status", "Updated"];
+      if (category.resource === "cableTypes") return [selectAllHeader, "Code", "Cable Type", "Role", "Core Count", "1310nm", "Status", "Updated"];
+      if (category.resource === "closureTypes") return [selectAllHeader, "Code", "Closure Type", "Max Core", "Environment", "Tray", "Status", "Updated"];
+      if (category.resource === "coreCapacities") return [selectAllHeader, "Value", "Label", "Description", "Route Types", "Status", "Updated"];
+      if (category.resource === "deviceCoreCapacities") return [selectAllHeader, "Value", "Label", "Description", "Device Types", "Status", "Updated"];
+      if (category.resource === "odpTypes") return [selectAllHeader, "Code", "ODP Type", "Status", "Updated"];
+      if (category.resource === "installationTypes") return [selectAllHeader, "Code", "Installation Type", "Status", "Updated"];
+      if (category.resource === "serviceTypes") return [selectAllHeader, "Code", "Service Type", "Status", "Updated"];
+      if (category.resource === "tenants") return [selectAllHeader, "Code", "Tenant", "Status", "Updated"];
+      if (category.resource === "manufacturers") return [selectAllHeader, "Code", "Manufacturer", "Updated"];
+      if (category.resource === "brands") return [selectAllHeader, "Code", "Brand", "Manufacturer", "Updated"];
+      if (category.resource === "assetModels") return [selectAllHeader, "Code", "Model", "Brand", "Updated"];
+      if (category.resource === "splitterProfiles") return [selectAllHeader, "Ratio", "Input", "Output", "Loss (dB)", "Device Types", "Status", "Updated"];
+      if (category.resource === "provinces") return [selectAllHeader, "Province", "Status", "Updated"];
+      if (category.resource === "cities") return [selectAllHeader, "Code", "City", "Province", "Updated"];
+      return [selectAllHeader, "Project ID", "Project Name", "Status", "Region", "POP", "Updated"];
+    })();
+    const vis: Record<string, boolean> = {};
+    h.forEach((_, index) => { vis[`col_${index}`] = index !== 0; });
+    return [h, h.length ? vis : undefined] as const;
   }, [category, selectAllHeader]);
 
   const tableRows = useMemo(() => {
@@ -1592,8 +1597,6 @@ export default function DataManagementListPage() {
             supportsPopFilter={supportsPopFilter}
             isPopFilterActive={popQueryParam !== "__all"}
             selectedPopLabel={selectedPopLabel}
-            canWrite={canWrite}
-            role={me.role}
           />
         )}
 
@@ -1855,6 +1858,8 @@ export default function DataManagementListPage() {
                   headers={headers}
                   rows={tableRows}
                   tableLabel={`${category.label} Columns`}
+                  enableColumnVisibility
+                  defaultColumnVisibility={defaultColumnVisibility}
                   selectedRowIndices={selectedRowIndices}
                   hiddenOnMobile={isOdpCategory}
                   onRowClick={(rowIndex) => {
@@ -1932,7 +1937,7 @@ export default function DataManagementListPage() {
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-4">
               <span className="text-xs text-muted-foreground">
-                Menampilkan <span className="font-mono font-medium text-foreground">{rows.length}</span> dari <span className="font-mono font-medium text-foreground">{total.toLocaleString("id-ID")}</span> data
+                Menampilkan <span className="font-mono font-medium text-foreground">{(page - 1) * limit + 1}</span>–<span className="font-mono font-medium text-foreground">{Math.min(page * limit, total)}</span> dari <span className="font-mono font-medium text-foreground">{total.toLocaleString("id-ID")}</span> data
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -1940,10 +1945,11 @@ export default function DataManagementListPage() {
                   size="sm"
                   disabled={page <= 1 || loading}
                   onClick={() => navigateToPage(page - 1)}
+                  className="rounded-full border-border/60 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                 >
                   Prev
                 </Button>
-                <span className="rounded border border-border/60 bg-muted/30 px-2.5 py-1 font-mono text-sm tabular-nums">
+                <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 font-mono text-sm tabular-nums glass-inset">
                   {page} / {Math.max(1, Math.ceil(total / limit))}
                 </span>
                 <Button
@@ -1951,6 +1957,7 @@ export default function DataManagementListPage() {
                   size="sm"
                   disabled={loading || page * limit >= total}
                   onClick={() => navigateToPage(page + 1)}
+                  className="rounded-full border-border/60 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                 >
                   Next
                 </Button>

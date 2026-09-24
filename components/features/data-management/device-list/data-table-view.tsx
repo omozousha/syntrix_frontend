@@ -15,6 +15,8 @@ export function DataTableView({
   onRowClick,
   onRowDoubleClick,
   rowContextMenu,
+  enableColumnVisibility = true,
+  defaultColumnVisibility,
 }: {
   headers: ReactNode[];
   rows: CellValue[][];
@@ -24,6 +26,8 @@ export function DataTableView({
   onRowClick: (rowIndex: number) => void;
   onRowDoubleClick: (rowIndex: number) => void;
   rowContextMenu: (rowIndex: number) => ReactNode;
+  enableColumnVisibility?: boolean;
+  defaultColumnVisibility?: Record<string, boolean>;
 }) {
   return (
     <div className={hiddenOnMobile ? "hidden md:block" : ""}>
@@ -32,7 +36,8 @@ export function DataTableView({
           headers={headers}
           rows={rows}
           tableLabel={tableLabel}
-          enableColumnVisibility
+          enableColumnVisibility={enableColumnVisibility}
+          defaultColumnVisibility={defaultColumnVisibility}
           enableSorting
           disableSortColumns={[0]}
           selectedRowIndices={selectedRowIndices}

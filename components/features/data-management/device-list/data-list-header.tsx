@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export function DataListHeader({
   label,
@@ -19,12 +20,12 @@ export function DataListHeader({
   onCreate: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 shadow-xs dark:bg-muted/5">
-      <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Kontrol daftar</span>
-        <span className="rounded border border-border/60 bg-background/60 px-2 py-0.5 text-xs text-muted-foreground">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/60 bg-card p-2.5 shadow-xs glass-inset">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <span className="font-mono text-[9px] uppercase tracking-[0.18em] font-medium text-muted-foreground">Kontrol daftar</span>
+        <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em] border-border/60 bg-background/50">
           {isRegionScoped ? "Region scoped" : "All regions"}
-        </span>
+        </Badge>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {canCreateMaster ? (
@@ -35,7 +36,7 @@ export function DataListHeader({
             </span>
           </Button>
         ) : null}
-        <Button asChild variant="outline" size="sm">
+        <Button asChild variant="outline" size="sm" className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
           <Link href={isMasterCategory ? "/master-data" : "/data-management"}>
             <ArrowLeft className="mr-2 size-4" />
             Kembali
