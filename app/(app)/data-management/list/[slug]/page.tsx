@@ -384,14 +384,7 @@ export default function DataManagementListPage() {
     }),
     [popLabelById, relationMaps],
   );
-  const filterGridClass =
-    category?.resource === "topologyRelationRules"
-      ? "sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4"
-      : supportsPopFilter || supportsProjectFilter
-      ? "sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5"
-      : category?.resource === "cities" || isSoftDeleteResource
-      ? "sm:grid-cols-2 lg:grid-cols-4"
-      : "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+  const filterGridClass = "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
   const applyPopFilter = useCallback(
     (nextValue: string) => {
       setSelectedIds(new Set());
