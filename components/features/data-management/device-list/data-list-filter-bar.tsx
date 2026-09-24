@@ -73,12 +73,12 @@ export function DataListFilterBar({
   onLimitChange: (value: number) => void;
   onResetFilters: () => void;
 }) {
-  const filterGroupClass = "flex flex-col gap-1.5";
-  const filterLabelClass = "font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground";
+  const filterGroupClass = "flex flex-col gap-1";
+  const filterLabelClass = "font-mono text-[8px] uppercase tracking-[0.12em] text-muted-foreground";
 
   return (
     <div className="rounded-[1.5rem] border border-border/40 bg-muted/10 p-1 shadow-2xs dark:bg-white/[0.01]">
-      <div className="rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card glass-inset p-4">
+      <div className="rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card glass-inset p-2.5">
         <div className={filterGridClass}>
           <div className={filterGroupClass}>
             <span className={filterLabelClass}>Cari</span>
