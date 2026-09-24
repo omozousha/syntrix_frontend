@@ -1619,8 +1619,7 @@ export default function DataManagementListPage() {
           </>
         ) : null}
 
-        <div className="rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-xs dark:bg-white/[0.02]">
-        <Card className="rounded-[calc(2rem-0.5rem)] border-border/60 shadow-xs glass-inset">
+        <Card className="rounded-[calc(2rem-0.5rem)] border border-border/60 bg-card shadow-xs glass-inset">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2 mb-1">
               <span className="font-mono text-[9px] uppercase tracking-[0.2em] rounded-full px-2.5 py-0.5 font-medium border border-border/60 bg-muted/60 text-muted-foreground">
@@ -1721,22 +1720,22 @@ export default function DataManagementListPage() {
             ) : null}
             {supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel ? (
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="font-normal">
+                <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.08em] border-border/60 bg-background/50">
                   POP: {selectedPopLabel}
                 </Badge>
               </div>
             ) : null}
             {supportsProjectFilter && projectQueryParam !== "__all" && selectedProjectLabel ? (
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="font-normal">
+                <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.08em] border-border/60 bg-background/50">
                   Project: {selectedProjectLabel}
                 </Badge>
               </div>
             ) : null}
             {idsFilter.length > 0 ? (
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="font-normal">
-                  Filter: {idsFilter.length} item terpilih
+                <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.08em] border-border/60 bg-background/50">
+                  Filter: {idsFilter.length} item
                 </Badge>
                 {supportsQrBulkDownload ? (
                   <Button
@@ -1745,12 +1744,13 @@ export default function DataManagementListPage() {
                     size="sm"
                     onClick={() => void handleDownloadFilteredQr()}
                     disabled={downloadingQr}
+                    className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                   >
-                    <Download className="mr-1 size-4" />
-                    {downloadingQr ? "Membuat QR..." : `Download QR (${idsFilter.length})`}
+                    <Download className="mr-1.5 size-3.5" />
+                    {downloadingQr ? "QR..." : `QR (${idsFilter.length})`}
                   </Button>
                 ) : null}
-                <Button type="button" variant="ghost" size="sm" onClick={clearSelectionFilter}>
+                <Button type="button" variant="ghost" size="sm" onClick={clearSelectionFilter} className="rounded-full font-mono text-[10px] uppercase tracking-[0.06em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
                   Clear
                 </Button>
               </div>
@@ -1760,18 +1760,10 @@ export default function DataManagementListPage() {
               <OdpListSkeleton />
             ) : loading ? (
               <div aria-label="Memuat data list" className="space-y-3">
-                <div className="hidden md:block overflow-x-auto rounded-lg border border-border/60 bg-card shadow-2xs">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-4 border-b bg-muted/60 px-4 py-3">
-                      <Skeleton className="size-4 rounded-sm" />
-                      <Skeleton className="h-3.5 w-28 rounded" />
-                      <Skeleton className="h-3.5 w-32 rounded" />
-                      <Skeleton className="h-3.5 w-24 rounded" />
-                      <Skeleton className="h-3.5 w-20 rounded" />
-                      <Skeleton className="h-3.5 w-32 rounded" />
-                    </div>
-                    {Array.from({ length: 6 }).map((_, index) => (
-                      <div key={index} className="flex items-center gap-4 border-b px-4 py-3 last:border-b-0">
+                <div className="hidden md:block rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-xs dark:bg-white/[0.02]">
+                  <div className="rounded-[calc(2rem-0.5rem)] border border-border/60 bg-card shadow-xs glass-inset">
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-4 border-b border-border/40 px-4 py-3">
                         <Skeleton className="size-4 rounded-sm" />
                         <Skeleton className="h-3.5 w-28 rounded" />
                         <Skeleton className="h-3.5 w-32 rounded" />
@@ -1779,12 +1771,22 @@ export default function DataManagementListPage() {
                         <Skeleton className="h-3.5 w-20 rounded" />
                         <Skeleton className="h-3.5 w-32 rounded" />
                       </div>
-                    ))}
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <div key={index} className="flex items-center gap-4 border-b border-border/40 px-4 py-3 last:border-b-0">
+                          <Skeleton className="size-4 rounded-sm" />
+                          <Skeleton className="h-3.5 w-28 rounded" />
+                          <Skeleton className="h-3.5 w-32 rounded" />
+                          <Skeleton className="h-3.5 w-24 rounded" />
+                          <Skeleton className="h-3.5 w-20 rounded" />
+                          <Skeleton className="h-3.5 w-32 rounded" />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-2 md:hidden">
                   {Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="rounded-xl border border-border/60 bg-card p-3 shadow-2xs">
+                    <div key={index} className="rounded-xl border border-border/60 bg-card p-3 shadow-2xs glass-inset">
                       <div className="space-y-2">
                         <Skeleton className="h-4 w-40 rounded" />
                         <Skeleton className="h-3 w-24 rounded" />
@@ -1928,7 +1930,7 @@ export default function DataManagementListPage() {
               </>
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-3">
               <span className="text-xs text-muted-foreground">
                 Menampilkan <span className="font-mono font-medium text-foreground">{(page - 1) * limit + 1}</span>–<span className="font-mono font-medium text-foreground">{Math.min(page * limit, total)}</span> dari <span className="font-mono font-medium text-foreground">{total.toLocaleString("id-ID")}</span> data
               </span>
@@ -1958,7 +1960,6 @@ export default function DataManagementListPage() {
             </div>
           </CardContent>
         </Card>
-        </div>
       </div>
 
       <MasterDataRenameDialog
