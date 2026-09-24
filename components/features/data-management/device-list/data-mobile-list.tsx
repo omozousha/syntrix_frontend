@@ -55,7 +55,7 @@ export function DataMobileList({
         return (
           <div
             key={row.id}
-            className={`rounded-2xl border bg-card p-3 shadow-2xs glass-inset transition-all duration-300 active:scale-[0.98] ${
+            className={`rounded-2xl border bg-card p-3 shadow-2xs glass-inset transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] ${
               isSelected ? "border-primary/60 bg-primary/5" : "border-border/60"
             }`}
           >
@@ -74,7 +74,7 @@ export function DataMobileList({
                 </div>
               </div>
               {showValidationBadge && validation ? (
-                <span title={validation.title} className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.06em] leading-tight ${validation.className}`}>
+                <span title={validation.title} className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] leading-tight ${validation.className}`}>
                   {validation.label}
                 </span>
               ) : null}
@@ -89,12 +89,12 @@ export function DataMobileList({
               <p className="mt-1 truncate text-xs text-muted-foreground">POP: <span className="font-mono text-[10px]">{getPopLabel(row)}</span></p>
             ) : null}
             <div className={`mt-3 grid gap-2 ${canTraceTopology ? "grid-cols-2" : "grid-cols-1"}`}>
-              <Button type="button" variant="outline" size="sm" onClick={() => onOpenDetail(row)} className="rounded-full font-mono text-[10px] uppercase tracking-[0.06em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
+              <Button type="button" variant="outline" size="sm" onClick={() => onOpenDetail(row)} className="rounded-full font-mono text-[10px] uppercase tracking-[0.12em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
                 <Eye className="mr-1.5 size-3.5" />
                 Detail
               </Button>
               {canTraceTopology ? (
-                <Button type="button" variant="outline" size="sm" onClick={() => onOpenTrace(row)} className="rounded-full font-mono text-[10px] uppercase tracking-[0.06em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
+                <Button type="button" variant="outline" size="sm" onClick={() => onOpenTrace(row)} className="rounded-full font-mono text-[10px] uppercase tracking-[0.12em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
                   <Waypoints className="mr-1.5 size-3.5" />
                   Trace
                 </Button>

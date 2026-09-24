@@ -75,8 +75,8 @@ export function DataListFilterBar({
   onLimitChange,
   onResetFilters,
 }: DataListFilterBarProps) {
-  const cell = "flex flex-col gap-0.5 rounded-lg border border-border/60 bg-background/40 px-2 py-1.5";
-  const label = "font-mono text-[7px] uppercase tracking-[0.1em] text-muted-foreground leading-none";
+  const cell = "flex flex-col gap-0.5 rounded-lg border border-border/60 bg-background/80 dark:bg-background/50 px-2 py-1.5";
+  const label = "font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground leading-none";
 
   const filters = [
     supportsPopFilter && (
@@ -227,7 +227,7 @@ export function DataListFilterBar({
           variant="ghost"
           size="sm"
           onClick={onResetFilters}
-          className="h-8 shrink-0 rounded-lg px-2.5 font-mono text-[9px] uppercase tracking-[0.06em] text-muted-foreground transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+          className="h-8 shrink-0 rounded-full px-2.5 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
         >
           Reset
         </Button>

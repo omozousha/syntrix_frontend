@@ -82,8 +82,9 @@ export function DataBulkActions({
             </Button>
           </>
         ) : null}
-        <Button type="button" variant="ghost" size="sm" onClick={onClearSelection} disabled={selectedCount === 0 || actionLoading} className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
-          <X className="size-4" />
+        <Button type="button" variant="ghost" size="sm" onClick={onClearSelection} disabled={selectedCount === 0 || actionLoading} className="rounded-full border border-border/60 font-mono text-[10px] uppercase tracking-[0.06em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
+          <X className="mr-1.5 size-3.5" />
+          Clear
         </Button>
       </div>
     </div>

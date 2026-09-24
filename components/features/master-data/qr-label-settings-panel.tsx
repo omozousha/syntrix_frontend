@@ -410,7 +410,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                         )}
                       </div>
                       <div className="space-y-3.5">
-                        <p className="text-xs text-muted-foreground">
+                        <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
                           Hasil crop square agar logo rapi di tengah QR label.
                         </p>
                         <CropRange id="qr-logo-crop-zoom" label="Zoom" min={1} max={3} step={0.05} value={cropZoom} valueLabel={`${cropZoom.toFixed(2)}x`} onChange={setCropZoom} />
@@ -455,7 +455,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                     disabled={saving}
                     className="h-9 rounded-xl border-border/60 bg-card text-xs shadow-2xs glass-inset"
                   />
-                  <p className="text-xs text-muted-foreground">Teks ini muncul di bawah QR label.</p>
+                  <p className="font-mono text-[10px] text-muted-foreground">Teks ini muncul di bawah QR label.</p>
                 </div>
 
                 {/* Actions */}
@@ -567,10 +567,10 @@ function CropRange({
   return (
     <div className="grid gap-1.5">
       <div className="flex items-center justify-between gap-3">
-        <Label htmlFor={id} className="text-xs text-muted-foreground">
+        <Label htmlFor={id} className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
           {label}
         </Label>
-        <span className="text-xs font-medium">{valueLabel}</span>
+        <span className="font-mono text-[10px] tabular-nums font-semibold">{valueLabel}</span>
       </div>
       <input
         id={id}

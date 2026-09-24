@@ -52,7 +52,7 @@ export function OdpCreateModeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full sm:max-w-lg">
+      <DialogContent className="w-full sm:max-w-lg rounded-2xl border border-border/60 bg-card shadow-xs glass-inset">
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-lg font-semibold">
             Pilih Mode Tambah ODP
@@ -132,18 +132,18 @@ function OptionCard({
       aria-label={title}
       onClick={onSelect}
       className={cn(
-        "flex w-full items-start gap-4 rounded-md border p-4 text-left transition-colors",
+        "flex w-full items-start gap-4 rounded-xl border p-4 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]",
         selected
-          ? "border-primary bg-primary/5"
-          : "border-border bg-background hover:bg-muted/40",
+          ? "border-primary/60 bg-primary/5 shadow-xs"
+          : "border-border/60 bg-background/80 dark:bg-white/[0.03] glass-inset",
       )}
     >
       <div
         className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border transition-colors",
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-300",
           selected
             ? "border-primary bg-primary text-primary-foreground"
-            : "border-input bg-muted text-muted-foreground",
+            : "border-input bg-muted text-muted-foreground dark:bg-white/10",
         )}
       >
         {icon}
@@ -153,10 +153,10 @@ function OptionCard({
           <span className="text-sm font-medium text-foreground">{title}</span>
           <span
             className={cn(
-              "inline-flex h-5 items-center rounded-full px-2 text-[11px] font-medium uppercase tracking-wide",
+              "inline-flex h-5 items-center rounded-full px-2 font-mono text-[9px] uppercase tracking-[0.12em]",
               selected
                 ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground",
+                : "bg-muted text-muted-foreground dark:bg-white/10 dark:text-white/70",
             )}
           >
             {value === "single" ? "01" : "02"}

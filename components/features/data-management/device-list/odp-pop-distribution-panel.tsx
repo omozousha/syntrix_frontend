@@ -24,8 +24,8 @@ export function OdpPopDistributionPanel({
 }: OdpPopDistributionPanelProps) {
   if (loading) {
     return (
-      <div className="rounded-2xl border border-border/40 bg-muted/10 p-2 shadow-xs dark:bg-white/[0.02]">
-        <div className="rounded-[calc(2rem-0.5rem)] border border-border/60 bg-background/80 p-3 backdrop-blur-xl dark:bg-background/40">
+      <div className="rounded-2xl border border-border/60 bg-card p-2 shadow-xs glass-inset">
+        <div className="rounded-[calc(1rem-0.25rem)] border border-border/60 bg-background/80 p-3 backdrop-blur-xl dark:bg-background/40 glass-inset">
           <Skeleton className="h-3 w-24" />
           <div className="mt-2 grid grid-flow-col grid-rows-2 gap-2 overflow-hidden">
             {[...Array(6)].map((_, i) => (
@@ -39,14 +39,14 @@ export function OdpPopDistributionPanel({
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-border/40 bg-muted/10 p-2 shadow-xs dark:bg-white/[0.02]">
-        <div className="rounded-[calc(2rem-0.5rem)] border border-border/60 bg-background/80 px-4 py-6 text-center backdrop-blur-xl dark:bg-background/40">
+      <div className="rounded-2xl border border-border/60 bg-card p-2 shadow-xs glass-inset">
+        <div className="rounded-[calc(1rem-0.25rem)] border border-border/60 bg-background/80 px-4 py-6 text-center backdrop-blur-xl dark:bg-background/40 glass-inset">
           <p className="text-sm text-destructive">{error}</p>
           {onRetry && (
             <button
               type="button"
               onClick={onRetry}
-              className="mt-2 rounded-full border border-border/60 bg-background px-3 py-1 text-xs shadow-xs transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted/30 active:scale-[0.98]"
+              className="mt-2 rounded-full border border-border/60 bg-background px-3 py-1 font-mono text-[10px] uppercase tracking-[0.12em] shadow-xs transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted/30 active:scale-[0.98]"
             >
               Coba Lagi
             </button>
@@ -61,13 +61,13 @@ export function OdpPopDistributionPanel({
   }
 
   return (
-    <div className="rounded-2xl border border-border/40 bg-muted/10 p-2 shadow-xs dark:bg-white/[0.02]">
-      <div className="rounded-[calc(2rem-0.5rem)] border border-border/60 bg-background/80 p-3 backdrop-blur-xl dark:bg-background/40">
+    <div className="rounded-2xl border border-border/60 bg-card p-2 shadow-xs glass-inset">
+      <div className="rounded-[calc(1rem-0.25rem)] border border-border/60 bg-background/80 p-3 backdrop-blur-xl dark:bg-background/40 glass-inset">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
             Distribusi POP
           </h3>
-          <span className="font-mono text-[9px] text-muted-foreground/70">
+          <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground/70">
             {pops.length} POP
           </span>
         </div>
@@ -87,12 +87,12 @@ export function OdpPopDistributionPanel({
                   type="button"
                   onClick={() => onPopSelect?.(pop.popId)}
                   className={cn(
-                    "group flex w-44 shrink-0 flex-col gap-1.5 rounded-lg border p-2.5 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                    "group flex w-44 shrink-0 flex-col gap-1.5 rounded-xl border p-2.5 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
                     "hover:border-primary/40 hover:bg-muted/15 active:scale-[0.97]",
                     isSelected
                       ? "border-primary/60 bg-primary/5 shadow-xs"
-                      : "border-border/60 bg-card shadow-2xs glass-inset",
-                    unassigned && !isSelected && "border-amber-300/60 bg-amber-50/30 dark:border-amber-900/30 dark:bg-amber-950/10"
+                      : "border-border/60 bg-background/80 dark:bg-background/50 shadow-2xs",
+                    unassigned && !isSelected && "border-amber-300/60 bg-amber-50/30 dark:border-amber-900/40 dark:bg-amber-950/30"
                   )}
                 >
                   <div className="flex items-center justify-between gap-1">
@@ -100,7 +100,7 @@ export function OdpPopDistributionPanel({
                       {unassigned ? UNASSIGNED_POP_LABEL : pop.label}
                     </span>
                     {unassigned && (
-                      <span className="shrink-0 rounded border border-amber-300 bg-amber-50 px-1 py-0.5 font-mono text-[8px] uppercase tracking-wider text-amber-700 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-400">
+                      <span className="shrink-0 rounded border border-amber-300 bg-amber-50 px-1 py-0.5 font-mono text-[8px] uppercase tracking-[0.1em] text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-400">
                         !
                       </span>
                     )}
