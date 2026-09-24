@@ -641,25 +641,29 @@ export default function DataManagementPage() {
   return (
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 px-3 pb-3 md:px-4 md:pb-4">
-        <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 shadow-xs dark:bg-muted/10 md:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="border-border/60 bg-background/50 text-[10px]">{subtitle}</Badge>
-                {!isSuperadmin ? <Badge variant="secondary" className="font-mono text-[10px]">{regions.length} region scope</Badge> : null}
+        {/* Double-Bezel Hero Header */}
+        <div className="rounded-[1.5rem] border border-border/40 bg-muted/10 p-1 shadow-2xs dark:bg-white/[0.01]">
+          <div className="rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card p-4 shadow-xs glass-inset md:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 space-y-2">
+                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">OPERATIONS / ASSET REPOSITORY</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="border-border/60 bg-background/50 font-mono text-[9px] uppercase tracking-[0.12em]">{subtitle}</Badge>
+                  {!isSuperadmin ? <Badge variant="secondary" className="font-mono text-[9px] tabular-nums tracking-[0.12em]">{regions.length} region scope</Badge> : null}
+                </div>
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">Asset Overview</h2>
+                  <p className="max-w-2xl text-sm text-muted-foreground leading-normal">
+                    Ringkasan aset pasif, kualitas data, dan relasi inventory berdasarkan scope akun.
+                  </p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">Asset Overview</h2>
-                <p className="max-w-2xl text-sm text-muted-foreground leading-normal">
-                  Ringkasan aset pasif, kualitas data, dan relasi inventory berdasarkan scope akun.
-                </p>
-              </div>
+              <AddDataMenu
+                canCreatePop={isSuperadmin || isAdminRegion}
+                canCreateDevice={isSuperadmin || isAdminRegion}
+                canManageMaster={isSuperadmin}
+              />
             </div>
-            <AddDataMenu
-              canCreatePop={isSuperadmin || isAdminRegion}
-              canCreateDevice={isSuperadmin || isAdminRegion}
-              canManageMaster={isSuperadmin}
-            />
           </div>
         </div>
 
@@ -669,9 +673,9 @@ export default function DataManagementPage() {
         {!loading && !error ? (
           <div className="space-y-3">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3">
-              <TabsList className={`inline-grid w-fit max-w-full overflow-x-auto ${canViewQuality ? "grid-cols-2" : "grid-cols-1"}`}>
-                <TabsTrigger value="overview">{isValidator ? "Validator Home" : "Overview"}</TabsTrigger>
-                {canViewQuality ? <TabsTrigger value="quality">Data Quality</TabsTrigger> : null}
+              <TabsList className={`inline-grid w-fit max-w-full overflow-x-auto ${canViewQuality ? "grid-cols-2" : "grid-cols-1"} rounded-full border border-border/50 bg-muted/20 p-1`}>
+                <TabsTrigger value="overview" className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">{isValidator ? "Validator Home" : "Overview"}</TabsTrigger>
+                {canViewQuality ? <TabsTrigger value="quality" className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">Data Quality</TabsTrigger> : null}
               </TabsList>
 
               <TabsContent value="overview" className="space-y-3">
@@ -731,9 +735,9 @@ export default function DataManagementPage() {
                 />
               </TabsContent>
             ) : null}
-            </Tabs>
-          </div>
-        ) : null}
+          </Tabs>
+        </div>
+      ) : null}
       </div>
     </ScrollArea>
   );

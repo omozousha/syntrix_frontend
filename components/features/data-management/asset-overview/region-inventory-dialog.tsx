@@ -60,11 +60,11 @@ export function RegionInventoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="grid max-h-[calc(100dvh-1.5rem)] max-w-6xl grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden p-0">
+      <DialogContent className="grid max-h-[calc(100dvh-1.5rem)] max-w-6xl grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden rounded-2xl border border-border/60 p-0 shadow-lg glass-inset">
         <DialogHeader className="border-b px-5 pb-4 pt-5 pr-14">
           <div className="flex flex-wrap items-center gap-2">
             <DialogTitle className="text-lg">Inventory Device {display.name}</DialogTitle>
-            {display.code ? <Badge variant="outline">{display.code}</Badge> : null}
+            {display.code ? <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em] glass-inset">{display.code}</Badge> : null}
           </div>
           <DialogDescription>Pilih tipe device untuk membuka halaman daftar inventory pada region terkait.</DialogDescription>
         </DialogHeader>
@@ -76,7 +76,7 @@ export function RegionInventoryDialog({
               value={typeSearch}
               onChange={(event) => setTypeSearch(event.target.value)}
               placeholder="Cari tipe device..."
-              className="pl-8"
+              className="h-9 rounded-full border-border/60 bg-card pl-9 text-xs shadow-2xs glass-inset"
             />
           </div>
           {typeCountQuery.isFetching ? (
@@ -95,7 +95,7 @@ export function RegionInventoryDialog({
           />
         </div>
 
-        <div className="border-t bg-muted/30 px-5 py-3 text-xs text-muted-foreground">
+        <div className="border-t border-border/60 bg-muted/30 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground glass-inset">
           {typeCountQuery.isPending ? "Menghitung device..." : `${totalRegionDevices.toLocaleString("id-ID")} device dalam ${deviceTypes.length} tipe`}
         </div>
       </DialogContent>

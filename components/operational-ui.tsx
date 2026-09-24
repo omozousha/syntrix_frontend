@@ -36,23 +36,23 @@ export function OperationalKpiCard({
   compact = false,
 }: OperationalKpiCardProps) {
   return (
-    <Card className="overflow-hidden transition-all duration-300 hover:border-muted-foreground/30 hover:shadow-sm">
+    <Card className="rounded-2xl border border-border/60 bg-card shadow-2xs glass-inset transition-all duration-300 hover:border-primary/45 hover:bg-muted/15 active:scale-[0.98]">
       <CardContent className={compact ? "flex flex-col items-stretch gap-1.5 p-2.5" : "flex items-center gap-3 p-3"}>
-        <div className={`flex shrink-0 items-center justify-center rounded-md border ${KPI_TONE_CLASS[tone]} ${compact ? "size-7 self-start" : "size-9"}`}>
+        <div className={`flex shrink-0 items-center justify-center rounded-xl border shadow-2xs ${KPI_TONE_CLASS[tone]} ${compact ? "size-7 self-start" : "size-9"}`}>
           <Icon className={compact ? "size-3.5" : "size-4"} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className={`font-semibold uppercase tracking-wide text-muted-foreground ${compact ? "text-[10px] leading-tight" : "truncate text-[11px]"}`}>{label}</p>
+            <p className={`font-mono font-medium uppercase tracking-[0.14em] text-muted-foreground ${compact ? "text-[9px] leading-tight" : "truncate text-[9px]"}`}>{label}</p>
             {badge ? (
-              <Badge variant="outline" className="h-4 px-1 text-[9px]">
+              <Badge variant="outline" className="h-4 px-1 font-mono text-[9px] uppercase tracking-wider">
                 {badge}
               </Badge>
             ) : null}
           </div>
-          <p className={`font-semibold leading-tight font-mono tabular-nums ${compact ? "text-lg" : "text-xl"}`}>{value}</p>
+          <p className={`font-bold leading-tight font-mono tabular-nums ${compact ? "text-lg" : "text-xl"}`}>{value}</p>
           {caption ? (
-            <p className={`text-muted-foreground ${compact ? "text-[10px] leading-snug line-clamp-2" : "truncate text-[11px]"}`}>{caption}</p>
+            <p className={`text-muted-foreground ${compact ? "text-[10px] leading-snug line-clamp-2" : "truncate text-[10px]"}`}>{caption}</p>
           ) : null}
         </div>
       </CardContent>

@@ -61,7 +61,7 @@ export function FocusedRegionCard({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Globe className="size-4 text-primary" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+          <h3 className="font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</h3>
         </div>
         {regions.length > 1 ? (
           <div className="w-full sm:w-80">
@@ -87,34 +87,32 @@ export function FocusedRegionCard({
         />
       ) : (
         <div className="space-y-3">
-          {/* Region Identity Bar — subtle, non-card */}
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/20 px-3 py-2.5">
+          {/* Region Identity Bar — micro-bezel */}
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/60 bg-card p-3 shadow-2xs glass-inset">
             <div className="flex min-w-0 items-center gap-2">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-md border bg-primary/10 text-primary">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary shadow-2xs">
                 <MapPin className="size-3.5" />
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold leading-tight">{focusedDisplay.name}</p>
                 {focusedRegionLastUpdated ? (
-                  <p className="truncate text-[11px] text-muted-foreground">
+                  <p className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                     Update: {formatDateTime(focusedRegionLastUpdated)}
                   </p>
                 ) : null}
               </div>
             </div>
             {focusedDisplay.code ? (
-              <Badge variant="outline" className="shrink-0 text-[10px] uppercase">
-                {focusedDisplay.code}
-              </Badge>
+              <Badge variant="outline" className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] glass-inset">{focusedDisplay.code}</Badge>
             ) : null}
           </div>
 
           {/* Quick Actions — Role-aware */}
-          <Card size="sm">
+          <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset" size="sm">
             <CardHeader className="border-b">
               <div className="flex items-center gap-2">
                 <Layers className="size-4 text-muted-foreground" />
-                <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
+                <CardTitle className="font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Quick Actions</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="pt-3">
@@ -176,7 +174,7 @@ export function FocusedRegionCard({
             <CardHeader className="border-b">
               <div className="flex items-center gap-2">
                 <Database className="size-4 text-muted-foreground" />
-                <CardTitle className="text-sm font-semibold">Asset Inventory</CardTitle>
+                <CardTitle className="font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Asset Inventory</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="pt-3">
@@ -194,14 +192,14 @@ export function FocusedRegionCard({
           </Card>
 
           {/* Info Footer */}
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed bg-muted/20 px-3 py-2">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/10 px-3.5 py-2.5 shadow-2xs glass-inset">
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
               <FileText className="size-3" />
               <span>
-                Total <strong>{focusedAssetCategories.length}</strong> kategori aset terdaftar untuk region ini
+                Total <strong className="font-mono tabular-nums text-foreground">{focusedAssetCategories.length}</strong> kategori aset terdaftar untuk region ini
               </span>
             </div>
-            <Badge variant="secondary" className="text-[10px]">
+            <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.12em] glass-inset">
               {isAdminRegion ? "Admin Region" : "Validator Field"}
             </Badge>
           </div>
@@ -231,28 +229,28 @@ function QuickActionCard({
   return (
     <Button
       asChild
-      variant={variant}
+      variant="ghost"
       size="sm"
-      className="h-auto justify-between gap-3 px-3 py-3 text-left"
+      className="h-auto justify-between gap-3 rounded-2xl border border-border/60 bg-card p-3 text-left shadow-2xs glass-inset transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-primary/45 hover:bg-muted/15 active:scale-[0.98]"
     >
       <Link href={href}>
         <div className="flex min-w-0 items-start gap-3">
-          <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border bg-muted/50 text-muted-foreground">
+          <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-muted/30 text-muted-foreground shadow-2xs">
             <Icon className="size-4" />
           </div>
           <div className="min-w-0 space-y-0.5">
             <div className="flex items-center gap-2">
               <span className="truncate text-sm font-medium">{label}</span>
               {badge ? (
-                <Badge variant="secondary" className="h-4 px-1 text-[9px]">
+                <Badge variant="secondary" className="h-4 rounded-full px-1.5 font-mono text-[9px] uppercase tracking-[0.08em] tabular-nums">
                   {badge}
                 </Badge>
               ) : null}
             </div>
-            <p className="truncate text-xs text-muted-foreground">{description}</p>
+            <p className="truncate font-mono text-[10px] text-muted-foreground">{description}</p>
           </div>
         </div>
-        <ArrowRight className="size-4 shrink-0 text-muted-foreground/60" />
+        <ArrowRight className="size-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 group-hover:translate-x-0.5" />
       </Link>
     </Button>
   );

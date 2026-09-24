@@ -56,8 +56,8 @@ export function RegionCardGrid({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Daftar Region</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Menampilkan <span className="font-mono font-semibold text-foreground">{regions.length}</span> dari {allRegionsCount} region
+          <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            Menampilkan <span className="font-mono font-semibold tabular-nums text-foreground">{regions.length}</span> dari <span className="font-mono tabular-nums">{allRegionsCount}</span> region
           </p>
         </div>
         <div className="relative w-full sm:w-72">
@@ -66,7 +66,7 @@ export function RegionCardGrid({
             value={searchRegion}
             onChange={(event) => onSearchRegionChange(event.target.value)}
             placeholder="Cari region..."
-            className="h-9 pl-8"
+            className="h-9 rounded-full border-border/60 bg-card pl-9 pr-4 text-xs shadow-2xs glass-inset"
           />
         </div>
       </div>
@@ -101,8 +101,8 @@ export function RegionCardGrid({
               Menampilkan halaman <span className="font-mono font-medium text-foreground">{safeRegionPage}</span> dari {totalRegionPages}
             </span>
             <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={onPrevPage} disabled={safeRegionPage <= 1}>Sebelumnya</Button>
-              <Button type="button" variant="outline" size="sm" onClick={onNextPage} disabled={safeRegionPage >= totalRegionPages}>Berikutnya</Button>
+              <Button type="button" variant="outline" size="sm" onClick={onPrevPage} disabled={safeRegionPage <= 1} className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">Sebelumnya</Button>
+              <Button type="button" variant="outline" size="sm" onClick={onNextPage} disabled={safeRegionPage >= totalRegionPages} className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">Berikutnya</Button>
             </div>
           </div>
         </>

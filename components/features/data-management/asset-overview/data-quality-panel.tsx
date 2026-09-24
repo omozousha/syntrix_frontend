@@ -107,41 +107,43 @@ export function DataQualityPanel({
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4 shadow-xs lg:flex-row lg:items-center lg:justify-between dark:bg-muted/5">
-        <div className="min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="gap-1 border-border/60 bg-background/50">
-              <ShieldCheck className="size-3 text-emerald-600 dark:text-emerald-400" />
-              Quality Center
-            </Badge>
-            <Badge variant={criticalTotal ? "destructive" : visibleIssueTotal ? "secondary" : "outline"} className="font-mono text-[10px]">
-              {visibleIssueTotal ? `${visibleIssueTotal} issue aktif` : "Sehat"}
-            </Badge>
+      <div className="rounded-[1.5rem] border border-border/40 bg-muted/10 p-1 shadow-2xs dark:bg-white/[0.01]">
+        <div className="rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card p-4 shadow-xs glass-inset lg:flex lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="gap-1 border-border/60 bg-background/50">
+                <ShieldCheck className="size-3 text-emerald-600 dark:text-emerald-400" />
+                Quality Center
+              </Badge>
+              <Badge variant={criticalTotal ? "destructive" : visibleIssueTotal ? "secondary" : "outline"} className="font-mono text-[10px] uppercase tracking-[0.12em] tabular-nums">
+                {visibleIssueTotal ? `${visibleIssueTotal} issue aktif` : "Sehat"}
+              </Badge>
+            </div>
+            <div>
+              <h3 className="text-base font-semibold tracking-tight">Data Quality & Topology Integrity</h3>
+              <p className="text-xs text-muted-foreground">
+                Pantau kelengkapan asset, ODP operations, port connection, fiber core, dan readiness topology.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base font-semibold tracking-tight">Data Quality & Topology Integrity</h3>
-            <p className="text-xs text-muted-foreground">
-              Pantau kelengkapan asset, ODP operations, port connection, fiber core, dan readiness topology.
-            </p>
+          <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto] lg:w-[38rem]">
+            <Combobox value={qualityRegionId} onValueChange={onRegionChange} options={regionOptions} />
+            <Select value={severityFilter} onValueChange={(value) => setSeverityFilter(value as SeverityFilter)}>
+              <SelectTrigger size="sm" className="w-full h-9 rounded-xl border-border/60 shadow-2xs">
+                <SelectValue placeholder="Severity" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="all">Semua severity</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
+                <SelectItem value="warning">Warning</SelectItem>
+                <SelectItem value="info">Info</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button type="button" variant="outline" size="sm" onClick={onRefresh} disabled={qualityLoading} className="justify-center h-9 rounded-full border-border/60 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
+              <RefreshCcw className={`mr-1 size-4 ${qualityLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
           </div>
-        </div>
-        <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto] lg:w-[38rem]">
-          <Combobox value={qualityRegionId} onValueChange={onRegionChange} options={regionOptions} />
-          <Select value={severityFilter} onValueChange={(value) => setSeverityFilter(value as SeverityFilter)}>
-            <SelectTrigger size="sm" className="w-full h-9 rounded-xl border-border/60">
-              <SelectValue placeholder="Severity" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="all">Semua severity</SelectItem>
-              <SelectItem value="critical">Critical</SelectItem>
-              <SelectItem value="warning">Warning</SelectItem>
-              <SelectItem value="info">Info</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button type="button" variant="outline" size="sm" onClick={onRefresh} disabled={qualityLoading} className="justify-center h-9 rounded-xl border-border/60">
-            <RefreshCcw className={`mr-1 size-4 ${qualityLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
         </div>
       </div>
 
@@ -180,9 +182,9 @@ export function DataQualityPanel({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {kpis.map((kpi) => (
-              <Card key={kpi.key} className="rounded-2xl border-border/60 shadow-xs">
+              <Card key={kpi.key} className="rounded-2xl border border-border/60 bg-card shadow-2xs glass-inset">
                 <CardHeader className="px-4 py-3">
-                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{kpi.label}</CardTitle>
+                  <CardTitle className="font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{kpi.label}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 pt-0">
                   <p className="text-2xl font-bold font-mono tabular-nums leading-tight">{kpi.value}</p>
@@ -191,7 +193,7 @@ export function DataQualityPanel({
               </Card>
             ))}
             {!kpis.length ? (
-              <Card className="rounded-2xl border-border/60 shadow-xs sm:col-span-2 xl:col-span-3">
+              <Card className="rounded-2xl border border-border/60 bg-card shadow-2xs glass-inset sm:col-span-2 xl:col-span-3">
                 <CardContent className="p-0">
                   <OperationalState title="Belum ada KPI" description="Data quality belum tersedia untuk filter region ini." />
                 </CardContent>
@@ -233,13 +235,13 @@ function HealthCard({
       : "border-emerald-200 bg-emerald-50/50 text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300";
 
   return (
-    <Card className={`rounded-2xl border-border/60 shadow-xs ${toneClass}`}>
+    <Card className={`rounded-2xl border border-border/60 bg-card shadow-2xs glass-inset ${toneClass}`}>
       <CardContent className="flex items-start gap-3.5 p-4">
         <div className="rounded-xl border border-current/15 bg-background/80 p-2 shadow-2xs">
           <Icon className="size-4 shrink-0" />
         </div>
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">{label}</p>
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] opacity-80">{label}</p>
           <p className="text-2xl font-bold leading-tight font-mono tabular-nums">{value}</p>
           <p className="text-[11px] leading-snug opacity-75">{note}</p>
         </div>
@@ -252,7 +254,7 @@ function IssueGroupCard({ group }: { group: DataQualityIssueGroup }) {
   const issueTotal = group.issues.reduce((sum, issue) => sum + issue.value, 0);
 
   return (
-    <Card className="rounded-2xl border-border/60 shadow-xs">
+    <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset">
       <CardHeader className="space-y-1.5 px-4 py-4 border-b border-border/50">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -262,7 +264,7 @@ function IssueGroupCard({ group }: { group: DataQualityIssueGroup }) {
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">{group.description}</p>
           </div>
-          <Badge variant={issueTotal ? "secondary" : "outline"} className="font-mono text-xs">
+          <Badge variant={issueTotal ? "secondary" : "outline"} className="font-mono text-[9px] tabular-nums uppercase tracking-[0.12em] glass-inset">
             {issueTotal}
           </Badge>
         </div>
@@ -272,20 +274,20 @@ function IssueGroupCard({ group }: { group: DataQualityIssueGroup }) {
           group.issues.map((issue) => (
             <div
               key={issue.key}
-              className="grid gap-3 rounded-xl border border-border/60 bg-muted/5 p-3.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center dark:bg-muted/2"
+              className="grid gap-3 rounded-xl border border-border/60 bg-muted/5 p-3.5 glass-inset sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
             >
               <div className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={issue.severity === "high" ? "destructive" : issue.severity === "medium" ? "secondary" : "outline"} className="font-mono text-[9px] uppercase tracking-wider h-5 px-1.5">
+                  <Badge variant={issue.severity === "high" ? "destructive" : issue.severity === "medium" ? "secondary" : "outline"} className="font-mono text-[9px] uppercase tracking-[0.12em] h-5 px-1.5">
                     {issue.severity}
                   </Badge>
                   <p className="text-sm font-medium tracking-tight text-foreground">{issue.label}</p>
                 </div>
                 <p className="text-xs text-muted-foreground leading-normal">{issue.note}</p>
               </div>
-              <Button asChild variant="outline" size="sm" className="w-full justify-between sm:w-32 rounded-xl border-border/60">
+              <Button asChild variant="outline" size="sm" className="w-full justify-between sm:w-32 rounded-full border-border/60 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
                 <Link href={issue.href}>
-                  <span className="font-mono font-semibold">{issue.value}</span>
+                  <span className="font-mono font-semibold tabular-nums">{issue.value}</span>
                   <span className="text-xs">Open</span>
                 </Link>
               </Button>
@@ -309,20 +311,20 @@ function IntegrityFindingsCard({
   filteredIssueTotal: number;
 }) {
   return (
-    <Card className="rounded-2xl border-border/60 shadow-xs">
+    <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset">
       <CardHeader className="space-y-1.5 px-4 py-4 border-b border-border/50">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <CardTitle className="text-sm font-semibold">Integrity Findings</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
-              Detail issue dari backend topology integrity. Filter aktif menampilkan <span className="font-mono font-medium text-foreground">{filteredIssueTotal}</span> item/indikator.
+              Detail issue dari backend topology integrity. Filter aktif menampilkan <span className="font-mono font-medium tabular-nums text-foreground">{filteredIssueTotal}</span> item/indikator.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Badge variant="outline" className="border-border/60 bg-background/50 text-[10px]">
+            <Badge variant="outline" className="border-border/60 bg-background/50 font-mono text-[10px] uppercase tracking-[0.12em] glass-inset">
               {severityFilter === "all" ? "Semua severity" : severityFilter}
             </Badge>
-            <Badge variant={issues.length ? "secondary" : "outline"} className="font-mono text-[10px]">
+            <Badge variant={issues.length ? "secondary" : "outline"} className="font-mono text-[10px] tabular-nums uppercase tracking-[0.12em] glass-inset">
               {issues.length}
             </Badge>
           </div>
@@ -331,14 +333,14 @@ function IntegrityFindingsCard({
       <CardContent className="space-y-3 px-4 pb-4 pt-3">
         {issues.length ? (
           issues.map((issue) => (
-            <div key={issue.key} className="rounded-xl border border-border/60 bg-muted/5 p-3.5 dark:bg-muted/2">
+            <div key={issue.key} className="rounded-xl border border-border/60 bg-muted/5 p-3.5 glass-inset">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant={issue.severity === "critical" ? "destructive" : issue.severity === "warning" ? "secondary" : "outline"} className="font-mono text-[9px] uppercase tracking-wider h-5 px-1.5">
+                    <Badge variant={issue.severity === "critical" ? "destructive" : issue.severity === "warning" ? "secondary" : "outline"} className="font-mono text-[9px] uppercase tracking-[0.12em] h-5 px-1.5">
                       {issue.severity}
                     </Badge>
-                    <Badge variant="outline" className="font-mono border-border/60 text-[9px] h-5 px-1.5 bg-background">{issue.type}</Badge>
+                    <Badge variant="outline" className="font-mono border-border/60 text-[9px] h-5 px-1.5 uppercase tracking-[0.12em] bg-background glass-inset">{issue.type}</Badge>
                   </div>
                   <p className="text-sm font-semibold tracking-tight leading-tight">{issue.title}</p>
                   <p className="text-xs text-muted-foreground leading-normal">{issue.message}</p>
