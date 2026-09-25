@@ -1,5 +1,6 @@
 import type { ColumnDef, ValidationRule } from "./generic-import-template-download";
 import type { PrerequisiteCheck } from "./generic-bulk-import-prerequisite-dialog";
+import { apiFetch } from "@/lib/api";
 
 export type BulkImportConfig = {
   pageTitle: string;
@@ -131,10 +132,12 @@ export const ODC_CONFIG: BulkImportConfig = {
   checkPrerequisite: async (token) => {
     if (!token) return { hasData: false, count: 0, message: "Tidak ada sesi login.", entityLabel: "POP" };
     try {
-      const res = await fetch(`/pops?page=1&limit=1`, { headers: { Authorization: `Bearer ${token}` } });
-      const json = await res.json();
-      const items = json?.data?.items || [];
-      const total = json?.meta?.total ?? items.length;
+      const json = await apiFetch<{ data?: { items?: unknown[] } | unknown[]; meta?: { total?: number } }>(
+        "/pops?page=1&limit=1",
+        { token },
+      );
+      const arr = Array.isArray(json?.data) ? json.data : (json?.data as { items?: unknown[] })?.items || [];
+      const total = json?.meta?.total ?? arr.length;
       return {
         hasData: total > 0,
         count: total,
@@ -263,10 +266,12 @@ export const OLT_CONFIG: BulkImportConfig = {
   checkPrerequisite: async (token) => {
     if (!token) return { hasData: false, count: 0, message: "Tidak ada sesi login.", entityLabel: "POP" };
     try {
-      const res = await fetch(`/pops?page=1&limit=1`, { headers: { Authorization: `Bearer ${token}` } });
-      const json = await res.json();
-      const items = json?.data?.items || [];
-      const total = json?.meta?.total ?? items.length;
+      const json = await apiFetch<{ data?: { items?: unknown[] } | unknown[]; meta?: { total?: number } }>(
+        "/pops?page=1&limit=1",
+        { token },
+      );
+      const arr = Array.isArray(json?.data) ? json.data : (json?.data as { items?: unknown[] })?.items || [];
+      const total = json?.meta?.total ?? arr.length;
       return {
         hasData: total > 0,
         count: total,
@@ -397,10 +402,12 @@ export const OTB_CONFIG: BulkImportConfig = {
   checkPrerequisite: async (token) => {
     if (!token) return { hasData: false, count: 0, message: "Tidak ada sesi login.", entityLabel: "POP" };
     try {
-      const res = await fetch(`/pops?page=1&limit=1`, { headers: { Authorization: `Bearer ${token}` } });
-      const json = await res.json();
-      const items = json?.data?.items || [];
-      const total = json?.meta?.total ?? items.length;
+      const json = await apiFetch<{ data?: { items?: unknown[] } | unknown[]; meta?: { total?: number } }>(
+        "/pops?page=1&limit=1",
+        { token },
+      );
+      const arr = Array.isArray(json?.data) ? json.data : (json?.data as { items?: unknown[] })?.items || [];
+      const total = json?.meta?.total ?? arr.length;
       return {
         hasData: total > 0,
         count: total,
@@ -589,16 +596,14 @@ export const CUSTOMER_CONFIG: BulkImportConfig = {
   checkPrerequisite: async (token) => {
     if (!token) return { hasData: false, count: 0, message: "Tidak ada sesi login.", entityLabel: "POP" };
     try {
-      const [popsRes, svcRes] = await Promise.all([
-        fetch(`/pops?page=1&limit=1`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`/serviceTypes?page=1&limit=1`, { headers: { Authorization: `Bearer ${token}` } }),
+      const [popsJson, svcJson] = await Promise.all([
+        apiFetch<{ data?: { items?: unknown[] } | unknown[]; meta?: { total?: number } }>("/pops?page=1&limit=1", { token }),
+        apiFetch<{ data?: { items?: unknown[] } | unknown[]; meta?: { total?: number } }>("/serviceTypes?page=1&limit=1", { token }),
       ]);
-      const popsJson = await popsRes.json();
-      const svcJson = await svcRes.json();
-      const popItems = popsJson?.data?.items || [];
-      const popTotal = popsJson?.meta?.total ?? popItems.length;
-      const svcItems = svcJson?.data?.items || [];
-      const svcTotal = svcJson?.meta?.total ?? svcItems.length;
+      const popArr = Array.isArray(popsJson?.data) ? popsJson.data : (popsJson?.data as { items?: unknown[] })?.items || [];
+      const popTotal = popsJson?.meta?.total ?? popArr.length;
+      const svcArr = Array.isArray(svcJson?.data) ? svcJson.data : (svcJson?.data as { items?: unknown[] })?.items || [];
+      const svcTotal = svcJson?.meta?.total ?? svcArr.length;
 
       if (popTotal === 0) {
         return { hasData: false, count: 0, message: "Belum ada data POP.", entityLabel: "POP" };
