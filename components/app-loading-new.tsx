@@ -50,7 +50,7 @@ export function AppLoading({
   if (resolvedVariant === "button") {
     return (
       <Loader2
-        className={cn("size-4 animate-spin shrink-0 [prefers-reduced-motion:reduce]:animate-none", className)}
+        className={cn("size-4 animate-spin shrink-0 motion-reduce:animate-none", className)}
         aria-hidden="true"
       />
     );
@@ -65,7 +65,7 @@ export function AppLoading({
         aria-live="polite"
       >
         <Loader2
-          className="size-4 animate-spin text-muted-foreground shrink-0 [prefers-reduced-motion:reduce]:animate-none"
+          className="size-4 animate-spin text-muted-foreground shrink-0 motion-reduce:animate-none"
           aria-hidden="true"
         />
         {label ? (
@@ -119,7 +119,7 @@ export function AppLoading({
                 <Inbox className="size-6" />
               </div>
             ) : (
-              <Loader2 className="size-6 animate-spin text-primary [prefers-reduced-motion:reduce]:animate-none" />
+              <Loader2 className="size-6 animate-spin text-primary motion-reduce:animate-none" />
             )}
             {label ? (
               <p
@@ -160,7 +160,7 @@ export function AppLoading({
           </div>
         ) : (
           <div className="mb-2.5 rounded-xl border border-border/50 bg-muted/30 p-2 text-primary shadow-2xs">
-            <Loader2 className="size-5 animate-spin [prefers-reduced-motion:reduce]:animate-none" />
+            <Loader2 className="size-5 animate-spin motion-reduce:animate-none" />
           </div>
         )}
         {label ? (
