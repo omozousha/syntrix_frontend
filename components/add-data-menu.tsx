@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { OdpCreateModeDialog } from "@/components/features/data-management/device-list/odp-create-mode-dialog";
+import { CreateModeDialog, type CreateModeDialogEntityType } from "@/components/features/data-management/device-list/create-mode-dialog";
 import {
   Box,
   Boxes,
@@ -107,6 +108,7 @@ export function AddDataMenu({
   const [open, setOpen] = useState(false);
   const [deviceTypes, setDeviceTypes] = useState<DeviceTypeRow[]>([]);
   const [odpDialogOpen, setOdpDialogOpen] = useState(false);
+  const [createModeDialogOpen, setCreateModeDialogOpen] = useState<CreateModeDialogEntityType | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -172,7 +174,10 @@ export function AddDataMenu({
           {canCreatePop && (
             <DropdownMenuItem
               className="items-start gap-3 py-2"
-              onSelect={() => go("/data-management/create?kind=pop")}
+              onSelect={() => {
+                setOpen(false);
+                setCreateModeDialogOpen("POP");
+              }}
             >
               <FolderPlus className="mt-0.5 size-4 text-muted-foreground" />
               <div className="space-y-0.5">
@@ -202,7 +207,10 @@ export function AddDataMenu({
           {canCreatePop && (
             <DropdownMenuItem
               className="items-start gap-3 py-2"
-              onSelect={() => go("/data-management/create?kind=customer")}
+              onSelect={() => {
+                setOpen(false);
+                setCreateModeDialogOpen("Customer");
+              }}
             >
               <UserRound className="mt-0.5 size-4 text-muted-foreground" />
               <div className="space-y-0.5">
@@ -243,6 +251,12 @@ export function AddDataMenu({
                         setOpen(false);
                         if (type.key === "ODP") {
                           setOdpDialogOpen(true);
+                        } else if (
+                          type.key === "ODC" ||
+                          type.key === "OLT" ||
+                          type.key === "OTB"
+                        ) {
+                          setCreateModeDialogOpen(type.key as CreateModeDialogEntityType);
                         } else {
                           router.push(
                             `/data-management/create?kind=device&type=${encodeURIComponent(
@@ -335,6 +349,16 @@ export function AddDataMenu({
         open={odpDialogOpen}
         onOpenChange={setOdpDialogOpen}
       />
+
+      {createModeDialogOpen && (
+        <CreateModeDialog
+          open={Boolean(createModeDialogOpen)}
+          onOpenChange={(open) => {
+            if (!open) setCreateModeDialogOpen(null);
+          }}
+          entityType={createModeDialogOpen}
+        />
+      )}
     </>
   );
 }

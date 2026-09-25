@@ -35,20 +35,20 @@ export type DataCategory = {
 };
 
 export const DATA_CATEGORIES: DataCategory[] = [
-  { slug: "pop", label: "POP", description: "Point of Presence", resource: "pops", group: "asset" },
-  { slug: "olt", label: "OLT", description: "Optical Line Terminal", resource: "devices", deviceTypeKey: "OLT", group: "asset" },
+  { slug: "pop", label: "POP", description: "Point of Presence", resource: "pops", group: "asset", supportsBulkImport: true },
+  { slug: "olt", label: "OLT", description: "Optical Line Terminal", resource: "devices", deviceTypeKey: "OLT", group: "asset", supportsBulkImport: true },
   { slug: "switch", label: "Switch", description: "Network switch asset", resource: "devices", deviceTypeKey: "SWITCH", group: "asset" },
   { slug: "router", label: "Router", description: "Routing device asset", resource: "devices", deviceTypeKey: "ROUTER", group: "asset" },
   { slug: "ont", label: "ONT", description: "Optical Network Terminal", resource: "devices", deviceTypeKey: "ONT", group: "asset" },
-  { slug: "otb", label: "OTB", description: "Optical Termination Box", resource: "devices", deviceTypeKey: "OTB", group: "asset" },
+  { slug: "otb", label: "OTB", description: "Optical Termination Box", resource: "devices", deviceTypeKey: "OTB", group: "asset", supportsBulkImport: true },
   { slug: "jc", label: "JC", description: "Joint Closure asset", resource: "devices", deviceTypeKey: "JC", group: "asset" },
-  { slug: "odc", label: "ODC", description: "Optical Distribution Cabinet", resource: "devices", deviceTypeKey: "ODC", group: "asset" },
+  { slug: "odc", label: "ODC", description: "Optical Distribution Cabinet", resource: "devices", deviceTypeKey: "ODC", group: "asset", supportsBulkImport: true },
   { slug: "odp", label: "ODP", description: "Optical Distribution Point", resource: "devices", deviceTypeKey: "ODP", group: "asset", supportsBulkImport: true },
   { slug: "cable", label: "Cable", description: "Fiber cable asset", resource: "devices", deviceTypeKey: "CABLE", group: "asset" },
   { slug: "rack", label: "Rack", description: "Cabinet/Rack perangkat", resource: "devices", deviceTypeKey: "RACK", group: "asset" },
   { slug: "rectifier", label: "Rectifier", description: "Rectifier & power system", resource: "devices", deviceTypeKey: "RECTIFIER", group: "asset" },
   { slug: "pole", label: "Pole", description: "Tiang jaringan", resource: "poles", group: "asset" },
-  { slug: "customer", label: "Customer", description: "Pelanggan dan titik layanan", resource: "customers", group: "asset" },
+  { slug: "customer", label: "Customer", description: "Pelanggan dan titik layanan", resource: "customers", group: "asset", supportsBulkImport: true },
   { slug: "projects", label: "Projects", description: "Proyek aktif dan arsip", resource: "projects", group: "asset" },
 
   { slug: "master-regions", label: "Regions", description: "Master region", resource: "regions", group: "master" },

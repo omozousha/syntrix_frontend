@@ -32,6 +32,7 @@ import { DataEmptyState } from "@/components/features/data-management/device-lis
 import { DataListFilterBar } from "@/components/features/data-management/device-list/data-list-filter-bar";
 import { DataListHeader } from "@/components/features/data-management/device-list/data-list-header";
 import { OdpCreateModeDialog } from "@/components/features/data-management/device-list/odp-create-mode-dialog";
+import { CreateModeDialog, type CreateModeDialogEntityType } from "@/components/features/data-management/device-list/create-mode-dialog";
 import { DataListKpiStrip } from "@/components/features/data-management/device-list/data-list-kpi-strip";
 import { DataMobileList } from "@/components/features/data-management/device-list/data-mobile-list";
 import { DataTableView } from "@/components/features/data-management/device-list/data-table-view";
@@ -252,7 +253,7 @@ export default function DataManagementListPage() {
   const [quickEditForm, setQuickEditForm] = useState<Record<string, string>>({});
   const [quickEditError, setQuickEditError] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
-  const [odpModeDialogOpen, setOdpModeDialogOpen] = useState(false);
+  const [createModeDialogOpen, setCreateModeDialogOpen] = useState<CreateModeDialogEntityType | null>(null);
   const [createForm, setCreateForm] = useState<Record<string, string>>({});
   const [createError, setCreateError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -503,12 +504,17 @@ export default function DataManagementListPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (category?.slug === "odp" && searchParams.get("triggerCreate") === "true") {
-      setOdpModeDialogOpen(true);
+    if (category?.supportsBulkImport && searchParams.get("triggerCreate") === "true") {
+      const entityType = slugToEntityType(category.slug);
+      if (entityType) {
+        setCreateModeDialogOpen(entityType);
+      } else {
+        setCreateOpen(true);
+      }
       const nextParams = new URLSearchParams(window.location.search);
       nextParams.delete("triggerCreate");
       const nextQuery = nextParams.toString();
-      router.replace(`/data-management/list/odp${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
+      router.replace(`/data-management/list/${category.slug}${nextQuery ? `?${nextQuery}` : ""}`, { scroll: false });
     }
   }, [category, searchParams, router]);
 
@@ -1568,8 +1574,13 @@ export default function DataManagementListPage() {
           canCreateMaster={canCreateMaster}
           isMasterCategory={isMasterCategory}
           onCreate={() => {
-            if (isOdpCategory && category?.supportsBulkImport) {
-              setOdpModeDialogOpen(true);
+            if (category?.supportsBulkImport) {
+              const entityType = slugToEntityType(category.slug);
+              if (entityType) {
+                setCreateModeDialogOpen(entityType);
+              } else {
+                setCreateOpen(true);
+              }
             } else {
               setCreateOpen(true);
             }
@@ -2074,13 +2085,29 @@ export default function DataManagementListPage() {
         </SheetContent>
       </Sheet>
 
-      <OdpCreateModeDialog
-        open={odpModeDialogOpen}
-        onOpenChange={setOdpModeDialogOpen}
-        onSingleMode={() => setCreateOpen(true)}
-      />
+      {createModeDialogOpen && (
+        <CreateModeDialog
+          open={Boolean(createModeDialogOpen)}
+          onOpenChange={(open) => {
+            if (!open) setCreateModeDialogOpen(null);
+          }}
+          onSingleMode={() => setCreateOpen(true)}
+          entityType={createModeDialogOpen}
+        />
+      )}
     </div>
   );
+}
+
+function slugToEntityType(slug: string): CreateModeDialogEntityType | null {
+  const s = slug.toLowerCase();
+  if (s === "odp") return "ODP";
+  if (s === "odc") return "ODC";
+  if (s === "olt") return "OLT";
+  if (s === "otb") return "OTB";
+  if (s === "pop") return "POP";
+  if (s === "customer") return "Customer";
+  return null;
 }
 
 function withArchivedLabel(item: Record<string, unknown>, text: string) {
