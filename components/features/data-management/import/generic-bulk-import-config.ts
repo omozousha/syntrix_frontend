@@ -16,6 +16,7 @@ export type BulkImportConfig = {
   storageKey: string;
   requiresPop: boolean;
   requiresRegion: boolean;
+  requiresServiceType?: boolean;
   successEntityLabel: string;
 };
 
@@ -624,5 +625,6 @@ export const CUSTOMER_CONFIG: BulkImportConfig = {
   storageKey: "customer-bulk-import-notice-dismissed",
   requiresPop: true,
   requiresRegion: true,
+  requiresServiceType: true,
   successEntityLabel: "Customer",
 };

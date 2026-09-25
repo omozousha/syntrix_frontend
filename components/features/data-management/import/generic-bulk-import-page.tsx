@@ -64,6 +64,7 @@ export function GenericBulkImportPage({ config }: Props) {
     storageKey,
     requiresPop,
     requiresRegion,
+    requiresServiceType,
     successEntityLabel,
   } = config;
 
@@ -211,17 +212,20 @@ export function GenericBulkImportPage({ config }: Props) {
     let regionsList: Array<{ id: string; region_name: string; code: string }> | null = null;
     let allowedRegionIds: string[] | null = null;
     let popsList: Array<{ id: string; pop_id: string; pop_name: string; pop_code: string }> | null = null;
+    let serviceTypesList: Array<{ id: string; service_type_name: string; service_type_code: string }> | null = null;
 
-    if (requiresRegion || requiresPop) {
+    if (requiresRegion || requiresPop || requiresServiceType) {
       try {
-        const [regions, scopes, pops] = await Promise.all([
+        const [regions, scopes, pops, svcTypes] = await Promise.all([
           requiresRegion ? loadRegionsCatalog(session?.token) : Promise.resolve(null),
           requiresRegion ? Promise.resolve(getUserScopeRegionIds(session)) : Promise.resolve(null),
           requiresPop ? loadPopsCatalog(session?.token) : Promise.resolve(null),
+          requiresServiceType ? loadServiceTypesCatalog(session?.token) : Promise.resolve(null),
         ]);
         regionsList = regions as Array<{ id: string; region_name: string; code: string }> | null;
         allowedRegionIds = scopes as string[] | null;
         popsList = pops as Array<{ id: string; pop_id: string; pop_name: string; pop_code: string }> | null;
+        serviceTypesList = svcTypes as Array<{ id: string; service_type_name: string; service_type_code: string }> | null;
       } catch (scopeErr) {
         setParseError(scopeErr instanceof Error ? scopeErr.message : "Role ini tidak didukung.");
         setUploadFile(null);
@@ -369,6 +373,59 @@ export function GenericBulkImportPage({ config }: Props) {
         fileErrorObj = {
           title: "Referensi POP Tidak Dikenali",
           description: `Berkas ini memiliki referensi POP yang tidak dikenali: ${Array.from(unknownPops).join(", ")}.`,
+        };
+      }
+    }
+
+    if (requiresServiceType && serviceTypesList) {
+      const lowerStName = new Map<string, { id: string; rawName: string }>();
+      const lowerStCode = new Map<string, { id: string; rawName: string }>();
+      const lowerStId = new Map<string, { id: string; rawName: string }>();
+      for (const st of serviceTypesList) {
+        const nameKey = st.service_type_name.trim().toLowerCase();
+        if (nameKey) lowerStName.set(nameKey, { id: st.id, rawName: st.service_type_name });
+        const codeKey = st.service_type_code.trim().toLowerCase();
+        if (codeKey) lowerStCode.set(codeKey, { id: st.id, rawName: st.service_type_name });
+        if (st.id) lowerStId.set(st.id.trim().toLowerCase(), { id: st.id, rawName: st.service_type_name });
+      }
+
+      const stLookup = (raw: string): { id: string; rawName: string } | null => {
+        const key = String(raw || "").trim().toLowerCase();
+        if (!key) return null;
+        return (
+          lowerStName.get(key) ||
+          lowerStCode.get(key) ||
+          lowerStId.get(key) ||
+          null
+        );
+      };
+
+      const unknownSts = new Set<string>();
+
+      preview = preview.map((row) => {
+        const rawSt = String(
+          row.data?.["service type"] ?? row.data?.service_type ?? row.data?.["Service Type"] ?? "",
+        ).trim();
+        if (!rawSt) return row;
+
+        const resolved = stLookup(rawSt);
+        if (!resolved) {
+          unknownSts.add(rawSt);
+          return {
+            ...row,
+            valid: false,
+            errors: Array.from(
+              new Set([...row.errors, `Service Type "${rawSt}" tidak terdaftar di master database`]),
+            ),
+          };
+        }
+        return row;
+      });
+
+      if (unknownSts.size && !fileErrorObj) {
+        fileErrorObj = {
+          title: "Service Type Tidak Dikenali",
+          description: `Berkas ini memiliki Service Type yang tidak dikenali: ${Array.from(unknownSts).join(", ")}.`,
         };
       }
     }
@@ -1133,6 +1190,60 @@ async function loadPopsCatalog(
 
   popsCatalogCache.token = token;
   popsCatalogCache.value = collected;
+  return collected;
+}
+
+const serviceTypesCatalogCache: {
+  token: string | null;
+  value: Array<{ id: string; service_type_name: string; service_type_code: string }> | null;
+} = { token: null, value: null };
+
+async function loadServiceTypesCatalog(
+  token: string | undefined,
+): Promise<Array<{ id: string; service_type_name: string; service_type_code: string }> | null> {
+  if (!token) return null;
+  if (serviceTypesCatalogCache.token === token && serviceTypesCatalogCache.value) {
+    return serviceTypesCatalogCache.value;
+  }
+
+  const collected: Array<{ id: string; service_type_name: string; service_type_code: string }> = [];
+
+  try {
+    let page = 1;
+    const pageSize = 200;
+    const collectFromPage = (input: unknown) => {
+      const arr = Array.isArray(input)
+        ? input
+        : Array.isArray((input as { items?: unknown[] })?.items)
+          ? (input as { items?: unknown[] }).items
+          : [];
+      for (const raw of arr as Array<{ id?: unknown; service_type_name?: unknown; service_type_code?: unknown }>) {
+        if (!raw?.id) continue;
+        collected.push({
+          id: String(raw.id),
+          service_type_name: String(raw.service_type_name || ""),
+          service_type_code: String(raw.service_type_code || ""),
+        });
+      }
+      return Array.isArray(arr) ? arr.length : 0;
+    };
+
+    while (page <= 25) {
+      const response = await apiFetch<{
+        data?: { items?: unknown[] } | unknown[];
+        items?: unknown[];
+      }>(`/serviceTypes?page=${page}&limit=${pageSize}`, { token });
+
+      const got = collectFromPage(response?.data);
+      if (got < pageSize) break;
+      page += 1;
+    }
+  } catch {
+    return null;
+  }
+
+  serviceTypesCatalogCache.token = token;
+  serviceTypesCatalogCache.value = collected;
   return collected;
 }
 
