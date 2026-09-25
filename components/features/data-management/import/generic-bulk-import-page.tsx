@@ -77,7 +77,7 @@ export function GenericBulkImportPage({ config }: Props) {
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
-  const [fileLevelError, setFileLevelError] = useState<string | null>(null);
+  const [fileLevelError, setFileLevelError] = useState<{ title: string; description: string } | null>(null);
 
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [checkResult, setCheckResult] = useState<PrerequisiteCheck | null>(null);
@@ -210,7 +210,7 @@ export function GenericBulkImportPage({ config }: Props) {
 
     let regionsList: Array<{ id: string; region_name: string; code: string }> | null = null;
     let allowedRegionIds: string[] | null = null;
-    let popsList: Array<{ id: string; pop_name: string; pop_code: string }> | null = null;
+    let popsList: Array<{ id: string; pop_id: string; pop_name: string; pop_code: string }> | null = null;
 
     if (requiresRegion || requiresPop) {
       try {
@@ -221,7 +221,7 @@ export function GenericBulkImportPage({ config }: Props) {
         ]);
         regionsList = regions as Array<{ id: string; region_name: string; code: string }> | null;
         allowedRegionIds = scopes as string[] | null;
-        popsList = pops as Array<{ id: string; pop_name: string; pop_code: string }> | null;
+        popsList = pops as Array<{ id: string; pop_id: string; pop_name: string; pop_code: string }> | null;
       } catch (scopeErr) {
         setParseError(scopeErr instanceof Error ? scopeErr.message : "Role ini tidak didukung.");
         setUploadFile(null);
@@ -240,7 +240,7 @@ export function GenericBulkImportPage({ config }: Props) {
       };
     });
 
-    let fileMessage: string | null = null;
+    let fileErrorObj: { title: string; description: string } | null = null;
     const role = session?.me?.role;
 
     if (regionsList && allowedRegionIds !== null) {
@@ -290,18 +290,30 @@ export function GenericBulkImportPage({ config }: Props) {
       });
 
       if (unknownRegions.size) {
-        fileMessage = `Berkas ini memiliki nama region yang tidak dikenali: ${Array.from(unknownRegions).join(", ")}.`;
+        fileErrorObj = {
+          title: "Region Tidak Dikenali",
+          description: `Berkas ini memiliki nama region yang tidak dikenali: ${Array.from(unknownRegions).join(", ")}.`,
+        };
       } else if (role === "admin" && uniqueRegionIds.size > 1) {
-        fileMessage = `Berkas ini berisi ${uniqueRegionIds.size} region berbeda. Untuk role admin, satu file hanya boleh berisi tepat satu region. Pisahkan per region.`;
+        fileErrorObj = {
+          title: "File Mengandung Multi-Region",
+          description: `Berkas ini berisi ${uniqueRegionIds.size} region berbeda. Untuk role admin, satu file hanya boleh berisi tepat satu region. Pisahkan per region.`,
+        };
       } else if (role === "user_all_region" && allowedRegionIds.length === 0) {
-        fileMessage = "Akun admin Anda belum memiliki region scope yang ditetapkan. Hubungi administrator.";
+        fileErrorObj = {
+          title: "Scope Region Belum Ditetapkan",
+          description: "Akun admin Anda belum memiliki region scope yang ditetapkan. Hubungi administrator.",
+        };
       } else if (
         role === "user_all_region" &&
         uniqueRegionIds.size > 0 &&
         Array.from(uniqueRegionIds).some((id) => !allowedRegionIds.includes(id))
       ) {
         const outOfScopeIds = Array.from(uniqueRegionIds).filter((id) => !allowedRegionIds.includes(id));
-        fileMessage = `Berkas ini berisi region di luar scope adminregion Anda (${outOfScopeIds.length} region). Hanya region dalam scope yang boleh diimpor.`;
+        fileErrorObj = {
+          title: "Region Tidak Termasuk Scope Anda",
+          description: `Berkas ini berisi region di luar scope admin Anda (${outOfScopeIds.length} region). Hanya region dalam scope yang boleh diimpor.`,
+        };
       }
     }
 
@@ -309,18 +321,26 @@ export function GenericBulkImportPage({ config }: Props) {
       const lowerPopName = new Map<string, { id: string; rawName: string }>();
       const lowerPopCode = new Map<string, { id: string; rawName: string }>();
       const lowerPopId = new Map<string, { id: string; rawName: string }>();
+      const lowerPopInventoryId = new Map<string, { id: string; rawName: string }>();
       for (const p of popsList) {
         const nameKey = p.pop_name.trim().toLowerCase();
         if (nameKey) lowerPopName.set(nameKey, { id: p.id, rawName: p.pop_name });
         const codeKey = p.pop_code.trim().toLowerCase();
         if (codeKey) lowerPopCode.set(codeKey, { id: p.id, rawName: p.pop_name });
-        lowerPopId.set(p.id.trim().toLowerCase(), { id: p.id, rawName: p.pop_name });
+        if (p.id) lowerPopId.set(p.id.trim().toLowerCase(), { id: p.id, rawName: p.pop_name });
+        if (p.pop_id) lowerPopInventoryId.set(p.pop_id.trim().toLowerCase(), { id: p.id, rawName: p.pop_name });
       }
 
       const popLookup = (raw: string): { id: string; rawName: string } | null => {
         const key = String(raw || "").trim().toLowerCase();
         if (!key) return null;
-        return lowerPopName.get(key) || lowerPopCode.get(key) || lowerPopId.get(key) || null;
+        return (
+          lowerPopInventoryId.get(key) ||
+          lowerPopCode.get(key) ||
+          lowerPopName.get(key) ||
+          lowerPopId.get(key) ||
+          null
+        );
       };
 
       const unknownPops = new Set<string>();
@@ -345,12 +365,15 @@ export function GenericBulkImportPage({ config }: Props) {
         return row;
       });
 
-      if (unknownPops.size && !fileMessage) {
-        fileMessage = `Berkas ini memiliki referensi POP yang tidak dikenali: ${Array.from(unknownPops).join(", ")}.`;
+      if (unknownPops.size && !fileErrorObj) {
+        fileErrorObj = {
+          title: "Referensi POP Tidak Dikenali",
+          description: `Berkas ini memiliki referensi POP yang tidak dikenali: ${Array.from(unknownPops).join(", ")}.`,
+        };
       }
     }
 
-    setFileLevelError(fileMessage);
+    setFileLevelError(fileErrorObj);
 
     const validCount = preview.filter((p) => p.valid && !p.errors.length).length;
     const invalidCount = preview.length - validCount;
@@ -414,7 +437,9 @@ export function GenericBulkImportPage({ config }: Props) {
     if (summary.invalid > 0 || fileLevelError) {
       setApplyState("error");
       setApplyMessage(
-        fileLevelError ? `Terdapat masalah scope region: ${fileLevelError}` : "Terdapat baris error. Selesaikan dulu sebelum menerapkan.",
+        fileLevelError
+          ? `Terdapat masalah berkas: ${fileLevelError.description}`
+          : "Terdapat baris error. Selesaikan dulu sebelum menerapkan.",
       );
       return;
     }
@@ -714,14 +739,8 @@ export function GenericBulkImportPage({ config }: Props) {
           {fileLevelError && (
             <Alert variant="destructive" className="max-w-4xl mx-auto">
               <AlertCircle className="size-4" />
-              <AlertTitle>
-                {session?.me?.role === "admin"
-                  ? "File Mengandung Multi-Region"
-                  : session?.me?.role === "user_all_region"
-                    ? "Region Tidak Termasuk Scope Anda"
-                    : "Region Tidak Dikenali"}
-              </AlertTitle>
-              <AlertDescription>{fileLevelError}</AlertDescription>
+              <AlertTitle>{fileLevelError.title}</AlertTitle>
+              <AlertDescription>{fileLevelError.description}</AlertDescription>
             </Alert>
           )}
 
@@ -942,7 +961,7 @@ export function GenericBulkImportPage({ config }: Props) {
                     summary.invalid > 0
                       ? "Selesaikan baris error sebelum menerapkan."
                       : fileLevelError
-                        ? fileLevelError
+                        ? fileLevelError.description
                         : ""
                   }
                 >
@@ -1064,18 +1083,18 @@ async function loadRegionsCatalog(
 
 const popsCatalogCache: {
   token: string | null;
-  value: Array<{ id: string; pop_name: string; pop_code: string }> | null;
+  value: Array<{ id: string; pop_id: string; pop_name: string; pop_code: string }> | null;
 } = { token: null, value: null };
 
 async function loadPopsCatalog(
   token: string | undefined,
-): Promise<Array<{ id: string; pop_name: string; pop_code: string }> | null> {
+): Promise<Array<{ id: string; pop_id: string; pop_name: string; pop_code: string }> | null> {
   if (!token) return null;
   if (popsCatalogCache.token === token && popsCatalogCache.value) {
     return popsCatalogCache.value;
   }
 
-  const collected: Array<{ id: string; pop_name: string; pop_code: string }> = [];
+  const collected: Array<{ id: string; pop_id: string; pop_name: string; pop_code: string }> = [];
 
   try {
     let page = 1;
@@ -1086,10 +1105,11 @@ async function loadPopsCatalog(
         : Array.isArray((input as { items?: unknown[] })?.items)
           ? (input as { items?: unknown[] }).items
           : [];
-      for (const raw of arr as Array<{ id?: unknown; pop_name?: unknown; pop_code?: unknown }>) {
+      for (const raw of arr as Array<{ id?: unknown; pop_id?: unknown; pop_name?: unknown; pop_code?: unknown }>) {
         if (!raw?.id) continue;
         collected.push({
           id: String(raw.id),
+          pop_id: String(raw.pop_id || ""),
           pop_name: String(raw.pop_name || ""),
           pop_code: String(raw.pop_code || ""),
         });
