@@ -460,7 +460,7 @@ export default function OdpBulkImportPage() {
   const isPreviewStep = step === "preview";
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto overscroll-contain space-y-6 pr-1.5 pb-8">
+    <div className="space-y-6 pr-1.5 pb-8">
       {/* Hero */}
       <header className="space-y-2">
         <div className="flex items-center gap-2">

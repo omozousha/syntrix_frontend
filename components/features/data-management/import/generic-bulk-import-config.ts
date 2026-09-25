@@ -526,8 +526,8 @@ export const CUSTOMER_TEMPLATE_COLUMNS: ColumnDef[] = [
 ];
 
 export const CUSTOMER_EXAMPLE_ROWS: Record<string, string>[] = [
-  { "customer name": "PT. ABC Sejahtera", CID: "CUS-0001", region: "Jabodebek", POP: "INV-POP-S89P4U2", "service type": "Broadband", "installation date": "2024-06-15", longitude: "106.84513", latitude: "-6.21462" },
-  { "customer name": "Ibu Siti Aminah", CID: "CUS-0002", region: "Jawa Barat", POP: "CBN", "service type": "Residential", "installation date": "", longitude: "107.61912", latitude: "-6.90389" },
+  { "customer name": "PT. ABC Sejahtera", CID: "CUS-0001", region: "Jabodebek", POP: "INV-POP-S89P4U2", "service type": "Internet", "installation date": "2024-06-15", longitude: "106.84513", latitude: "-6.21462" },
+  { "customer name": "Ibu Siti Aminah", CID: "CUS-0002", region: "Jawa Barat", POP: "CBN", "service type": "Internet", "installation date": "", longitude: "107.61912", latitude: "-6.90389" },
 ];
 
 const CUSTOMER_VALIDATION_RULES: ValidationRule[] = [
@@ -549,7 +549,7 @@ export const CUSTOMER_INSTRUCTIONS: string[][] = [
   ["CID", "Nomor Customer ID (opsional, backend auto-generate jika kosong)"],
   ["region", "Nama region lengkap persis sama dengan master database"],
   ["POP", "Kode POP 3 huruf, nama POP, atau ID inventori (INV-POP-...)"],
-  ["service type", "Tipe layanan (contoh: Broadband, Residential, Dedicated)"],
+  ["service type", "Tipe layanan (contoh: Internet, Dedicated, dll.)"],
   ["installation date", "Tanggal instalasi (format YYYY-MM-DD, contoh: 2024-06-15)"],
   ["longitude", "Koordinat desimal (-180 s/d 180)"],
   ["latitude", "Koordinat desimal (-90 s/d 90)"],

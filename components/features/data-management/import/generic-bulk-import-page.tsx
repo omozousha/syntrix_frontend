@@ -561,7 +561,7 @@ export function GenericBulkImportPage({ config }: Props) {
   const templateFileName = `template_${(deviceTypeKey || entityType).toLowerCase()}_bulk_import`;
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto overscroll-contain space-y-6 pr-1.5 pb-8">
+    <div className="space-y-6 pr-1.5 pb-8">
       <header className="space-y-2">
         <div className="flex items-center gap-2">
           <h2 className="text-2xl font-bold tracking-tight">{pageTitle}</h2>
