@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes, CheckSquare, MapPin, Shield } from "lucide-react";
+import { Boxes, CheckSquare, MapPin, Shield, Users } from "lucide-react";
 import { OperationalKpiCard } from "@/components/operational-ui";
 
 export function DataListKpiStrip({
@@ -13,6 +13,7 @@ export function DataListKpiStrip({
   isMasterCategory,
   activeCount,
   archivedCount,
+  customerCount,
 }: {
   total: number;
   categoryLabel: string;
@@ -23,6 +24,7 @@ export function DataListKpiStrip({
   isMasterCategory?: boolean;
   activeCount?: number;
   archivedCount?: number;
+  customerCount?: number;
 }) {
   const cards = [
     <OperationalKpiCard key="total" label="Total Data" value={total.toLocaleString("id-ID")} caption={`${categoryLabel} pada filter aktif`} icon={Boxes} tone="blue" compact />,
@@ -37,6 +39,19 @@ export function DataListKpiStrip({
     cards.push(
       <OperationalKpiCard key="filter" label="POP Filter" value={supportsPopFilter && isPopFilterActive ? "Active" : "All"} caption={selectedPopLabel || "Semua POP"} icon={MapPin} tone={supportsPopFilter && isPopFilterActive ? "emerald" : "slate"} compact />,
     );
+    if (customerCount !== undefined) {
+      cards.push(
+        <OperationalKpiCard
+          key="customers"
+          label="Total Pelanggan"
+          value={customerCount.toLocaleString("id-ID")}
+          caption="Pelanggan di filter aktif"
+          icon={Users}
+          tone="emerald"
+          compact
+        />,
+      );
+    }
     if (selectedCount > 0) {
       cards.push(
         <OperationalKpiCard key="selected" label="Selected" value={selectedCount.toLocaleString("id-ID")} caption="Siap bulk action" icon={CheckSquare} tone="amber" compact />,
@@ -44,5 +59,5 @@ export function DataListKpiStrip({
     }
   }
 
-  return <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">{cards}</div>;
+  return <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">{cards}</div>;
 }

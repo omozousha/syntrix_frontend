@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { ArrowRight, Search, Users } from "lucide-react";
 import { InlineLoader } from "@/components/app-loading-new";
 import { OperationalState } from "@/components/operational-ui";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { apiFetch, type DevicesListResponse } from "@/lib/api";
@@ -40,6 +41,16 @@ export function RegionInventoryDialog({
     queryKey: [...deviceKeys.all, "region-type-counts", region?.id || "", deviceTypes.map((item) => item.value).join(",")],
     queryFn: () => fetchDeviceTypeCounts(token, region?.id || "", deviceTypes),
     enabled: open && Boolean(region?.id) && deviceTypes.length > 0,
+    staleTime: 60_000,
+  });
+
+  const customerCountQuery = useQuery({
+    queryKey: ["region-customer-count", region?.id || ""],
+    queryFn: async () => {
+      const res = await apiFetch<{ meta?: { total: number }; data?: unknown[] }>(`/customers?page=1&limit=1&region_id=${encodeURIComponent(region?.id || "")}`, { token });
+      return res.meta?.total ?? res.data?.length ?? 0;
+    },
+    enabled: open && Boolean(region?.id),
     staleTime: 60_000,
   });
 
@@ -82,6 +93,36 @@ export function RegionInventoryDialog({
           {typeCountQuery.isFetching ? (
             <InlineLoader label="Menghitung device..." />
           ) : null}
+        </div>
+
+        {/* Customer Quick Summary Strip */}
+        <div className="px-5 pt-1">
+          <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/10 p-3 glass-inset">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+                <Users className="size-4" />
+              </div>
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">Pelanggan Region</p>
+                <p className="font-mono text-base font-bold tabular-nums text-foreground">
+                  {customerCountQuery.isPending ? "..." : (customerCountQuery.data ?? 0).toLocaleString("id-ID")}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] gap-1.5 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+              onClick={() => {
+                if (!region?.id) return;
+                onOpenChange(false);
+                router.push(`/data-management/list/customer?region_id=${encodeURIComponent(region.id)}`);
+              }}
+            >
+              Lihat Customer
+              <ArrowRight className="size-3" />
+            </Button>
+          </div>
         </div>
 
         <div className="min-h-0 overflow-y-auto px-5">

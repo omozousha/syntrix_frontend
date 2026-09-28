@@ -26,9 +26,10 @@ import {
 import {
   PopBentoHeroTile,
   PopBentoLocationTile,
-  PopBentoRackKpiTile,
   PopBentoPropertyTile,
   PopBentoDocumentsTile,
+  PopBentoRackKpiTile,
+  PopDetailSummaryStrip,
   PopRackElevationCanvas,
   PopRackFormDialog,
   PopUnmountedTray,
@@ -635,6 +636,13 @@ export default function DataManagementDetailPage() {
   const [popDocuments, setPopDocuments] = useState<PopDocumentRef[]>([]);
   const [loadingPopDocuments, setLoadingPopDocuments] = useState(false);
 
+  // POP Customer Summary States
+  const [popCustomerTotal, setPopCustomerTotal] = useState(0);
+  const [loadingPopCustomerSummary, setLoadingPopCustomerSummary] = useState(false);
+  const [popCustomerStatusBreakdown, setPopCustomerStatusBreakdown] = useState<
+    Array<{ status: string; count: number }>
+  >([]);
+
   function toggleShowUnmountedTray() {
     setShowUnmountedTray((prev) => {
       const next = !prev;
@@ -771,6 +779,18 @@ export default function DataManagementDetailPage() {
         const specs = d.specifications as Record<string, unknown> | undefined;
         return sum + (Number(specs?.u_height) || 1);
       }, 0);
+  }, [popDevices]);
+
+  const popDeviceCount = useMemo(() => {
+    return popDevices.filter((d) => String(d.device_type_key || "").toUpperCase() !== "RACK").length;
+  }, [popDevices]);
+
+  const popOdpCount = useMemo(() => {
+    return popDevices.filter((d) => String(d.device_type_key || "").toUpperCase() === "ODP").length;
+  }, [popDevices]);
+
+  const popTotalPorts = useMemo(() => {
+    return popDevices.reduce((sum, d) => sum + (Number(d.total_ports) || 0), 0);
   }, [popDevices]);
 
   useEffect(() => {
@@ -1427,6 +1447,50 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       }
     }
     void loadPopDevices();
+    return () => {
+      cancelled = true;
+    };
+  }, [category?.resource, item?.id, token]);
+
+  // ── Fetch customer summary untuk POP saat ini ──
+  useEffect(() => {
+    if (category?.resource !== "pops" || !item?.id || !token) {
+      setPopCustomerTotal(0);
+      setPopCustomerStatusBreakdown([]);
+      return;
+    }
+    const popItemId = item.id;
+    let cancelled = false;
+    async function loadPopCustomerSummary() {
+      setLoadingPopCustomerSummary(true);
+      try {
+        const res = await apiFetch<PaginatedResponse<GenericItem>>(
+          `/customers?page=1&limit=1000&pop_id=${encodeURIComponent(popItemId)}`,
+          { token }
+        );
+        if (!cancelled) {
+          const rows = res.data || [];
+          const statusMap = new Map<string, number>();
+          rows.forEach((row) => {
+            const st = String((row as Record<string, unknown>).status ?? "unknown");
+            statusMap.set(st, (statusMap.get(st) || 0) + 1);
+          });
+          const breakdown = Array.from(statusMap.entries())
+            .map(([status, count]) => ({ status, count }))
+            .sort((a, b) => b.count - a.count);
+          setPopCustomerTotal(res.meta?.total ?? rows.length);
+          setPopCustomerStatusBreakdown(breakdown);
+        }
+      } catch {
+        if (!cancelled) {
+          setPopCustomerTotal(0);
+          setPopCustomerStatusBreakdown([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingPopCustomerSummary(false);
+      }
+    }
+    void loadPopCustomerSummary();
     return () => {
       cancelled = true;
     };
@@ -3195,6 +3259,18 @@ if (!category) {
 
                 {/* 6-TILE BENTO GRID POP + RACK ELEVATION */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+                  {/* SUMMARY STRIP: Total Device, ODP, Port, Customer */}
+                  <div className="col-span-1 sm:col-span-12">
+                    <PopDetailSummaryStrip
+                      popId={item.id}
+                      totalDevices={popDeviceCount}
+                      totalOdp={popOdpCount}
+                      totalPorts={popTotalPorts}
+                      totalCustomers={popCustomerTotal}
+                      loading={loadingPopDevices || loadingPopCustomerSummary}
+                    />
+                  </div>
+
                   {/* TILE 1: POP Hero & Status & Power (7 Cols Desktop / 12 Mobile) */}
                   <div className="sm:col-span-7 lg:col-span-7">
                     <PopBentoHeroTile

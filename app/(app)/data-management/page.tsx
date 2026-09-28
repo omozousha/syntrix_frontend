@@ -55,6 +55,7 @@ type RegionCoreSummary = {
   cableDevices: number;
   projects: number;
   devices: number;
+  customers: number;
   popLatestUpdatedAt: string | null;
   deviceLatestUpdatedAt: string | null;
   routeLatestUpdatedAt: string | null;
@@ -329,11 +330,12 @@ export default function DataManagementPage() {
 
         const entries = await Promise.all(
           missingRegions.map(async (region) => {
-            const [popSummary, routeSummary, projectSummary, deviceSummary] = await Promise.all([
+            const [popSummary, routeSummary, projectSummary, deviceSummary, customerSummary] = await Promise.all([
               fetchSummaryByPath(`${popPath}&region_id=${encodeURIComponent(region.id)}`, token),
               fetchSummaryByPath(`${routePath}&region_id=${encodeURIComponent(region.id)}`, token),
               fetchSummaryByPath(`${projectPath}&region_id=${encodeURIComponent(region.id)}`, token),
               fetchSummaryByPath(`/devices?page=1&limit=1&region_id=${encodeURIComponent(region.id)}`, token),
+              fetchSummaryByPath(`/customers?page=1&limit=1&region_id=${encodeURIComponent(region.id)}`, token),
             ]);
             const routeMetrics = await fetchRouteMetrics(token, region.id);
             return [
@@ -345,6 +347,7 @@ export default function DataManagementPage() {
                 cableDevices: routeMetrics.linkedCableCount,
                 projects: projectSummary.total,
                 devices: deviceSummary.total,
+                customers: customerSummary.total,
                 popLatestUpdatedAt: popSummary.latestUpdatedAt,
                 deviceLatestUpdatedAt: deviceSummary.latestUpdatedAt,
                 routeLatestUpdatedAt: routeMetrics.latestUpdatedAt || routeSummary.latestUpdatedAt,
@@ -536,11 +539,12 @@ export default function DataManagementPage() {
         const routePath = categoryPath(assetCategories, "route");
         const projectPath = categoryPath(assetCategories, "projects");
 
-        const [popSummary, routeSummary, projectSummary, deviceSummary, routeMetrics, categorySummaries] = await Promise.all([
+        const [popSummary, routeSummary, projectSummary, deviceSummary, customerSummary, routeMetrics, categorySummaries] = await Promise.all([
           fetchSummaryByPath(`${popPath}&region_id=${encodeURIComponent(regionId)}`, token),
           fetchSummaryByPath(`${routePath}&region_id=${encodeURIComponent(regionId)}`, token),
           fetchSummaryByPath(`${projectPath}&region_id=${encodeURIComponent(regionId)}`, token),
           fetchSummaryByPath(`/devices?page=1&limit=1&region_id=${encodeURIComponent(regionId)}`, token),
+          fetchSummaryByPath(`/customers?page=1&limit=1&region_id=${encodeURIComponent(regionId)}`, token),
           fetchRouteMetrics(token, regionId),
           needDetail
             ? Promise.all(
@@ -566,6 +570,7 @@ export default function DataManagementPage() {
               cableDevices: routeMetrics.linkedCableCount,
               projects: projectSummary.total,
               devices: deviceSummary.total,
+              customers: customerSummary.total,
               popLatestUpdatedAt: popSummary.latestUpdatedAt,
               deviceLatestUpdatedAt: deviceSummary.latestUpdatedAt,
               routeLatestUpdatedAt: routeMetrics.latestUpdatedAt || routeSummary.latestUpdatedAt,

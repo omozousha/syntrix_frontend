@@ -74,12 +74,26 @@ export default function RootLayout({
                   var isDark = theme === 'dark' || (theme !== 'light' && prefersDark);
                   document.documentElement.classList.toggle('dark', isDark);
                 } catch(e) {}
+
+                // Suppress browser extension hydration noise (Bitdefender, Grammarly, etc.)
+                try {
+                  if (typeof window !== 'undefined') {
+                    var origError = console.error;
+                    console.error = function() {
+                      var msg = arguments[0];
+                      if (typeof msg === 'string' && (msg.indexOf('bis_skin_checked') !== -1 || msg.indexOf('bis_register') !== -1)) {
+                        return;
+                      }
+                      origError.apply(console, arguments);
+                    };
+                  }
+                } catch(e) {}
               })();
             `,
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col grain-overlay">
+      <body className="min-h-full flex flex-col grain-overlay" suppressHydrationWarning>
         <ThemeSync />
         <QueryProvider>
           <TooltipProvider>

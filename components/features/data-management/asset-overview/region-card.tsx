@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Cable, Database, MapPin, Network } from "lucide-react";
+import { ArrowUpRight, Cable, Database, MapPin, Network, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +16,7 @@ export type RegionCoreSummary = {
   routeDistanceMeters: number;
   cableDevices: number;
   devices: number;
+  customers?: number;
   popLatestUpdatedAt: string | null;
   deviceLatestUpdatedAt: string | null;
 };
@@ -62,6 +63,9 @@ export function RegionCard({
           <Metric icon={Database} label="Device" value={loading ? undefined : String(summary?.devices ?? 0)} />
           <Metric icon={Network} label="Route" value={loading ? undefined : formatKilometers(summary?.routeDistanceMeters ?? 0)} />
           <Metric icon={Cable} label="Cable on Route" value={loading ? undefined : String(summary?.cableDevices ?? 0)} />
+          <div className="col-span-2">
+            <Metric icon={Users} label="Customer" value={loading ? undefined : String(summary?.customers ?? 0)} />
+          </div>
         </CardContent>
 
         <CardFooter className="px-4 pb-4 pt-2">

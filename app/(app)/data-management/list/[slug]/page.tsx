@@ -23,6 +23,7 @@ import {
   Server,
   Split,
   Trash2,
+  Users,
   Waypoints,
   X,
   type LucideIcon,
@@ -572,6 +573,11 @@ export default function DataManagementListPage() {
     };
   }, [category, token, page, limit, search, effectiveRegionScopeId, provinceFilter, refreshSeed, archiveView, isSoftDeleteResource, supportsPopFilter, popQueryParam, supportsProjectFilter, projectQueryParam, idsFilter, validationStatusFilter]);
 
+  const popCustomerTotal = useMemo(() => {
+    if (category?.resource !== "pops") return undefined;
+    return rows.reduce((sum, p) => sum + Number(p.customer_count || 0), 0);
+  }, [category?.resource, rows]);
+
   useEffect(() => {
     if (!supportsPopFilter) {
       setPopFilterOptions([]);
@@ -854,7 +860,7 @@ export default function DataManagementListPage() {
   const [headers, defaultColumnVisibility] = useMemo(() => {
     const h: ReactNode[] = (() => {
       if (!category) return [];
-      if (category.resource === "pops") return [selectAllHeader, "POP ID", "Code", "Name", "Status", "Updated"];
+      if (category.resource === "pops") return [selectAllHeader, "POP ID", "Code", "Name", "Pelanggan", "Status", "Updated"];
       if (category.resource === "devices") {
         if (category.deviceTypeKey === "CABLE") return [selectAllHeader, "Device ID", "Name", "Type", "Kategori", "POP", "Status", "Validation", "Updated"];
         return [selectAllHeader, "Device ID", "Name", "Type", "POP", "Status", "Validation", "Updated"];
@@ -914,11 +920,24 @@ export default function DataManagementListPage() {
       );
 
       if (category.resource === "pops") {
+        const customerCount = Number(item.customer_count ?? 0);
+        const customerListHref = `/data-management/list/customer?pop_id=${encodeURIComponent(item.id)}`;
         return [
           selectCell,
           pick(item, ["pop_id"]),
           pick(item, ["pop_code"]),
           pick(item, ["pop_name", "name"]),
+          (
+            <Link
+              key={`pop-cust-${item.id}`}
+              href={customerListHref}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-full border border-border/50 bg-muted/30 px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-foreground hover:border-primary/60 hover:bg-primary/10 transition-colors"
+            >
+              <Users className="size-3 text-muted-foreground" />
+              {customerCount.toLocaleString("id-ID")}
+            </Link>
+          ),
           pick(item, ["status_pop", "status"]),
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
@@ -1601,6 +1620,7 @@ export default function DataManagementListPage() {
             supportsPopFilter={supportsPopFilter}
             isPopFilterActive={popQueryParam !== "__all"}
             selectedPopLabel={selectedPopLabel}
+            customerCount={category?.resource === "pops" ? popCustomerTotal : undefined}
           />
         )}
 
