@@ -51,6 +51,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob, resolveAttachment } from "@/lib/attachment-utils";
@@ -642,6 +643,10 @@ export default function DataManagementDetailPage() {
   const [popCustomerStatusBreakdown, setPopCustomerStatusBreakdown] = useState<
     Array<{ status: string; count: number }>
   >([]);
+
+  // POP Detail Active Tab State ("overview" | "rack")
+  const initialPopTab = searchParams.get("tab") === "rack" ? "rack" : "overview";
+  const [activePopTab, setActivePopTab] = useState<string>(initialPopTab);
 
   function toggleShowUnmountedTray() {
     setShowUnmountedTray((prev) => {
@@ -3271,125 +3276,156 @@ if (!category) {
                     />
                   </div>
 
-                  {/* TILE 1: POP Hero & Status & Power (7 Cols Desktop / 12 Mobile) */}
-                  <div className="sm:col-span-7 lg:col-span-7">
-                    <PopBentoHeroTile
-                      popName={valueOf(item.pop_name)}
-                      popCode={valueOf(item.pop_code)}
-                      popType={relationLabels.popType || valueOf(item.pop_type)}
-                      regionName={relationLabels.region}
-                      statusPop={valueOf(item.status_pop, "active")}
-                      validationStatus={detailValidationStatus}
-                      tanggalPopAktif={valueOf(item.tanggal_pop_aktif)}
-                      tenant={valueOf(item.tenant)}
-                      plnCidNumber={valueOf(item.pln_cid_number)}
-                      plnPaymentMethod={valueOf(item.pln_payment_method)}
-                      plnPhase={valueOf(item.pln_phase)}
-                      plnWattage={item.pln_wattage as number | string | null | undefined}
-                      updatedAt={valueOf(item.updated_at || item.created_at)}
-                      tags={Array.isArray(item.tags) ? (item.tags as string[]) : []}
-                    />
-                  </div>
-
-                  {/* TILE 2: Peta & Lokasi POP (5 Cols Desktop / 12 Mobile) */}
-                  <div className="sm:col-span-5 lg:col-span-5">
-                    <PopBentoLocationTile
-                      latitude={item.latitude as number | string | null | undefined}
-                      longitude={item.longitude as number | string | null | undefined}
-                      address={valueOf(item.address)}
-                      popName={valueOf(item.pop_name)}
-                      cityName={relationLabels.city}
-                      provinceName={relationLabels.province}
-                      onOpenMapModal={() => setNavModalOpen(true)}
-                    />
-                  </div>
-
-                  {/* TILE 3: Legalitas Site, Pajak PBB & Kontrak Sewa (12 Cols Full Width) */}
+                  {/* TAB CONTAINER */}
                   <div className="col-span-1 sm:col-span-12">
-                    <PopBentoPropertyTile property={popPropertyData} />
-                  </div>
+                    <Tabs value={activePopTab} onValueChange={setActivePopTab}>
+                      {/* Tab Navigation */}
+                      <TabsList className="mb-4 rounded-full border border-border/50 bg-muted/20 p-1 h-auto gap-1">
+                        <TabsTrigger
+                          value="overview"
+                          className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=active]:bg-card data-[state=active]:shadow-xs px-4 py-1.5"
+                        >
+                          Overview
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="rack"
+                          className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=active]:bg-card data-[state=active]:shadow-xs px-4 py-1.5"
+                        >
+                          Rack &amp; Inventaris
+                        </TabsTrigger>
+                      </TabsList>
 
-                  {/* TILE 4: KPI Utilisasi Rak & Breakdown Perangkat Terfilter (12 Cols Full Width) */}
-                  <div className="col-span-1 sm:col-span-12">
-                    <PopBentoRackKpiTile
-                      totalRacks={popRacks.length}
-                      totalU={totalPopU}
-                      usedU={usedPopU}
-                      popId={item.id}
-                      deviceTypeCounts={popDeviceTypeCounts}
-                      visibleDeviceTypes={visiblePopDeviceTypes}
-                      token={token || undefined}
-                      onVisibleTypesChange={setVisiblePopDeviceTypes}
-                    />
-                  </div>
+                      {/* TAB 1: Overview — Identitas, Lokasi, Properti, Dokumen, Galeri */}
+                      <TabsContent value="overview" className="mt-0">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+                          {/* TILE 1: POP Hero & Status & Power (7 Cols Desktop / 12 Mobile) */}
+                          <div className="sm:col-span-7 lg:col-span-7">
+                            <PopBentoHeroTile
+                              popName={valueOf(item.pop_name)}
+                              popCode={valueOf(item.pop_code)}
+                              popType={relationLabels.popType || valueOf(item.pop_type)}
+                              regionName={relationLabels.region}
+                              statusPop={valueOf(item.status_pop, "active")}
+                              validationStatus={detailValidationStatus}
+                              tanggalPopAktif={valueOf(item.tanggal_pop_aktif)}
+                              tenant={valueOf(item.tenant)}
+                              plnCidNumber={valueOf(item.pln_cid_number)}
+                              plnPaymentMethod={valueOf(item.pln_payment_method)}
+                              plnPhase={valueOf(item.pln_phase)}
+                              plnWattage={item.pln_wattage as number | string | null | undefined}
+                              updatedAt={valueOf(item.updated_at || item.created_at)}
+                              tags={Array.isArray(item.tags) ? (item.tags as string[]) : []}
+                            />
+                          </div>
 
-                  {/* TILE 5: Interactive Rack Elevation Canvas (Adaptive 8 or 12 Cols) */}
-                  <div className={showUnmountedTray ? "sm:col-span-12 lg:col-span-8" : "col-span-1 sm:col-span-12 lg:col-span-12"}>
-                    <PopRackElevationCanvas
-                      racks={popRacks}
-                      selectedRackId={activePopRackId}
-                      mountedDevices={popMountedDevices}
-                      onSelectRackId={setSelectedPopRackId}
-                      onCreateNewRack={handleCreateNewPopRack}
-                      onEditRack={handleEditPopRack}
-                      onResetRack={handleResetPopRack}
-                      onDeleteRack={handleDeletePopRack}
-                      onMountDevice={handleMountPopDevice}
-                      onUnmountDevice={handleUnmountPopDevice}
-                      onEmptySlotClick={(u) => {
-                        setPopMountTargetU(u);
-                        setPopDeviceToMount(null);
-                        setPopMountModalOpen(true);
-                      }}
-                      showUnmountedTray={showUnmountedTray}
-                      unmountedCount={popUnmountedDevices.length}
-                      onToggleUnmountedTray={toggleShowUnmountedTray}
-                    />
-                  </div>
+                          {/* TILE 2: Peta & Lokasi POP (5 Cols Desktop / 12 Mobile) */}
+                          <div className="sm:col-span-5 lg:col-span-5">
+                            <PopBentoLocationTile
+                              latitude={item.latitude as number | string | null | undefined}
+                              longitude={item.longitude as number | string | null | undefined}
+                              address={valueOf(item.address)}
+                              popName={valueOf(item.pop_name)}
+                              cityName={relationLabels.city}
+                              provinceName={relationLabels.province}
+                              onOpenMapModal={() => setNavModalOpen(true)}
+                            />
+                          </div>
 
-                  {/* TILE 6: Unmounted Devices Tray (4 Cols Desktop / 12 Mobile, conditionally rendered) */}
-                  {showUnmountedTray ? (
-                    <div className="sm:col-span-12 lg:col-span-4">
-                      <PopUnmountedTray
-                        devices={popUnmountedDevices}
-                        onSelectDeviceToMount={(dev) => {
-                          setPopDeviceToMount(dev);
-                          setPopMountTargetU(1);
-                          setPopMountModalOpen(true);
-                        }}
-                        onClose={toggleShowUnmountedTray}
-                      />
-                    </div>
-                  ) : null}
+                          {/* TILE 3: Legalitas Site, Pajak PBB & Kontrak Sewa (12 Cols Full Width) */}
+                          <div className="col-span-1 sm:col-span-12">
+                            <PopBentoPropertyTile property={popPropertyData} />
+                          </div>
 
-                  {/* TILE 7: Galeri Foto Ruang/Site POP (12 Cols Full Width) */}
-                  <div className="col-span-1 sm:col-span-12">
-                    <DeviceBentoGalleryTile
-                      deviceTypeLabel="Site POP"
-                      attachments={galleryImageAttachments}
-                      imagePreviewUrls={imagePreviewUrls}
-                      attachmentNames={attachmentNames}
-                      loadingImagePreviews={loadingImagePreviews}
-                      editing={editable && isEditing}
-                      maxImageAttachments={MAX_IMAGE_ATTACHMENTS}
-                      newImageFiles={newImageFiles}
-                      newImagePreviewUrls={newImagePreviewUrls}
-                      onOpenGallery={openGalleryAt}
-                      onNewImageFilesChange={handleNewImageFilesChange}
-                      onClearNewImages={() => setNewImageFiles([])}
-                      onRemoveNewImage={removeNewImageAt}
-                    />
-                  </div>
+                          {/* TILE 4: Galeri Foto Ruang/Site POP (12 Cols Full Width) */}
+                          <div className="col-span-1 sm:col-span-12">
+                            <DeviceBentoGalleryTile
+                              deviceTypeLabel="Site POP"
+                              attachments={galleryImageAttachments}
+                              imagePreviewUrls={imagePreviewUrls}
+                              attachmentNames={attachmentNames}
+                              loadingImagePreviews={loadingImagePreviews}
+                              editing={editable && isEditing}
+                              maxImageAttachments={MAX_IMAGE_ATTACHMENTS}
+                              newImageFiles={newImageFiles}
+                              newImagePreviewUrls={newImagePreviewUrls}
+                              onOpenGallery={openGalleryAt}
+                              onNewImageFilesChange={handleNewImageFilesChange}
+                              onClearNewImages={() => setNewImageFiles([])}
+                              onRemoveNewImage={removeNewImageAt}
+                            />
+                          </div>
 
-                  {/* TILE 8: Berkas & Dokumen Site POP (PDF, PBB, Kontrak, PBG) (12 Cols Full Width) - Terletak di bawah Galeri */}
-                  <div className="col-span-1 sm:col-span-12">
-                    <PopBentoDocumentsTile
-                      documents={popDocuments}
-                      token={token || undefined}
-                      canEdit={editable}
-                      onUploadDocument={handleUploadPopDocument}
-                      onDeleteDocument={handleDeletePopDocument}
-                    />
+                          {/* TILE 5: Berkas & Dokumen Site POP (12 Cols Full Width) */}
+                          <div className="col-span-1 sm:col-span-12">
+                            <PopBentoDocumentsTile
+                              documents={popDocuments}
+                              token={token || undefined}
+                              canEdit={editable}
+                              onUploadDocument={handleUploadPopDocument}
+                              onDeleteDocument={handleDeletePopDocument}
+                            />
+                          </div>
+                        </div>
+                      </TabsContent>
+
+                      {/* TAB 2: Rack & Inventaris */}
+                      <TabsContent value="rack" className="mt-0">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+                          {/* TILE 4: KPI Utilisasi Rak & Breakdown Perangkat Terfilter (12 Cols Full Width) */}
+                          <div className="col-span-1 sm:col-span-12">
+                            <PopBentoRackKpiTile
+                              totalRacks={popRacks.length}
+                              totalU={totalPopU}
+                              usedU={usedPopU}
+                              popId={item.id}
+                              deviceTypeCounts={popDeviceTypeCounts}
+                              visibleDeviceTypes={visiblePopDeviceTypes}
+                              token={token || undefined}
+                              onVisibleTypesChange={setVisiblePopDeviceTypes}
+                            />
+                          </div>
+
+                          {/* TILE 5: Interactive Rack Elevation Canvas (Adaptive 8 or 12 Cols) */}
+                          <div className={showUnmountedTray ? "sm:col-span-12 lg:col-span-8" : "col-span-1 sm:col-span-12 lg:col-span-12"}>
+                            <PopRackElevationCanvas
+                              racks={popRacks}
+                              selectedRackId={activePopRackId}
+                              mountedDevices={popMountedDevices}
+                              onSelectRackId={setSelectedPopRackId}
+                              onCreateNewRack={handleCreateNewPopRack}
+                              onEditRack={handleEditPopRack}
+                              onResetRack={handleResetPopRack}
+                              onDeleteRack={handleDeletePopRack}
+                              onMountDevice={handleMountPopDevice}
+                              onUnmountDevice={handleUnmountPopDevice}
+                              onEmptySlotClick={(u) => {
+                                setPopMountTargetU(u);
+                                setPopDeviceToMount(null);
+                                setPopMountModalOpen(true);
+                              }}
+                              showUnmountedTray={showUnmountedTray}
+                              unmountedCount={popUnmountedDevices.length}
+                              onToggleUnmountedTray={toggleShowUnmountedTray}
+                            />
+                          </div>
+
+                          {/* TILE 6: Unmounted Devices Tray (4 Cols Desktop / 12 Mobile, conditionally rendered) */}
+                          {showUnmountedTray ? (
+                            <div className="sm:col-span-12 lg:col-span-4">
+                              <PopUnmountedTray
+                                devices={popUnmountedDevices}
+                                onSelectDeviceToMount={(dev) => {
+                                  setPopDeviceToMount(dev);
+                                  setPopMountTargetU(1);
+                                  setPopMountModalOpen(true);
+                                }}
+                                onClose={toggleShowUnmountedTray}
+                              />
+                            </div>
+                          ) : null}
+                        </div>
+                      </TabsContent>
+                    </Tabs>
                   </div>
                 </div>
 
