@@ -76,8 +76,48 @@ export default function RootLayout({
                 } catch(e) {}
 
                 // Suppress browser extension hydration noise (Bitdefender, Grammarly, etc.)
+                // Root cause: Bitdefender injects bis_skin_checked/bis_register attributes into
+                // existing DOM elements before React hydrates, causing mismatch on the actual element.
+                // Fix: MutationObserver strips these attributes the moment they appear, so React
+                // sees a clean DOM at hydration time.
                 try {
-                  if (typeof window !== 'undefined') {
+                  if (typeof window !== 'undefined' && window.MutationObserver) {
+                    var STRIP_ATTRS = ['bis_skin_checked', 'bis_register'];
+                    var stripAttrs = function(el) {
+                      if (!el || el.nodeType !== 1) return;
+                      for (var i = 0; i < STRIP_ATTRS.length; i++) {
+                        var attr = STRIP_ATTRS[i];
+                        if (el.hasAttribute && el.hasAttribute(attr)) {
+                          el.removeAttribute(attr);
+                        }
+                      }
+                    };
+                    var stripAll = function(root) {
+                      stripAttrs(root);
+                      var nodes = root.querySelectorAll ? root.querySelectorAll('[bis_skin_checked],[bis_register]') : [];
+                      for (var i = 0; i < nodes.length; i++) stripAttrs(nodes[i]);
+                    };
+                    var mdObserver = new MutationObserver(function(mutations) {
+                      for (var i = 0; i < mutations.length; i++) {
+                        var m = mutations[i];
+                        if (m.type === 'attributes') {
+                          stripAttrs(m.target);
+                        } else if (m.type === 'childList') {
+                          for (var j = 0; j < m.addedNodes.length; j++) {
+                            var node = m.addedNodes[j];
+                            if (node.nodeType === 1) stripAll(node);
+                          }
+                        }
+                      }
+                    });
+                    // Observe before body is fully parsed so Bitdefender injection is caught live.
+                    mdObserver.observe(document.documentElement, {
+                      childList: true,
+                      subtree: true,
+                      attributes: true,
+                      attributeFilter: STRIP_ATTRS,
+                    });
+                    // Also suppress any console.error that still slips through (React puts diff in later args).
                     var origError = console.error;
                     console.error = function() {
                       for (var i = 0; i < arguments.length; i++) {
