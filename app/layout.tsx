@@ -80,9 +80,11 @@ export default function RootLayout({
                   if (typeof window !== 'undefined') {
                     var origError = console.error;
                     console.error = function() {
-                      var msg = arguments[0];
-                      if (typeof msg === 'string' && (msg.indexOf('bis_skin_checked') !== -1 || msg.indexOf('bis_register') !== -1)) {
-                        return;
+                      for (var i = 0; i < arguments.length; i++) {
+                        var arg = arguments[i];
+                        if (typeof arg === 'string' && (arg.indexOf('bis_skin_checked') !== -1 || arg.indexOf('bis_register') !== -1)) {
+                          return;
+                        }
                       }
                       origError.apply(console, arguments);
                     };
