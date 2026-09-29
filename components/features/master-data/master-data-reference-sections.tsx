@@ -24,9 +24,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DataCategory } from "@/lib/data-management-config";
+import type { MessageKey } from "@/lib/locales";
+import { useTranslate } from "@/lib/use-locale";
+
+export type MasterDataSectionKey = "topology" | "device" | "vendorTenant" | "location";
 
 export type MasterDataSectionConfig = {
-  title: string;
+  key: MasterDataSectionKey;
+  titleKey: MessageKey;
   icon: LucideIcon;
   slugs: string[];
 };
@@ -44,18 +49,18 @@ type Props = {
   failedCatalogs: FailedCatalog[];
 };
 
-const SECTION_COLORS: Record<string, string> = {
-  "Referensi Topologi": "text-sky-500 dark:text-sky-400",
-  "Referensi Perangkat": "text-emerald-500 dark:text-emerald-400",
-  "Referensi Vendor & Tenant": "text-violet-500 dark:text-violet-400",
-  "Referensi Lokasi": "text-amber-500 dark:text-amber-400",
+const SECTION_COLORS: Record<MasterDataSectionKey, string> = {
+  topology: "text-sky-500 dark:text-sky-400",
+  device: "text-emerald-500 dark:text-emerald-400",
+  vendorTenant: "text-violet-500 dark:text-violet-400",
+  location: "text-amber-500 dark:text-amber-400",
 };
 
-const SECTION_ICON_BG: Record<string, string> = {
-  "Referensi Topologi": "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
-  "Referensi Perangkat": "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-  "Referensi Vendor & Tenant": "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20",
-  "Referensi Lokasi": "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+const SECTION_ICON_BG: Record<MasterDataSectionKey, string> = {
+  topology: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
+  device: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+  vendorTenant: "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20",
+  location: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
 };
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -85,6 +90,7 @@ export function MasterDataReferenceSections({
   summaryBySlug,
   failedCatalogs,
 }: Props) {
+  const { t } = useTranslate();
   const [search, setSearch] = useState("");
 
   const flatItems = useMemo(() => {
@@ -95,7 +101,7 @@ export function MasterDataReferenceSections({
       count: number;
       failed: boolean;
       failedReason: string;
-      sectionTitle: string;
+      sectionKey: MasterDataSectionKey;
     }> = [];
     for (const section of sections) {
       for (const category of categories.filter((c) => section.slugs.includes(c.slug))) {
@@ -108,7 +114,7 @@ export function MasterDataReferenceSections({
           count: failed ? 0 : count,
           failed: Boolean(failed),
           failedReason: failed?.reason || "",
-          sectionTitle: section.title,
+          sectionKey: section.key,
         });
       }
     }
@@ -119,15 +125,17 @@ export function MasterDataReferenceSections({
     if (!search.trim()) return null;
     const q = search.toLowerCase();
     return flatItems.filter(
-      (i) => i.label.toLowerCase().includes(q) || i.sectionTitle.toLowerCase().includes(q),
+      (i) =>
+        i.label.toLowerCase().includes(q) ||
+        t(`masterData.section.${i.sectionKey}`).toLowerCase().includes(q),
     );
-  }, [search, flatItems]);
+  }, [search, flatItems, t]);
 
   const renderCards = (items: typeof flatItems) => (
     <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
       {items.map((item) => {
         const Icon = ICON_MAP[item.label] ?? HardDrive;
-        const iconBg = SECTION_ICON_BG[item.sectionTitle] ?? "bg-muted/30 text-muted-foreground border-border/50";
+        const iconBg = SECTION_ICON_BG[item.sectionKey] ?? "bg-muted/30 text-muted-foreground border-border/50";
         const isEmpty = !item.failed && item.count === 0;
 
         if (item.failed) {
@@ -143,7 +151,7 @@ export function MasterDataReferenceSections({
                 {item.label}
               </span>
               <Badge variant="destructive" className="h-4 font-mono text-[9px] uppercase tracking-[0.12em]">
-                Error
+                {t("masterData.reference.errorBadge")}
               </Badge>
             </div>
           );
@@ -182,8 +190,8 @@ export function MasterDataReferenceSections({
               <p className="font-semibold text-foreground">{item.label}</p>
               <p className="mt-0.5 text-muted-foreground">{item.description}</p>
               <div className="mt-1.5 flex items-center justify-between border-t border-border/40 pt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
-                <span>{item.sectionTitle}</span>
-                <span className="font-semibold text-foreground tabular-nums">{item.count} item</span>
+                <span>{t(`masterData.section.${item.sectionKey}`)}</span>
+                <span className="font-semibold text-foreground tabular-nums">{t("masterData.reference.itemCount", { count: item.count })}</span>
               </div>
             </TooltipContent>
           </Tooltip>
@@ -201,7 +209,7 @@ export function MasterDataReferenceSections({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari kategori referensi master data..."
+            placeholder={t("masterData.reference.searchPlaceholder")}
             className="h-9 rounded-full border-border/60 bg-card pl-9.5 pr-9 text-xs shadow-2xs glass-inset transition-colors duration-200 focus-visible:border-primary/50"
           />
           {search ? (
@@ -223,7 +231,7 @@ export function MasterDataReferenceSections({
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1">
                 <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
-                  Hasil Pencarian ({filtered.length})
+                  {t("masterData.reference.searchResults", { count: filtered.length })}
                 </p>
                 <Button
                   variant="ghost"
@@ -231,7 +239,7 @@ export function MasterDataReferenceSections({
                   onClick={() => setSearch("")}
                   className="h-5 rounded-full px-2 font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground"
                 >
-                  Reset Filter
+                  {t("masterData.reference.resetFilter")}
                 </Button>
               </div>
               {renderCards(filtered)}
@@ -240,7 +248,7 @@ export function MasterDataReferenceSections({
             <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/5 py-12 text-center">
               <Search className="size-8 text-muted-foreground/30" />
               <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                Tidak ada kategori cocok dengan &ldquo;{search}&rdquo;
+                {t("masterData.reference.noMatch", { search })}
               </p>
               <Button
                 variant="outline"
@@ -248,31 +256,31 @@ export function MasterDataReferenceSections({
                 onClick={() => setSearch("")}
                 className="mt-1 rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
               >
-                Hapus Pencarian
+                {t("masterData.reference.clearSearch")}
               </Button>
             </div>
           )
         ) : (
           <div className="space-y-5">
             {sections.map((section) => {
-              const cats = flatItems.filter((i) => i.sectionTitle === section.title);
+              const cats = flatItems.filter((i) => i.sectionKey === section.key);
               if (cats.length === 0) return null;
               const sectionTotal = cats.reduce((acc, c) => acc + c.count, 0);
 
               return (
-                <div key={section.title} className="space-y-2.5">
+                <div key={section.key} className="space-y-2.5">
                   <div className="flex items-center justify-between px-0.5">
                     <div className="flex items-center gap-2">
-                      <section.icon className={`size-3.5 ${SECTION_COLORS[section.title] ?? "text-muted-foreground"}`} />
+                      <section.icon className={`size-3.5 ${SECTION_COLORS[section.key] ?? "text-muted-foreground"}`} />
                       <h3 className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
-                        {section.title}
+                        {t(section.titleKey)}
                       </h3>
                     </div>
                     <Badge
                       variant="outline"
                       className="h-4.5 rounded-full border-border/50 px-2 font-mono text-[9px] font-semibold tabular-nums tracking-[0.12em] text-muted-foreground"
                     >
-                      {sectionTotal} ITEM
+                      {t("masterData.reference.itemCount", { count: sectionTotal })}
                     </Badge>
                   </div>
                   {renderCards(cats)}

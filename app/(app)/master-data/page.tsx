@@ -17,28 +17,33 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { MASTER_DATA_CATEGORIES } from "@/lib/data-management-config";
+import { useTranslate } from "@/lib/use-locale";
 
 type GenericItem = { id: string };
 type SummaryBySlug = Record<string, number>;
 
 const MASTER_SECTIONS: MasterDataSectionConfig[] = [
   {
-    title: "Referensi Topologi",
+    key: "topology",
+    titleKey: "masterData.section.topology",
     icon: Network,
     slugs: ["master-regions", "master-pop-types", "master-route-types", "master-service-types"],
   },
   {
-    title: "Referensi Perangkat",
+    key: "device",
+    titleKey: "masterData.section.device",
     icon: Boxes,
     slugs: ["master-device-types", "master-odp-types", "master-cable-types", "master-closure-types", "master-core-capacities", "master-device-core-capacities", "master-installation-types", "master-models", "master-splitter-profiles"],
   },
   {
-    title: "Referensi Vendor & Tenant",
+    key: "vendorTenant",
+    titleKey: "masterData.section.vendorTenant",
     icon: Building2,
     slugs: ["master-tenants", "master-manufacturers", "master-brands"],
   },
   {
-    title: "Referensi Lokasi",
+    key: "location",
+    titleKey: "masterData.section.location",
     icon: MapPinned,
     slugs: ["master-provinces", "master-cities"],
   },
@@ -46,6 +51,7 @@ const MASTER_SECTIONS: MasterDataSectionConfig[] = [
 
 export default function MasterDataPage() {
   const { token, me } = useSession();
+  const { t } = useTranslate();
   const [summaryBySlug, setSummaryBySlug] = useState<SummaryBySlug>({});
   const [failedCatalogs, setFailedCatalogs] = useState<FailedCatalog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,14 +83,14 @@ export default function MasterDataPage() {
           nextFailed.push({
             slug: category.slug,
             label: category.label,
-            reason: result.reason instanceof Error ? result.reason.message : "Unknown error",
+            reason: result.reason instanceof Error ? result.reason.message : "",
           });
         });
         setSummaryBySlug(nextSummary);
         setFailedCatalogs(nextFailed);
       } catch (err) {
         if (cancelled) return;
-        setError((err as Error).message || "Gagal memuat ringkasan master data.");
+        setError((err as Error).message);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -106,12 +112,12 @@ export default function MasterDataPage() {
       <div className="flex h-full items-center justify-center">
         <Card className="max-w-md rounded-2xl border border-border/60 bg-card p-2 shadow-xs glass-inset">
           <CardHeader>
-            <CardTitle>Akses Terbatas</CardTitle>
-            <CardDescription>Halaman Master Data hanya tersedia untuk role admin.</CardDescription>
+            <CardTitle>{t("masterData.accessDeniedTitle")}</CardTitle>
+            <CardDescription>{t("masterData.accessDeniedDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
-              <Link href="/data-management">Kembali ke Data Management</Link>
+              <Link href="/data-management">{t("masterData.backToDataManagement")}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -125,19 +131,19 @@ export default function MasterDataPage() {
         {/* Header Eyebrow & Title */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">SYSTEM / MASTER REPOSITORIES</p>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">Katalog Master Data</h1>
+            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{t("masterData.eyebrow")}</p>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">{t("masterData.title")}</h1>
             <p className="text-xs text-muted-foreground">
-              Pusat referensi topologi, perangkat, vendor, dan lokasi untuk seluruh inventori jaringan Syntrix.
+              {t("masterData.description")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.12em]">
               <BookMarked className="mr-1 size-3" />
-              Pusat Master Data
+              {t("masterData.hub")}
             </Badge>
             <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em]">
-              Admin Only
+              {t("masterData.adminOnly")}
             </Badge>
             <AddDataMenu canCreatePop={false} canCreateDevice={false} canManageMaster />
           </div>
@@ -150,8 +156,8 @@ export default function MasterDataPage() {
           failedCount={failedCatalogs.length}
         />
 
-        {loading ? <AppLoading label="Memuat ringkasan master data..." /> : null}
-        {!loading && error ? <AppLoading label={error} variant="error" /> : null}
+        {loading ? <AppLoading label={t("masterData.loading")} /> : null}
+        {!loading && error ? <AppLoading label={error || t("masterData.loadFailed")} variant="error" /> : null}
 
         {!loading && !error ? (
           <Tabs defaultValue="references" className="space-y-4">
@@ -160,28 +166,28 @@ export default function MasterDataPage() {
                 value="references"
                 className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
               >
-                Basis Data Referensi
+                {t("masterData.tab.references")}
               </TabsTrigger>
               <TabsTrigger
                 value="qr-label"
                 className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
               >
-                Konfigurasi Label QR
+                {t("masterData.tab.qrLabel")}
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="references" className="space-y-4">
               {failedCatalogs.length ? (
                 <div className="rounded-2xl border border-amber-300/60 bg-amber-50/50 p-4 shadow-xs glass-inset dark:bg-amber-950/10">
-                  <p className="font-mono text-[9px] uppercase tracking-[0.18em] font-semibold text-amber-700 dark:text-amber-400">Peringatan Sinkronisasi</p>
+                  <p className="font-mono text-[9px] uppercase tracking-[0.18em] font-semibold text-amber-700 dark:text-amber-400">{t("masterData.syncWarningTitle")}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Terjadi error saat membaca sebagian resource master data. Biasanya karena migrasi/metadata backend belum sinkron.
+                    {t("masterData.syncWarningBody")}
                   </p>
                   <div className="mt-2 space-y-1.5">
                     {failedCatalogs.map((item) => (
                       <div key={item.slug} className="flex items-center justify-between gap-2 rounded-xl border border-border/40 bg-card px-3 py-2 text-sm">
                         <span className="font-medium">{item.label}</span>
-                        <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em]">{item.reason}</Badge>
+                        <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em]">{item.reason || t("masterData.unknownError")}</Badge>
                       </div>
                     ))}
                   </div>
