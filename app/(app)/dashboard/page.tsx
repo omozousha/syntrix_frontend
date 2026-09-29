@@ -28,6 +28,7 @@ import {
   type RegionsListResponse,
 } from "@/lib/api";
 import { getPopLabel, getRegionLabel } from "@/lib/relation-labels";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type RoleKey = "superadmin" | "adminregion" | "validator";
 
@@ -120,10 +121,11 @@ const EMPTY_DATA: DashboardData = {
 
 export default function DashboardPage() {
   const { token, me } = useSession();
+  const { t } = useTranslate();
   const role = normalizeRole(me.role);
   const [data, setData] = useState<DashboardData>(EMPTY_DATA);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ message?: string; fallback: "refresh" | "load" } | null>(null);
   const [regionFilterId, setRegionFilterId] = useState("");
   const [actionLoadingId, setActionLoadingId] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -134,13 +136,13 @@ export default function DashboardPage() {
 
   const doRefresh = useCallback(async () => {
     setRefreshing(true);
-    setError("");
+    setError(null);
     try {
       const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
       setData(next);
       setLastUpdated(new Date());
     } catch (err) {
-      setError((err as Error).message || "Gagal refresh dashboard.");
+      setError({ message: (err as Error).message, fallback: "refresh" });
     }
     setRefreshing(false);
   }, [token, role, singleRegionScope, scopeRegionIds]);
@@ -153,7 +155,7 @@ export default function DashboardPage() {
         await apiFetch(`/validation-requests/${id}/${endpoint}/approve`, {
           token,
           method: "POST",
-          body: { note: "Fast approve from dashboard" },
+          body: { note: t("dashboard.helper.fastApprove") },
         });
         const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
         setData(next);
@@ -167,7 +169,7 @@ export default function DashboardPage() {
         await apiFetch(`/validation-requests/${id}/${endpoint}/reject`, {
           token,
           method: "POST",
-          body: { note: "Fast reject from dashboard" },
+          body: { note: t("dashboard.helper.fastReject") },
         });
         const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
         setData(next);
@@ -175,14 +177,14 @@ export default function DashboardPage() {
       setActionLoadingId("");
     },
     loadingId: actionLoadingId,
-  }), [role, token, singleRegionScope, actionLoadingId]);
+  }), [role, token, singleRegionScope, actionLoadingId, t]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function run() {
       setLoading(true);
-      setError("");
+      setError(null);
       try {
         const next = await loadDashboardData(token, role, singleRegionScope, scopeRegionIds);
         if (!cancelled) {
@@ -191,7 +193,7 @@ export default function DashboardPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError((err as Error).message || "Gagal memuat dashboard.");
+          setError({ message: (err as Error).message, fallback: "load" });
           setData(EMPTY_DATA);
         }
       } finally {
@@ -208,7 +210,7 @@ export default function DashboardPage() {
   if (loading && !data.summary) {
     return (
       <div className="h-full min-h-0 w-full pr-3">
-        <AppLoading label="Sedang memuat dashboard operasional..." />
+        <AppLoading label={t("dashboard.loading")} />
       </div>
     );
   }
@@ -218,7 +220,7 @@ export default function DashboardPage() {
       <DashboardHeader
         role={role}
         regionCount={scopeRegionIds.length}
-        regions={data.regions.map((r) => ({ id: String(r.id), label: r.region_name || r.region_id || "Region" }))}
+        regions={data.regions.map((r) => ({ id: String(r.id), label: r.region_name || r.region_id || t("dashboard.tab.region") }))}
         regionFilter={regionFilterId}
         onRegionFilterChange={setRegionFilterId}
         onRefresh={doRefresh}
@@ -229,8 +231,10 @@ export default function DashboardPage() {
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Dashboard belum lengkap</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertTitle>{t("dashboard.errorTitle")}</AlertTitle>
+          <AlertDescription>
+            {error.message || t(error.fallback === "refresh" ? "dashboard.refreshFailed" : "dashboard.loadFailed")}
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -250,6 +254,7 @@ function DashboardTabs({
   loading: boolean;
   singleRegionScope: string;
 }) {
+  const { t } = useTranslate();
   const showRegionTab = role === "superadmin";
   const showDeviceTab = role !== "validator";
   const tabColumns = role === "validator" ? "grid-cols-3" : showRegionTab ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4";
@@ -257,24 +262,24 @@ function DashboardTabs({
     <Tabs defaultValue="overview" className="space-y-4">
       <TabsList className={`grid h-auto w-full gap-1 ${tabColumns}`}>
         <TabsTrigger value="overview" className="h-auto min-h-9 whitespace-normal px-2 py-2 text-center text-xs leading-tight sm:text-sm">
-          Overview
+          {t("dashboard.tab.overview")}
         </TabsTrigger>
         {showRegionTab ? (
           <TabsTrigger value="region" className="h-auto min-h-9 whitespace-normal px-2 py-2 text-center text-xs leading-tight sm:text-sm">
-            Region
+            {t("dashboard.tab.region")}
           </TabsTrigger>
         ) : null}
         <TabsTrigger value="pop" className="h-auto min-h-9 whitespace-normal px-2 py-2 text-center text-xs leading-tight sm:text-sm">
-          POP
+          {t("dashboard.tab.pop")}
         </TabsTrigger>
         {showDeviceTab ? (
           <TabsTrigger value="device" className="h-auto min-h-9 whitespace-normal px-2 py-2 text-center text-xs leading-tight sm:text-sm">
-            Device
+            {t("dashboard.tab.device")}
           </TabsTrigger>
         ) : null}
         <TabsTrigger value="workflow" className="h-auto min-h-9 whitespace-normal px-2 py-2 text-center text-xs leading-tight sm:text-sm">
-          <span className="sm:hidden">KPI</span>
-          <span className="hidden sm:inline">KPI & Workflow</span>
+          <span className="sm:hidden">{t("dashboard.tab.kpiMobile")}</span>
+          <span className="hidden sm:inline">{t("dashboard.tab.workflow")}</span>
         </TabsTrigger>
       </TabsList>
 
@@ -324,22 +329,23 @@ function DashboardHeader({
   loading?: boolean;
   lastUpdated?: Date | null;
 }) {
-  const copy = getRoleCopy(role);
-  const regionOptions = regions ? [{ value: "__all__", label: "Semua region" }, ...regions.map((r) => ({ value: r.id, label: r.label }))] : [];
+  const { t } = useTranslate();
+  const copy = getRoleCopy(role, t);
+  const regionOptions = regions ? [{ value: "__all__", label: t("dashboard.regionFilterPlaceholder") }, ...regions.map((r) => ({ value: r.id, label: r.label }))] : [];
   return (
     <div className="rounded-[2rem] border border-border/40 bg-gradient-to-br from-muted/10 to-muted/5 p-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:bg-gradient-to-br dark:from-white/[0.02] dark:to-transparent">
       <div className="flex flex-col gap-3 rounded-[calc(2rem-0.5rem)] border border-border/60 bg-background/80 p-3.5 sm:p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-xl dark:bg-background/40 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.18em]">{copy.badge}</Badge>
-            <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.18em]">{regionCount ? `${regionCount} region scope` : "Global scope"}</Badge>
+            <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.18em]">{regionCount ? t("dashboard.regionScope", { count: regionCount }) : t("dashboard.globalScope")}</Badge>
           </div>
           <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">{copy.title}</h2>
           <p className="max-w-3xl text-xs sm:text-sm text-muted-foreground">{copy.description}</p>
         </div>
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
           <span className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:inline">
-            {lastUpdated ? `${formatTimeAgo(lastUpdated)}` : ""}
+            {lastUpdated ? formatTimeAgo(lastUpdated, t) : ""}
           </span>
           <Button
             type="button"
@@ -348,14 +354,14 @@ function DashboardHeader({
             disabled={refreshing}
             onClick={onRefresh}
             className="h-9 px-2 text-xs"
-            aria-label="Refresh dashboard"
+            aria-label={t("dashboard.refresh")}
           >
-            {refreshing ? "..." : "⟳"}
+            {refreshing ? t("dashboard.refreshing") : "⟳"}
           </Button>
           {regions && onRegionFilterChange ? (
             <Select value={regionFilter || "__all__"} onValueChange={(v) => onRegionFilterChange(v === "__all__" ? "" : v)} disabled={refreshing || loading}>
               <SelectTrigger className="h-9 w-full sm:w-[180px] text-xs sm:text-sm">
-                <SelectValue placeholder="Semua region" />
+                <SelectValue placeholder={t("dashboard.regionFilterPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {regionOptions.map((opt) => (
@@ -374,53 +380,54 @@ function DashboardHeader({
 }
 
 function AssetOverviewDashboard({ data, loading }: { data: DashboardData; loading: boolean }) {
+  const { t } = useTranslate();
   const s = data.summary;
   const odpStats = getOdpStatsFromSummary(s);
   const portStats = getPortStatsFromSummary(s);
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <DashboardMetricCard label="Regions" value={s?.regions?.total ?? data.regions.length} caption="Region aktif sesuai scope user." badge="Scope" icon={MapPinned} loading={loading} />
-        <DashboardMetricCard label="POPs" value={s?.pops?.total ?? 0} caption="POP yang menjadi titik agregasi jaringan." badge="POP" tone="blue" icon={Database} loading={loading} />
-        <DashboardMetricCard label="Devices" value={s?.devices?.total ?? 0} caption="Total perangkat dalam scope dashboard." badge="Inventory" tone="green" icon={RadioTower} loading={loading} />
-        <DashboardMetricCard label="ODP" value={odpStats.total} caption={`${odpStats.validated} validated, ${odpStats.unvalidated} belum valid.`} badge="Field" tone="amber" icon={ClipboardCheck} loading={loading} />
-        <DashboardMetricCard label="Ports" value={portStats.total} caption={`${portStats.problem} port perlu perhatian.`} badge="Capacity" tone={portStats.problem ? "amber" : "green"} icon={Activity} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.regions")} value={s?.regions?.total ?? data.regions.length} caption={t("dashboard.caption.regions")} badge={t("dashboard.badge.scope")} icon={MapPinned} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.pops")} value={s?.pops?.total ?? 0} caption={t("dashboard.caption.pops")} badge="POP" tone="blue" icon={Database} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.devices")} value={s?.devices?.total ?? 0} caption={t("dashboard.caption.devices")} badge={t("dashboard.badge.inventory")} tone="green" icon={RadioTower} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.odp")} value={odpStats.total} caption={t("dashboard.caption.odp", { validated: odpStats.validated, unvalidated: odpStats.unvalidated })} badge={t("dashboard.badge.field")} tone="amber" icon={ClipboardCheck} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.ports")} value={portStats.total} caption={t("dashboard.caption.ports", { problem: portStats.problem })} badge={t("dashboard.badge.capacity")} tone={portStats.problem ? "amber" : "green"} icon={Activity} loading={loading} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <DashboardDonutChartCard
-          title="Device Type Composition"
-          description="Komposisi perangkat aktif pada scope dashboard."
-          data={toChartFromSummary(s?.devices?.byType)}
-          emptyLabel="Belum ada data device untuk chart komposisi."
+          title={t("dashboard.chart.deviceType.title")}
+          description={t("dashboard.chart.deviceType.description")}
+          data={toChartFromSummary(s?.devices?.byType, t)}
+          emptyLabel={t("dashboard.chart.deviceType.empty")}
           loading={loading}
         />
         <DashboardBarChartCard
-          title="POP Distribution"
-          description="Sebaran device per POP teratas."
-          data={toChartFromSummary(s?.pops?.topByDevice)}
-          emptyLabel="Belum ada relasi device ke POP untuk ditampilkan."
+          title={t("dashboard.chart.popDistribution.title")}
+          description={t("dashboard.chart.popDistribution.description")}
+          data={toChartFromSummary(s?.pops?.topByDevice, t)}
+          emptyLabel={t("dashboard.chart.popDistribution.empty")}
           loading={loading}
         />
         <DashboardDonutChartCard
-          title="ODP Validation"
-          description="Distribusi status validasi ODP pada scope dashboard."
-          data={odpValidationFromSummary(s, data)}
-          emptyLabel="Belum ada data ODP untuk validasi."
+          title={t("dashboard.chart.odpValidation.title")}
+          description={t("dashboard.chart.odpValidation.description")}
+          data={odpValidationFromSummary(s, data, t)}
+          emptyLabel={t("dashboard.chart.odpValidation.empty")}
           loading={loading}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DashboardTrendLine
-          title="Audit Activity Trend"
-          description="Tren aktivitas audit mingguan (7 hari terakhir)."
+          title={t("dashboard.chart.auditActivityTrend.title")}
+          description={t("dashboard.chart.auditActivityTrend.description")}
           data={weeklyAuditTrend(data.auditLogs)}
           loading={loading}
         />
         <DashboardMiniMap
-          title="POP Location Map"
-          description="Lokasi POP pada scope dashboard."
+          title={t("dashboard.chart.popLocationMap.title")}
+          description={t("dashboard.chart.popLocationMap.description")}
           markers={buildMapMarkers(data.pops, data.odpDevices)}
           loading={loading}
         />
@@ -438,16 +445,17 @@ function ValidatorOverviewDashboard({
   loading: boolean;
   singleRegionScope: string;
 }) {
+  const { t } = useTranslate();
   const odpStats = getOdpStatsFromSummary(data.summary);
   const regionSuffix = singleRegionScope ? `&region_id=${encodeURIComponent(singleRegionScope)}` : "";
-  const rejected = requestItems(data.rejectedAdminregion, "rejected_adminregion");
+  const rejected = requestItems(data.rejectedAdminregion, "rejected_adminregion", t);
   const pendingOdp = data.odpDevices
     .filter((item) => !isValidated(item))
     .slice(0, 6)
     .map((item) => ({
       id: `pending:${item.id}`,
       title: item.device_name || item.device_id || "ODP",
-      description: `${item.device_id || "Inventory belum tersedia"} belum memiliki validasi final.`,
+      description: t("dashboard.helper.pendingFinal", { id: item.device_id || t("dashboard.helper.inventoryNotReady") }),
       href: `/data-management/list/odp/${item.id}`,
       badge: item.validation_status || "unvalidated",
       tone: "amber" as const,
@@ -456,61 +464,61 @@ function ValidatorOverviewDashboard({
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <DashboardMetricCard label="Region Scope" value={data.summary?.regions?.total ?? (data.regions.length || 1)} caption={formatRegionScope(data.regions)} badge="Scope" tone="blue" icon={MapPinned} loading={loading} />
-        <DashboardMetricCard label="POP Coverage" value={data.summary?.pops?.total ?? data.pops.length} caption="POP yang menjadi konteks area validasi." badge="POP" icon={Database} loading={loading} />
-        <DashboardMetricCard label="ODP Queue" value={odpStats.unvalidated} caption="ODP yang belum valid final." badge="Validate" tone="amber" icon={RadioTower} loading={loading} />
-        <DashboardMetricCard label="Rejected" value={data.rejectedAdminregion.length} caption="Validasi yang perlu diperbaiki dari catatan reviewer." badge="Fix" tone={data.rejectedAdminregion.length ? "red" : "green"} icon={AlertTriangle} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.regionScope")} value={data.summary?.regions?.total ?? (data.regions.length || 1)} caption={formatRegionScope(data.regions, t)} badge={t("dashboard.badge.scope")} tone="blue" icon={MapPinned} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.popCoverage")} value={data.summary?.pops?.total ?? data.pops.length} caption={t("dashboard.caption.popCoverage")} badge="POP" icon={Database} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.odpQueue")} value={odpStats.unvalidated} caption={t("dashboard.caption.odpQueue")} badge={t("dashboard.badge.validate")} tone="amber" icon={RadioTower} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.rejected")} value={data.rejectedAdminregion.length} caption={t("dashboard.caption.rejected")} badge={t("dashboard.badge.fix")} tone={data.rejectedAdminregion.length ? "red" : "green"} icon={AlertTriangle} loading={loading} />
       </div>
 
       <Card className="border-primary/20 bg-primary/5">
         <CardHeader className="p-3 pb-2">
-          <CardTitle className="text-base">Field Focus</CardTitle>
-          <CardDescription>Mulai dari POP dan ODP dalam scope region, lalu buka form validasi dari queue.</CardDescription>
+          <CardTitle className="text-base">{t("dashboard.fieldFocus.title")}</CardTitle>
+          <CardDescription>{t("dashboard.fieldFocus.description")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2 p-3 pt-0">
           <Button asChild>
-            <Link href={`/data-management/list/odp${singleRegionScope ? `?region_id=${encodeURIComponent(singleRegionScope)}` : ""}`}>Open ODP Queue</Link>
+            <Link href={`/data-management/list/odp${singleRegionScope ? `?region_id=${encodeURIComponent(singleRegionScope)}` : ""}`}>{t("dashboard.fieldFocus.openOdpQueue")}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href={`/data-management/list/odp?validation_status=unvalidated${regionSuffix}`}>ODP Belum Valid</Link>
+            <Link href={`/data-management/list/odp?validation_status=unvalidated${regionSuffix}`}>{t("dashboard.fieldFocus.odpBelumValid")}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/requests">Requests</Link>
+            <Link href="/requests">{t("dashboard.fieldFocus.requests")}</Link>
           </Button>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DashboardDonutChartCard
-          title="ODP Validation"
-          description="Status validasi ODP pada scope validator."
-          data={odpValidationFromSummary(data.summary, data)}
-          emptyLabel="Belum ada ODP dalam scope validator."
+          title={t("dashboard.chart.odpValidation.title")}
+          description={t("dashboard.chart.odpValidationWorkflow.description")}
+          data={odpValidationFromSummary(data.summary, data, t)}
+          emptyLabel={t("dashboard.chart.odpValidationWorkflow.empty")}
           loading={loading}
         />
         <DashboardBarChartCard
-          title="POP by ODP"
-          description="POP dengan ODP terbanyak dalam area kerja validator."
-          data={toChartFromSummary(data.summary?.pops?.topByOdp)}
-          emptyLabel="Belum ada ODP yang terhubung ke POP."
+          title={t("dashboard.chart.topPopByOdp.title")}
+          description={t("dashboard.chart.topPopByOdp.description")}
+          data={toChartFromSummary(data.summary?.pops?.topByOdp, t)}
+          emptyLabel={t("dashboard.chart.topPopByOdp.empty")}
           loading={loading}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DashboardWorkQueue
-          title="Prioritas Validasi"
-          description="Rejected dan ODP belum valid yang paling cepat ditindaklanjuti."
+          title={t("dashboard.queue.validationPriority.title")}
+          description={t("dashboard.queue.validationPriority.description")}
           items={[...rejected, ...pendingOdp]}
-          emptyLabel="Tidak ada prioritas validasi aktif dari data yang tersedia."
+          emptyLabel={t("dashboard.queue.validationPriority.empty")}
           icon={ClipboardCheck}
           loading={loading}
         />
         <DashboardWorkQueue
-          title="POP Coverage Attention"
-          description="POP tanpa relasi device pada scope data dashboard."
-          items={popWithoutDeviceFromSummary(data.summary)}
-          emptyLabel="Semua POP dalam scope memiliki relasi device."
+          title={t("dashboard.queue.popCoverageAttention.title")}
+          description={t("dashboard.queue.popCoverageAttention.description")}
+          items={popWithoutDeviceFromSummary(data.summary, t)}
+          emptyLabel={t("dashboard.queue.popCoverageAttention.empty")}
           icon={Database}
           loading={loading}
         />
@@ -520,28 +528,29 @@ function ValidatorOverviewDashboard({
 }
 
 function RegionDashboardTab({ data, loading }: { data: DashboardData; loading: boolean }) {
+  const { t } = useTranslate();
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DashboardBarChartCard
-        title="Device Per Region"
-        description="Distribusi perangkat berdasarkan region."
-        data={toChartFromSummary(data.summary?.devices?.byRegion)}
-        emptyLabel="Belum ada data region/device untuk ditampilkan."
+        title={t("dashboard.chart.devicePerRegion.title")}
+        description={t("dashboard.chart.devicePerRegion.description")}
+        data={toChartFromSummary(data.summary?.devices?.byRegion, t)}
+        emptyLabel={t("dashboard.chart.devicePerRegion.empty")}
         loading={loading}
       />
       <DashboardBarChartCard
-        title="POP Per Region"
-        description="Distribusi POP berdasarkan region."
-        data={toChartFromSummary(data.summary?.pops?.byRegion)}
-        emptyLabel="Belum ada data POP per region."
+        title={t("dashboard.chart.popPerRegion.title")}
+        description={t("dashboard.chart.popPerRegion.description")}
+        data={toChartFromSummary(data.summary?.pops?.byRegion, t)}
+        emptyLabel={t("dashboard.chart.popPerRegion.empty")}
         loading={loading}
       />
       <RegionHealthCard data={data} loading={loading} />
       <DashboardBarChartCard
-        title="ODP Per Region"
-        description="Sebaran ODP untuk membaca coverage field node."
-        data={toChartFromSummary(data.summary?.odp?.byRegion)}
-        emptyLabel="Belum ada data ODP per region."
+        title={t("dashboard.chart.odpPerRegion.title")}
+        description={t("dashboard.chart.odpPerRegion.description")}
+        data={toChartFromSummary(data.summary?.odp?.byRegion, t)}
+        emptyLabel={t("dashboard.chart.odpPerRegion.empty")}
         loading={loading}
       />
     </div>
@@ -549,34 +558,35 @@ function RegionDashboardTab({ data, loading }: { data: DashboardData; loading: b
 }
 
 function PopDashboardTab({ data, loading }: { data: DashboardData; loading: boolean }) {
+  const { t } = useTranslate();
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <DashboardDonutChartCard
-        title="POP Status"
-        description="Komposisi status POP pada scope dashboard."
-        data={toChartFromSummary(data.summary?.pops?.byStatus)}
-        emptyLabel="Belum ada status POP untuk ditampilkan."
+        title={t("dashboard.chart.popStatus.title")}
+        description={t("dashboard.chart.popStatus.description")}
+        data={toChartFromSummary(data.summary?.pops?.byStatus, t)}
+        emptyLabel={t("dashboard.chart.popStatus.empty")}
         loading={loading}
       />
       <DashboardBarChartCard
-        title="Top POP by Device"
-        description="POP dengan jumlah device terbanyak."
-        data={toChartFromSummary(data.summary?.pops?.topByDevice)}
-        emptyLabel="Belum ada device yang terhubung ke POP."
+        title={t("dashboard.chart.topPopByDevice.title")}
+        description={t("dashboard.chart.topPopByDevice.description")}
+        data={toChartFromSummary(data.summary?.pops?.topByDevice, t)}
+        emptyLabel={t("dashboard.chart.topPopByDevice.empty")}
         loading={loading}
       />
       <DashboardBarChartCard
-        title="Top POP by ODP"
-        description="POP dengan jumlah ODP terbanyak."
-        data={toChartFromSummary(data.summary?.pops?.topByOdp)}
-        emptyLabel="Belum ada ODP yang terhubung ke POP."
+        title={t("dashboard.chart.topPopByOdp.title")}
+        description={t("dashboard.chart.topPopByOdp.description")}
+        data={toChartFromSummary(data.summary?.pops?.topByOdp, t)}
+        emptyLabel={t("dashboard.chart.topPopByOdp.empty")}
         loading={loading}
       />
       <DashboardWorkQueue
-        title="POP Coverage Attention"
-        description="POP yang belum memiliki device pada data scope saat ini."
-        items={popWithoutDeviceFromSummary(data.summary)}
-        emptyLabel="Semua POP dalam scope memiliki relasi device."
+        title={t("dashboard.queue.popCoverageAttention.title")}
+        description={t("dashboard.queue.popCoverageAttention.description")}
+        items={popWithoutDeviceFromSummary(data.summary, t)}
+        emptyLabel={t("dashboard.queue.popCoverageAttention.empty")}
         icon={Database}
         loading={loading}
       />
@@ -585,34 +595,35 @@ function PopDashboardTab({ data, loading }: { data: DashboardData; loading: bool
 }
 
 function DeviceDashboardTab({ data, loading }: { data: DashboardData; loading: boolean }) {
+  const { t } = useTranslate();
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DashboardDonutChartCard
-        title="Device Type"
-        description="Komposisi jenis perangkat inventory."
-        data={toChartFromSummary(data.summary?.devices?.byType)}
-        emptyLabel="Belum ada data device."
+        title={t("dashboard.chart.deviceTypeComposition.title")}
+        description={t("dashboard.chart.deviceTypeComposition.description")}
+        data={toChartFromSummary(data.summary?.devices?.byType, t)}
+        emptyLabel={t("dashboard.chart.deviceTypeComposition.empty")}
         loading={loading}
       />
       <DashboardBarChartCard
-        title="Device Status"
-        description="Status perangkat yang tercatat pada inventory."
-        data={toChartFromSummary(data.summary?.devices?.byStatus)}
-        emptyLabel="Belum ada status device."
+        title={t("dashboard.chart.deviceStatus.title")}
+        description={t("dashboard.chart.deviceStatus.description")}
+        data={toChartFromSummary(data.summary?.devices?.byStatus, t)}
+        emptyLabel={t("dashboard.chart.deviceStatus.empty")}
         loading={loading}
       />
       <DashboardDonutChartCard
-        title="ODP Validation"
-        description="Validasi ODP berdasarkan status workflow terbaru."
-        data={odpValidationFromSummary(data.summary, data)}
-        emptyLabel="Belum ada ODP dalam scope."
+        title={t("dashboard.chart.odpValidationWorkflow.title")}
+        description={t("dashboard.chart.odpValidationWorkflow.description")}
+        data={odpValidationFromSummary(data.summary, data, t)}
+        emptyLabel={t("dashboard.chart.odpValidationWorkflow.empty")}
         loading={loading}
       />
       <DashboardBarChartCard
-        title="Port Utilization"
-        description="Distribusi status port pada scope dashboard."
-        data={toChartFromSummary(data.summary?.ports?.byStatus)}
-        emptyLabel="Belum ada data port."
+        title={t("dashboard.chart.portUtilization.title")}
+        description={t("dashboard.chart.portUtilization.description")}
+        data={toChartFromSummary(data.summary?.ports?.byStatus, t)}
+        emptyLabel={t("dashboard.chart.portUtilization.empty")}
         loading={loading}
       />
     </div>
@@ -620,36 +631,37 @@ function DeviceDashboardTab({ data, loading }: { data: DashboardData; loading: b
 }
 
 function SuperadminDashboard({ data, loading }: { data: DashboardData; loading: boolean }) {
+  const { t } = useTranslate();
   const odpStats = getOdpStatsFromSummary(data.summary);
   const portStats = getPortStatsFromSummary(data.summary);
-  const riskItems = buildRiskItems(data);
+  const riskItems = buildRiskItems(data, t);
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <DashboardMetricCard label="Final Approval" value={data.superadminRequests.length} caption="Request menunggu keputusan superadmin." badge="Queue" tone="blue" icon={ShieldCheck} loading={loading} />
-        <DashboardMetricCard label="Rejected" value={data.rejectedAdminregion.length + data.rejectedSuperadmin.length} caption="Request yang perlu tindak lanjut role terkait." badge="Risk" tone="red" icon={AlertTriangle} loading={loading} />
-        <DashboardMetricCard label="ODP Validated" value={odpStats.validated} caption={`${odpStats.unvalidated} ODP belum valid final.`} badge="ODP" tone="green" icon={CheckCircle2} loading={loading} />
-        <DashboardMetricCard label="Port Issue" value={portStats.problem} caption="Port down, maintenance, atau assignment tidak konsisten." badge="Quality" tone={portStats.problem ? "amber" : "green"} icon={RadioTower} loading={loading} />
-        <DashboardMetricCard label="Audit Events" value={data.auditLogs.length} caption="Aktivitas terbaru yang tersedia untuk governance." badge="Recent" icon={Activity} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.finalApproval")} value={data.superadminRequests.length} caption={t("dashboard.caption.finalApproval")} badge={t("dashboard.badge.queue")} tone="blue" icon={ShieldCheck} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.rejected")} value={data.rejectedAdminregion.length + data.rejectedSuperadmin.length} caption={t("dashboard.caption.rejectedRisk")} badge={t("dashboard.badge.risk")} tone="red" icon={AlertTriangle} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.odpValidated")} value={odpStats.validated} caption={t("dashboard.caption.odpValidatedCount", { unvalidated: odpStats.unvalidated })} badge="ODP" tone="green" icon={CheckCircle2} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.portIssue")} value={portStats.problem} caption={t("dashboard.caption.portIssueCount")} badge={t("dashboard.badge.quality")} tone={portStats.problem ? "amber" : "green"} icon={RadioTower} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.auditEvents")} value={data.auditLogs.length} caption={t("dashboard.caption.auditEvents")} badge={t("dashboard.badge.recent")} icon={Activity} loading={loading} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DashboardWorkQueue
-          title="Approval Command Queue"
-          description="Prioritas request yang membutuhkan keputusan final atau tindak lanjut."
+          title={t("dashboard.queue.approvalCommand.title")}
+          description={t("dashboard.queue.approvalCommand.description")}
           items={[
-            ...requestItems(data.superadminRequests, "pending_superadmin"),
-            ...requestItems(data.rejectedSuperadmin, "rejected_superadmin"),
+            ...requestItems(data.superadminRequests, "pending_superadmin", t),
+            ...requestItems(data.rejectedSuperadmin, "rejected_superadmin", t),
           ]}
-          emptyLabel="Tidak ada request final yang perlu diproses."
+          emptyLabel={t("dashboard.queue.approvalCommand.empty")}
           icon={ClipboardCheck}
           loading={loading}
         />
         <DashboardWorkQueue
-          title="Operational Risk"
-          description="Issue ODP yang paling baik dicek sebelum menjadi backlog."
+          title={t("dashboard.queue.operationalRisk.title")}
+          description={t("dashboard.queue.operationalRisk.description")}
           items={riskItems}
-          emptyLabel="Tidak ada risiko operasional utama dari data yang tersedia."
+          emptyLabel={t("dashboard.queue.operationalRisk.empty")}
           icon={AlertTriangle}
           loading={loading}
         />
@@ -658,10 +670,10 @@ function SuperadminDashboard({ data, loading }: { data: DashboardData; loading: 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <RegionHealthCard data={data} loading={loading} />
         <DashboardActivityFeed
-          title="Recent Governance Activity"
-          description="Aktivitas audit terbaru untuk approval dan perubahan asset."
-          items={auditItems(data.auditLogs)}
-          emptyLabel="Belum ada aktivitas audit terbaru."
+          title={t("dashboard.activity.recentGovernance.title")}
+          description={t("dashboard.activity.recentGovernance.description")}
+          items={auditItems(data.auditLogs, t)}
+          emptyLabel={t("dashboard.activity.recentGovernance.empty")}
           loading={loading}
         />
       </div>
@@ -670,40 +682,41 @@ function SuperadminDashboard({ data, loading }: { data: DashboardData; loading: 
 }
 
 function AdminregionDashboard({ data, loading, singleRegionScope }: { data: DashboardData; loading: boolean; singleRegionScope: string }) {
+  const { t } = useTranslate();
   const odpStats = getOdpStatsFromSummary(data.summary);
   const portStats = getPortStatsFromSummary(data.summary);
   const regionSuffix = singleRegionScope ? `&region_id=${encodeURIComponent(singleRegionScope)}` : "";
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <DashboardMetricCard label="Need Review" value={data.adminregionRequests.length} caption="Submission validator menunggu review region." badge="Today" tone="blue" icon={ClipboardCheck} loading={loading} />
-        <DashboardMetricCard label="Rejected Superadmin" value={data.rejectedSuperadmin.length} caption="Perlu review ulang sebelum resubmit final." badge="Follow up" tone="red" icon={AlertTriangle} loading={loading} />
-        <DashboardMetricCard label="Validated ODP" value={odpStats.validated} caption={`${odpStats.unvalidated} ODP masih perlu validasi.`} badge="Progress" tone="green" icon={CheckCircle2} loading={loading} />
-        <DashboardMetricCard label="Evidence Issue" value={data.evidenceMissing.length} caption="Request aktif dengan evidence kurang." badge="Quality" tone={data.evidenceMissing.length ? "amber" : "green"} icon={Database} loading={loading} />
-        <DashboardMetricCard label="Port Issue" value={portStats.problem} caption="Port down/maintenance atau mismatch assignment." badge="Ops" tone={portStats.problem ? "amber" : "green"} icon={RadioTower} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.needReview")} value={data.adminregionRequests.length} caption={t("dashboard.caption.needReview")} badge={t("dashboard.badge.today")} tone="blue" icon={ClipboardCheck} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.rejected")} value={data.rejectedSuperadmin.length} caption={t("dashboard.caption.rejectedSuperadminCount")} badge={t("dashboard.badge.followUp")} tone="red" icon={AlertTriangle} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.validatedOdp")} value={odpStats.validated} caption={t("dashboard.caption.validatedOdpCount", { unvalidated: odpStats.unvalidated })} badge={t("dashboard.badge.progress")} tone="green" icon={CheckCircle2} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.evidenceIssue")} value={data.evidenceMissing.length} caption={t("dashboard.caption.evidenceIssueCount")} badge={t("dashboard.badge.quality")} tone={data.evidenceMissing.length ? "amber" : "green"} icon={Database} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.portIssue")} value={portStats.problem} caption={t("dashboard.caption.portIssueOps")} badge={t("dashboard.badge.ops")} tone={portStats.problem ? "amber" : "green"} icon={RadioTower} loading={loading} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DashboardWorkQueue
-          title="My Region Review Queue"
-          description="Request yang sedang menunggu keputusan admin region."
+          title={t("dashboard.queue.myRegionReview.title")}
+          description={t("dashboard.queue.myRegionReview.description")}
           items={[
-            ...requestItems(data.adminregionRequests, "pending_adminregion"),
-            ...requestItems(data.rejectedSuperadmin, "rejected_superadmin"),
+            ...requestItems(data.adminregionRequests, "pending_adminregion", t),
+            ...requestItems(data.rejectedSuperadmin, "rejected_superadmin", t),
           ]}
-          emptyLabel="Tidak ada request regional yang perlu diproses."
+          emptyLabel={t("dashboard.queue.myRegionReview.empty")}
           icon={ClipboardCheck}
           loading={loading}
         />
         <DashboardWorkQueue
-          title="Field Quality Queue"
-          description="Issue lapangan yang perlu ditindaklanjuti oleh tim regional."
+          title={t("dashboard.queue.fieldQuality.title")}
+          description={t("dashboard.queue.fieldQuality.description")}
           items={[
-            qualityItem("ODP belum tervalidasi", odpStats.unvalidated, `/data-management/list/odp?validation_status=unvalidated${regionSuffix}`, "medium"),
-            qualityItem("Evidence kurang", data.evidenceMissing.length, "/requests", "high"),
-            qualityItem("Port down/maintenance", portStats.downMaintenance, `/data-management/list/odp${regionSuffix}`, "medium"),
+            qualityItem(t("dashboard.quality.unvalidated"), odpStats.unvalidated, `/data-management/list/odp?validation_status=unvalidated${regionSuffix}`, "medium", t),
+            qualityItem(t("dashboard.quality.evidenceMissing"), data.evidenceMissing.length, "/requests", "high", t),
+            qualityItem(t("dashboard.quality.portIssue"), portStats.downMaintenance, `/data-management/list/odp${regionSuffix}`, "medium", t),
           ].filter(Boolean) as DashboardQueueItem[]}
-          emptyLabel="Tidak ada issue field utama dari data yang tersedia."
+          emptyLabel={t("dashboard.queue.fieldQuality.empty")}
           icon={AlertTriangle}
           loading={loading}
         />
@@ -712,10 +725,10 @@ function AdminregionDashboard({ data, loading, singleRegionScope }: { data: Dash
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ValidationProgressCard odpStats={odpStats} loading={loading} />
         <DashboardActivityFeed
-          title="Validator Activity"
-          description="Submission dan resubmission terbaru yang perlu dipantau."
-          items={requestActivityItems([...data.adminregionRequests, ...data.rejectedAdminregion])}
-          emptyLabel="Belum ada aktivitas validator yang aktif."
+          title={t("dashboard.activity.validatorActivity.title")}
+          description={t("dashboard.activity.validatorActivity.description")}
+          items={requestActivityItems([...data.adminregionRequests, ...data.rejectedAdminregion], t)}
+          emptyLabel={t("dashboard.activity.validatorActivity.empty")}
           loading={loading}
         />
       </div>
@@ -724,16 +737,17 @@ function AdminregionDashboard({ data, loading, singleRegionScope }: { data: Dash
 }
 
 function ValidatorDashboard({ data, loading, singleRegionScope }: { data: DashboardData; loading: boolean; singleRegionScope: string }) {
+  const { t } = useTranslate();
   const odpStats = getOdpStatsFromSummary(data.summary);
   const regionSuffix = singleRegionScope ? `&region_id=${encodeURIComponent(singleRegionScope)}` : "";
-  const rejected = requestItems(data.rejectedAdminregion, "rejected_adminregion");
+  const rejected = requestItems(data.rejectedAdminregion, "rejected_adminregion", t);
   const openOdpItems = data.odpDevices
     .filter((item) => !isValidated(item))
     .slice(0, 6)
     .map((item) => ({
       id: item.id,
       title: item.device_name || item.device_id || "ODP",
-      description: `${item.device_id || "Inventory belum tersedia"} belum memiliki validasi final.`,
+      description: t("dashboard.helper.pendingFinal", { id: item.device_id || t("dashboard.helper.inventoryNotReady") }),
       href: `/data-management/list/odp/${item.id}`,
       badge: item.validation_status || "unvalidated",
       tone: "amber" as const,
@@ -742,44 +756,44 @@ function ValidatorDashboard({ data, loading, singleRegionScope }: { data: Dashbo
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <DashboardMetricCard label="Tugas Validasi" value={odpStats.unvalidated} caption="ODP dalam scope region yang belum valid final." badge="Queue" tone="blue" icon={RadioTower} loading={loading} />
-        <DashboardMetricCard label="Rejected" value={data.rejectedAdminregion.length} caption="Perlu perbaikan berdasarkan catatan admin region." badge="Fix" tone="red" icon={AlertTriangle} loading={loading} />
-        <DashboardMetricCard label="Submitted" value={data.adminregionRequests.length} caption="Menunggu review admin region." badge="Review" tone="amber" icon={Timer} loading={loading} />
-        <DashboardMetricCard label="Validated" value={odpStats.validated} caption="ODP sudah lulus approval final." badge="Done" tone="green" icon={CheckCircle2} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.tugasValidasi")} value={odpStats.unvalidated} caption={t("dashboard.caption.tugasValidasi")} badge={t("dashboard.badge.queue")} tone="blue" icon={RadioTower} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.rejected")} value={data.rejectedAdminregion.length} caption={t("dashboard.caption.rejectedFix")} badge={t("dashboard.badge.fix")} tone="red" icon={AlertTriangle} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.submitted")} value={data.adminregionRequests.length} caption={t("dashboard.caption.submitted")} badge={t("dashboard.badge.review")} tone="amber" icon={Timer} loading={loading} />
+        <DashboardMetricCard label={t("dashboard.metric.validatedDone")} value={odpStats.validated} caption={t("dashboard.caption.validatedDone")} badge={t("dashboard.badge.done")} tone="green" icon={CheckCircle2} loading={loading} />
       </div>
 
       <Card className="border-primary/20 bg-primary/5">
         <CardHeader className="p-3 pb-2">
-          <CardTitle className="text-base">Mobile Field Command</CardTitle>
-          <CardDescription>Mulai dari queue yang butuh aksi lapangan, lalu lanjut ke section validasi.</CardDescription>
+          <CardTitle className="text-base">{t("dashboard.mobileFieldCommand.title")}</CardTitle>
+          <CardDescription>{t("dashboard.mobileFieldCommand.description")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2 p-3 pt-0">
           <Button asChild>
-            <Link href={`/data-management/list/odp${singleRegionScope ? `?region_id=${encodeURIComponent(singleRegionScope)}` : ""}`}>Open ODP Queue</Link>
+            <Link href={`/data-management/list/odp${singleRegionScope ? `?region_id=${encodeURIComponent(singleRegionScope)}` : ""}`}>{t("dashboard.queue.openOdpQueue")}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href={`/data-management/list/odp?validation_status=unvalidated${regionSuffix}`}>ODP Belum Valid</Link>
+            <Link href={`/data-management/list/odp?validation_status=unvalidated${regionSuffix}`}>{t("dashboard.fieldFocus.odpBelumValid")}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/requests">Requests</Link>
+            <Link href="/requests">{t("dashboard.queue.openRequests")}</Link>
           </Button>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DashboardWorkQueue
-          title="Tugas Hari Ini"
-          description="ODP yang paling siap dibuka untuk validasi lapangan."
+          title={t("dashboard.queue.todayTasks.title")}
+          description={t("dashboard.queue.todayTasks.description")}
           items={[...rejected, ...openOdpItems]}
-          emptyLabel="Tidak ada tugas validasi aktif dari data yang tersedia."
+          emptyLabel={t("dashboard.queue.todayTasks.empty")}
           icon={MapPinned}
           loading={loading}
         />
         <DashboardWorkQueue
-          title="Status Submit"
-          description="Request validasi yang sedang berada di review chain."
-          items={requestItems(data.adminregionRequests, "pending_adminregion")}
-          emptyLabel="Belum ada submission aktif menunggu review."
+          title={t("dashboard.queue.submitStatus.title")}
+          description={t("dashboard.queue.submitStatus.description")}
+          items={requestItems(data.adminregionRequests, "pending_adminregion", t)}
+          emptyLabel={t("dashboard.queue.submitStatus.empty")}
           icon={ClipboardCheck}
           loading={loading}
         />
@@ -789,22 +803,23 @@ function ValidatorDashboard({ data, loading, singleRegionScope }: { data: Dashbo
 }
 
 function RegionHealthCard({ data, loading }: { data: DashboardData; loading: boolean }) {
+  const { t } = useTranslate();
   const odpStats = getOdpStatsFromSummary(data.summary);
   const portStats = getPortStatsFromSummary(data.summary);
   const rows = [
-    { label: "ODP total", value: odpStats.total },
-    { label: "Validated", value: odpStats.validated },
-    { label: "Unvalidated", value: odpStats.unvalidated },
-    { label: "Port issue", value: portStats.problem },
+    { label: t("dashboard.regionHealth.odpTotal"), value: odpStats.total },
+    { label: t("dashboard.regionHealth.validated"), value: odpStats.validated },
+    { label: t("dashboard.regionHealth.unvalidated"), value: odpStats.unvalidated },
+    { label: t("dashboard.regionHealth.portIssue"), value: portStats.problem },
   ];
   return (
     <Card>
       <CardHeader className="p-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Users className="size-4" />
-          Region Health
+          {t("dashboard.regionHealth.title")}
         </CardTitle>
-        <CardDescription>Ringkasan health ODP dari scope dashboard.</CardDescription>
+        <CardDescription>{t("dashboard.regionHealth.description")}</CardDescription>
       </CardHeader>
       <CardContent className="grid grid-cols-2 gap-2 p-3 pt-0">
         {rows.map((row) => (
@@ -819,12 +834,13 @@ function RegionHealthCard({ data, loading }: { data: DashboardData; loading: boo
 }
 
 function ValidationProgressCard({ odpStats, loading }: { odpStats: { total: number; validated: number; unvalidated: number }; loading: boolean }) {
+  const { t } = useTranslate();
   const percent = odpStats.total ? Math.round((odpStats.validated / odpStats.total) * 100) : 0;
   return (
     <Card>
       <CardHeader className="p-3 pb-2">
-        <CardTitle className="text-base">ODP Validation Progress</CardTitle>
-        <CardDescription>Progress validasi final pada scope region aktif.</CardDescription>
+        <CardTitle className="text-base">{t("dashboard.odpValidationProgress.title")}</CardTitle>
+        <CardDescription>{t("dashboard.odpValidationProgress.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-3 pt-0">
         {loading ? <Skeleton className="h-16 w-full" /> : (
@@ -832,9 +848,9 @@ function ValidationProgressCard({ odpStats, loading }: { odpStats: { total: numb
             <div className="flex items-end justify-between gap-3">
               <div>
                 <p className="text-3xl font-semibold">{percent}%</p>
-                <p className="text-xs text-muted-foreground">{odpStats.validated} dari {odpStats.total} ODP validated</p>
+                <p className="text-xs text-muted-foreground">{t("dashboard.odpValidationProgress.validated", { validated: odpStats.validated, total: odpStats.total })}</p>
               </div>
-              <Badge variant={percent >= 80 ? "secondary" : "outline"}>{percent >= 80 ? "healthy" : "needs work"}</Badge>
+              <Badge variant={percent >= 80 ? "secondary" : "outline"}>{percent >= 80 ? t("dashboard.odpValidationProgress.healthy") : t("dashboard.odpValidationProgress.needsWork")}</Badge>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-muted">
               <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${percent}%` }} />
@@ -917,17 +933,17 @@ async function fetchAllPaginated<T>(pathWithPage: string, token: string, limit =
   return allRows.flat();
 }
 
-function formatTimeAgo(date: Date): string {
+function formatTimeAgo(date: Date, t: TFn): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return `${seconds}d yang lalu`;
+  if (seconds < 60) return t("dashboard.timeAgo", { time: `${seconds}d` });
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m yang lalu`;
-  return `${Math.floor(minutes / 60)}j yang lalu`;
+  if (minutes < 60) return t("dashboard.timeAgo", { time: `${minutes}m` });
+  return t("dashboard.timeAgo", { time: `${Math.floor(minutes / 60)}j` });
 }
 
-function formatRegionScope(regions: RegionItem[]) {
-  if (!regions.length) return "Region mengikuti scope akun validator.";
-  if (regions.length === 1) return getRegionLabel({ relation: regions[0], fallback: "1 region aktif" });
+function formatRegionScope(regions: RegionItem[], t: TFn) {
+  if (!regions.length) return t("dashboard.helper.regionScope");
+  if (regions.length === 1) return getRegionLabel({ relation: regions[0], fallback: t("dashboard.helper.oneRegionActive") });
   return regions
     .slice(0, 2)
     .map((region) => getRegionLabel({ relation: region }))
@@ -952,10 +968,10 @@ function getPortStatsFromSummary(s?: DashboardSummaryResponse["data"] | null) {
 
 const CHART_MAX_ITEMS = 6;
 
-function toChartFromSummary(rows?: Array<{ label?: string; value?: number; href?: string }> | null): DashboardChartDatum[] {
+function toChartFromSummary(rows: Array<{ label?: string; value?: number; href?: string }> | null | undefined, t: TFn): DashboardChartDatum[] {
   const items = (rows || [])
     .filter((x) => x?.value && x?.value > 0)
-    .map((x) => ({ label: x.label || "Lainnya", value: Number(x.value) || 0, href: x.href }));
+    .map((x) => ({ label: x.label || t("dashboard.helper.lainnya"), value: Number(x.value) || 0, href: x.href }));
 
   if (items.length <= CHART_MAX_ITEMS) return items;
 
@@ -964,30 +980,30 @@ function toChartFromSummary(rows?: Array<{ label?: string; value?: number; href?
   const restValue = rest.reduce((sum, item) => sum + item.value, 0);
   return [
     ...top,
-    { label: "Lainnya", value: restValue, color: "var(--chart-3)", href: "/data-management/list/devices" },
+    { label: t("dashboard.helper.lainnya"), value: restValue, color: "var(--chart-3)", href: "/data-management/list/devices" },
   ];
 }
 
-function odpValidationFromSummary(s?: DashboardSummaryResponse["data"] | null, data?: DashboardData): DashboardChartDatum[] {
+function odpValidationFromSummary(s: DashboardSummaryResponse["data"] | null | undefined, data: DashboardData | undefined, t: TFn): DashboardChartDatum[] {
   const odp = s?.odp;
   const items: DashboardChartDatum[] = [];
   if (!odp) return items;
-  if (odp.validated) items.push({ label: "Validated", value: odp.validated, color: "#16a34a", href: "/data-management/list/odp?status=validated" });
-  if (odp.unvalidated) items.push({ label: "Unvalidated", value: odp.unvalidated, color: "#f59e0b", href: "/data-management/list/odp?status=unvalidated" });
-  if (data?.adminregionRequests?.length) items.push({ label: "Pending Admin Region", value: data.adminregionRequests.length, color: "#2563eb", href: "/requests" });
-  if (data?.superadminRequests?.length) items.push({ label: "Pending Superadmin", value: data.superadminRequests.length, color: "#7c3aed", href: "/requests" });
+  if (odp.validated) items.push({ label: t("dashboard.chart.legend.odpValidated"), value: odp.validated, color: "#16a34a", href: "/data-management/list/odp?status=validated" });
+  if (odp.unvalidated) items.push({ label: t("dashboard.chart.legend.odpUnvalidated"), value: odp.unvalidated, color: "#f59e0b", href: "/data-management/list/odp?status=unvalidated" });
+  if (data?.adminregionRequests?.length) items.push({ label: t("dashboard.chart.legend.pendingAdminRegion"), value: data.adminregionRequests.length, color: "#2563eb", href: "/requests" });
+  if (data?.superadminRequests?.length) items.push({ label: t("dashboard.chart.legend.pendingSuperadmin"), value: data.superadminRequests.length, color: "#7c3aed", href: "/requests" });
   const rejected = (data?.rejectedAdminregion?.length || 0) + (data?.rejectedSuperadmin?.length || 0);
-  if (rejected) items.push({ label: "Rejected", value: rejected, color: "#dc2626", href: "/requests" });
+  if (rejected) items.push({ label: t("dashboard.chart.legend.rejected"), value: rejected, color: "#dc2626", href: "/requests" });
   return items;
 }
 
-function popWithoutDeviceFromSummary(s?: DashboardSummaryResponse["data"] | null): DashboardQueueItem[] {
+function popWithoutDeviceFromSummary(s: DashboardSummaryResponse["data"] | null | undefined, t: TFn): DashboardQueueItem[] {
   return (s?.pops?.withoutDevice || []).slice(0, 6).map((pop) => ({
     id: `pop-wd:${pop.pop_id}`,
     title: pop.pop_name || pop.pop_code || "POP",
-    description: `${pop.pop_code || "POP"} belum memiliki device pada scope data dashboard.`,
+    description: t("dashboard.pop.noDeviceDesc", { pop: pop.pop_code || "POP" }),
     href: "/data-management",
-    badge: "No Device",
+    badge: t("dashboard.pop.noDevice"),
     tone: "amber" as const,
   }));
 }
@@ -1044,6 +1060,7 @@ function isValidated(item: DeviceItem) {
 function requestItems(
   items: ValidationRequestItem[],
   kind: "pending_adminregion" | "pending_superadmin" | "rejected_adminregion" | "rejected_superadmin",
+  t: TFn,
   onFastAction?: {
     approve: (id: string) => Promise<void>;
     reject: (id: string) => Promise<void>;
@@ -1053,10 +1070,10 @@ function requestItems(
   const canAct = kind === "pending_adminregion" || kind === "pending_superadmin";
   return items.slice(0, 8).map((item) => ({
     id: `${kind}:${item.id}`,
-    title: getRequestTitle(item),
-    description: getRequestDescription(item),
+    title: getRequestTitle(item, t),
+    description: getRequestDescription(item, t),
     href: kind === "pending_adminregion" || kind === "pending_superadmin" || kind === "rejected_superadmin" ? "/requests" : `/data-management/list/odp/${item.entity_id || ""}`,
-    badge: statusLabel(item.current_status || kind),
+    badge: statusLabel(item.current_status || kind, t),
     tone: kind.includes("rejected") ? "red" : "blue",
     onApprove: canAct && onFastAction ? () => onFastAction.approve(item.id) : undefined,
     onReject: canAct && onFastAction ? () => onFastAction.reject(item.id) : undefined,
@@ -1064,76 +1081,76 @@ function requestItems(
   }));
 }
 
-function requestActivityItems(items: ValidationRequestItem[]): DashboardActivityItem[] {
+function requestActivityItems(items: ValidationRequestItem[], t: TFn): DashboardActivityItem[] {
   return items.slice(0, 6).map((item) => ({
     id: item.id,
-    title: getRequestTitle(item),
-    description: getRequestDescription(item),
+    title: getRequestTitle(item, t),
+    description: getRequestDescription(item, t),
     timestamp: item.updated_at,
     href: "/requests",
   }));
 }
 
-function auditItems(items: AuditLogItem[]): DashboardActivityItem[] {
+function auditItems(items: AuditLogItem[], t: TFn): DashboardActivityItem[] {
   return items.map((item) => ({
     id: item.id,
-    title: formatAction(item.action_name),
-    description: `${item.entity_type || "Entity"} ${item.entity_id || ""}`.trim(),
+    title: formatAction(item.action_name, t),
+    description: `${item.entity_type || t("dashboard.helper.entity")} ${item.entity_id || ""}`.trim(),
     timestamp: item.created_at,
     href: item.entity_type && item.entity_id ? `/audit-trail?entity_type=${encodeURIComponent(item.entity_type)}&entity_id=${encodeURIComponent(item.entity_id)}` : "/audit-trail",
   }));
 }
 
-function buildRiskItems(data: DashboardData) {
+function buildRiskItems(data: DashboardData, t: TFn) {
   const odpStats = getOdpStatsFromSummary(data.summary);
   const portStats = getPortStatsFromSummary(data.summary);
   return [
-    qualityItem("ODP belum tervalidasi", odpStats.unvalidated, "/data-management/list/odp?validation_status=unvalidated", "medium"),
-    qualityItem("Evidence kurang", data.evidenceMissing.length, "/requests", "high"),
-    qualityItem("Port issue", portStats.problem, "/data-management/list/odp", "high"),
-    qualityItem("Rejected workflow", data.rejectedAdminregion.length + data.rejectedSuperadmin.length, "/requests", "high"),
+    qualityItem(t("dashboard.quality.unvalidated"), odpStats.unvalidated, "/data-management/list/odp?validation_status=unvalidated", "medium", t),
+    qualityItem(t("dashboard.quality.evidenceMissing"), data.evidenceMissing.length, "/requests", "high", t),
+    qualityItem(t("dashboard.quality.portIssue"), portStats.problem, "/data-management/list/odp", "high", t),
+    qualityItem(t("dashboard.quality.rejectedWorkflow"), data.rejectedAdminregion.length + data.rejectedSuperadmin.length, "/requests", "high", t),
   ].filter(Boolean) as DashboardQueueItem[];
 }
 
-function qualityItem(title: string, value: number, href: string, severity: "high" | "medium"): DashboardQueueItem | null {
+function qualityItem(title: string, value: number, href: string, severity: "high" | "medium", t: TFn): DashboardQueueItem | null {
   if (!value) return null;
   return {
     id: `${title}:${href}`,
     title,
-    description: `${value} item perlu ditindaklanjuti.`,
+    description: t("dashboard.quality.itemNeedsFollowUp", { value }),
     href,
-    badge: severity,
+    badge: severity === "high" ? t("dashboard.queue.badge.high") : t("dashboard.queue.badge.medium"),
     tone: severity === "high" ? "red" : "amber",
   };
 }
 
-function getRequestTitle(item: ValidationRequestItem) {
+function getRequestTitle(item: ValidationRequestItem, t: TFn) {
   return (
     item.payload_snapshot?.field_validation?.new_device_name ||
     item.payload_snapshot?.field_validation?.old_device_name ||
     item.payload_snapshot?.device?.device_name ||
     item.payload_snapshot?.resource_name ||
     item.request_id ||
-    "Validation Request"
+    t("dashboard.helper.validationRequest")
   );
 }
 
-function getRequestDescription(item: ValidationRequestItem) {
-  const operation = item.payload_snapshot?.operation || item.payload_snapshot?.source || "request";
+function getRequestDescription(item: ValidationRequestItem, t: TFn) {
+  const operation = item.payload_snapshot?.operation || item.payload_snapshot?.source || t("dashboard.request.request");
   const note = item.adminregion_review_note || item.superadmin_review_note;
-  return note ? `${operation}: ${note}` : `${operation} - ${item.request_id || "request terkait"}`;
+  return note ? `${operation}: ${note}` : `${operation} - ${item.request_id || t("dashboard.request.related")}`;
 }
 
-function statusLabel(value: string) {
-  if (value === "ongoing_validated" || value === "pending_adminregion") return "Pending Admin Region";
-  if (value === "pending_async" || value === "pending_superadmin") return "Pending Superadmin";
-  if (value === "rejected_by_adminregion" || value === "rejected_adminregion") return "Rejected Admin Region";
-  if (value === "rejected_by_superadmin" || value === "rejected_superadmin") return "Rejected Superadmin";
+function statusLabel(value: string, t: TFn) {
+  if (value === "ongoing_validated" || value === "pending_adminregion") return t("dashboard.helper.pendingAdminRegion");
+  if (value === "pending_async" || value === "pending_superadmin") return t("dashboard.helper.pendingSuperadmin");
+  if (value === "rejected_by_adminregion" || value === "rejected_adminregion") return t("dashboard.helper.rejectedAdminRegion");
+  if (value === "rejected_by_superadmin" || value === "rejected_superadmin") return t("dashboard.helper.rejectedSuperadmin");
   return value.replaceAll("_", " ");
 }
 
-function formatAction(value?: string | null) {
-  if (!value) return "Audit activity";
+function formatAction(value: string | null | undefined, t: TFn) {
+  if (!value) return t("dashboard.helper.auditActivity");
   return value.replaceAll("_", " ");
 }
 
@@ -1143,30 +1160,30 @@ function normalizeRole(role: string): RoleKey {
   return "validator";
 }
 
-function getRoleCopy(role: RoleKey) {
+function getRoleCopy(role: RoleKey, t: TFn) {
   if (role === "superadmin") {
     return {
-      badge: "Superadmin Inventory Console",
-      title: "Network Asset Dashboard",
-      description: "Ringkasan Region, POP, Device, dan KPI operasional untuk menjaga inventory tetap terkendali.",
-      primaryAction: "Open Asset Overview",
+      badge: t("dashboard.badge.superadmin"),
+      title: t("dashboard.title.networkAsset"),
+      description: t("dashboard.description.superadmin"),
+      primaryAction: t("dashboard.primaryAction.superadmin"),
       primaryHref: "/data-management",
     };
   }
   if (role === "adminregion") {
     return {
-      badge: "Admin Region Inventory",
-      title: "Regional Asset Dashboard",
-      description: "Konteks region, POP, device, dan health ODP sebelum masuk ke queue review validator.",
-      primaryAction: "Open ODP List",
+      badge: t("dashboard.badge.adminregion"),
+      title: t("dashboard.title.regionalAsset"),
+      description: t("dashboard.description.adminregion"),
+      primaryAction: t("dashboard.primaryAction.adminregion"),
       primaryHref: "/data-management/list/odp",
     };
   }
   return {
-    badge: "Validator Field Inventory",
-    title: "ODP Field Dashboard",
-    description: "Konteks region, POP, dan ODP dalam scope validator sebelum memulai validasi lapangan.",
-    primaryAction: "Open ODP Queue",
+    badge: t("dashboard.badge.validator"),
+    title: t("dashboard.title.fieldOdp"),
+    description: t("dashboard.description.validator"),
+    primaryAction: t("dashboard.primaryAction.validator"),
     primaryHref: "/data-management/list/odp",
   };
 }

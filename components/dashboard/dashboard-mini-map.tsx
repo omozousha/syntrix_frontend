@@ -7,6 +7,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/lib/use-theme";
+import { useTranslate } from "@/lib/use-locale";
 
 type MapMarker = {
   id: string;
@@ -48,6 +49,7 @@ export function DashboardMiniMap({
 }) {
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme } = useTheme();
+  const { t } = useTranslate();
 
   useEffect(() => {
     setMounted(true);
@@ -86,7 +88,7 @@ export function DashboardMiniMap({
                   <Popup>
                     <div className="text-xs">
                       <strong>{m.label}</strong>
-                      {m.deviceCount != null ? <div>Devices: {m.deviceCount}</div> : null}
+                      {m.deviceCount != null ? <div>{t("dashboard.mapDevices", { count: m.deviceCount })}</div> : null}
                     </div>
                   </Popup>
                 </Marker>
@@ -95,7 +97,7 @@ export function DashboardMiniMap({
           </div>
         ) : (
           <div className="flex h-[240px] items-center justify-center rounded-none border-t text-sm text-muted-foreground">
-            {mounted ? "Tidak ada data geografis untuk ditampilkan." : "Memuat peta..."}
+            {mounted ? t("dashboard.mapEmpty") : t("dashboard.mapLoading")}
           </div>
         )}
       </CardContent>

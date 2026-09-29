@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslate } from "@/lib/use-locale";
 
 export type DashboardQueueItem = {
   id: string;
@@ -35,6 +36,7 @@ export function DashboardWorkQueue({
   icon?: LucideIcon;
   loading?: boolean;
 }) {
+  const { t } = useTranslate();
   return (
     <Card className="min-w-0 rounded-2xl border-border/60 shadow-xs glass-inset">
       <CardHeader className="p-3 pb-2">
@@ -81,7 +83,7 @@ export function DashboardWorkQueue({
                         variant="outline"
                         className="h-7 rounded-full border-emerald-500/30 px-2 text-xs text-emerald-600 transition-all duration-300 active:scale-[0.98] hover:bg-emerald-500/10 hover:text-emerald-500 dark:border-emerald-500/40 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
                       >
-                        {item.actionLoading ? "..." : "Setujui"}
+                        {item.actionLoading ? "..." : t("dashboard.approve")}
                       </Button>
                     ) : null}
                     {item.onReject ? (
@@ -93,7 +95,7 @@ export function DashboardWorkQueue({
                         variant="outline"
                         className="h-7 rounded-full border-destructive/30 px-2 text-xs text-destructive transition-all duration-300 active:scale-[0.98] hover:bg-destructive/10 hover:text-destructive"
                       >
-                        {item.actionLoading ? "..." : "Tolak"}
+                        {item.actionLoading ? "..." : t("dashboard.reject")}
                       </Button>
                     ) : null}
                   </div>
@@ -101,7 +103,7 @@ export function DashboardWorkQueue({
               </div>
               <div className="flex shrink-0 items-start gap-1">
                 <Button asChild variant="ghost" size="icon" className="size-8 transition-all duration-300 active:scale-[0.95]">
-                  <Link href={item.href} aria-label={`Open ${item.title}`}>
+                  <Link href={item.href} aria-label={t("dashboard.openItem", { title: item.title })}>
                     <ArrowUpRight className="size-4" />
                   </Link>
                 </Button>

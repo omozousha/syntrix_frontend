@@ -17,6 +17,10 @@ import { mapValidationStatus } from "@/lib/validation-status";
 import { useSession } from "@/components/session-context";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LocaleToggle } from "@/components/shell/locale-toggle";
+import { useTranslate } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
+
+type TFn = (key: MessageKey, vars?: Record<string, string | number>) => string;
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,6 +82,7 @@ type RegionOption = {
 export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => void }) {
   const router = useRouter();
   const { token } = useSession();
+  const { t } = useTranslate();
   const normalizedRole = normalizeRole(me.role);
   const canReviewValidation = normalizedRole === "adminregion" || normalizedRole === "superadmin";
   const { theme: currentTheme, setTheme: setThemePreference } = useTheme();
@@ -167,10 +172,10 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
   const initials = getInitials(me.app_user.full_name);
   const notificationCount = unreadCount;
   const notificationQueueLabel = useMemo(() => {
-    if (normalizedRole === "superadmin") return "Queue Superadmin";
-    if (normalizedRole === "adminregion") return "Queue Admin Region";
-    return "Notifikasi";
-  }, [normalizedRole]);
+    if (normalizedRole === "superadmin") return t("nav.queueSuperadmin");
+    if (normalizedRole === "adminregion") return t("nav.queueAdminRegion");
+    return t("nav.notification");
+  }, [normalizedRole, t]);
   const scopedRegionIds = useMemo(() => me.app_user.user_region_scopes?.map((item) => item.region_id).filter(Boolean) || [], [me.app_user.user_region_scopes]);
 
   useEffect(() => {
@@ -225,13 +230,13 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
         const newlyArrived = unreadRows.filter((row) => !seenUnreadIdsRef.current.has(String(row.id)));
         if (newlyArrived.length) {
           const latest = newlyArrived[0];
-          const urgentLabel = latest.urgent ? " (URGENT)" : "";
-          const copy = getNotificationCopy(latest, normalizedRole);
+          const urgentLabel = latest.urgent ? ` ${t("nav.urgentSuffix")}` : "";
+          const copy = getNotificationCopy(latest, normalizedRole, t);
           const showToast = copy.variant === "warning" || latest.urgent ? toast.warning : toast.success;
           showToast(`${copy.toastTitle}${urgentLabel}`, {
             description: [copy.targetName, copy.stageLabel].filter(Boolean).join(" - "),
             action: {
-              label: "Buka",
+              label: t("nav.open"),
               onClick: () => router.push(REQUESTS_PATH),
             },
           });
@@ -253,7 +258,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [token, canReviewValidation, router, normalizedRole, selectedRegionId]);
+  }, [token, canReviewValidation, router, normalizedRole, selectedRegionId, t]);
 
   useEffect(() => {
     if (!canReviewValidation) return;
@@ -299,9 +304,9 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
       setNotifications([]);
       setUnreadCount(0);
       seenUnreadIdsRef.current.clear();
-      toast.success("Semua notifikasi ditandai sudah dibaca.");
+      toast.success(t("nav.toastReadAll"));
     } catch {
-      toast.error("Gagal menandai semua notifikasi.");
+      toast.error(t("nav.toastReadAllFailed"));
     }
   }
 
@@ -324,26 +329,26 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
           <DropdownMenuContent align="end" className="w-[calc(100vw-1rem)] max-w-80 rounded-2xl border border-border/40 bg-muted/10 p-1.5 shadow-xs dark:bg-white/[0.02]">
             <div className="overflow-hidden rounded-[calc(1.25rem-0.25rem)] border border-border/60 bg-popover shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
             <DropdownMenuLabel className="flex items-center justify-between px-2.5 py-2">
-              <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Request Inbox</span>
+              <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{t("nav.requestInbox")}</span>
               <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em]">{notificationQueueLabel}</Badge>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <div className="space-y-2 px-2 pb-1">
               <div className="flex items-center gap-1">
                 <Button type="button" variant={digestWindow === "daily" ? "default" : "outline"} size="sm" className="h-7 font-mono text-[10px] uppercase tracking-[0.12em]" onClick={() => setDigestWindow("daily")}>
-                  24 Jam
+                  {t("nav.24h")}
                 </Button>
                 <Button type="button" variant={digestWindow === "weekly" ? "default" : "outline"} size="sm" className="h-7 font-mono text-[10px] uppercase tracking-[0.12em]" onClick={() => setDigestWindow("weekly")}>
-                  7 Hari
+                  {t("nav.7d")}
                 </Button>
               </div>
               {regionOptions.length ? (
                 <Select value={selectedRegionId || "all"} onValueChange={(value) => setSelectedRegionId(value === "all" ? "" : value)}>
                   <SelectTrigger size="sm" className="h-8 min-h-8 w-full rounded-lg border-border/60 bg-background text-xs">
-                    <SelectValue placeholder="Semua Region" />
+                    <SelectValue placeholder={t("nav.allRegions")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Semua Region</SelectItem>
+                    <SelectItem value="all">{t("nav.allRegions")}</SelectItem>
                     {regionOptions.map((region) => (
                       <SelectItem key={region.id} value={region.id}>
                         {region.label}
@@ -354,51 +359,51 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
               ) : null}
               <div className="rounded-xl border border-border/60 bg-muted/20 p-2 shadow-2xs">
                 {digestLoading ? (
-                  <span className="text-[11px] text-muted-foreground">Memuat ringkasan...</span>
+                  <span className="text-[11px] text-muted-foreground">{t("nav.loadingSummary")}</span>
                 ) : (
                   <div className="grid grid-cols-2 gap-1.5">
                     <span className="flex items-center gap-1.5 text-[11px]">
                       <Inbox className="size-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">Inbox</span>
+                      <span className="text-muted-foreground">{t("nav.inbox")}</span>
                       <span className="ml-auto font-mono font-medium tabular-nums">{digest?.pending_total ?? 0}</span>
                     </span>
                     <span className="flex items-center gap-1.5 text-[11px]">
                       <MailOpen className="size-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">Unread</span>
+                      <span className="text-muted-foreground">{t("nav.unread")}</span>
                       <span className="ml-auto font-mono font-medium tabular-nums">{digest?.unread_total ?? 0}</span>
                     </span>
                     <span className="flex items-center gap-1.5 text-[11px]">
                       <AlertTriangle className="size-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">Urgent</span>
+                      <span className="text-muted-foreground">{t("nav.urgent")}</span>
                       <span className="ml-auto font-mono font-medium tabular-nums">{digest?.urgent_total ?? 0}</span>
                     </span>
                     <span className="flex items-center gap-1.5 text-[11px]">
                       <Clock className="size-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">Update</span>
+                      <span className="text-muted-foreground">{t("nav.update")}</span>
                       <span className="ml-auto font-mono font-medium tabular-nums">{digest?.updated_in_window ?? 0}</span>
                     </span>
                   </div>
                 )}
               </div>
               <div className="rounded-md border border-dashed bg-background/80 p-2 text-[11px] text-muted-foreground">
-                Broadcast Announcement siap ditempatkan di sini saat endpoint event notification aktif.
+                {t("nav.broadcastPlaceholder")}
               </div>
             </div>
             {notificationCount > 0 ? (
               <div className="px-2 pb-1">
                 <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => void markAllAsRead()}>
-                  Mark all as read
+                  {t("nav.markAllRead")}
                 </Button>
               </div>
             ) : null}
             <ScrollArea className="max-h-80">
               <div className="space-y-1 p-1">
                 {notificationLoading ? (
-                  <p className="px-2 py-1 text-xs text-muted-foreground">Memuat notifikasi...</p>
+                  <p className="px-2 py-1 text-xs text-muted-foreground">{t("nav.loadingNotification")}</p>
                 ) : notifications.length ? (
                   notifications.map((item) => {
                     const mappedStatus = mapValidationStatus(item.current_status);
-                    const copy = getNotificationCopy(item, normalizedRole);
+                    const copy = getNotificationCopy(item, normalizedRole, t);
                     return (
                       <DropdownMenuItem
                         key={item.id}
@@ -424,7 +429,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
                           {item.urgent ? <span className="ml-1 font-mono text-[10px] font-bold text-amber-600 dark:text-amber-400">URGENT</span> : null}
                         </span>
                         <span className="line-clamp-1 text-[11px] text-muted-foreground">
-                          {copy.targetName || "Asset terkait"} - {copy.stageLabel}
+                          {copy.targetName || t("nav.assetRelated")} - {copy.stageLabel}
                         </span>
                         <div className="mt-0.5 flex w-full items-center justify-between gap-2">
                           <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
@@ -443,14 +448,14 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
                             }}
                           >
                             <Check className="mr-1 size-2.5" />
-                            Read
+                            {t("nav.read")}
                           </Button>
                         </div>
                       </DropdownMenuItem>
                     );
                   })
                 ) : (
-                  <p className="px-2 py-1 text-xs text-muted-foreground">Tidak ada notifikasi baru.</p>
+                  <p className="px-2 py-1 text-xs text-muted-foreground">{t("nav.noNewNotification")}</p>
                 )}
               </div>
             </ScrollArea>
@@ -459,7 +464,7 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
                 className="cursor-pointer rounded-b-2xl py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground transition-colors hover:bg-muted/50 focus:bg-muted/50"
                 onClick={() => router.push(REQUESTS_PATH)}
               >
-                Buka halaman Requests
+                {t("nav.openRequests")}
               </DropdownMenuItem>
             </div>
             </div>
@@ -478,8 +483,8 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
       />
       <ResponseDialog
         open={logoutDialogOpen}
-        title="Mengakhiri Sesi"
-        description="Syntrix sedang menutup workspace dan membersihkan sesi akun. Anda akan diarahkan ke login dalam 5 detik."
+        title={t("nav.logoutTitle")}
+        description={t("nav.logoutDesc")}
         variant="info"
         loading={logoutLoading}
         showAction={false}
@@ -509,10 +514,11 @@ function NavUserAccountMenu({
   onSetTheme: (theme: "light" | "dark" | "system") => void;
   onLogout: () => void;
 }) {
+  const { t } = useTranslate();
   const themeOptions: { value: "light" | "dark" | "system"; label: string; icon: typeof Sun }[] = [
-    { value: "system", label: "System", icon: Sun },
-    { value: "light", label: "Light", icon: Sun },
-    { value: "dark", label: "Dark", icon: Moon },
+    { value: "system", label: t("nav.systemTheme"), icon: Sun },
+    { value: "light", label: t("nav.lightTheme"), icon: Sun },
+    { value: "dark", label: t("nav.darkTheme"), icon: Moon },
   ];
 
   return (
@@ -544,10 +550,10 @@ function NavUserAccountMenu({
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onProfile} className="cursor-pointer">
           <User className="mr-2 size-4" />
-          Profile
+          {t("nav.profile")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-[11px] text-muted-foreground">Theme</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-[11px] text-muted-foreground">{t("nav.theme")}</DropdownMenuLabel>
         {themeOptions.map((opt) => {
           const Icon = opt.icon;
           return (
@@ -565,7 +571,7 @@ function NavUserAccountMenu({
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-destructive focus:text-destructive">
           <LogOut className="mr-2 size-4" />
-          Logout
+          {t("nav.logout")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -592,10 +598,14 @@ function formatAge(ageMinutes: number) {
   return `${days}h ${remHours}j`;
 }
 
-function getNotificationCopy(item: ValidationRequestNotificationItem, role: string) {
-  const requestType = getNotificationRequestType(item);
+function getNotificationCopy(
+  item: ValidationRequestNotificationItem,
+  role: string,
+  t: TFn,
+) {
+  const requestType = getNotificationRequestType(item, t);
   const targetName = getNotificationTargetName(item);
-  const stageLabel = getNotificationStageLabel(item.current_status, role);
+  const stageLabel = getNotificationStageLabel(item.current_status, role, t);
   const title = targetName ? `${requestType}: ${targetName}` : requestType;
   const isWarning = String(item.current_status || "").startsWith("rejected");
 
@@ -604,22 +614,27 @@ function getNotificationCopy(item: ValidationRequestNotificationItem, role: stri
     targetName,
     title,
     stageLabel,
-    toastTitle: isWarning ? `${requestType} perlu tindak lanjut` : `${requestType} masuk inbox`,
+    toastTitle: isWarning
+      ? t("nav.requestTypeFollowUp", { requestType })
+      : t("nav.requestTypeArrived", { requestType }),
     variant: isWarning ? ("warning" as const) : ("success" as const),
   };
 }
 
-function getNotificationRequestType(item: ValidationRequestNotificationItem) {
+function getNotificationRequestType(item: ValidationRequestNotificationItem, t: TFn) {
   const source = String(item.payload_snapshot?.source || "").trim();
-  if (source === "adminregion-create-device") return "Create Device Request";
+  if (source === "adminregion-create-device") return t("nav.createDeviceRequest");
   if (
     source === "adminregion-create-resource" ||
     source === "adminregion-update-resource" ||
     source === "adminregion-archive-resource"
   ) {
-    return `${getOperationLabel(item.payload_snapshot?.operation)} ${item.payload_snapshot?.resource_label || "Asset"} Request`;
+    return t("nav.assetRequest", {
+      operation: getOperationLabel(item.payload_snapshot?.operation, t),
+      resource: item.payload_snapshot?.resource_label || t("nav.assetLabel"),
+    });
   }
-  return "Field Validation Request";
+  return t("nav.fieldValidationRequest");
 }
 
 function getNotificationTargetName(item: ValidationRequestNotificationItem) {
@@ -643,20 +658,20 @@ function getNotificationTargetName(item: ValidationRequestNotificationItem) {
   );
 }
 
-function getNotificationStageLabel(status: string | null | undefined, role: string) {
-  if (status === "ongoing_validated") return role === "adminregion" ? "Menunggu review Admin Region" : "Dalam review Admin Region";
-  if (status === "pending_async") return role === "superadmin" ? "Menunggu approval Superadmin" : "Dalam review Superadmin";
-  if (status === "rejected_by_adminregion") return "Ditolak Admin Region";
-  if (status === "rejected_by_superadmin") return "Ditolak Superadmin, perlu resubmit Admin Region";
-  if (status === "validated") return "Selesai disetujui Superadmin";
-  return "Menunggu review";
+function getNotificationStageLabel(status: string | null | undefined, role: string, t: TFn) {
+  if (status === "ongoing_validated") return role === "adminregion" ? t("nav.stageAwaitAdminRegion") : t("nav.stageInAdminRegion");
+  if (status === "pending_async") return role === "superadmin" ? t("nav.stageAwaitSuperadmin") : t("nav.stageInSuperadmin");
+  if (status === "rejected_by_adminregion") return t("nav.stageRejectedAdminRegion");
+  if (status === "rejected_by_superadmin") return t("nav.stageRejectedSuperadmin");
+  if (status === "validated") return t("nav.stageValidated");
+  return t("nav.stageAwaitReview");
 }
 
-function getOperationLabel(operation?: string | null) {
-  if (operation === "update") return "Update";
-  if (operation === "archive") return "Archive";
-  if (operation === "delete") return "Delete";
-  return "Create";
+function getOperationLabel(operation: string | null | undefined, t: TFn) {
+  if (operation === "update") return t("nav.opUpdate");
+  if (operation === "archive") return t("nav.opArchive");
+  if (operation === "delete") return t("nav.opDelete");
+  return t("nav.opCreate");
 }
 
 function pickText(...values: unknown[]) {

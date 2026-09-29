@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import { translate, type MessageKey } from "@/lib/locales";
 
 export type Locale = "id" | "en";
+export type TFn = (key: MessageKey, vars?: Record<string, string | number>) => string;
 
 const LOCALE_KEY = "syntrix-locale";
 const listeners = new Set<() => void>();
@@ -41,4 +43,13 @@ export function useLocale() {
   }, []);
 
   return { locale, setLocale };
+}
+
+export function useTranslate() {
+  const { locale } = useLocale();
+  const t = useCallback(
+    (key: MessageKey, vars?: Record<string, string | number>) => translate(locale, key, vars),
+    [locale],
+  );
+  return { locale, t };
 }

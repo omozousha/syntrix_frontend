@@ -4,17 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { useTranslate } from "@/lib/use-locale";
 
 export type TrendDatum = {
   label: string;
   value: number;
-};
-
-const DEFAULT_CONFIG: ChartConfig = {
-  value: {
-    label: "Jumlah",
-    color: "var(--color-primary)",
-  },
 };
 
 export function DashboardTrendLine({
@@ -30,11 +24,12 @@ export function DashboardTrendLine({
   loading?: boolean;
   color?: string;
 }) {
+  const { t } = useTranslate();
   const hasData = data.length > 0;
 
   const config: ChartConfig = {
     value: {
-      label: "Jumlah",
+      label: t("dashboard.chart.count"),
       color,
     },
   };
@@ -80,7 +75,7 @@ export function DashboardTrendLine({
           </ChartContainer>
         ) : (
           <div className="flex h-[180px] items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
-            Belum ada data tren.
+            {t("dashboard.trendEmpty")}
           </div>
         )}
       </CardContent>

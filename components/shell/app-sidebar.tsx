@@ -23,6 +23,8 @@ import {
   SidebarMenuSubItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { useTranslate } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 
 export type AppSidebarMenuItem = {
   href: string;
@@ -30,61 +32,61 @@ export type AppSidebarMenuItem = {
 };
 
 type NavSubItem = {
-  title: string;
+  titleKey: MessageKey;
   url: string;
   icon?: LucideIcon;
 };
 
 type NavMainItem = {
-  title: string;
+  titleKey: MessageKey;
   url: string;
   icon?: LucideIcon;
   items?: NavSubItem[];
 };
 
 type NavSection = {
-  label: string;
+  labelKey: MessageKey;
   items: NavMainItem[];
 };
 
 const NAV_SECTIONS: NavSection[] = [
   {
-    label: "Workspace",
-    items: [{ title: "Dashboard", url: "/dashboard", icon: LayoutDashboard }],
+    labelKey: "sidebar.workspace",
+    items: [{ titleKey: "sidebar.dashboard", url: "/dashboard", icon: LayoutDashboard }],
   },
   {
-    label: "Assets",
+    labelKey: "sidebar.assets",
     items: [
     {
-      title: "Data Management",
+      titleKey: "sidebar.dataManagement",
       url: "/data-management",
       icon: Database,
       items: [
-        { title: "Asset Overview", url: "/data-management", icon: FolderTree },
-        { title: "List ODP", url: "/data-management/list/odp", icon: Workflow },
+        { titleKey: "sidebar.assetOverview", url: "/data-management", icon: FolderTree },
+        { titleKey: "sidebar.listOdp", url: "/data-management/list/odp", icon: Workflow },
       ],
     },
     ],
   },
   {
-    label: "Validation",
+    labelKey: "sidebar.validation",
     items: [
-      { title: "Requests", url: "/requests", icon: ShieldCheck },
-      { title: "Audit Trail", url: "/audit-trail", icon: ShieldCheck },
+      { titleKey: "sidebar.requests", url: "/requests", icon: ShieldCheck },
+      { titleKey: "sidebar.auditTrail", url: "/audit-trail", icon: ShieldCheck },
     ],
   },
   {
-    label: "Network",
+    labelKey: "sidebar.network",
     items: [
-      { title: "Maps", url: "/maps", icon: Map },
+      { titleKey: "sidebar.maps", url: "/maps", icon: Map },
     ],
   },
   {
-    label: "Administration",
+    labelKey: "sidebar.administration",
     items: [
-      { title: "Master Data", url: "/master-data", icon: BookMarked },
-      { title: "Account Management", url: "/account-management", icon: Layers3 },
-      { title: "Trash", url: "/trash", icon: Trash2 },
+      { titleKey: "sidebar.masterData", url: "/master-data", icon: BookMarked },
+      { titleKey: "sidebar.accountManagement", url: "/account-management", icon: Layers3 },
+      { titleKey: "sidebar.trash", url: "/trash", icon: Trash2 },
     ],
   },
 ];
@@ -96,6 +98,7 @@ export function AppSidebar({
   pathname: string;
   menus: AppSidebarMenuItem[];
 }) {
+  const { t } = useTranslate();
   const allowedHrefs = useMemo(() => new Set(menus.map((menu) => menu.href)), [menus]);
   const sections = useMemo(() => {
     return NAV_SECTIONS.map((section) => ({
@@ -120,15 +123,15 @@ export function AppSidebar({
           </div>
           <div className="min-w-0">
             <p className="truncate text-base font-semibold leading-none tracking-tight">Syntrix</p>
-            <p className="mt-1 text-[10px] leading-snug text-sidebar-foreground/70">Ops Console</p>
+            <p className="mt-1 text-[10px] leading-snug text-sidebar-foreground/70">{t("sidebar.opsConsole")}</p>
           </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         {sections.map((section) => (
-          <SidebarGroup key={section.label} className="px-2 py-1.5">
-            <SidebarGroupLabel className="font-mono text-[9px] uppercase tracking-[0.18em] text-sidebar-foreground/60">{section.label}</SidebarGroupLabel>
+          <SidebarGroup key={section.labelKey} className="px-2 py-1.5">
+            <SidebarGroupLabel className="font-mono text-[9px] uppercase tracking-[0.18em] text-sidebar-foreground/60">{t(section.labelKey)}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-1">
                 {section.items.map((item) => {
@@ -139,7 +142,7 @@ export function AppSidebar({
 
                 if (!hasSubItems) {
                   return (
-                    <SidebarMenuItem key={item.title}>
+                    <SidebarMenuItem key={item.titleKey}>
                       <SidebarMenuButton
                         asChild
                         isActive={itemIsActive}
@@ -148,7 +151,7 @@ export function AppSidebar({
                         <Link href={item.url}>
                           {itemIsActive ? <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" /> : null}
                           {item.icon ? <item.icon className="size-4" /> : null}
-                          <span>{item.title}</span>
+                          <span>{t(item.titleKey)}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -157,7 +160,7 @@ export function AppSidebar({
 
                 return (
                   <Collapsible
-                    key={item.title}
+                    key={item.titleKey}
                     asChild
                     defaultOpen={isOpen}
                     className="group/collapsible"
@@ -165,24 +168,24 @@ export function AppSidebar({
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton
-                          tooltip={item.title}
+                          tooltip={t(item.titleKey)}
                           isActive={itemIsActive}
                           className="relative h-9 rounded-lg px-2.5 text-sm transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-sidebar-accent data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
                         >
                           {itemIsActive ? <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" /> : null}
                           {item.icon ? <item.icon className="size-4" /> : null}
-                          <span>{item.title}</span>
+                          <span>{t(item.titleKey)}</span>
                           <ChevronRight className={`ml-auto size-4 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${isOpen ? "rotate-90 text-primary" : "text-muted-foreground"}`} />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <SidebarMenuSub>
                           {item.items?.map((subItem) => (
-                            <SidebarMenuSubItem key={subItem.title}>
+                            <SidebarMenuSubItem key={subItem.titleKey}>
                               <SidebarMenuSubButton asChild isActive={isActive(subItem.url)} className="h-8 text-xs data-[active=true]:font-medium data-[active=true]:text-primary">
                                 <Link href={subItem.url}>
                                   {subItem.icon ? <subItem.icon className="size-4" /> : null}
-                                  <span>{subItem.title}</span>
+                                  <span>{t(subItem.titleKey)}</span>
                                 </Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>

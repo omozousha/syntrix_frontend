@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Lightbulb } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useTranslate, type TFn } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 
 const TIP_ROTATION_INTERVAL_MS = 7000;
 
@@ -19,8 +21,9 @@ export function SidebarSmartTip({
   menus: SidebarSmartTipMenuItem[];
 }) {
   const [rotation, setRotation] = useState({ key: "", index: 0 });
+  const { t } = useTranslate();
   const allowedHrefs = useMemo(() => new Set(menus.map((menu) => menu.href)), [menus]);
-  const tips = useMemo(() => getSmartTips(pathname, allowedHrefs), [pathname, allowedHrefs]);
+  const tips = useMemo(() => getSmartTips(pathname, allowedHrefs, t), [pathname, allowedHrefs, t]);
   const tipsKey = tips.join("|");
   const activeTipIndex = rotation.key === tipsKey ? rotation.index % tips.length : 0;
   const activeTip = tips[activeTipIndex] || tips[0];
@@ -43,12 +46,12 @@ export function SidebarSmartTip({
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <Badge variant="outline" className="rounded-md font-mono text-[9px] uppercase tracking-[0.15em] border-sidebar-border/70 text-muted-foreground bg-background/50">
-            Panduan
+            {t("tip.label")}
           </Badge>
           <Lightbulb className="size-3.5 text-sidebar-foreground/50" />
         </div>
         {tips.length > 1 ? (
-          <div aria-label={`Tip ${activeTipIndex + 1} dari ${tips.length}`} className="flex items-center gap-1">
+          <div aria-label={t("tip.count", { index: activeTipIndex + 1, total: tips.length })} className="flex items-center gap-1">
             {tips.map((tip, index) => (
               <span
                 key={tip}
@@ -67,98 +70,68 @@ export function SidebarSmartTip({
   );
 }
 
-function getSmartTips(pathname: string, allowedHrefs: Set<string>) {
-  if (pathname.startsWith("/dashboard") && allowedHrefs.has("/dashboard")) {
-    if (allowedHrefs.has("/requests")) {
-      return [
-        "Tab Overview merangkum Region, POP, dan Device sebelum masuk KPI workflow.",
-        "Gunakan tab Device untuk membaca komposisi asset, status device, dan validasi ODP.",
-        "Pindah ke KPI & Workflow saat perlu review request, issue ODP, atau audit activity.",
-      ];
-    }
+type TipGroup =
+  | "dashboardReviewer"
+  | "dashboardValidator"
+  | "requests"
+  | "listOdp"
+  | "listDevice"
+  | "fieldOdp"
+  | "auditTrail"
+  | "trash"
+  | "maps"
+  | "genericRequests"
+  | "genericOdp"
+  | "default";
 
-    return [
-      "Tab Overview membantu membaca scope region, POP, dan ODP sebelum validasi lapangan.",
-      "Gunakan tab Device untuk melihat status ODP dan distribusi validasi.",
-      "Pindah ke KPI & Workflow untuk membuka tugas validasi dan rejected submission.",
-    ];
+function getSmartTips(pathname: string, allowedHrefs: Set<string>, t: TFn) {
+  const tip = (group: TipGroup) => [
+    t(`tip.${group}.1` as MessageKey),
+    t(`tip.${group}.2` as MessageKey),
+    t(`tip.${group}.3` as MessageKey),
+  ];
+
+  if (pathname.startsWith("/dashboard") && allowedHrefs.has("/dashboard")) {
+    return allowedHrefs.has("/requests")
+      ? tip("dashboardReviewer")
+      : tip("dashboardValidator");
   }
 
   if (pathname.startsWith("/requests") && allowedHrefs.has("/requests")) {
-    return [
-      "Review request sesuai tahap approval aktif sebelum perubahan masuk data utama.",
-      "Cek perbedaan field, lampiran, dan catatan reviewer sebelum approve atau reject.",
-      "Gunakan Audit Trail jika perlu memastikan sumber perubahan dan waktu aksi.",
-    ];
+    return tip("requests");
   }
 
   if (pathname.startsWith("/data-management/list/odp") && allowedHrefs.has("/data-management/list/odp")) {
-    return [
-      "Gunakan filter POP untuk membatasi ODP sesuai titik interkoneksi yang sedang diaudit.",
-      "Pastikan tipe ODP dan jenis instalasi sudah sesuai format data terbaru.",
-      "Gunakan histori validasi untuk membaca evidence dan keputusan reviewer terakhir.",
-    ];
+    return tip("listOdp");
   }
 
   if (pathname.startsWith("/data-management/list/") && allowedHrefs.has("/data-management")) {
-    return [
-      "Gunakan filter POP untuk melihat device berdasarkan titik interkoneksi operasional.",
-      "Kombinasikan pencarian, region scope, dan POP agar audit device lebih presisi.",
-      "Jika data kosong, reset filter atau cek apakah device memang belum terhubung ke POP tersebut.",
-    ];
+    return tip("listDevice");
   }
 
   if (pathname.startsWith("/field/odp")) {
-    return [
-      "Lengkapi section validasi dari kiri ke kanan, lalu cek Review & Submit.",
-      "Foto awal dan checklist kondisi menjadi evidence utama untuk request validasi.",
-      "Jika request ditolak, baca catatan reviewer sebelum melakukan resubmit.",
-    ];
+    return tip("fieldOdp");
   }
 
   if (pathname.startsWith("/audit-trail") && allowedHrefs.has("/audit-trail")) {
-    return [
-      "Gunakan Audit Trail untuk melacak perubahan data, reviewer, dan waktu aksi.",
-      "Filter berdasarkan asset atau aktivitas saat perlu investigasi perubahan spesifik.",
-      "Bandingkan timestamp audit dengan histori validasi untuk konteks approval.",
-    ];
+    return tip("auditTrail");
   }
 
   if (pathname.startsWith("/trash") && allowedHrefs.has("/trash")) {
-    return [
-      "Pulihkan data hanya jika record masih valid dan relasinya sudah diverifikasi.",
-      "Cek relasi asset sebelum restore agar data utama tetap konsisten.",
-      "Gunakan pencarian untuk memastikan record yang dipulihkan adalah data yang tepat.",
-    ];
+    return tip("trash");
   }
 
   if (pathname.startsWith("/maps") && allowedHrefs.has("/maps")) {
-    return [
-      "Gunakan Maps untuk membaca sebaran asset dan konteks lokasi di lapangan.",
-      "Validasi koordinat membantu memastikan asset tampil pada area operasional yang benar.",
-      "Cek layer peta sesuai kebutuhan inspeksi atau monitoring jaringan.",
-    ];
+    return tip("maps");
   }
 
   if (allowedHrefs.has("/requests")) {
-    return [
-      "Pantau Requests untuk memastikan perubahan asset selesai direview tepat waktu.",
-      "Prioritaskan request yang menunggu role aktif agar queue tidak menumpuk.",
-      "Buka detail request untuk membaca perubahan teknis sebelum mengambil keputusan.",
-    ];
+    return tip("genericRequests");
   }
 
   if (allowedHrefs.has("/data-management/list/odp")) {
-    return [
-      "Gunakan List ODP untuk cek detail, histori validasi, dan status port.",
-      "Buka detail ODP untuk melihat format identity dan evidence terbaru.",
-      "Pastikan status port konsisten dengan hasil validasi lapangan.",
-    ];
+    return tip("genericOdp");
   }
 
-  return [
-    "Buka Asset Overview untuk ringkasan aset dan aksi sesuai role akun.",
-    "Gunakan menu yang tersedia sesuai role untuk menjaga workflow tetap terkontrol.",
-    "Cek data utama sebelum membuat perubahan pada asset operasional.",
-  ];
+  return tip("default");
 }

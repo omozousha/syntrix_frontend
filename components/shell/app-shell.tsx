@@ -9,6 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { getCategoryBySlug } from "@/lib/data-management-config";
 import { MapsPersistentHost } from "@/components/features/maps/maps-persistent-host";
+import { useTranslate, type TFn } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 
 export function AppShell({
   me,
@@ -20,26 +22,26 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { t } = useTranslate();
   const normalizedRole = normalizeRole(me.role);
   const isSuperAdmin = normalizedRole === "superadmin";
   const isAdminRegion = normalizedRole === "adminregion";
   const isValidator = normalizedRole === "validator";
   const canReviewValidation = isSuperAdmin || isAdminRegion;
   const menus: AppSidebarMenuItem[] = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/data-management", label: "Data Management" },
-    ...(isAdminRegion ? [{ href: "/data-management/list/odp", label: "ODP List" }] : []),
-    ...(canReviewValidation ? [{ href: "/requests", label: "Requests" }] : []),
-    { href: "/maps", label: "Maps" },
-    ...(isSuperAdmin ? [{ href: "/master-data", label: "Master Data" }] : []),
-    ...(isSuperAdmin ? [{ href: "/audit-trail", label: "Audit Trail" }] : []),
-    ...(isSuperAdmin ? [{ href: "/trash", label: "Trash" }] : []),
-    { href: "/maps", label: "Maps" },
-    ...(isSuperAdmin || isAdminRegion ? [{ href: "/account-management", label: "Account Management" }] : []),
+    { href: "/dashboard", label: t("sidebar.dashboard") },
+    { href: "/data-management", label: t("sidebar.dataManagement") },
+    ...(isAdminRegion ? [{ href: "/data-management/list/odp", label: t("sidebar.listOdp") }] : []),
+    ...(canReviewValidation ? [{ href: "/requests", label: t("sidebar.requests") }] : []),
+    { href: "/maps", label: t("sidebar.maps") },
+    ...(isSuperAdmin ? [{ href: "/master-data", label: t("sidebar.masterData") }] : []),
+    ...(isSuperAdmin ? [{ href: "/audit-trail", label: t("sidebar.auditTrail") }] : []),
+    ...(isSuperAdmin ? [{ href: "/trash", label: t("sidebar.trash") }] : []),
+    ...(isSuperAdmin || isAdminRegion ? [{ href: "/account-management", label: t("sidebar.accountManagement") }] : []),
   ];
 
-  const pageContext = buildPageContext(pathname);
-  const scopeLabel = buildScopeLabel(me, normalizedRole);
+  const pageContext = buildPageContext(pathname, t);
+  const scopeLabel = buildScopeLabel(me, normalizedRole, t);
 
   return (
     <SidebarProvider defaultOpen={true} className="h-dvh overflow-hidden bg-sidebar">
@@ -96,75 +98,80 @@ function formatRoleLabel(role: string) {
   return role;
 }
 
-function buildScopeLabel(me: SessionUser, role: string) {
-  if (role === "superadmin") return "All regions";
+function buildScopeLabel(me: SessionUser, role: string, t: TFn) {
+  if (role === "superadmin") return t("header.allRegions");
   const count = me.app_user.user_region_scopes?.length || 0;
-  if (count > 1) return `${count} regions`;
-  if (count === 1) return "1 region";
-  return "Region scope";
+  if (count > 1) return `${count} ${t("header.regions")}`;
+  if (count === 1) return t("header.oneRegion");
+  return t("header.regionScope");
 }
 
-function buildPageContext(pathname: string) {
+function buildPageContext(pathname: string, t: TFn) {
   const segments = pathname.split("/").filter(Boolean);
   const first = segments[0] || "dashboard";
-  const last = segments[segments.length - 1] || first;
-  const labels: Record<string, { eyebrow: string; title: string; description: string }> = {
+  const labels: Record<string, { eyebrowKey: MessageKey; titleKey: MessageKey; descriptionKey: MessageKey }> = {
     dashboard: {
-      eyebrow: "Workspace",
-      title: "Dashboard",
-      description: "Ringkasan scope, request, dan kondisi inventory.",
+      eyebrowKey: "sidebar.workspace",
+      titleKey: "sidebar.dashboard",
+      descriptionKey: "page.dashboard.description",
     },
     "data-management": {
-      eyebrow: "Inventory",
-      title: buildDataManagementTitle(segments),
-      description: "Kelola asset, POP, route, project, customer, dan relasi jaringan.",
+      eyebrowKey: "sidebar.assets",
+      titleKey: "sidebar.dataManagement",
+      descriptionKey: "page.dataManagement.description",
     },
     requests: {
-      eyebrow: "Approval",
-      title: "Requests",
-      description: "Review request asset dan validasi sesuai role.",
+      eyebrowKey: "sidebar.requests",
+      titleKey: "sidebar.requests",
+      descriptionKey: "page.requests.description",
     },
     "validation-requests": {
-      eyebrow: "Approval",
-      title: "Requests",
-      description: "Review hasil validasi lapangan dan evidence.",
+      eyebrowKey: "sidebar.validation",
+      titleKey: "sidebar.requests",
+      descriptionKey: "page.requests.description",
     },
     "master-data": {
-      eyebrow: "Reference",
-      title: segments.length > 1 ? buildDataManagementTitle(segments) : "Master Data",
-      description: "Standarisasi referensi perangkat, lokasi, dan layanan.",
+      eyebrowKey: "sidebar.administration",
+      titleKey: "sidebar.masterData",
+      descriptionKey: "page.masterData.description",
     },
     "audit-trail": {
-      eyebrow: "Governance",
-      title: "Audit Trail",
-      description: "Lacak perubahan dan aktivitas sistem.",
+      eyebrowKey: "sidebar.governance",
+      titleKey: "sidebar.auditTrail",
+      descriptionKey: "page.auditTrail.description",
     },
     trash: {
-      eyebrow: "Archive",
-      title: "Trash",
-      description: "Kelola data yang sudah diarsipkan.",
+      eyebrowKey: "sidebar.trash",
+      titleKey: "sidebar.trash",
+      descriptionKey: "page.trash.description",
     },
     maps: {
-      eyebrow: "Network",
-      title: "Maps",
-      description: "Visualisasi asset dan cakupan jaringan.",
+      eyebrowKey: "sidebar.network",
+      titleKey: "sidebar.maps",
+      descriptionKey: "page.maps.description",
     },
     "account-management": {
-      eyebrow: "Administration",
-      title: "Account Management",
-      description: "Kelola akun, role, dan region scope.",
+      eyebrowKey: "sidebar.administration",
+      titleKey: "sidebar.accountManagement",
+      descriptionKey: "page.accountManagement.description",
     },
     profile: {
-      eyebrow: "Account",
-      title: "Profile",
-      description: "Kelola identitas dan keamanan akun.",
+      eyebrowKey: "sidebar.profile",
+      titleKey: "sidebar.profile",
+      descriptionKey: "page.profile.description",
     },
   };
 
-  return labels[first] || {
-    eyebrow: "Syntrix",
-    title: buildEntityTitle(last),
-    description: "Synchronization & Validation Matrix.",
+  const ctx = labels[first] || {
+    eyebrowKey: "sidebar.workspace",
+    titleKey: "sidebar.dashboard",
+    descriptionKey: "page.default.description",
+  };
+
+  return {
+    eyebrow: t(ctx.eyebrowKey),
+    title: first === "master-data" && segments.length > 1 ? buildDataManagementTitle(segments) : t(ctx.titleKey),
+    description: t(ctx.descriptionKey),
   };
 }
 

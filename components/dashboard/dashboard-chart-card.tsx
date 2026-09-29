@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslate } from "@/lib/use-locale";
 import { Cell, Pie, PieChart } from "recharts";
 
 export type DashboardChartDatum = {
@@ -30,6 +31,7 @@ export function DashboardDonutChartCard({
   loading?: boolean;
 }) {
   const router = useRouter();
+  const { t } = useTranslate();
   const normalized = normalizeData(data);
   const total = normalized.reduce((sum, item) => sum + item.value, 0);
 
@@ -90,7 +92,7 @@ export function DashboardDonutChartCard({
               </ChartContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-xl font-bold leading-none tabular-nums">{total}</span>
-                <span className="text-xs uppercase leading-none text-muted-foreground">total</span>
+                <span className="text-xs uppercase leading-none text-muted-foreground">{t("dashboard.chart.total")}</span>
               </div>
             </div>
             <ChartLegend data={normalized} total={total} />
