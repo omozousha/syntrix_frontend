@@ -418,6 +418,9 @@ const id = {
   "dashboard.openItem": "Buka {title}",
   "dashboard.chart.count": "Jumlah",
   "dashboard.mapDevices": "Perangkat: {count}",
+  "common.loadFailed": "Data gagal dimuat",
+  "common.checkConnection": "Periksa koneksi lalu coba lagi.",
+  "common.retry": "Coba lagi",
 } as const;
 
 export type Messages = { [K in keyof typeof id]: string };
@@ -808,6 +811,9 @@ const en: Messages = {
   "dashboard.openItem": "Open {title}",
   "dashboard.chart.count": "Count",
   "dashboard.mapDevices": "Devices: {count}",
+  "common.loadFailed": "Failed to load data",
+  "common.checkConnection": "Check connection then retry.",
+  "common.retry": "Retry",
 };
 
 export const dictionaries: Record<Locale, Messages> = { id, en };
