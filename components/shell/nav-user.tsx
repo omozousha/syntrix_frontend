@@ -16,6 +16,7 @@ import { getRegionLabel } from "@/lib/relation-labels";
 import { mapValidationStatus } from "@/lib/validation-status";
 import { useSession } from "@/components/session-context";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { LocaleToggle } from "@/components/shell/locale-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -306,6 +307,8 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
 
   return (
     <div className="flex w-auto shrink-0 items-center justify-end gap-1.5 sm:gap-2">
+      <LocaleToggle />
+
       {canReviewValidation ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

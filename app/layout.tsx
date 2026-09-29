@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Doto, Space_Grotesk, Space_Mono } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeSync } from "@/components/providers/theme-sync";
+import { LocaleSync } from "@/components/providers/locale-sync";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -137,6 +138,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col grain-overlay" suppressHydrationWarning>
         <ThemeSync />
+        <LocaleSync />
         <QueryProvider>
           <TooltipProvider>
             {children}
