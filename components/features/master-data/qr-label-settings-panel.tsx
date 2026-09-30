@@ -21,6 +21,7 @@ import {
   loadQrLabelSettings,
   type QrLabelSettings,
 } from "@/lib/qr-label";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type UploadResult = {
   id: string;
@@ -34,6 +35,7 @@ type QrLabelSettingsPanelProps = {
 };
 
 export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
+  const { t } = useTranslate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [setting, setSetting] = useState<QrLabelSettings | null>(null);
   const [logoPreviewDataUrl, setLogoPreviewDataUrl] = useState("");
@@ -49,9 +51,8 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [successTitle, setSuccessTitle] = useState("");
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
-  const [successDialogTitle, setSuccessDialogTitle] = useState("");
-  const [successDialogDescription, setSuccessDialogDescription] = useState("");
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
 
   useEffect(() => {
@@ -69,7 +70,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
         setSetting(nextSetting);
         setLogoPreviewDataUrl(logoDataUrl);
       } catch (err) {
-        if (!cancelled) setError((err as Error).message || "Gagal memuat QR label settings.");
+        if (!cancelled) setError((err as Error).message);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -158,11 +159,11 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
 
     if (!file.type.startsWith("image/")) {
       setSelectedFile(null);
-      setError("Logo QR harus berupa file image.");
+      setError(t("qrLabel.error.imageRequired"));
       return;
     }
 
-    const dataUrl = await fileToDataUrl(file);
+    const dataUrl = await fileToDataUrl(file, t);
     setSelectedFile(null);
     setCropSourceDataUrl(dataUrl);
     setCropZoom(1);
@@ -176,14 +177,14 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
     setError("");
     setSuccess("");
     try {
-      const croppedDataUrl = await cropImageDataUrl(cropSourceDataUrl, cropZoom, cropOffsetX, cropOffsetY);
+      const croppedDataUrl = await cropImageDataUrl(cropSourceDataUrl, cropZoom, cropOffsetX, cropOffsetY, t);
       const croppedFile = await dataUrlToFile(croppedDataUrl, "qr-label-logo.png");
       setSelectedFile(croppedFile);
       setLogoPreviewDataUrl(croppedDataUrl);
       setCropSourceDataUrl("");
       setCropPreviewDataUrl("");
     } catch (err) {
-      setError((err as Error).message || "Gagal crop logo QR.");
+      setError((err as Error).message || t("qrLabel.error.cropFailed"));
     }
   }
 
@@ -232,14 +233,13 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
       setCropPreviewDataUrl("");
       await reloadSettings();
       const message = selectedFile
-        ? "Logo QR label berhasil diupload dan diterapkan ke detail ODP serta bulk QR."
-        : "QR label settings berhasil disimpan.";
+        ? t("qrLabel.toast.logoUploaded")
+        : t("qrLabel.toast.saved");
       setSuccess(message);
-      setSuccessDialogTitle("QR Label Berhasil Disimpan");
-      setSuccessDialogDescription(message);
+      setSuccessTitle(t("qrLabel.dialog.savedTitle"));
       setSuccessDialogOpen(true);
     } catch (err) {
-      setError((err as Error).message || "Gagal menyimpan QR label settings.");
+      setError((err as Error).message || t("qrLabel.error.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -255,6 +255,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
         token: token || undefined,
         body: {
           reset_logo: true,
+          // ponytail: default footer copy is persisted data (never localized) to keep API payload stable across locale toggle
           footer_text: setting?.footer_text || "Scan QR untuk membuka detail/validasi Device",
           is_active: true,
         },
@@ -265,13 +266,12 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
       setCropSourceDataUrl("");
       setCropPreviewDataUrl("");
       await reloadSettings();
-      const message = "Logo QR dikembalikan ke default.";
+      const message = t("qrLabel.toast.logoReset");
       setSuccess(message);
-      setSuccessDialogTitle("Logo QR Berhasil Direset");
-      setSuccessDialogDescription(message);
+      setSuccessTitle(t("qrLabel.dialog.resetTitle"));
       setSuccessDialogOpen(true);
     } catch (err) {
-      setError((err as Error).message || "Gagal reset logo QR.");
+      setError((err as Error).message || t("qrLabel.error.resetFailed"));
     } finally {
       setSaving(false);
     }
@@ -285,23 +285,23 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/40 p-5 pb-4">
             <div className="min-w-0">
               <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
-                KONFIGURASI / QR LABEL
+                {t("qrLabel.eyebrow")}
               </p>
               <h2 className="mt-0.5 flex items-center gap-2 text-base font-semibold text-foreground">
                 <QrCode className="size-4 text-primary" />
-                QR Label Settings
+                {t("qrLabel.title")}
               </h2>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Atur logo tengah dan footer QR label untuk download detail ODP dan bulk QR.
+                {t("qrLabel.description")}
               </p>
             </div>
             <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.12em]">
-              Superadmin
+              {t("qrLabel.badge")}
             </Badge>
           </div>
           <div className="grid min-w-0 gap-6 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
           <div className="min-w-0 space-y-5">
-            {loading ? <AppLoading label="Memuat QR label settings..." /> : null}
+            {loading ? <AppLoading label={t("qrLabel.loading")} /> : null}
 
             {!loading ? (
               <>
@@ -309,20 +309,20 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                 <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/60 bg-muted/15 px-4 py-3 text-sm shadow-2xs glass-inset">
                   <div className="flex items-center gap-2">
                     <span className="size-2 rounded-full bg-emerald-500" />
-                    <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground">Logo Aktif</span>
+                    <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground">{t("qrLabel.logoActive")}</span>
                   </div>
                   <Separator orientation="vertical" className="h-4" />
                   <span className="truncate text-xs text-muted-foreground">
-                    {cropSourceDataUrl ? "Menunggu crop" : selectedFile?.name || setting?.qr_logo_original_name || "Default Syntrix logo"}
+                    {cropSourceDataUrl ? t("qrLabel.awaitingCrop") : selectedFile?.name || setting?.qr_logo_original_name || t("qrLabel.defaultLogo")}
                   </span>
                   {setting?.updated_at ? (
                     <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
-                      &middot; Update: {new Date(setting.updated_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                      {t("qrLabel.update", { time: new Date(setting.updated_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) })}
                     </span>
                   ) : null}
                   {cropSourceDataUrl ? (
                     <Badge variant="destructive" className="ml-auto shrink-0 font-mono text-[9px] uppercase tracking-[0.12em]">
-                      Belum disimpan
+                      {t("qrLabel.unsavedBadge")}
                     </Badge>
                   ) : null}
                 </div>
@@ -336,23 +336,23 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                     onClick={() => setMobilePreviewOpen((v) => !v)}
                   >
                     <Eye className="size-3.5" />
-                    {mobilePreviewOpen ? "Tutup preview" : "Lihat preview QR label"}
+                    {mobilePreviewOpen ? t("qrLabel.closePreview") : t("qrLabel.openPreview")}
                   </Button>
                   {mobilePreviewOpen ? (
                     <div className="mt-3 space-y-2">
-                      <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Preview label</p>
+                      <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{t("qrLabel.previewLabel")}</p>
                       <div className="overflow-hidden rounded-2xl border border-border/60 bg-white p-3 shadow-2xs">
                         {labelPreviewDataUrl ? (
                           <Image
                             src={labelPreviewDataUrl}
-                            alt="QR label preview"
+                            alt={t("qrLabel.previewAlt")}
                             width={900}
                             height={450}
                             unoptimized
                             className="h-auto w-full rounded-xl"
                           />
                         ) : (
-                          <div className="flex aspect-[2/1] items-center justify-center text-xs text-muted-foreground">Preview belum tersedia</div>
+                          <div className="flex aspect-[2/1] items-center justify-center text-xs text-muted-foreground">{t("qrLabel.previewUnavailable")}</div>
                         )}
                       </div>
                     </div>
@@ -386,13 +386,13 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                   <div className="mb-2 rounded-xl border border-border/50 bg-muted/40 p-2.5 shadow-2xs">
                     <ImageUp className="size-5 text-muted-foreground" />
                   </div>
-                  <p className="text-sm font-semibold text-foreground">Upload atau drag logo QR</p>
+                  <p className="text-sm font-semibold text-foreground">{t("qrLabel.uploadTitle")}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Gunakan logo dengan kontras jelas. Format persegi (1:1) direkomendasikan.
+                    {t("qrLabel.uploadHint")}
                   </p>
                   {selectedFile ? (
                     <Badge variant="secondary" className="mt-2.5 font-mono text-[9px] uppercase tracking-[0.12em]">
-                      File: {selectedFile.name}
+                      {t("qrLabel.fileBadge", { name: selectedFile.name })}
                     </Badge>
                   ) : null}
                 </div>
@@ -400,22 +400,22 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                 {/* Crop Controls */}
                 {cropSourceDataUrl ? (
                   <div className="rounded-2xl border border-border/60 bg-muted/10 p-4 shadow-2xs glass-inset">
-                    <p className="mb-3 font-mono text-[9px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">Crop Logo</p>
+                    <p className="mb-3 font-mono text-[9px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">{t("qrLabel.cropTitle")}</p>
                     <div className="grid gap-4 sm:grid-cols-[160px_minmax(0,1fr)]">
                       <div className="flex aspect-square items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-white shadow-2xs">
                         {cropPreviewDataUrl ? (
-                          <Image src={cropPreviewDataUrl} alt="Preview crop" width={512} height={512} unoptimized className="h-full w-full object-contain" />
+                          <Image src={cropPreviewDataUrl} alt={t("qrLabel.cropPreviewAlt")} width={512} height={512} unoptimized className="h-full w-full object-contain" />
                         ) : (
-                          <span className="text-xs text-muted-foreground">Memproses...</span>
+                          <span className="text-xs text-muted-foreground">{t("qrLabel.processing")}</span>
                         )}
                       </div>
                       <div className="space-y-3.5">
                         <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                          Hasil crop square agar logo rapi di tengah QR label.
+                          {t("qrLabel.cropHint")}
                         </p>
-                        <CropRange id="qr-logo-crop-zoom" label="Zoom" min={1} max={3} step={0.05} value={cropZoom} valueLabel={`${cropZoom.toFixed(2)}x`} onChange={setCropZoom} />
-                        <CropRange id="qr-logo-crop-x" label="Geser Horizontal" min={-100} max={100} step={1} value={cropOffsetX} valueLabel={`${cropOffsetX}`} onChange={setCropOffsetX} />
-                        <CropRange id="qr-logo-crop-y" label="Geser Vertikal" min={-100} max={100} step={1} value={cropOffsetY} valueLabel={`${cropOffsetY}`} onChange={setCropOffsetY} />
+                        <CropRange id="qr-logo-crop-zoom" label={t("qrLabel.cropZoom")} min={1} max={3} step={0.05} value={cropZoom} valueLabel={`${cropZoom.toFixed(2)}x`} onChange={setCropZoom} />
+                        <CropRange id="qr-logo-crop-x" label={t("qrLabel.cropX")} min={-100} max={100} step={1} value={cropOffsetX} valueLabel={`${cropOffsetX}`} onChange={setCropOffsetX} />
+                        <CropRange id="qr-logo-crop-y" label={t("qrLabel.cropY")} min={-100} max={100} step={1} value={cropOffsetY} valueLabel={`${cropOffsetY}`} onChange={setCropOffsetY} />
                         <div className="flex flex-wrap gap-2 pt-1">
                           <Button
                             type="button"
@@ -424,7 +424,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                             disabled={saving || !cropPreviewDataUrl}
                             className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                           >
-                            Gunakan Crop
+                            {t("qrLabel.applyCrop")}
                           </Button>
                           <Button
                             type="button"
@@ -434,7 +434,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                             disabled={saving}
                             className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                           >
-                            Batal
+                            {t("qrLabel.cancel")}
                           </Button>
                         </div>
                       </div>
@@ -445,17 +445,17 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                 {/* Footer Text */}
                 <div className="space-y-1.5">
                   <Label htmlFor="qr-footer-text" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                    Footer Label
+                    {t("qrLabel.footerLabel")}
                   </Label>
                   <Input
                     id="qr-footer-text"
                     value={setting?.footer_text || ""}
                     onChange={(e) => setSetting((prev) => ({ ...(prev || {}), footer_text: e.target.value }))}
-                    placeholder="Scan QR untuk membuka detail/validasi Device"
+                    placeholder={t("qrLabel.footerPlaceholder")}
                     disabled={saving}
                     className="h-9 rounded-xl border-border/60 bg-card text-xs shadow-2xs glass-inset"
                   />
-                  <p className="font-mono text-[10px] text-muted-foreground">Teks ini muncul di bawah QR label.</p>
+                  <p className="font-mono text-[10px] text-muted-foreground">{t("qrLabel.footerHint")}</p>
                 </div>
 
                 {/* Actions */}
@@ -467,7 +467,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                     className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                   >
                     <Save className="mr-2 size-3.5" />
-                    {saving ? "Menyimpan..." : "Simpan Pengaturan"}
+                    {saving ? t("qrLabel.saving") : t("qrLabel.save")}
                   </Button>
                   <Button
                     type="button"
@@ -477,7 +477,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                     className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                   >
                     <RefreshCw className="mr-2 size-3.5" />
-                    Reset Logo
+                    {t("qrLabel.resetLogo")}
                   </Button>
                 </div>
 
@@ -498,12 +498,12 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
 
           {/* Desktop Preview */}
           <div className="hidden min-w-0 space-y-2 xl:sticky xl:top-4 xl:block xl:self-start">
-            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Preview Label QR</p>
+            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{t("qrLabel.previewDesktopTitle")}</p>
             <div className="overflow-hidden rounded-2xl border border-border/60 bg-white p-3.5 shadow-xs">
               {labelPreviewDataUrl ? (
                 <Image
                   src={labelPreviewDataUrl}
-                  alt="QR label preview"
+                  alt={t("qrLabel.previewAlt")}
                   width={900}
                   height={450}
                   unoptimized
@@ -511,12 +511,12 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                 />
               ) : (
                 <div className="flex aspect-[2/1] items-center justify-center text-xs text-muted-foreground">
-                  Preview belum tersedia
+                  {t("qrLabel.previewUnavailable")}
                 </div>
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Preview adalah representasi cetak fisik. QR akan mengarah ke detail ODP di aplikasi.
+              {t("qrLabel.previewCaption")}
             </p>
           </div>
         </div>
@@ -525,10 +525,10 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
 
       <ResponseDialog
         open={successDialogOpen}
-        title={successDialogTitle}
-        description={successDialogDescription}
+        title={successTitle}
+        description={success}
         variant="success"
-        actionLabel="OK"
+        actionLabel={t("qrLabel.ok")}
         onOpenChange={setSuccessDialogOpen}
         onAction={() => setSuccessDialogOpen(false)}
       />
@@ -536,11 +536,11 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
   );
 }
 
-function fileToDataUrl(file: File) {
+function fileToDataUrl(file: File, t: TFn) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("Gagal membaca file logo."));
+    reader.onerror = () => reject(new Error(t("qrLabel.error.readFile")));
     reader.readAsDataURL(file);
   });
 }
@@ -586,27 +586,28 @@ function CropRange({
   );
 }
 
-function loadImageElement(src: string) {
+// ponytail: t optional — the preview-rebuild call site discards errors, so it skips t and avoids t in effect deps
+function loadImageElement(src: string, t?: TFn) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new window.Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Gagal memuat preview logo."));
+    image.onerror = () => reject(new Error(t ? t("qrLabel.error.loadImage") : "Failed to load logo preview."));
     image.src = src;
   });
 }
 
-async function cropImageDataUrl(src: string, zoom: number, offsetX: number, offsetY: number) {
-  const image = await loadImageElement(src);
+async function cropImageDataUrl(src: string, zoom: number, offsetX: number, offsetY: number, t?: TFn) {
+  const image = await loadImageElement(src, t);
   const naturalWidth = image.naturalWidth || image.width;
   const naturalHeight = image.naturalHeight || image.height;
-  if (!naturalWidth || !naturalHeight) throw new Error("Ukuran logo tidak valid.");
+  if (!naturalWidth || !naturalHeight) throw new Error(t ? t("qrLabel.error.invalidSize") : "Invalid logo size.");
 
   const outputSize = 512;
   const canvas = document.createElement("canvas");
   canvas.width = outputSize;
   canvas.height = outputSize;
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("Browser tidak mendukung crop logo.");
+  if (!context) throw new Error(t ? t("qrLabel.error.cropUnsupported") : "This browser does not support logo cropping.");
 
   const normalizedZoom = Math.max(1, zoom);
   const cropSize = Math.max(1, Math.min(naturalWidth, naturalHeight) / normalizedZoom);

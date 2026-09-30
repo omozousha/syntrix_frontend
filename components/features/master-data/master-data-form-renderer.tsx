@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { SimpleDropdown } from "@/components/ui/simple-dropdown";
 import { Textarea } from "@/components/ui/textarea";
 import type { FieldDef, FieldType } from "@/lib/master-data-form-config";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 
@@ -81,6 +82,7 @@ function renderCombobox(
   onChange: (v: string) => void,
   error: string | undefined,
   lookups: LookupOptions,
+  t: TFn,
 ) {
   let options = field.options || [];
   if (field.lookupType) {
@@ -91,15 +93,15 @@ function renderCombobox(
     <SimpleDropdown
       value={value}
       onValueChange={(v) => onChange(v === "__none" ? "" : v)}
-      placeholder={field.placeholder || "Pilih..."}
+      placeholder={field.placeholder || t("masterData.form.select")}
       options={options}
       className={error ? "border-destructive" : ""}
     />
   );
 }
 
-function renderReadonlyInput(field: FieldDef, value: string) {
-  return <Input value={value || "Otomatis"} disabled className="h-9 text-sm text-muted-foreground" />;
+function renderReadonlyInput(field: FieldDef, value: string, t: TFn) {
+  return <Input value={value || t("masterData.form.auto")} disabled className="h-9 text-sm text-muted-foreground" />;
 }
 
 function renderTextareaInput(field: FieldDef, value: string, onChange: (v: string) => void, error: string | undefined) {
@@ -113,7 +115,7 @@ function renderTextareaInput(field: FieldDef, value: string, onChange: (v: strin
   );
 }
 
-function renderColorInput(field: FieldDef, value: string, onChange: (v: string) => void) {
+function renderColorInput(field: FieldDef, value: string, onChange: (v: string) => void, t: TFn) {
   const normalized = normalizeHexColor(value) || "#0EA5E9";
   return (
     <div className="flex items-center gap-2">
@@ -126,7 +128,7 @@ function renderColorInput(field: FieldDef, value: string, onChange: (v: string) 
         </PopoverTrigger>
         <PopoverContent className="w-64 space-y-3" align="start">
           <div className="space-y-1.5">
-            <Label className="text-xs">Color Picker</Label>
+            <Label className="text-xs">{t("masterData.form.colorPicker")}</Label>
             <input
               type="color"
               value={normalized}
@@ -135,7 +137,7 @@ function renderColorInput(field: FieldDef, value: string, onChange: (v: string) 
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Quick Colors</Label>
+            <Label className="text-xs">{t("masterData.form.quickColors")}</Label>
             <div className="grid grid-cols-8 gap-1">
               {SWATCHES.map((color) => (
                 <button
@@ -144,7 +146,7 @@ function renderColorInput(field: FieldDef, value: string, onChange: (v: string) 
                   className="size-6 rounded border"
                   style={{ backgroundColor: color }}
                   onClick={() => onChange(color)}
-                  aria-label={`Pilih ${color}`}
+                  aria-label={t("masterData.form.pickColor", { color })}
                 />
               ))}
             </div>
@@ -196,6 +198,7 @@ function parseJsonStringArray(value: string | undefined | null): string[] {
 
 export function MasterDataFormFields(props: RenderMasterDataFieldsProps) {
   const { fields, form, setForm, fieldErrors, setFieldError, clearFieldError, lookups, onBlur, isEdit } = props;
+  const { t } = useTranslate();
   const setValue = (key: string, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -253,9 +256,9 @@ export function MasterDataFormFields(props: RenderMasterDataFieldsProps) {
                     </Label>
                     {field.type === "text" ? renderTextInput(field, value, handleChange, error) : null}
                     {field.type === "number" ? renderNumberInput(field, value, handleChange, error) : null}
-                    {field.type === "combobox" ? renderCombobox(field, value, handleChange, error, lookups) : null}
-                    {field.type === "readonly" ? renderReadonlyInput(field, value) : null}
-                    {field.type === "color" ? renderColorInput(field, value, handleChange) : null}
+                    {field.type === "combobox" ? renderCombobox(field, value, handleChange, error, lookups, t) : null}
+                    {field.type === "readonly" ? renderReadonlyInput(field, value, t) : null}
+                    {field.type === "color" ? renderColorInput(field, value, handleChange, t) : null}
                     {field.type === "textarea" ? renderTextareaInput(field, value, handleChange, error) : null}
                     {field.type === "checkbox-group" ? (
                       <div className="space-y-2">
