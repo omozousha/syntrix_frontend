@@ -233,7 +233,7 @@ export function GenericBulkImportPage({ config }: Props) {
         popsList = pops as Array<{ id: string; pop_id: string; pop_name: string; pop_code: string }> | null;
         serviceTypesList = svcTypes as Array<{ id: string; service_type_name: string; service_type_code: string }> | null;
       } catch (scopeErr) {
-        setParseError(scopeErr instanceof Error ? scopeErr.message : "Role ini tidak didukung.");
+        setParseError(scopeErr instanceof Error ? scopeErr.message : t("import.page.unsupportedRole"));
         setUploadFile(null);
         setFilename(null);
         return;
@@ -301,18 +301,18 @@ export function GenericBulkImportPage({ config }: Props) {
 
       if (unknownRegions.size) {
         fileErrorObj = {
-          title: "Region Tidak Dikenali",
-          description: `Berkas ini memiliki nama region yang tidak dikenali: ${Array.from(unknownRegions).join(", ")}.`,
+          title: t("import.page.errRegionUnknown"),
+          description: t("import.page.errRegionUnknownDesc", { regions: Array.from(unknownRegions).join(", ") }),
         };
       } else if (role === "admin" && uniqueRegionIds.size > 1) {
         fileErrorObj = {
-          title: "File Mengandung Multi-Region",
-          description: `Berkas ini berisi ${uniqueRegionIds.size} region berbeda. Untuk role admin, satu file hanya boleh berisi tepat satu region. Pisahkan per region.`,
+          title: t("import.page.errMultiRegion"),
+          description: t("import.page.errMultiRegionDesc", { count: uniqueRegionIds.size }),
         };
       } else if (role === "user_all_region" && allowedRegionIds.length === 0) {
         fileErrorObj = {
-          title: "Scope Region Belum Ditetapkan",
-          description: "Akun admin Anda belum memiliki region scope yang ditetapkan. Hubungi administrator.",
+          title: t("import.page.errScopeNotSet"),
+          description: t("import.page.errScopeNotSetDesc"),
         };
       } else if (
         role === "user_all_region" &&
@@ -321,8 +321,8 @@ export function GenericBulkImportPage({ config }: Props) {
       ) {
         const outOfScopeIds = Array.from(uniqueRegionIds).filter((id) => !allowedRegionIds.includes(id));
         fileErrorObj = {
-          title: "Region Tidak Termasuk Scope Anda",
-          description: `Berkas ini berisi region di luar scope admin Anda (${outOfScopeIds.length} region). Hanya region dalam scope yang boleh diimpor.`,
+          title: t("import.page.errOutOfScope"),
+          description: t("import.page.errOutOfScopeDesc", { count: outOfScopeIds.length }),
         };
       }
     }
@@ -377,8 +377,8 @@ export function GenericBulkImportPage({ config }: Props) {
 
       if (unknownPops.size && !fileErrorObj) {
         fileErrorObj = {
-          title: "Referensi POP Tidak Dikenali",
-          description: `Berkas ini memiliki referensi POP yang tidak dikenali: ${Array.from(unknownPops).join(", ")}.`,
+          title: t("import.page.errPopUnknown"),
+          description: t("import.page.errPopUnknownDesc", { pops: Array.from(unknownPops).join(", ") }),
         };
       }
     }
@@ -430,8 +430,8 @@ export function GenericBulkImportPage({ config }: Props) {
 
       if (unknownSts.size && !fileErrorObj) {
         fileErrorObj = {
-          title: "Service Type Tidak Dikenali",
-          description: `Berkas ini memiliki Service Type yang tidak dikenali: ${Array.from(unknownSts).join(", ")}.`,
+          title: t("import.page.errServiceTypeUnknown"),
+          description: t("import.page.errServiceTypeUnknownDesc", { types: Array.from(unknownSts).join(", ") }),
         };
       }
     }

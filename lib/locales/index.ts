@@ -1126,8 +1126,6 @@ const id = {
   "import.page.prereqLabel": "Prasyarat",
   "import.page.fileSelected": "File Terpilih",
   "import.page.progressLabel": "Progress",
-  "import.page.fileErrorTitle": "{title}",
-  "import.page.fileErrorDesc": "{description}",
   "import.page.back": "Kembali",
   "import.page.cancel": "Batal",
   "import.page.nextUpload": "LANJUT UNGGAH",
@@ -1161,6 +1159,20 @@ const id = {
   "import.page.dialog.apply": "MULAI TERAPKAN",
   "import.page.dialog.retryTitle": "Selesaikan baris error sebelum menerapkan.",
   "import.page.dialog.rows": "{count} Baris",
+
+  // Import — file-level validation errors (titles + descriptions)
+  "import.page.errRegionUnknown": "Region Tidak Dikenali",
+  "import.page.errRegionUnknownDesc": "Berkas ini memiliki nama region yang tidak dikenali: {regions}.",
+  "import.page.errMultiRegion": "Berkas Mengandung Multi-Region",
+  "import.page.errMultiRegionDesc": "Berkas ini berisi {count} region berbeda. Untuk role admin, satu file hanya boleh berisi tepat satu region. Pisahkan per region.",
+  "import.page.errScopeNotSet": "Scope Region Belum Ditetapkan",
+  "import.page.errScopeNotSetDesc": "Akun admin Anda belum memiliki region scope yang ditetapkan. Hubungi administrator.",
+  "import.page.errOutOfScope": "Region Tidak Termasuk Scope Anda",
+  "import.page.errOutOfScopeDesc": "Berkas ini berisi region di luar scope admin Anda ({count} region). Hanya region dalam scope yang boleh diimpor.",
+  "import.page.errPopUnknown": "Referensi POP Tidak Dikenali",
+  "import.page.errPopUnknownDesc": "Berkas ini memiliki referensi POP yang tidak dikenali: {pops}.",
+  "import.page.errServiceTypeUnknown": "Service Type Tidak Dikenali",
+  "import.page.errServiceTypeUnknownDesc": "Berkas ini memiliki Service Type yang tidak dikenali: {types}.",
 } as const;
 
 export type Messages = { [K in keyof typeof id]: string };
@@ -2259,8 +2271,6 @@ const en: Messages = {
   "import.page.prereqLabel": "Prerequisite",
   "import.page.fileSelected": "File Selected",
   "import.page.progressLabel": "Progress",
-  "import.page.fileErrorTitle": "{title}",
-  "import.page.fileErrorDesc": "{description}",
   "import.page.back": "Back",
   "import.page.cancel": "Cancel",
   "import.page.nextUpload": "CONTINUE UPLOAD",
@@ -2294,6 +2304,20 @@ const en: Messages = {
   "import.page.dialog.apply": "START APPLY",
   "import.page.dialog.retryTitle": "Resolve the error rows before applying.",
   "import.page.dialog.rows": "{count} rows",
+
+  // Import — file-level validation errors (titles + descriptions)
+  "import.page.errRegionUnknown": "Unrecognized Region",
+  "import.page.errRegionUnknownDesc": "This file contains region names that are not recognized: {regions}.",
+  "import.page.errMultiRegion": "File Contains Multiple Regions",
+  "import.page.errMultiRegionDesc": "This file contains {count} different regions. For the admin role, a single file may contain only one region. Split by region.",
+  "import.page.errScopeNotSet": "Region Scope Not Set",
+  "import.page.errScopeNotSetDesc": "Your admin account has no region scope assigned yet. Contact an administrator.",
+  "import.page.errOutOfScope": "Region Outside Your Scope",
+  "import.page.errOutOfScopeDesc": "This file contains regions outside your admin scope ({count} region(s)). Only regions within scope may be imported.",
+  "import.page.errPopUnknown": "Unrecognized POP Reference",
+  "import.page.errPopUnknownDesc": "This file contains POP references that are not recognized: {pops}.",
+  "import.page.errServiceTypeUnknown": "Unrecognized Service Type",
+  "import.page.errServiceTypeUnknownDesc": "This file contains Service Types that are not recognized: {types}.",
 };
 
 export const dictionaries: Record<Locale, Messages> = { id, en };
