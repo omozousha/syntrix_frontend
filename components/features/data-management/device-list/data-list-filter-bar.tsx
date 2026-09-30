@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
+import { useTranslate } from "@/lib/use-locale";
 
 type ArchiveView = "active" | "archived" | "all";
 
@@ -75,22 +76,23 @@ export function DataListFilterBar({
   onLimitChange,
   onResetFilters,
 }: DataListFilterBarProps) {
+  const { t } = useTranslate();
   const cell = "flex flex-col gap-0.5 rounded-lg border border-border/60 bg-background/80 dark:bg-background/50 px-2 py-1.5";
   const label = "font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground leading-none";
 
   const filters = [
     supportsPopFilter && (
       <div key="pop" className={cell}>
-        <span className={label}>POP</span>
+        <span className={label}>{t("deviceList.filter.pop")}</span>
         <Combobox
           value={popFilterValue}
           onValueChange={onPopFilterChange}
-          placeholder={popFilterLoading ? "..." : "POP"}
-          searchPlaceholder="Cari..."
-          emptyText="Tidak ada."
+          placeholder={popFilterLoading ? "..." : t("deviceList.filter.pop")}
+          searchPlaceholder={t("deviceList.filter.search")}
+          emptyText={t("deviceList.filter.noOption")}
           disabled={popFilterLoading}
           options={[
-            { value: "__all", label: "Semua" },
+            { value: "__all", label: t("deviceList.filter.all") },
             ...popFilterOptions.slice().sort((a, b) => a.label.localeCompare(b.label, "id")).map((o) => ({ value: o.id, label: o.label })),
           ]}
         />
@@ -98,16 +100,16 @@ export function DataListFilterBar({
     ),
     supportsProjectFilter && (
       <div key="project" className={cell}>
-        <span className={label}>Project</span>
+        <span className={label}>{t("deviceList.filter.project")}</span>
         <Combobox
           value={projectFilterValue}
           onValueChange={onProjectFilterChange}
-          placeholder={projectFilterLoading ? "..." : "Project"}
-          searchPlaceholder="Cari..."
-          emptyText="Tidak ada."
+          placeholder={projectFilterLoading ? "..." : t("deviceList.filter.project")}
+          searchPlaceholder={t("deviceList.filter.search")}
+          emptyText={t("deviceList.filter.noOption")}
           disabled={projectFilterLoading}
           options={[
-            { value: "__all", label: "Semua" },
+            { value: "__all", label: t("deviceList.filter.all") },
             ...projectFilterOptions.slice().sort((a, b) => a.label.localeCompare(b.label, "id")).map((o) => ({ value: o.id, label: o.label })),
           ]}
         />
@@ -115,34 +117,36 @@ export function DataListFilterBar({
     ),
     supportsValidationFilter && (
       <div key="validation" className={cell}>
-        <span className={label}>Validasi</span>
+        <span className={label}>{t("deviceList.filter.validation")}</span>
         <Combobox
           value={validationStatusFilter}
           onValueChange={onValidationStatusFilterChange}
-          placeholder="Status"
+          placeholder={t("deviceList.filter.status")}
+          emptyText={t("deviceList.filter.noOption")}
           options={[
-            { value: "__all", label: "Semua" },
-            { value: "valid", label: "Valid" },
-            { value: "__unvalidated__", label: "Belum" },
-            { value: "pending_async", label: "Pending" },
-            { value: "ongoing_validated", label: "Ongoing" },
-            { value: "rejected_by_adminregion", label: "Rj. Admin" },
-            { value: "rejected_by_superadmin", label: "Rj. Super" },
-            { value: "warning", label: "Warning" },
-            { value: "invalid", label: "Invalid" },
+            { value: "__all", label: t("deviceList.filter.all") },
+            { value: "valid", label: t("deviceList.filter.valid") },
+            { value: "__unvalidated__", label: t("deviceList.filter.unvalidated") },
+            { value: "pending_async", label: t("deviceList.filter.pending") },
+            { value: "ongoing_validated", label: t("deviceList.filter.ongoing") },
+            { value: "rejected_by_adminregion", label: t("deviceList.filter.rejectedByAdmin") },
+            { value: "rejected_by_superadmin", label: t("deviceList.filter.rejectedBySuper") },
+            { value: "warning", label: t("deviceList.filter.warning") },
+            { value: "invalid", label: t("deviceList.filter.invalid") },
           ]}
         />
       </div>
     ),
     categoryResource === "cities" && (
       <div key="province" className={cell}>
-        <span className={label}>Province</span>
+        <span className={label}>{t("deviceList.filter.province")}</span>
         <Combobox
           value={provinceFilter}
           onValueChange={onProvinceFilterChange}
-          placeholder="Provinsi"
+          placeholder={t("deviceList.filter.provincePlaceholder")}
+          emptyText={t("deviceList.filter.noOption")}
           options={[
-            { value: "__all", label: "Semua" },
+            { value: "__all", label: t("deviceList.filter.all") },
             ...provinceOptions.map((o) => ({ value: o.id, label: o.label })),
           ]}
         />
@@ -150,22 +154,23 @@ export function DataListFilterBar({
     ),
     categoryResource === "topologyRelationRules" && (
       <div key="direction" className={cell}>
-        <span className={label}>Direction</span>
+        <span className={label}>{t("deviceList.filter.direction")}</span>
         <Combobox
           value={directionFilter}
           onValueChange={onDirectionFilterChange}
-          placeholder="Arah"
+          placeholder={t("deviceList.filter.directionPlaceholder")}
+          emptyText={t("deviceList.filter.noOption")}
           options={[
-            { value: "__all", label: "Semua" },
-            { value: "front", label: "Front" },
-            { value: "rear", label: "Rear" },
+            { value: "__all", label: t("deviceList.filter.all") },
+            { value: "front", label: t("deviceList.filter.front") },
+            { value: "rear", label: t("deviceList.filter.rear") },
           ]}
         />
       </div>
     ),
     isSoftDeleteResource && (
       <div key="archive" className={cell}>
-        <span className={label}>Arsip</span>
+        <span className={label}>{t("deviceList.filter.archive")}</span>
         <Combobox
           value={archiveView}
           onValueChange={(value) => {
@@ -173,20 +178,20 @@ export function DataListFilterBar({
             onArchiveViewChange(value);
           }}
           options={[
-            { value: "active", label: "Active" },
-            { value: "archived", label: "Archived" },
-            { value: "all", label: "All" },
+            { value: "active", label: t("deviceList.filter.viewActive") },
+            { value: "archived", label: t("deviceList.filter.viewArchived") },
+            { value: "all", label: t("deviceList.filter.viewAll") },
           ]}
         />
       </div>
     ),
     (
       <div key="limit" className={cell}>
-        <span className={label}>Limit</span>
+        <span className={label}>{t("deviceList.filter.limit")}</span>
         <Combobox
           value={String(limit)}
           onValueChange={(value) => onLimitChange(Number(value))}
-          placeholder="Rows"
+          placeholder={t("deviceList.filter.rows")}
           options={[
             { value: "10", label: "10" },
             { value: "20", label: "20" },
@@ -197,14 +202,14 @@ export function DataListFilterBar({
     ),
     (
       <div key="reset" className={cell}>
-        <span className={label}>Aksi</span>
+        <span className={label}>{t("deviceList.filter.actions")}</span>
         <Button
           type="button"
           variant="outline"
           onClick={onResetFilters}
           className="h-7 w-full rounded-full border-border/60 px-2 font-mono text-[9px] uppercase tracking-[0.06em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
         >
-          Reset
+          {t("deviceList.filter.reset")}
         </Button>
       </div>
     ),
@@ -218,7 +223,11 @@ export function DataListFilterBar({
           <Input
             value={searchInput}
             onChange={(event) => onSearchInputChange(event.target.value)}
-            placeholder={categoryResource === "cities" ? "Cari..." : "Cari data..."}
+            placeholder={
+              categoryResource === "cities"
+                ? t("deviceList.filter.search")
+                : t("deviceList.filter.searchData")
+            }
             className="h-8 rounded-lg border-border/60 bg-background pl-8 pr-2.5 text-[11px] shadow-2xs"
           />
         </div>
@@ -229,7 +238,7 @@ export function DataListFilterBar({
           onClick={onResetFilters}
           className="h-8 shrink-0 rounded-full px-2.5 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
         >
-          Reset
+          {t("deviceList.filter.reset")}
         </Button>
       </div>
       <div className={filterGridClass}>

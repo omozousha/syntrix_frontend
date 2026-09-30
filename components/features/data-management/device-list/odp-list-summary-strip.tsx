@@ -4,6 +4,7 @@ import type { OdpListSummary } from "@/lib/types/odp-summary";
 import { OperationalKpiCard } from "@/components/operational-ui";
 import { formatValidationRate, calculateAvailablePorts, formatPortUsage } from "@/lib/formatters/odp-stats";
 import { Boxes, CheckSquare, MapPin, Server } from "lucide-react";
+import { useTranslate } from "@/lib/use-locale";
 
 interface OdpListSummaryStripProps {
   summary: OdpListSummary | null;
@@ -12,6 +13,8 @@ interface OdpListSummaryStripProps {
 }
 
 export function OdpListSummaryStrip({ summary, popCount, loading }: OdpListSummaryStripProps) {
+  const { t } = useTranslate();
+
   if (loading || !summary) {
     return (
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -42,36 +45,39 @@ export function OdpListSummaryStrip({ summary, popCount, loading }: OdpListSumma
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
       {/* Total ODP */}
       <OperationalKpiCard
-        label="Total ODP"
+        label={t("deviceList.summary.totalOdp")}
         value={String(summary.total)}
-        caption="Device ODP dalam filter aktif"
+        caption={t("deviceList.summary.totalOdpCaption")}
         icon={Boxes}
         tone="blue"
       />
-      
+
       {/* Validation Progress */}
       <OperationalKpiCard
-        label="Validasi"
+        label={t("deviceList.summary.validation")}
         value={validationStats.rate ?? "--"}
-        caption={`${summary.validated} tervalidasi dari ${summary.total} total`}
+        caption={t("deviceList.summary.validationCaption", {
+          validated: summary.validated,
+          total: summary.total,
+        })}
         icon={CheckSquare}
         tone={validationStats.isHigh ? "emerald" : "amber"}
       />
-      
+
       {/* Port Availability */}
       <OperationalKpiCard
-        label="Port"
+        label={t("deviceList.summary.port")}
         value={portUsage.label}
-        caption={`${availablePorts} port tersedia`}
+        caption={t("deviceList.summary.portCaption", { count: availablePorts })}
         icon={Server}
         tone="slate"
       />
-      
+
       {/* POP Coverage */}
       <OperationalKpiCard
-        label="POP Coverage"
+        label={t("deviceList.summary.popCoverage")}
         value={String(actualPopCount)}
-        caption={`${actualPopCount} POP dalam scope aktif`}
+        caption={t("deviceList.summary.popCoverageCaption", { count: actualPopCount })}
         icon={MapPin}
         tone="emerald"
       />

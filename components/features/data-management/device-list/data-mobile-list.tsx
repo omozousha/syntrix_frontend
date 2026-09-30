@@ -2,6 +2,7 @@
 
 import { Eye, Waypoints } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslate } from "@/lib/use-locale";
 
 type GenericItem = Record<string, unknown> & {
   id: string;
@@ -44,6 +45,8 @@ export function DataMobileList({
   onOpenTrace: (row: GenericItem) => void;
   onToggleSelection: (row: GenericItem) => void;
 }) {
+  const { t } = useTranslate();
+
   return (
     <div className="space-y-2 md:hidden">
       {rows.map((row) => {
@@ -65,7 +68,7 @@ export function DataMobileList({
                   type="checkbox"
                   checked={isSelected}
                   onChange={() => onToggleSelection(row)}
-                  aria-label={`Pilih ${primaryName || row.id}`}
+                  aria-label={t("deviceList.mobile.selectRow", { name: primaryName || row.id })}
                   className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-input bg-background text-primary"
                 />
                 <div className="min-w-0 space-y-0.5">
@@ -81,22 +84,22 @@ export function DataMobileList({
             </div>
             <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span className="font-mono text-[9px] uppercase tracking-[0.08em]">
-                Status: <span className="font-semibold text-foreground">{getStatus(row) || "-"}</span>
+                {t("deviceList.mobile.status")} <span className="font-semibold text-foreground">{getStatus(row) || "-"}</span>
               </span>
               <span className="font-mono text-[10px] tabular-nums">{getUpdatedAt(row)}</span>
             </div>
             {supportsPopFilter ? (
-              <p className="mt-1 truncate text-xs text-muted-foreground">POP: <span className="font-mono text-[10px]">{getPopLabel(row)}</span></p>
+              <p className="mt-1 truncate text-xs text-muted-foreground">{t("deviceList.mobile.pop")} <span className="font-mono text-[10px]">{getPopLabel(row)}</span></p>
             ) : null}
             <div className={`mt-3 grid gap-2 ${canTraceTopology ? "grid-cols-2" : "grid-cols-1"}`}>
               <Button type="button" variant="outline" size="sm" onClick={() => onOpenDetail(row)} className="rounded-full font-mono text-[10px] uppercase tracking-[0.12em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
                 <Eye className="mr-1.5 size-3.5" />
-                Detail
+                {t("deviceList.mobile.detail")}
               </Button>
               {canTraceTopology ? (
                 <Button type="button" variant="outline" size="sm" onClick={() => onOpenTrace(row)} className="rounded-full font-mono text-[10px] uppercase tracking-[0.12em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
                   <Waypoints className="mr-1.5 size-3.5" />
-                  Trace
+                  {t("deviceList.mobile.trace")}
                 </Button>
               ) : null}
             </div>
