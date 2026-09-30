@@ -5,6 +5,7 @@ import { Users, TrendingUp, ArrowRight, Building2, CheckCircle2 } from "lucide-r
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useTranslate } from "@/lib/use-locale";
 
 type PopItem = Record<string, unknown> & {
   id: string;
@@ -24,7 +25,7 @@ export function PopListCustomerResumeCard({
   selectedPopId,
   selectedPopLabel,
 }: PopListCustomerResumeCardProps) {
-  // If specific POP is selected
+  const { t } = useTranslate();
   const isSpecificPop = Boolean(selectedPopId && selectedPopId !== "__all" && selectedPopId !== "__null__");
   const activePop = isSpecificPop ? pops.find((p) => p.id === selectedPopId) : null;
 
@@ -50,19 +51,19 @@ export function PopListCustomerResumeCard({
           <div className="min-w-0 space-y-0.5">
             <div className="flex items-center gap-2">
               <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
-                Ringkasan Pelanggan POP
+                {t("popResume.title")}
               </span>
               <Badge
                 variant="secondary"
                 className="font-mono text-[9px] uppercase tracking-[0.12em] rounded-full"
               >
-                {isSpecificPop ? "Filter Aktif" : "Katalog Halaman Ini"}
+                {isSpecificPop ? t("popResume.filterActive") : t("popResume.pageCatalog")}
               </Badge>
             </div>
             <p className="truncate text-sm font-semibold text-foreground">
               {isSpecificPop
-                ? (selectedPopLabel || String(activePop?.pop_name || "POP Terpilih"))
-                : "Distribusi Pelanggan Lintas POP"}
+                ? (selectedPopLabel || String(activePop?.pop_name || t("popResume.selectedPop")))
+                : t("popResume.crossPop")}
             </p>
           </div>
         </div>
@@ -73,7 +74,7 @@ export function PopListCustomerResumeCard({
             <>
               <div>
                 <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                  Pelanggan Terhubung
+                  {t("popResume.connectedCustomers")}
                 </p>
                 <p className="font-mono text-xl font-bold tabular-nums text-foreground">
                   {activePopCustomerCount.toLocaleString("id-ID")}
@@ -81,12 +82,12 @@ export function PopListCustomerResumeCard({
               </div>
               <div>
                 <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                  Status Jaringan
+                  {t("popResume.networkStatus")}
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <CheckCircle2 className="size-3.5 text-emerald-500" />
                   <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                    Aktif Melayani
+                    {t("popResume.serving")}
                   </span>
                 </div>
               </div>
@@ -95,7 +96,7 @@ export function PopListCustomerResumeCard({
             <>
               <div>
                 <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                  Total Pelanggan
+                  {t("popResume.totalCustomers")}
                 </p>
                 <p className="font-mono text-xl font-bold tabular-nums text-foreground">
                   {totalCustomers.toLocaleString("id-ID")}
@@ -103,7 +104,7 @@ export function PopListCustomerResumeCard({
               </div>
               <div>
                 <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                  POP Berpelanggan
+                  {t("popResume.popsWithCustomers")}
                 </p>
                 <p className="font-mono text-xl font-bold tabular-nums text-foreground">
                   {popsWithCustomers}{" "}
@@ -113,7 +114,7 @@ export function PopListCustomerResumeCard({
               {topPop && topPopCount > 0 ? (
                 <div className="hidden md:block">
                   <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-                    POP Terpadat
+                    {t("popResume.topPop")}
                   </p>
                   <p className="truncate font-mono text-xs font-semibold text-foreground max-w-[140px]">
                     {String(topPop.pop_name || topPop.pop_code || "-")}{" "}
@@ -133,7 +134,7 @@ export function PopListCustomerResumeCard({
             className="w-full sm:w-auto rounded-full font-mono text-[10px] uppercase tracking-[0.12em] gap-1.5 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
           >
             <Link href={targetHref}>
-              {isSpecificPop ? "Lihat Pelanggan POP Ini" : "Buka Daftar Pelanggan"}
+              {isSpecificPop ? t("popResume.viewThisPop") : t("popResume.viewAll")}
               <ArrowRight className="size-3" />
             </Link>
           </Button>

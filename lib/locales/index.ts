@@ -980,6 +980,53 @@ const id = {
   "deviceList.filter.viewActive": "Aktif",
   "deviceList.filter.viewArchived": "Diarsipkan",
   "deviceList.filter.viewAll": "Semua",
+
+  // Data management — create mode dialog (shared ODP/ODC/OLT/OTB/POP/Customer)
+  "deviceCreate.title": "Pilih Mode Tambah {entity}",
+  "deviceCreate.description": "Pilih cara menambah data {entity}: satu per satu via form, atau banyak sekaligus via file Excel/CSV.",
+  "deviceCreate.single": "Tambah {entity} Tunggal",
+  "deviceCreate.bulk": "Impor Massal {entity}",
+  "deviceCreate.desc.device": "Isi form satu {entity}, lengkapi detail & relasi topologi.",
+  "deviceCreate.desc.pop": "Isi form satu POP, lengkapi data lokasi & relasi.",
+  "deviceCreate.desc.customer": "Isi form satu customer, lengkapi data pelanggan & layanan.",
+  "deviceCreate.bulkDesc.device": "Unggah file CSV/Excel hingga 2.000 baris. Cocok untuk rollout area luas.",
+  "deviceCreate.bulkDesc.pop": "Unggah file CSV/Excel untuk import POP massal dalam satu waktu.",
+  "deviceCreate.bulkDesc.customer": "Unggah file CSV/Excel untuk import customer massal dalam satu waktu.",
+  "deviceCreate.cancel": "Batal",
+  "deviceCreate.continueBulk": "Lanjut Impor",
+  "deviceCreate.continueForm": "Lanjut Form",
+  "deviceCreate.chooseMode": "Pilih Mode",
+
+  // Data management — POP distribution panel
+  "deviceList.popPanel.title": "Distribusi POP",
+  "deviceList.popPanel.popCount": "{count} POP",
+  "deviceList.popPanel.odp": "ODP",
+  "deviceList.popPanel.portUsage": "{used}/{total} port",
+
+  // Data management — POP customer resume card
+  "popResume.title": "Ringkasan Pelanggan POP",
+  "popResume.filterActive": "Filter Aktif",
+  "popResume.pageCatalog": "Katalog Halaman Ini",
+  "popResume.selectedPop": "POP Terpilih",
+  "popResume.crossPop": "Distribusi Pelanggan Lintas POP",
+  "popResume.connectedCustomers": "Pelanggan Terhubung",
+  "popResume.networkStatus": "Status Jaringan",
+  "popResume.serving": "Aktif Melayani",
+  "popResume.totalCustomers": "Total Pelanggan",
+  "popResume.popsWithCustomers": "POP Berpelanggan",
+  "popResume.topPop": "POP Terpadat",
+  "popResume.viewThisPop": "Lihat Pelanggan POP Ini",
+  "popResume.viewAll": "Buka Daftar Pelanggan",
+
+  // Data management — KPI strip
+  "deviceList.kpi.totalData": "Total Data",
+  "deviceList.kpi.totalCaption": "{category} pada filter aktif",
+  "deviceList.kpi.activeItems": "Item aktif",
+  "deviceList.kpi.inactiveItems": "Item tidak aktif",
+  "deviceList.kpi.allPop": "Semua POP",
+  "deviceList.kpi.totalCustomers": "Total Pelanggan",
+  "deviceList.kpi.customerCaption": "Pelanggan di filter aktif",
+  "deviceList.kpi.selectedCaption": "Siap bulk action",
 } as const;
 
 export type Messages = { [K in keyof typeof id]: string };
@@ -1932,6 +1979,53 @@ const en: Messages = {
   "deviceList.filter.viewActive": "Active",
   "deviceList.filter.viewArchived": "Archived",
   "deviceList.filter.viewAll": "All",
+
+  // Data management — create mode dialog (shared ODP/ODC/OLT/OTB/POP/Customer)
+  "deviceCreate.title": "Choose How to Add {entity}",
+  "deviceCreate.description": "Choose how to add {entity} data: one at a time via the form, or many at once via an Excel/CSV file.",
+  "deviceCreate.single": "Add Single {entity}",
+  "deviceCreate.bulk": "Bulk Import {entity}",
+  "deviceCreate.desc.device": "Fill in the form for one {entity}, complete the details and topology relations.",
+  "deviceCreate.desc.pop": "Fill in the form for one POP, complete the location data and relations.",
+  "deviceCreate.desc.customer": "Fill in the form for one customer, complete the customer and service data.",
+  "deviceCreate.bulkDesc.device": "Upload a CSV/Excel file with up to 2,000 rows. Suited for wide-area rollouts.",
+  "deviceCreate.bulkDesc.pop": "Upload a CSV/Excel file to import POPs in bulk in one go.",
+  "deviceCreate.bulkDesc.customer": "Upload a CSV/Excel file to import customers in bulk in one go.",
+  "deviceCreate.cancel": "Cancel",
+  "deviceCreate.continueBulk": "Continue to Import",
+  "deviceCreate.continueForm": "Continue to Form",
+  "deviceCreate.chooseMode": "Choose Mode",
+
+  // Data management — POP distribution panel
+  "deviceList.popPanel.title": "POP Distribution",
+  "deviceList.popPanel.popCount": "{count} POPs",
+  "deviceList.popPanel.odp": "ODP",
+  "deviceList.popPanel.portUsage": "{used}/{total} ports",
+
+  // Data management — POP customer resume card
+  "popResume.title": "POP Customer Summary",
+  "popResume.filterActive": "Active Filter",
+  "popResume.pageCatalog": "Catalog On This Page",
+  "popResume.selectedPop": "Selected POP",
+  "popResume.crossPop": "Customer Distribution Across POPs",
+  "popResume.connectedCustomers": "Connected Customers",
+  "popResume.networkStatus": "Network Status",
+  "popResume.serving": "In Service",
+  "popResume.totalCustomers": "Total Customers",
+  "popResume.popsWithCustomers": "POPs With Customers",
+  "popResume.topPop": "Busiest POP",
+  "popResume.viewThisPop": "View Customers Of This POP",
+  "popResume.viewAll": "Open Customer List",
+
+  // Data management — KPI strip
+  "deviceList.kpi.totalData": "Total Data",
+  "deviceList.kpi.totalCaption": "{category} in the active filter",
+  "deviceList.kpi.activeItems": "Active items",
+  "deviceList.kpi.inactiveItems": "Inactive items",
+  "deviceList.kpi.allPop": "All POPs",
+  "deviceList.kpi.totalCustomers": "Total Customers",
+  "deviceList.kpi.customerCaption": "Customers in the active filter",
+  "deviceList.kpi.selectedCaption": "Ready for bulk action",
 };
 
 export const dictionaries: Record<Locale, Messages> = { id, en };

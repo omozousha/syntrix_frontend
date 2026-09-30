@@ -13,6 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { SquarePen, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 
 export type CreateModeDialogEntityType = "ODP" | "ODC" | "OLT" | "OTB" | "POP" | "Customer";
 
@@ -26,49 +28,48 @@ export type CreateModeDialogProps = {
 
 const ENTITY_CONFIG: Record<
   CreateModeDialogEntityType,
-  { kind: string; title: string; createLabel: string; singleDescription: string; bulkDescription: string }
+  {
+    kind: string;
+    createLabel: string;
+    singleDescriptionKey: MessageKey;
+    bulkDescriptionKey: MessageKey;
+  }
 > = {
   ODP: {
     kind: "device&type=ODP",
-    title: "Pilih Mode Tambah ODP",
     createLabel: "ODP",
-    singleDescription: "Isi form satu ODP, lengkapi detail & relasi topologi.",
-    bulkDescription: "Unggah file CSV/Excel hingga 2.000 baris. Cocok untuk rollout area luas.",
+    singleDescriptionKey: "deviceCreate.desc.device",
+    bulkDescriptionKey: "deviceCreate.bulkDesc.device",
   },
   ODC: {
     kind: "device&type=ODC",
-    title: "Pilih Mode Tambah ODC",
     createLabel: "ODC",
-    singleDescription: "Isi form satu ODC, lengkapi detail & relasi topologi.",
-    bulkDescription: "Unggah file CSV/Excel hingga 2.000 baris. Cocok untuk rollout area luas.",
+    singleDescriptionKey: "deviceCreate.desc.device",
+    bulkDescriptionKey: "deviceCreate.bulkDesc.device",
   },
   OLT: {
     kind: "device&type=OLT",
-    title: "Pilih Mode Tambah OLT",
     createLabel: "OLT",
-    singleDescription: "Isi form satu OLT, lengkapi detail & relasi topologi.",
-    bulkDescription: "Unggah file CSV/Excel hingga 2.000 baris. Cocok untuk rollout area luas.",
+    singleDescriptionKey: "deviceCreate.desc.device",
+    bulkDescriptionKey: "deviceCreate.bulkDesc.device",
   },
   OTB: {
     kind: "device&type=OTB",
-    title: "Pilih Mode Tambah OTB",
     createLabel: "OTB",
-    singleDescription: "Isi form satu OTB, lengkapi detail & relasi topologi.",
-    bulkDescription: "Unggah file CSV/Excel hingga 2.000 baris. Cocok untuk rollout area luas.",
+    singleDescriptionKey: "deviceCreate.desc.device",
+    bulkDescriptionKey: "deviceCreate.bulkDesc.device",
   },
   POP: {
     kind: "pop",
-    title: "Pilih Mode Tambah POP",
     createLabel: "POP",
-    singleDescription: "Isi form satu POP, lengkapi data lokasi & relasi.",
-    bulkDescription: "Unggah file CSV/Excel untuk import POP massal dalam satu waktu.",
+    singleDescriptionKey: "deviceCreate.desc.pop",
+    bulkDescriptionKey: "deviceCreate.bulkDesc.pop",
   },
   Customer: {
     kind: "customer",
-    title: "Pilih Mode Tambah Customer",
     createLabel: "Customer",
-    singleDescription: "Isi form satu customer, lengkapi data pelanggan & layanan.",
-    bulkDescription: "Unggah file CSV/Excel untuk import customer massal dalam satu waktu.",
+    singleDescriptionKey: "deviceCreate.desc.customer",
+    bulkDescriptionKey: "deviceCreate.bulkDesc.customer",
   },
 };
 
@@ -85,6 +86,7 @@ export function CreateModeDialog({
 }: CreateModeDialogProps) {
   const router = useRouter();
   const [selected, setSelected] = React.useState<"single" | "bulk" | null>(null);
+  const { t } = useTranslate();
 
   const config = ENTITY_CONFIG[entityType];
 
@@ -107,11 +109,10 @@ export function CreateModeDialog({
       <DialogContent className="w-full sm:max-w-lg rounded-2xl border border-border/60 bg-card shadow-xs glass-inset">
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-lg font-semibold">
-            {config.title}
+            {t("deviceCreate.title", { entity: config.createLabel })}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Pilih cara menambah data {config.createLabel}: satu per satu via form, atau banyak
-            sekaligus via file Excel/CSV.
+            {t("deviceCreate.description", { entity: config.createLabel })}
           </DialogDescription>
         </DialogHeader>
 
@@ -119,16 +120,16 @@ export function CreateModeDialog({
           <OptionCard
             value="single"
             icon={<SquarePen className="size-5" />}
-            title={`Tambah ${config.createLabel} Tunggal`}
-            description={config.singleDescription}
+            title={t("deviceCreate.single", { entity: config.createLabel })}
+            description={t(config.singleDescriptionKey, { entity: config.createLabel })}
             selected={selected === "single"}
             onSelect={() => setSelected("single")}
           />
           <OptionCard
             value="bulk"
             icon={<Upload className="size-5" />}
-            title={`Impor Massal ${config.createLabel}`}
-            description={config.bulkDescription}
+            title={t("deviceCreate.bulk", { entity: config.createLabel })}
+            description={t(config.bulkDescriptionKey)}
             selected={selected === "bulk"}
             onSelect={() => setSelected("bulk")}
           />
@@ -140,7 +141,7 @@ export function CreateModeDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
           >
-            Batal
+            {t("deviceCreate.cancel")}
           </Button>
           <Button
             type="button"
@@ -148,10 +149,10 @@ export function CreateModeDialog({
             disabled={!selected}
           >
             {selected === "bulk"
-              ? "Lanjut Impor"
+              ? t("deviceCreate.continueBulk")
               : selected === "single"
-                ? "Lanjut Form"
-                : "Pilih Mode"}
+                ? t("deviceCreate.continueForm")
+                : t("deviceCreate.chooseMode")}
           </Button>
         </DialogFooter>
       </DialogContent>

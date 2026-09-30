@@ -115,8 +115,12 @@ if (problems.length) {
   process.exit(1);
 }
 
+const unusedNote = unused.length
+  ? `unused ${unused.length} (WARN, non-strict)`
+  : "unused 0";
+
 console.log(
-  `Locale check passed. ${idKeys.size} key, parity id/en ok, placeholder ok, unused 0.`,
+  `Locale check passed. ${idKeys.size} key, parity id/en ok, placeholder ok, ${unusedNote}.`,
 );
 
 function listFiles(dir) {

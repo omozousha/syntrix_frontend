@@ -11,8 +11,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileUp, SquarePen, Upload } from "lucide-react";
+import { SquarePen, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 
 export type OdpCreateModeDialogProps = {
   open: boolean;
@@ -21,12 +23,17 @@ export type OdpCreateModeDialogProps = {
   onSingleMode?: () => void;
 };
 
+const ODP_CONFIG = {
+  kind: "device&type=ODP" as const,
+  createLabel: "ODP" as const,
+  singleDescriptionKey: "deviceCreate.desc.device" as MessageKey,
+  bulkDescriptionKey: "deviceCreate.bulkDesc.device" as MessageKey,
+} as const;
+
 /**
  * Centered dialog offering two ODP provisioning modes:
- * - **Tambah ODP Tunggal** (single create form)
- * - **Impor Massal ODP** (bulk import page)
- *
- * Aligned with platform's standard Shadcn UI design system.
+ * - single create form
+ * - bulk import page
  */
 export function OdpCreateModeDialog({
   open,
@@ -35,12 +42,13 @@ export function OdpCreateModeDialog({
 }: OdpCreateModeDialogProps) {
   const router = useRouter();
   const [selected, setSelected] = React.useState<"single" | "bulk" | null>(null);
+  const { t } = useTranslate();
 
   function handleSingle() {
     if (onSingleMode) {
       onSingleMode();
     } else {
-      router.push("/data-management/create?kind=device&type=ODP");
+      router.push(`/data-management/create?kind=${ODP_CONFIG.kind}`);
     }
     onOpenChange(false);
   }
@@ -55,11 +63,10 @@ export function OdpCreateModeDialog({
       <DialogContent className="w-full sm:max-w-lg rounded-2xl border border-border/60 bg-card shadow-xs glass-inset">
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-lg font-semibold">
-            Pilih Mode Tambah ODP
+            {t("deviceCreate.title", { entity: ODP_CONFIG.createLabel })}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Pilih cara menambah data ODP: satu per satu via form, atau banyak
-            sekaligus via file Excel/CSV.
+            {t("deviceCreate.description", { entity: ODP_CONFIG.createLabel })}
           </DialogDescription>
         </DialogHeader>
 
@@ -67,16 +74,16 @@ export function OdpCreateModeDialog({
           <OptionCard
             value="single"
             icon={<SquarePen className="size-5" />}
-            title="Tambah ODP Tunggal"
-            description="Isi form satu ODP, lengkapi detail & relasi topologi."
+            title={t("deviceCreate.single", { entity: ODP_CONFIG.createLabel })}
+            description={t(ODP_CONFIG.singleDescriptionKey, { entity: ODP_CONFIG.createLabel })}
             selected={selected === "single"}
             onSelect={() => setSelected("single")}
           />
           <OptionCard
             value="bulk"
             icon={<Upload className="size-5" />}
-            title="Impor Massal ODP"
-            description="Unggah file CSV/Excel hingga 2.000 baris. Cocok untuk rollout area luas."
+            title={t("deviceCreate.bulk", { entity: ODP_CONFIG.createLabel })}
+            description={t(ODP_CONFIG.bulkDescriptionKey)}
             selected={selected === "bulk"}
             onSelect={() => setSelected("bulk")}
           />
@@ -88,7 +95,7 @@ export function OdpCreateModeDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
           >
-            Batal
+            {t("deviceCreate.cancel")}
           </Button>
           <Button
             type="button"
@@ -96,10 +103,10 @@ export function OdpCreateModeDialog({
             disabled={!selected}
           >
             {selected === "bulk"
-              ? "Lanjut Impor"
+              ? t("deviceCreate.continueBulk")
               : selected === "single"
-                ? "Lanjut Form"
-                : "Pilih Mode"}
+                ? t("deviceCreate.continueForm")
+                : t("deviceCreate.chooseMode")}
           </Button>
         </DialogFooter>
       </DialogContent>
