@@ -13,7 +13,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
-import { useTranslate } from "@/lib/use-locale";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 import { type MessageKey } from "@/lib/locales";
 
 type GenericItem = {
@@ -244,7 +244,7 @@ export default function OdpQualityPage() {
             >
               {t("odpQuality.reset")}
             </Button>
-            <Button type="button" variant="outline" onClick={() => exportIssueCsv(sortedRows, t(activeMeta.labelKey))}>
+            <Button type="button" variant="outline" onClick={() => exportIssueCsv(sortedRows, t(activeMeta.labelKey), t)}>
               <Download className="mr-2 size-4" />
               {t("odpQuality.exportCsv")}
             </Button>
@@ -458,7 +458,7 @@ function getWorkflowIssueNote(issue: IssueKey, request: ValidationQualityRequest
   return evidenceCount ? "odpQuality.note.evidenceMissing" : "odpQuality.note.evidenceNone";
 }
 
-function exportIssueCsv(rows: IssueRow[], issueLabel: string) {
+function exportIssueCsv(rows: IssueRow[], issueLabel: string, noteT: TFn) {
   const headers = ["issue_label", "odp_id", "odp_name", "port_label", "port_status", "note", "detail_url", "qr_url"];
   const lines = rows.map((row) => [
     issueLabel,
@@ -466,7 +466,7 @@ function exportIssueCsv(rows: IssueRow[], issueLabel: string) {
     row.odpDeviceName,
     row.portLabel,
     row.portStatus,
-    row.note,
+    noteT(row.note),
     `/data-management/list/odp/${row.odpId}`,
     `/field/odp/${row.odpId}`,
   ]);
