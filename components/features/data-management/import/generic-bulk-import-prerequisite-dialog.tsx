@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, CheckCircle2, Info, Loader2 } from "lucide-react";
 import { InlineLoader } from "@/components/app-loading-new";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 
 export interface PrerequisiteCheck {
   hasData: boolean;
@@ -45,8 +46,10 @@ export function BulkImportPrerequisiteDialog({
   onCheck,
   entityLabel,
   storageKey,
-  prerequisites = [`Data ${entityLabel} harus tersedia sebelum import.`],
+  prerequisites,
 }: BulkImportPrerequisiteDialogProps) {
+  const { t } = useTranslate();
+  const prerequisiteList = prerequisites ?? [t("import.prereq.default", { entity: entityLabel })];
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [hasCheckedOnMount, setHasCheckedOnMount] = useState(false);
 
@@ -88,12 +91,12 @@ export function BulkImportPrerequisiteDialog({
           <div className="flex items-center gap-2">
             <AlertCircle className="size-5 text-amber-500" aria-hidden />
             <DialogTitle className="text-lg font-semibold">
-              Prasyarat Import Massal {entityLabel}
+              {t("import.notice.title", { entity: entityLabel })}
             </DialogTitle>
           </div>
           <DialogDescription className="text-sm text-muted-foreground">
-            Sebelum melanjutkan, pastikan data pendukung sudah tersedia.
-            {prerequisites.map((p, i) => (
+            {t("import.notice.description")}
+            {prerequisiteList.map((p, i) => (
               <span key={i}> {p}</span>
             ))}
           </DialogDescription>
@@ -102,7 +105,7 @@ export function BulkImportPrerequisiteDialog({
         <div className="space-y-4">
           {isChecking && (
             <div className="flex items-center justify-center py-3">
-              <InlineLoader label={`Memeriksa ketersediaan data ${entityLabel}...`} />
+              <InlineLoader label={t("import.notice.checking", { entity: entityLabel })} />
             </div>
           )}
 
@@ -136,8 +139,8 @@ export function BulkImportPrerequisiteDialog({
                   )}
                 >
                   {checkResult.count > 0
-                    ? `Ditemukan ${checkResult.count} data ${entityLabel}`
-                    : `Belum ada data ${entityLabel}`}
+                    ? t("import.notice.found", { count: checkResult.count, entity: entityLabel })
+                    : t("import.notice.missing", { entity: entityLabel })}
                 </span>
               </div>
               <p
@@ -158,13 +161,13 @@ export function BulkImportPrerequisiteDialog({
               id="dont-show-again"
               checked={dontShowAgain}
               onCheckedChange={(checked) => setDontShowAgain(checked === true)}
-              aria-label="Jangan tampilkan notifikasi ini lagi"
+              aria-label={t("import.notice.dontShow")}
             />
             <Label
               htmlFor="dont-show-again"
               className="text-sm text-muted-foreground cursor-pointer select-none"
             >
-              Jangan tampilkan notifikasi ini lagi
+              {t("import.notice.dontShow")}
             </Label>
           </div>
         </div>
@@ -177,7 +180,7 @@ export function BulkImportPrerequisiteDialog({
               disabled={isChecking}
               className="w-full"
             >
-              Lanjutkan ke Import
+              {t("import.notice.proceed")}
             </Button>
           ) : (
             <Button
@@ -189,12 +192,12 @@ export function BulkImportPrerequisiteDialog({
             >
               {isChecking ? (
                 <>
-                  <Loader2 className="mr-2 size-4 animate-spin" /> Memeriksa...
+                  <Loader2 className="mr-2 size-4 animate-spin" /> {t("import.notice.checkingShort")}
                 </>
               ) : checkResult?.count === 0 ? (
-                "Tutup untuk buat data"
+                t("import.notice.closeForCreate")
               ) : (
-                "Tutup"
+                t("import.notice.close")
               )}
             </Button>
           )}
@@ -205,7 +208,7 @@ export function BulkImportPrerequisiteDialog({
               onClick={() => handleDismiss(true)}
               className="w-full"
             >
-              Tutup
+              {t("import.notice.close")}
             </Button>
           )}
         </DialogFooter>

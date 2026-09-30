@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, CheckCircle2, Info, Loader2 } from "lucide-react";
 import { InlineLoader, ButtonLoader } from "@/components/app-loading-new";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 
 export const NOTICE_DISMISSED_KEY = "odp-bulk-import-notice-dismissed";
 
@@ -48,6 +49,7 @@ export function OdpBulkImportNoticeDialog({
   isChecking,
   onCheckPops,
 }: OdpBulkImportNoticeDialogProps) {
+  const { t } = useTranslate();
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [hasCheckedOnMount, setHasCheckedOnMount] = useState(false);
 
@@ -91,13 +93,11 @@ export function OdpBulkImportNoticeDialog({
           <div className="flex items-center gap-2">
             <AlertCircle className="size-5 text-amber-500" aria-hidden />
             <DialogTitle className="text-lg font-semibold">
-              Prasyarat Import Massal ODP
+              {t("import.odpNotice.title")}
             </DialogTitle>
           </div>
           <DialogDescription className="text-sm text-muted-foreground">
-            Sebelum melanjutkan, pastikan data POP (Point of Presence) sudah
-            tersedia di region Anda. Setiap ODP harus terhubung ke POP yang
-            valid.
+            {t("import.odpNotice.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -110,8 +110,8 @@ export function OdpBulkImportNoticeDialog({
               />
               <div className="space-y-1.5 text-sm">
                 <p className="font-medium text-amber-900 dark:text-amber-200">
-                  Prasyarat: Data POP harus tersedia
-                </p>
+                    {t("import.odpNotice.prerequisite")}
+                  </p>
                 <p className="text-amber-800 dark:text-amber-300 text-sm">
                   Setiap ODP harus terhubung ke POP yang valid. Jika belum
                   ada data POP, silakan buat terlebih dahulu di menu
@@ -125,7 +125,7 @@ export function OdpBulkImportNoticeDialog({
 
           {isChecking && (
             <div className="flex items-center justify-center py-3">
-              <InlineLoader label="Memeriksa ketersediaan data POP..." />
+              <InlineLoader label={t("import.odpNotice.checking")} />
             </div>
           )}
 
@@ -159,8 +159,8 @@ export function OdpBulkImportNoticeDialog({
                   )}
                 >
                   {popCheck.popCount > 0
-                    ? `Ditemukan ${popCheck.popCount} data POP`
-                    : "Belum ada data POP"}
+                    ? t("import.odpNotice.found", { count: popCheck.popCount })
+                    : t("import.odpNotice.missing")}
                 </span>
               </div>
               <p
@@ -181,13 +181,13 @@ export function OdpBulkImportNoticeDialog({
               id="dont-show-again"
               checked={dontShowAgain}
               onCheckedChange={(checked) => setDontShowAgain(checked === true)}
-              aria-label="Jangan tampilkan notifikasi ini lagi"
+              aria-label={t("import.notice.dontShow")}
             />
             <Label
               htmlFor="dont-show-again"
               className="text-sm text-muted-foreground cursor-pointer select-none"
             >
-              Jangan tampilkan notifikasi ini lagi
+              {t("import.notice.dontShow")}
             </Label>
           </div>
         </div>
@@ -200,7 +200,7 @@ export function OdpBulkImportNoticeDialog({
               disabled={isChecking}
               className="w-full"
             >
-              Lanjutkan ke Import
+              {t("import.odpNotice.proceed")}
             </Button>
           ) : (
             <Button
@@ -212,12 +212,12 @@ export function OdpBulkImportNoticeDialog({
             >
               {isChecking ? (
                 <>
-                  <ButtonLoader className="mr-2 text-primary" /> Memeriksa...
+                  <ButtonLoader className="mr-2 text-primary" /> {t("import.odpNotice.checking")}
                 </>
               ) : popCheck?.popCount === 0 ? (
-                "Tutup untuk buat POP"
+                t("import.odpNotice.closeForCreate")
               ) : (
-                "Tutup"
+                t("import.notice.close")
               )}
             </Button>
           )}
@@ -228,7 +228,7 @@ export function OdpBulkImportNoticeDialog({
               onClick={() => handleDismiss(true)}
               className="w-full"
             >
-              Tutup
+              {t("import.notice.close")}
             </Button>
           )}
         </DialogFooter>

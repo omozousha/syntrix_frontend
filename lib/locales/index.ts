@@ -1027,6 +1027,44 @@ const id = {
   "deviceList.kpi.totalCustomers": "Total Pelanggan",
   "deviceList.kpi.customerCaption": "Pelanggan di filter aktif",
   "deviceList.kpi.selectedCaption": "Siap bulk action",
+
+  // Import — prerequisite dialog
+  "import.notice.title": "Prasyarat Import Massal {entity}",
+  "import.notice.description": "Sebelum melanjutkan, pastikan data pendukung sudah tersedia.",
+  "import.notice.checking": "Memeriksa ketersediaan data {entity}...",
+  "import.notice.found": "Ditemukan {count} data {entity}",
+  "import.notice.missing": "Belum ada data {entity}",
+  "import.notice.dontShow": "Jangan tampilkan notifikasi ini lagi",
+  "import.notice.checkingShort": "Memeriksa...",
+  "import.prereq.default": "Data {entity} harus tersedia sebelum import.",
+  "import.notice.proceed": "Lanjutkan ke Import",
+  "import.notice.closeForCreate": "Tutup untuk buat data",
+  "import.notice.close": "Tutup",
+
+  // Import — ODP-specific prerequisite dialog
+  "import.odpNotice.title": "Prasyarat Import Massal ODP",
+  "import.odpNotice.description": "Sebelum melanjutkan, pastikan data POP (Point of Presence) sudah tersedia di region Anda. Setiap ODP harus terhubung ke POP yang valid.",
+  "import.odpNotice.prerequisite": "Prasyarat: Data POP harus tersedia",
+  "import.odpNotice.checking": "Memeriksa ketersediaan data POP...",
+  "import.odpNotice.found": "Ditemukan {count} data POP",
+  "import.odpNotice.missing": "Belum ada data POP",
+  "import.odpNotice.closeForCreate": "Tutup untuk buat POP",
+  "import.odpNotice.proceed": "Lanjutkan ke Import",
+
+  // Import — preview table
+  "import.preview.filterLabel": "Filter Validasi ({filtered} dari {total} baris)",
+  "import.preview.all": "SEMUA ({count})",
+  "import.preview.valid": "VALID ({count})",
+  "import.preview.error": "ERROR ({count})",
+  "import.preview.downloadError": "UNDUH ERROR CSV",
+  "import.preview.overflow": "+{overflow} baris data disembunyikan. Hanya menampilkan {maxRows} data pertama pada daftar pratinjau.",
+  "import.preview.colRow": "BARIS",
+  "import.preview.colStatus": "STATUS VALIDASI",
+  "import.preview.badgeValid": "VALID",
+  "import.preview.badgeError": "ERROR",
+  "import.preview.errorLabel": "Kesalahan Validasi",
+  "import.preview.empty": "[TIDAK ADA DATA PADA FILTER INI]",
+  "import.preview.counting": "Menampilkan {maxRows} dari {total} baris tersaring.",
 } as const;
 
 export type Messages = { [K in keyof typeof id]: string };
@@ -2026,6 +2064,44 @@ const en: Messages = {
   "deviceList.kpi.totalCustomers": "Total Customers",
   "deviceList.kpi.customerCaption": "Customers in the active filter",
   "deviceList.kpi.selectedCaption": "Ready for bulk action",
+
+  // Import — prerequisite dialog
+  "import.notice.title": "Bulk Import Prerequisites For {entity}",
+  "import.notice.description": "Before continuing, make sure the supporting data is available.",
+  "import.notice.checking": "Checking {entity} availability...",
+  "import.notice.found": "Found {count} {entity} record(s)",
+  "import.notice.missing": "No {entity} data yet",
+  "import.notice.dontShow": "Never show this notice again",
+  "import.notice.checkingShort": "Checking...",
+  "import.prereq.default": "{entity} data must be available before importing.",
+  "import.notice.proceed": "Continue to Import",
+  "import.notice.closeForCreate": "Close To Create Data",
+  "import.notice.close": "Close",
+
+  // Import — ODP-specific prerequisite dialog
+  "import.odpNotice.title": "Bulk Import ODP Prerequisites",
+  "import.odpNotice.description": "Before continuing, ensure POP (Point of Presence) data is available in your region. Each ODP must connect to a valid POP.",
+  "import.odpNotice.prerequisite": "Prerequisite: POP data must be available",
+  "import.odpNotice.checking": "Checking POP availability...",
+  "import.odpNotice.found": "Found {count} POP record(s)",
+  "import.odpNotice.missing": "No POP data yet",
+  "import.odpNotice.closeForCreate": "Close to create POP",
+  "import.odpNotice.proceed": "Continue to Import",
+
+  // Import — preview table
+  "import.preview.filterLabel": "Validation Filter ({filtered} of {total} rows)",
+  "import.preview.all": "ALL ({count})",
+  "import.preview.valid": "VALID ({count})",
+  "import.preview.error": "ERROR ({count})",
+  "import.preview.downloadError": "DOWNLOAD ERROR CSV",
+  "import.preview.overflow": "+{overflow} rows hidden. Only showing the first {maxRows} rows in the preview list.",
+  "import.preview.colRow": "ROW",
+  "import.preview.colStatus": "VALIDATION STATUS",
+  "import.preview.badgeValid": "VALID",
+  "import.preview.badgeError": "ERROR",
+  "import.preview.errorLabel": "Validation Error",
+  "import.preview.empty": "[NO DATA IN THIS FILTER]",
+  "import.preview.counting": "Showing {maxRows} of {total} filtered rows.",
 };
 
 export const dictionaries: Record<Locale, Messages> = { id, en };

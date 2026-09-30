@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertCircle, CircleDot, ChevronUp, ChevronDown, Download, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 
 export type ImportPreviewRow = {
   rowIndex: number;
@@ -27,6 +28,7 @@ export function ImportPreviewTable({
   columns,
   maxRows = 50,
 }: ImportPreviewTableProps) {
+  const { t } = useTranslate();
   const [filterType, setFilterType] = React.useState<FilterType>("all");
   const [sortConfig, setSortConfig] = React.useState<{
     key: string | null;
@@ -91,7 +93,7 @@ export function ImportPreviewTable({
     if (errorRows.length === 0) return;
 
     // Headers: Baris, Kolom..., Error
-    const headers = ["Baris", ...columns, "Kesalahan Validasi"].join(",");
+    const headers = [t("import.preview.colRow"), ...columns, t("import.preview.errorLabel")].join(",");
     const csvContent = errorRows.map(row => {
       const rowData = columns.map(col => {
         const val = row.data?.[col] ?? "";
@@ -124,7 +126,7 @@ export function ImportPreviewTable({
         <div className="flex items-center gap-2">
           <Filter className="size-3.5 text-muted-foreground" />
           <span className="text-xs uppercase tracking-wider text-muted-foreground font-mono">
-            Filter Validasi ({filteredRows.length} dari {rows.length} baris)
+            {t("import.preview.filterLabel", { filtered: filteredRows.length, total: rows.length })}
           </span>
         </div>
 
@@ -139,7 +141,7 @@ export function ImportPreviewTable({
                 filterType === "all" ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground"
               )}
             >
-              SEMUA ({rows.length})
+              {t("import.preview.all", { count: rows.length })}
             </button>
             <button
               type="button"
@@ -149,7 +151,7 @@ export function ImportPreviewTable({
                 filterType === "valid" ? "bg-green-600 text-white font-semibold" : "text-muted-foreground"
               )}
             >
-              VALID ({rows.length - errorCount})
+              {t("import.preview.valid", { count: rows.length - errorCount })}
             </button>
             <button
               type="button"
@@ -159,7 +161,7 @@ export function ImportPreviewTable({
                 filterType === "error" ? "bg-red-600 text-white font-semibold" : "text-muted-foreground"
               )}
             >
-              ERROR ({errorCount})
+              {t("import.preview.error", { count: errorCount })}
             </button>
           </div>
 
@@ -172,7 +174,7 @@ export function ImportPreviewTable({
               className="h-7 text-xs font-mono border-red-500/30 text-red-600 hover:bg-red-500/5 hover:text-red-700 gap-1.5"
             >
               <Download className="size-3" />
-              UNDUH ERROR CSV
+              {t("import.preview.downloadError")}
             </Button>
           )}
         </div>
@@ -181,7 +183,7 @@ export function ImportPreviewTable({
       {/* Overflow state description */}
       {overflow > 0 && (
         <div className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 border border-amber-200 dark:border-amber-950/30 p-2.5 rounded font-mono uppercase tracking-wider text-center">
-          +{overflow} baris data disembunyikan. Hanya menampilkan {maxRows} data pertama pada daftar pratinjau.
+          {t("import.preview.overflow", { overflow, maxRows })}
         </div>
       )}
 
@@ -195,7 +197,7 @@ export function ImportPreviewTable({
                 style={{ width: 64 }}
               >
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold font-mono">
-                  BARIS
+                  {t("import.preview.colRow")}
                 </span>
               </th>
               {columns.map((col) => (
@@ -214,7 +216,7 @@ export function ImportPreviewTable({
               ))}
               <th className="px-3 py-2 text-left" style={{ width: 140 }}>
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold font-mono">
-                  STATUS VALIDASI
+                  {t("import.preview.colStatus")}
                 </span>
               </th>
             </tr>
@@ -261,7 +263,7 @@ export function ImportPreviewTable({
                 >
                   <CircleDot className="size-6 text-muted-foreground/30 mx-auto mb-2" />
                   <span className="text-xs text-muted-foreground uppercase tracking-wider font-mono">
-                    [TIDAK ADA DATA PADA FILTER INI]
+                    {t("import.preview.empty")}
                   </span>
                 </td>
               </tr>
@@ -272,7 +274,7 @@ export function ImportPreviewTable({
 
       {filteredRows.length > maxRows && (
         <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono text-right">
-          Menampilkan {maxRows} dari {filteredRows.length} baris tersaring.
+          {t("import.preview.counting", { maxRows, total: filteredRows.length })}
         </p>
       )}
     </div>
@@ -280,10 +282,11 @@ export function ImportPreviewTable({
 }
 
 function StatusCell({ row }: { row: ImportPreviewRow }) {
+  const { t } = useTranslate();
   if (row.valid && row.errors.length === 0) {
     return (
       <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/10 h-5 px-2 text-[10px] font-mono font-medium">
-        VALID
+        {t("import.preview.badgeValid")}
       </Badge>
     );
   }
@@ -291,7 +294,7 @@ function StatusCell({ row }: { row: ImportPreviewRow }) {
   return (
     <div className="flex flex-col gap-1 items-start max-w-[200px]">
       <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/10 h-5 px-2 text-[10px] font-mono font-medium">
-        ERROR
+        {t("import.preview.badgeError")}
       </Badge>
       <div className="text-[10px] text-red-500 font-mono leading-relaxed mt-0.5 max-h-[60px] overflow-y-auto w-full">
         {row.errors.map((err, i) => (
