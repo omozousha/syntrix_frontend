@@ -255,7 +255,13 @@ export default function ValidationRequestsPage() {
     async function loadThumbs() {
       const next: Record<string, string> = {};
       for (const ref of visibleEvidenceRefs) {
-        const resolved = await resolveAttachmentCandidates(ref.candidates, token);
+        let resolved: string[] = [];
+        try {
+          resolved = await resolveAttachmentCandidates(ref.candidates, token);
+        } catch {
+          // skip candidate whose resolution fails entirely
+          continue;
+        }
         for (const candidate of resolved) {
           try {
             const { blob } = await fetchAttachmentBlob(candidate, token, "preview");
@@ -488,7 +494,7 @@ export default function ValidationRequestsPage() {
       const results = await Promise.allSettled(
         ids.map((id) =>
           apiFetch(
-            `/validation-requests/${id}/superadmin/${bulkConfirmAction}`,
+            `/validation-requests/${id}/${activeQueue === "adminregion" ? "adminregion" : "superadmin"}/${bulkConfirmAction}`,
             bulkConfirmAction === "reject"
               ? { method: "POST", token, body: JSON.stringify({ note: bulkRejectNote.trim() }) }
               : { method: "POST", token },
@@ -637,7 +643,13 @@ export default function ValidationRequestsPage() {
   }
 
   async function openEvidence(candidates: string[]) {
-    const resolved = await resolveAttachmentCandidates(candidates, token);
+    let resolved: string[] = [];
+    try {
+      resolved = await resolveAttachmentCandidates(candidates, token);
+    } catch {
+      setError(t("validation.result.openEvidenceFail"));
+      return;
+    }
     for (const candidate of resolved) {
       try {
         await downloadAttachmentFile(candidate, token);
@@ -650,7 +662,13 @@ export default function ValidationRequestsPage() {
   }
 
   async function previewEvidence(candidates: string[], label: string) {
-    const resolved = await resolveAttachmentCandidates(candidates, token);
+    let resolved: string[] = [];
+    try {
+      resolved = await resolveAttachmentCandidates(candidates, token);
+    } catch {
+      await openEvidence(candidates);
+      return;
+    }
     for (const candidate of resolved) {
       try {
         const { blob } = await fetchAttachmentBlob(candidate, token, "preview");

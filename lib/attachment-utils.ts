@@ -1,5 +1,4 @@
 import { API_BASE_URL, apiFetch } from "@/lib/api";
-import type { PaginatedResponse } from "@/lib/api";
 
 type AttachmentResolveData = {
   id: string;
@@ -11,65 +10,18 @@ type AttachmentResolveData = {
 
 const resolveCache = new Map<string, AttachmentResolveData | null>();
 
-function isUuidLike(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
 export async function resolveAttachment(identifier: string, token: string) {
   const key = String(identifier || "").trim();
   if (!key) return null;
   if (resolveCache.has(key)) return resolveCache.get(key) || null;
-  // Prefer frontend-side safe resolution to avoid backend cast errors on old deployments.
-  // 1) UUID identifier: try PK
-  if (isUuidLike(key)) {
-    try {
-      const byPk = await apiFetch<{ data: AttachmentResolveData }>(`/attachments/${encodeURIComponent(key)}`, { token });
-      if (byPk.data?.id) {
-        resolveCache.set(key, byPk.data);
-        return byPk.data;
-      }
-    } catch {
-      // continue
-    }
-    try {
-      const byStorage = await apiFetch<PaginatedResponse<AttachmentResolveData>>(
-        `/attachments?page=1&limit=1&storage_file_id=${encodeURIComponent(key)}`,
-        { token },
-      );
-      const row = byStorage.data?.[0] || null;
-      resolveCache.set(key, row);
-      return row;
-    } catch {
-      // continue
-    }
-  }
-
-  // 2) ATT code (or any non-uuid): query by attachment_id only
+  // Backend /attachments/resolve/:identifier matches id, attachment_id, or storage_file_id in one lookup.
+  // (The list endpoint GET /attachments does not exist, so filter-query fallbacks used to 404.)
   try {
-    const byCode = await apiFetch<PaginatedResponse<AttachmentResolveData>>(
-      `/attachments?page=1&limit=1&attachment_id=${encodeURIComponent(key)}`,
+    const res = await apiFetch<{ data?: AttachmentResolveData }>(
+      `/attachments/resolve/${encodeURIComponent(key)}`,
       { token },
     );
-    const row = byCode.data?.[0] || null;
-    resolveCache.set(key, row);
-    return row;
-  } catch {
-    // continue to broad fallback
-  }
-
-  // 3) Broad fallback for older backends that do not support field filters.
-  // Keep scope small to avoid heavy requests.
-  try {
-    const unfiltered = await apiFetch<PaginatedResponse<AttachmentResolveData>>("/attachments?page=1&limit=200", {
-      token,
-    });
-    const row =
-      (unfiltered.data || []).find((item) =>
-        item
-        && (String(item.id || "") === key
-          || String(item.attachment_id || "") === key
-          || String(item.storage_file_id || "") === key),
-      ) || null;
+    const row = res.data?.id ? res.data : null;
     resolveCache.set(key, row);
     return row;
   } catch {
