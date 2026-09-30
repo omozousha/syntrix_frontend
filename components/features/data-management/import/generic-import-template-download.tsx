@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { FileSpreadsheet, FileText } from "lucide-react";
+import { useTranslate } from "@/lib/use-locale";
 
 export type ColumnDef = {
   key: string;
@@ -58,6 +59,7 @@ function triggerDownload(blob: Blob, name: string) {
 
 export function GenericImportTemplateDownload({ config }: Props) {
   const { columns, exampleRows, fileName, sheetName, instructions, validationRules } = config;
+  const { t } = useTranslate();
 
   function downloadCsv() {
     const csv = buildCsv(columns, exampleRows);
@@ -96,12 +98,12 @@ export function GenericImportTemplateDownload({ config }: Props) {
   return (
     <div className="space-y-2">
       <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-        Unduh Template
+        {t("import.template.title")}
       </Label>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" onClick={downloadXlsx} className="gap-2">
           <FileSpreadsheet className="size-4" />
-          Unduh Template XLSX
+          {t("import.template.downloadXlsx")}
         </Button>
         <Button
           type="button"
@@ -110,14 +112,14 @@ export function GenericImportTemplateDownload({ config }: Props) {
           className="gap-2"
         >
           <FileText className="size-4" />
-          Unduh Template CSV
+          {t("import.template.downloadCsv")}
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Template XLSX berisi 3 sheet: <strong>{sheetName}</strong> (data +{" "}
-        {exampleRows.length} contoh baris), <strong>Petunjuk</strong>,{" "}
-        <strong>Validasi</strong>. Format CSV adalah header plain-text untuk
-        editor teks.
+        {t("import.template.description", {
+          sheet: sheetName,
+          count: exampleRows.length,
+        })}
       </p>
     </div>
   );

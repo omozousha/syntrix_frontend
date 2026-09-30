@@ -36,13 +36,15 @@ import {
   type PrerequisiteCheck,
 } from "@/components/features/data-management/import/generic-bulk-import-prerequisite-dialog";
 import type { BulkImportConfig } from "@/components/features/data-management/import/generic-bulk-import-config";
+import { useTranslate } from "@/lib/use-locale";
+import { type MessageKey } from "@/lib/locales";
 
 type StepKey = "template" | "upload" | "preview";
 
-const STEPS: Array<{ value: StepKey; label: string }> = [
-  { value: "template", label: "01 · TEMPLATE" },
-  { value: "upload", label: "02 · UPLOAD" },
-  { value: "preview", label: "03 · VALIDASI" },
+const STEPS: Array<{ value: StepKey; label: MessageKey }> = [
+  { value: "template", label: "import.page.stepTemplate" },
+  { value: "upload", label: "import.page.stepUpload" },
+  { value: "preview", label: "import.page.stepValidation" },
 ];
 
 type Props = {
@@ -52,6 +54,7 @@ type Props = {
 export function GenericBulkImportPage({ config }: Props) {
   const router = useRouter();
   const session = useSession();
+  const { t } = useTranslate();
   const {
     pageTitle,
     entityType,
@@ -91,8 +94,11 @@ export function GenericBulkImportPage({ config }: Props) {
   } | null>(null);
 
   const runPrerequisiteCheck = useCallback(async (): Promise<PrerequisiteCheck | null> => {
+    // ponytail: messages here are stored in state and rendered later; using t() would
+    // need it in deps -> re-fetch on every locale toggle. Upgrade path: store a key+vars,
+    // resolve at render.
     if (!session?.token) {
-      const r = { hasData: false, count: 0, message: "Tidak ada sesi login.", entityLabel: "DATA" };
+      const r = { hasData: false, count: 0, message: t("import.page.noSession"), entityLabel: "DATA" };
       setCheckResult(r);
       return r;
     }
@@ -142,7 +148,7 @@ export function GenericBulkImportPage({ config }: Props) {
     setParseError(null);
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (ext !== "csv" && ext !== "xlsx" && ext !== "xls") {
-      setParseError("Format file harus .csv, .xlsx, atau .xls");
+      setParseError(t("import.page.invalidFormat"));
       setUploadFile(null);
       setFilename(null);
       return;
@@ -156,7 +162,7 @@ export function GenericBulkImportPage({ config }: Props) {
       if (ext === "csv") {
         const text = await file.text();
         const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim().length > 0);
-        if (lines.length <= 1) throw new Error("File CSV kosong.");
+        if (lines.length <= 1) throw new Error(t("import.page.emptyFile"));
         const headers = lines[0].split(",").map((h) => h.trim().replaceAll('"', ""));
         parsed = [];
         for (let i = 1; i < lines.length; i++) {
@@ -171,27 +177,27 @@ export function GenericBulkImportPage({ config }: Props) {
         const buffer = await file.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
-        if (!sheetName) throw new Error("File excel kosong atau tidak valid");
+        if (!sheetName) throw new Error(t("import.page.emptyExcel"));
         const sheet = workbook.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
         parsed = rows.map((row) => row as Record<string, string>);
       }
     } catch (err) {
-      setParseError(err instanceof Error ? err.message : "Gagal membaca berkas.");
+      setParseError(err instanceof Error ? err.message : t("import.page.readFailed"));
       setUploadFile(null);
       setFilename(null);
       return;
     }
 
     if (parsed.length === 0) {
-      setParseError("File tidak memiliki baris data (kosong).");
+      setParseError(t("import.page.noRows"));
       setUploadFile(null);
       setFilename(null);
       return;
     }
 
     if (parsed.length > 2000) {
-      setParseError(`Jumlah baris data (${parsed.length}) melebihi batas maksimal 2.000 baris.`);
+      setParseError(t("import.page.overLimit", { count: parsed.length }));
       setUploadFile(null);
       setFilename(null);
       return;
@@ -203,7 +209,7 @@ export function GenericBulkImportPage({ config }: Props) {
     ).length;
 
     if (matchCount < 2) {
-      setParseError("Format kolom template tidak dikenal. Pastikan nama kolom sesuai template.");
+      setParseError(t("import.page.unknownFormat"));
       setUploadFile(null);
       setFilename(null);
       return;
@@ -475,19 +481,19 @@ export function GenericBulkImportPage({ config }: Props) {
     if (popResult && !popResult.hasData) {
       setNoticeOpen(true);
       setApplyState("error");
-      setApplyMessage("Tidak dapat menerapkan: data prasyarat belum tersedia.");
+      setApplyMessage(t("import.page.applyPrereqMissing"));
       return;
     }
 
     if (!session?.token) {
       setApplyState("error");
-      setApplyMessage("Token session tidak ditemukan. Silakan login ulang.");
+      setApplyMessage(t("import.page.tokenExpired"));
       return;
     }
 
     if (!uploadFile) {
       setApplyState("error");
-      setApplyMessage("File belum diunggah.");
+      setApplyMessage(t("import.page.noFile"));
       return;
     }
 
@@ -495,8 +501,8 @@ export function GenericBulkImportPage({ config }: Props) {
       setApplyState("error");
       setApplyMessage(
         fileLevelError
-          ? `Terdapat masalah berkas: ${fileLevelError.description}`
-          : "Terdapat baris error. Selesaikan dulu sebelum menerapkan.",
+          ? t("import.page.fileProblem", { description: fileLevelError.description })
+          : t("import.page.errorRowsApply"),
       );
       return;
     }
@@ -535,10 +541,10 @@ export function GenericBulkImportPage({ config }: Props) {
         errors: serverErrors,
       });
       setApplyState("success");
-      setApplyMessage("Batch impor massal berhasil diproses.");
+      setApplyMessage(t("import.page.applySuccess"));
     } catch (err) {
       setApplyState("error");
-      setApplyMessage(err instanceof Error ? err.message : "Gagal menerapkan batch di server.");
+      setApplyMessage(err instanceof Error ? err.message : t("import.page.applyFailed"));
     }
   }
 
@@ -573,20 +579,19 @@ export function GenericBulkImportPage({ config }: Props) {
                   : "bg-amber-500/10 text-amber-500 border-amber-500/20"
               }`}
             >
-              {checkResult.hasData ? `${checkResult.entityLabel} Siap` : `${checkResult.entityLabel} Tidak Tersedia`}
+              {checkResult.hasData ? t("import.page.badgeReady", { entity: checkResult.entityLabel }) : t("import.page.badgeUnavailable", { entity: checkResult.entityLabel })}
             </span>
           )}
         </div>
         <p className="text-sm text-muted-foreground">
-          Tambahkan ratusan atau ribuan data {successEntityLabel} sekaligus menggunakan file CSV atau Excel.
-          Pastikan data format koordinat{requiresPop ? ", POP," : ""} dan region sudah valid sebelum diunggah.
+          {requiresPop ? t("import.page.subtitleWithPop", { entity: successEntityLabel }) : t("import.page.subtitleWithoutPop", { entity: successEntityLabel })}
         </p>
       </header>
 
       <Separator />
 
       <div className="w-full">
-        <nav className="flex items-center justify-between border border-border bg-muted/20 p-1.5 rounded-lg max-w-4xl mx-auto" aria-label="Progress">
+        <nav className="flex items-center justify-between border border-border bg-muted/20 p-1.5 rounded-lg max-w-4xl mx-auto" aria-label={t("import.page.progressLabel")}>
           {STEPS.map((s, idx) => {
             const isActive = step === s.value;
             const isCompleted = STEPS.findIndex((x) => x.value === step) > idx;
@@ -613,7 +618,7 @@ export function GenericBulkImportPage({ config }: Props) {
                       {idx + 1}
                     </span>
                   )}
-                  {s.label.split(" · ")[1]}
+                  {t(s.label)}
                 </button>
                 {idx < STEPS.length - 1 && (
                   <ArrowRight className="size-3.5 text-muted-foreground/30" />
@@ -629,15 +634,15 @@ export function GenericBulkImportPage({ config }: Props) {
       {isTemplateStep && (
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
-            <CardTitle>LANGKAH 1: UNDUH TEMPLATE & PETUNJUK</CardTitle>
+            <CardTitle>{t("import.page.templateHeading")}</CardTitle>
             <CardDescription>
-              Gunakan berkas template resmi agar kolom dan baris terpetakan dengan benar di database.
+              {t("import.page.templateDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="rounded-lg border border-border p-4 bg-muted/10 space-y-4">
               <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground font-mono">
-                Daftar Kolom ({templateColumns.length} Kolom):
+                {t("import.page.columnList", { count: templateColumns.length })}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs font-mono">
                 {templateColumns.map((col) => (
@@ -668,16 +673,16 @@ export function GenericBulkImportPage({ config }: Props) {
       {isUploadStep && (
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
-            <CardTitle>LANGKAH 2: UNGGAH BERKAS DATA {successEntityLabel}</CardTitle>
+            <CardTitle>{t("import.page.uploadHeading", { entity: successEntityLabel })}</CardTitle>
             <CardDescription>
-              Pilih file CSV atau XLSX hasil pengisian template. Batas maksimum impor adalah 2.000 baris data.
+              {t("import.page.uploadDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {parseError && (
               <Alert variant="destructive">
                 <AlertCircle className="size-4" />
-                <AlertTitle>Kesalahan Pembacaan Berkas</AlertTitle>
+                <AlertTitle>{t("import.page.readError")}</AlertTitle>
                 <AlertDescription>{parseError}</AlertDescription>
               </Alert>
             )}
@@ -693,15 +698,15 @@ export function GenericBulkImportPage({ config }: Props) {
                 onDrop={handleDrop}
               >
                 <Upload className="size-10 text-muted-foreground mb-4" />
-                <h3 className="text-sm font-semibold uppercase tracking-wider font-mono">Tarik & Letakkan File</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wider font-mono">{t("import.page.dragDrop")}</h3>
                 <p className="text-xs text-muted-foreground mt-1 mb-4">
-                  Dukung format .xlsx, .xls, atau .csv (Maksimal 2.000 baris data)
+                  {t("import.page.dragDropHint")}
                 </p>
                 <Label
                   htmlFor="import-file-upload"
                   className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 cursor-pointer"
                 >
-                  Pilih File Manual
+                  {t("import.page.pickFile")}
                 </Label>
                 <Input
                   id="import-file-upload"
@@ -727,11 +732,11 @@ export function GenericBulkImportPage({ config }: Props) {
                   <div>
                     <p className="text-sm font-semibold">{filename}</p>
                     <p className="text-xs text-muted-foreground font-mono">
-                      {(uploadFile.size / 1024).toFixed(1)} KB · Siap divalidasi
+                      {(uploadFile.size / 1024).toFixed(1)} KB · {t("import.page.fileReady")}
                     </p>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={removeFile} title="Hapus berkas">
+                <Button variant="ghost" size="icon" onClick={removeFile} title={t("import.page.removeFile")}>
                   <X className="size-4" />
                 </Button>
               </div>
@@ -739,7 +744,7 @@ export function GenericBulkImportPage({ config }: Props) {
 
             <div className="rounded-lg border border-border p-4 bg-muted/5 space-y-2">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
-                Checklist Impor Massal {successEntityLabel}:
+                {t("import.page.checklist", { entity: successEntityLabel })}
               </h4>
               <ul className="text-xs space-y-1 text-muted-foreground">
                 {requiresPop && (
@@ -747,16 +752,16 @@ export function GenericBulkImportPage({ config }: Props) {
                     <span
                       className={`w-1.5 h-1.5 rounded-full ${checkResult?.hasData ? "bg-green-500" : "bg-red-500"}`}
                     />
-                    Prasyarat: {checkResult?.hasData ? "Terpenuhi" : "Belum terpenuhi (Harap buat data pendukung dahulu)"}
+                    {t("import.page.prereqLabel")}: {checkResult?.hasData ? t("import.page.prereqMet") : t("import.page.prereqNotMet")}
                   </li>
                 )}
                 <li className="flex items-center gap-2">
                   <span className={`w-1.5 h-1.5 rounded-full ${uploadFile ? "bg-green-500" : "bg-muted-foreground"}`} />
-                  File Terpilih: {uploadFile ? "Ya" : "Belum diunggah"}
+                  {t("import.page.fileSelected")}: {uploadFile ? t("import.page.fileSelectedYes") : t("import.page.fileSelectedNo")}
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                  Maksimal 2.000 baris data per batch file.
+                  {t("import.page.maxRows")}
                 </li>
               </ul>
             </div>
@@ -767,15 +772,15 @@ export function GenericBulkImportPage({ config }: Props) {
       {isPreviewStep && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 max-w-4xl mx-auto">
-            <ImportSummaryStat label="TOTAL BARIS" value={summary.total} tone="primary" />
+            <ImportSummaryStat label={t("import.page.totalRows")} value={summary.total} tone="primary" />
             <ImportSummaryStat
-              label="BARIS VALID"
+              label={t("import.page.validRows")}
               value={summary.valid}
               total={summary.total || 1}
               tone="success"
             />
             <ImportSummaryStat
-              label="BARIS ERROR"
+              label={t("import.page.errorRows")}
               value={summary.invalid}
               total={summary.total || 1}
               tone="destructive"
@@ -785,10 +790,11 @@ export function GenericBulkImportPage({ config }: Props) {
           {summary.invalid > 0 && (
             <Alert variant="destructive" className="max-w-4xl mx-auto">
               <AlertTriangle className="size-4" />
-              <AlertTitle>Ditemukan Data Tidak Valid</AlertTitle>
+              <AlertTitle>{t("import.page.invalidFound")}</AlertTitle>
               <AlertDescription>
-                Terdapat {summary.invalid} baris data yang memiliki kesalahan validasi.
-                Hanya baris dengan status <strong className="text-red-600">VALID</strong> yang akan disimpan saat proses penerapan.
+                {t("import.page.invalidDescA", { count: summary.invalid })}{" "}
+                <strong className="text-red-600">{t("import.preview.badgeValid")}</strong>{" "}
+                {t("import.page.invalidDescB")}
               </AlertDescription>
             </Alert>
           )}
@@ -804,15 +810,15 @@ export function GenericBulkImportPage({ config }: Props) {
           <Card className="w-full">
             <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <CardTitle>LANGKAH 3: HASIL VALIDASI DATA {successEntityLabel}</CardTitle>
+                <CardTitle>{t("import.page.previewHeading", { entity: successEntityLabel })}</CardTitle>
                 <CardDescription>
-                  Pratinjau maksimum 50 baris data pertama. Lakukan pengecekan status validitas.
+                  {t("import.page.previewDesc")}
                 </CardDescription>
               </div>
               {uploadFile && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
                   <span>
-                    Berkas: <strong>{filename}</strong>
+                    {t("import.page.fileLabel")} <strong>{filename}</strong>
                   </span>
                   <Button
                     variant="outline"
@@ -823,7 +829,7 @@ export function GenericBulkImportPage({ config }: Props) {
                     }}
                     className="h-7 text-[10px]"
                   >
-                    GANTI FILE
+                    {t("import.page.changeFile")}
                   </Button>
                 </div>
               )}
@@ -843,7 +849,7 @@ export function GenericBulkImportPage({ config }: Props) {
           className="rounded-full"
         >
           <ArrowLeft className="mr-2 size-4" />
-          KEMBALI
+          {t("import.page.back")}
         </Button>
 
         <div className="flex items-center gap-2">
@@ -853,7 +859,7 @@ export function GenericBulkImportPage({ config }: Props) {
             className="rounded-full"
             onClick={() => router.push("/data-management")}
           >
-            BATAL
+            {t("import.page.cancel")}
           </Button>
           <Button
             type="button"
@@ -871,9 +877,9 @@ export function GenericBulkImportPage({ config }: Props) {
             }
             className="rounded-full"
           >
-            {isTemplateStep && "LANJUT UNGGAH"}
-            {isUploadStep && "LIHAT VALIDASI"}
-            {isPreviewStep && "LANJUT TERAPKAN"}
+            {isTemplateStep && t("import.page.nextUpload")}
+            {isUploadStep && t("import.page.viewValidation")}
+            {isPreviewStep && t("import.page.apply")}
           </Button>
         </div>
       </div>
@@ -895,39 +901,39 @@ export function GenericBulkImportPage({ config }: Props) {
           <DialogHeader>
             <DialogTitle className="text-lg font-bold font-mono">
               {applyState === "success"
-                ? `IMPOR MASSAL ${successEntityLabel.toUpperCase()} SELESAI`
+                ? t("import.page.dialog.successTitle", { entity: successEntityLabel.toUpperCase() })
                 : applyState === "error"
-                  ? "GAGAL MENYIMPAN DATA"
-                  : "KONFIRMASI PENYIMPANAN BATCH"}
+                  ? t("import.page.dialog.errorTitle")
+                  : t("import.page.dialog.confirmTitle")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground font-mono">
               {applyState === "success"
-                ? "Berkas berhasil diproses oleh backend server."
+                ? t("import.page.dialog.successDesc")
                 : applyState === "error"
-                  ? "Proses impor massal mengalami kegagalan."
-                  : "Tinjau ringkasan sebelum menyimpan data ke database."}
+                  ? t("import.page.dialog.errorDesc")
+                  : t("import.page.dialog.confirmDesc")}
             </DialogDescription>
           </DialogHeader>
 
           {applyState === "idle" && (
             <div className="space-y-4 py-2">
               <div className="rounded-lg border border-border p-3 bg-muted/10 space-y-2.5 text-xs font-mono">
-                <h3 className="font-semibold uppercase tracking-wider text-muted-foreground">Ringkasan Impor:</h3>
+                <h3 className="font-semibold uppercase tracking-wider text-muted-foreground">{t("import.page.dialog.summaryTitle")}</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-muted-foreground">Nama Berkas:</span>
+                    <span className="text-muted-foreground">{t("import.page.dialog.fileName")}</span>
                     <p className="font-semibold text-foreground mt-0.5 truncate">{filename}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Jumlah Data:</span>
-                    <p className="font-semibold text-foreground mt-0.5">{summary.total} Baris</p>
+                    <span className="text-muted-foreground">{t("import.page.dialog.dataCount")}</span>
+                    <p className="font-semibold text-foreground mt-0.5">{t("import.page.dialog.rows", { count: summary.total })}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Akan Diimpor (Valid):</span>
+                    <span className="text-muted-foreground">{t("import.page.dialog.willImport")}</span>
                     <p className="font-semibold text-green-600 mt-0.5">{summary.valid} {successEntityLabel}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Akan Dilewati (Error):</span>
+                    <span className="text-muted-foreground">{t("import.page.dialog.willSkip")}</span>
                     <p className="font-semibold text-red-500 mt-0.5">{summary.invalid} {successEntityLabel}</p>
                   </div>
                 </div>
@@ -937,10 +943,10 @@ export function GenericBulkImportPage({ config }: Props) {
                 <div className="flex gap-2">
                   <AlertTriangle className="size-4 shrink-0 text-amber-600 mt-0.5" />
                   <div>
-                    <strong className="block font-semibold mb-1">Perhatian Sebelum Menyimpan:</strong>
+                    <strong className="block font-semibold mb-1">{t("import.page.dialog.warningTitle")}</strong>
                     <ul className="list-disc pl-4 space-y-1">
-                      <li>Aksi ini akan membuat data {successEntityLabel} baru di database Syntrix.</li>
-                      <li>Proses pembentukan kode inventori unik akan berjalan secara otomatis di backend.</li>
+                      <li>{t("import.page.dialog.warningCreate", { entity: successEntityLabel })}</li>
+                      <li>{t("import.page.dialog.warningInventory")}</li>
                     </ul>
                   </div>
                 </div>
@@ -948,7 +954,7 @@ export function GenericBulkImportPage({ config }: Props) {
             </div>
           )}
 
-          {applyState === "loading" && <AppLoading variant="card" label="Sedang Menyimpan Data..." />}
+          {applyState === "loading" && <AppLoading variant="card" label={t("import.page.dialog.saving")} />}
 
           {applyState === "success" && importResult && (
             <div className="space-y-4 py-2">
@@ -957,19 +963,19 @@ export function GenericBulkImportPage({ config }: Props) {
                   <CheckCircle2 className="size-6" />
                 </div>
                 <h3 className="text-sm font-semibold text-green-600 uppercase tracking-wider font-mono">
-                  Impor Selesai
+                  {t("import.page.dialog.completeTitle")}
                 </h3>
               </div>
 
               <div className="rounded-lg border border-border p-3 bg-muted/10 space-y-2.5 font-mono text-xs">
-                <h4 className="font-semibold uppercase tracking-wider text-muted-foreground">Hasil Eksekusi:</h4>
+                <h4 className="font-semibold uppercase tracking-wider text-muted-foreground">{t("import.page.dialog.executionTitle")}</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-muted-foreground">Sukses Dibuat:</span>
+                    <span className="text-muted-foreground">{t("import.page.dialog.successCount")}</span>
                     <p className="font-bold text-green-600 text-base">{importResult.successCount}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Gagal/Dilewati:</span>
+                    <span className="text-muted-foreground">{t("import.page.dialog.failedCount")}</span>
                     <p className="font-bold text-red-500 text-base">{importResult.failedCount}</p>
                   </div>
                 </div>
@@ -978,12 +984,12 @@ export function GenericBulkImportPage({ config }: Props) {
               {importResult.errors.length > 0 && (
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
-                    Daftar Error Server ({importResult.errors.length}):
+                    {t("import.page.dialog.errorListTitle", { count: importResult.errors.length })}
                   </Label>
                   <div className="border border-border rounded-md bg-card max-h-[140px] overflow-y-auto p-2.5 space-y-2 font-mono text-[10px]">
                     {importResult.errors.map((err, i) => (
                       <div key={i} className="text-red-500 border-b border-border/50 pb-1.5 last:border-0 last:pb-0">
-                        <span className="font-bold">Baris {err.row_index}:</span>
+                        <span className="font-bold">{t("import.page.dialog.rowLabel", { row: err.row_index })}</span>
                         <p className="text-muted-foreground mt-0.5">{err.errors.join(", ")}</p>
                       </div>
                     ))}
@@ -997,7 +1003,7 @@ export function GenericBulkImportPage({ config }: Props) {
             <div className="space-y-4 py-2">
               <Alert variant="destructive">
                 <AlertCircle className="size-4" />
-                <AlertTitle>Gagal Menyimpan Data</AlertTitle>
+                <AlertTitle>{t("import.page.dialog.failedSave")}</AlertTitle>
                 <AlertDescription className="text-xs mt-1">{applyMessage}</AlertDescription>
               </Alert>
             </div>
@@ -1007,7 +1013,7 @@ export function GenericBulkImportPage({ config }: Props) {
             {applyState === "idle" && (
               <>
                 <Button type="button" variant="outline" onClick={() => setApplyDialogOpen(false)} className="w-full sm:w-auto">
-                  BATAL
+                  {t("import.page.cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -1016,13 +1022,13 @@ export function GenericBulkImportPage({ config }: Props) {
                   disabled={summary.valid === 0 || summary.invalid > 0 || fileLevelError !== null}
                   title={
                     summary.invalid > 0
-                      ? "Selesaikan baris error sebelum menerapkan."
+                      ? t("import.page.dialog.retryTitle")
                       : fileLevelError
                         ? fileLevelError.description
                         : ""
                   }
                 >
-                  MULAI TERAPKAN
+                  {t("import.page.dialog.apply")}
                 </Button>
               </>
             )}
@@ -1043,7 +1049,7 @@ export function GenericBulkImportPage({ config }: Props) {
                   }}
                   className="w-full sm:flex-1 font-mono text-xs uppercase tracking-wider"
                 >
-                  Impor File Baru
+                  {t("import.page.dialog.newImport")}
                 </Button>
                 <Button
                   type="button"
@@ -1053,7 +1059,7 @@ export function GenericBulkImportPage({ config }: Props) {
                   }}
                   className="w-full sm:flex-1 font-mono text-xs uppercase tracking-wider"
                 >
-                  Lihat List {successEntityLabel}
+                  {t("import.page.dialog.viewList", { entity: successEntityLabel })}
                 </Button>
               </div>
             )}
@@ -1061,10 +1067,10 @@ export function GenericBulkImportPage({ config }: Props) {
             {applyState === "error" && (
               <>
                 <Button type="button" variant="outline" onClick={() => setApplyState("idle")} className="w-full sm:w-auto">
-                  KEMBALI
+                  {t("import.page.back")}
                 </Button>
                 <Button type="button" onClick={handleApply} className="w-full sm:w-auto">
-                  COBA LAGI
+                  {t("import.page.dialog.retry")}
                 </Button>
               </>
             )}

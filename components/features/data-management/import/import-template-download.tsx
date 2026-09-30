@@ -5,6 +5,7 @@ import { FileSpreadsheet, FileText } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { useTranslate } from "@/lib/use-locale";
 
 /**
  * Template columns required for ODP bulk import.
@@ -73,6 +74,7 @@ export function ImportTemplateDownload({
 }: {
   fileName?: string;
 }) {
+  const { t } = useTranslate();
   function buildCsv(): string {
     const headers = ODP_TEMPLATE_COLUMNS.join(",");
     const rows = EXAMPLE_ROWS.map((row) =>
@@ -172,12 +174,12 @@ export function ImportTemplateDownload({
   return (
     <div className="space-y-2">
       <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-        Unduh Template
+        {t("import.template.title")}
       </Label>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" onClick={downloadXlsx} className="gap-2">
           <FileSpreadsheet className="size-4" />
-          Unduh Template XLSX
+          {t("import.template.downloadXlsx")}
         </Button>
         <Button
           type="button"
@@ -186,13 +188,11 @@ export function ImportTemplateDownload({
           className="gap-2"
         >
           <FileText className="size-4" />
-          Unduh Template CSV
+          {t("import.template.downloadCsv")}
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Template XLSX berisi 3 sheet: <strong>ODP</strong> (data + 3 contoh baris),{" "}
-        <strong>Petunjuk</strong>, <strong>Validasi</strong>. Format CSV adalah
-        header plain-text untuk editor teks.
+        {t("import.template.description", { sheet: "ODP", count: EXAMPLE_ROWS.length })}
       </p>
     </div>
   );
