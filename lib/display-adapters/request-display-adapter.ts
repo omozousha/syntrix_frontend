@@ -1,5 +1,10 @@
 import { valueText } from "@/lib/domain-formatters";
 import { getPopLabel, getProjectLabel, getRegionLabel } from "@/lib/relation-labels";
+import type { MessageKey } from "@/lib/locales";
+
+// Adapter rows are pure display data; callers pass `t` from useTranslate(), with a
+// key-passthrough default so non-UI call sites keep compiling.
+type TFn = (key: MessageKey, vars?: Record<string, string | number>) => string;
 
 export type RequestLookupLabels = {
   regions: Record<string, string>;
@@ -48,79 +53,80 @@ type FieldValidationContext = {
   summary: Record<string, unknown>;
   currentDevice: Record<string, unknown>;
   lookupLabels: RequestLookupLabels;
+  t: TFn;
 };
 
 const FIELD_VALIDATION_RENDERERS: Record<string, FieldValidationRenderer> = {
   ODP: {
-    reviewFields: ({ field, summary }) => [
-      { title: "Tanggal Validasi", value: valueText(field.validation_date) },
-      { title: "ID Inventory", value: valueText(field.inventory_id) },
-      { title: "Nama ODP Lama", value: valueText(field.old_device_name) },
-      { title: "Nama ODP Baru", value: valueText(field.new_device_name) },
-      { title: "POP", value: getPopLabel({ fallback: field.pop_name, optional: true }) },
-      { title: "Longitude", value: valueText(field.longitude) },
-      { title: "Latitude", value: valueText(field.latitude) },
-      { title: "Tipe ODP", value: valueText(field.odp_type) },
-      { title: "Jenis Instalasi", value: valueText(field.installation_type) },
-      { title: "Splitter", value: valueText(field.splitter_ratio) },
-      { title: "Kapasitas", value: valueText(field.total_ports) },
-      { title: "Port Aktif", value: valueText(summary.used) },
-      { title: "Port Kosong", value: valueText(summary.empty ?? summary.idle) },
-      { title: "Port Rusak", value: valueText(summary.broken ?? summary.down) },
+    reviewFields: ({ field, summary, t }) => [
+      { title: t("validation.field.validationDate"), value: valueText(field.validation_date) },
+      { title: t("validation.adapter.inventoryId"), value: valueText(field.inventory_id) },
+      { title: t("validation.adapter.oldDeviceName"), value: valueText(field.old_device_name) },
+      { title: t("validation.adapter.newDeviceName"), value: valueText(field.new_device_name) },
+      { title: t("validation.field.pop"), value: getPopLabel({ fallback: field.pop_name, optional: true }) },
+      { title: t("validation.field.longitude"), value: valueText(field.longitude) },
+      { title: t("validation.field.latitude"), value: valueText(field.latitude) },
+      { title: t("validation.field.tipeOdp"), value: valueText(field.odp_type) },
+      { title: t("validation.field.jenisInstalasi"), value: valueText(field.installation_type) },
+      { title: t("validation.adapter.splitter"), value: valueText(field.splitter_ratio) },
+      { title: t("validation.adapter.capacity"), value: valueText(field.total_ports) },
+      { title: t("validation.adapter.activePort"), value: valueText(summary.used) },
+      { title: t("validation.adapter.emptyPort"), value: valueText(summary.empty ?? summary.idle) },
+      { title: t("validation.adapter.brokenPort"), value: valueText(summary.broken ?? summary.down) },
     ],
-    comparisonPairs: ({ field, currentDevice, lookupLabels }) => {
+    comparisonPairs: ({ field, currentDevice, lookupLabels, t }) => {
       const currentPop = currentDevice.pop_name || getPopDisplay(currentDevice.pop_id, lookupLabels);
       return [
-        ["Nama ODP Lama", currentDevice.device_name || field.old_device_name, field.old_device_name],
-        ["Nama ODP Baru", null, field.new_device_name],
-        ["POP", currentPop, field.pop_name || getPopDisplay(field.pop_id, lookupLabels)],
-        ["Longitude", currentDevice.longitude, field.longitude],
-        ["Latitude", currentDevice.latitude, field.latitude],
-        ["Tipe ODP", currentDevice.odp_type, field.odp_type],
-        ["Jenis Instalasi", currentDevice.installation_type, field.installation_type],
-        ["Splitter", currentDevice.splitter_ratio, field.splitter_ratio],
-        ["Kapasitas", currentDevice.total_ports, field.total_ports],
+        [t("validation.adapter.oldDeviceName"), currentDevice.device_name || field.old_device_name, field.old_device_name],
+        [t("validation.adapter.newDeviceName"), null, field.new_device_name],
+        [t("validation.field.pop"), currentPop, field.pop_name || getPopDisplay(field.pop_id, lookupLabels)],
+        [t("validation.field.longitude"), currentDevice.longitude, field.longitude],
+        [t("validation.field.latitude"), currentDevice.latitude, field.latitude],
+        [t("validation.field.tipeOdp"), currentDevice.odp_type, field.odp_type],
+        [t("validation.field.jenisInstalasi"), currentDevice.installation_type, field.installation_type],
+        [t("validation.adapter.splitter"), currentDevice.splitter_ratio, field.splitter_ratio],
+        [t("validation.adapter.capacity"), currentDevice.total_ports, field.total_ports],
       ];
     },
   },
   ODC: {
-    reviewFields: ({ field, technical }) => [
-      ...buildGenericDeviceReviewFields("ODC", field),
-      { title: "Splitter", value: valueText(technical.splitter_ratio ?? field.splitter_ratio) },
-      { title: "Total Port", value: valueText(technical.total_ports ?? field.total_ports) },
-      { title: "Used Port", value: valueText(technical.used_ports ?? field.used_ports) },
-      { title: "Kapasitas Core", value: valueText(technical.capacity_core ?? field.capacity_core) },
-      { title: "Core Terpakai", value: valueText(technical.used_core ?? field.used_core) },
+    reviewFields: ({ field, technical, t }) => [
+      ...buildGenericDeviceReviewFields("ODC", field, t),
+      { title: t("validation.adapter.splitter"), value: valueText(technical.splitter_ratio ?? field.splitter_ratio) },
+      { title: t("validation.adapter.totalPort"), value: valueText(technical.total_ports ?? field.total_ports) },
+      { title: t("validation.adapter.usedPort"), value: valueText(technical.used_ports ?? field.used_ports) },
+      { title: t("validation.adapter.coreCapacity"), value: valueText(technical.capacity_core ?? field.capacity_core) },
+      { title: t("validation.adapter.usedCore"), value: valueText(technical.used_core ?? field.used_core) },
     ],
-    comparisonPairs: ({ field, technical, currentDevice, lookupLabels }) => [
-      ...buildGenericDeviceComparisonPairs("ODC", field, currentDevice, lookupLabels),
-      ["Splitter", currentDevice.splitter_ratio, technical.splitter_ratio ?? field.splitter_ratio],
-      ["Total Port", currentDevice.total_ports, technical.total_ports ?? field.total_ports],
-      ["Used Port", currentDevice.used_ports, technical.used_ports ?? field.used_ports],
-      ["Kapasitas Core", currentDevice.capacity_core, technical.capacity_core ?? field.capacity_core],
-      ["Core Terpakai", currentDevice.used_core, technical.used_core ?? field.used_core],
+    comparisonPairs: ({ field, technical, currentDevice, lookupLabels, t }) => [
+      ...buildGenericDeviceComparisonPairs("ODC", field, currentDevice, lookupLabels, t),
+      [t("validation.adapter.splitter"), currentDevice.splitter_ratio, technical.splitter_ratio ?? field.splitter_ratio],
+      [t("validation.adapter.totalPort"), currentDevice.total_ports, technical.total_ports ?? field.total_ports],
+      [t("validation.adapter.usedPort"), currentDevice.used_ports, technical.used_ports ?? field.used_ports],
+      [t("validation.adapter.coreCapacity"), currentDevice.capacity_core, technical.capacity_core ?? field.capacity_core],
+      [t("validation.adapter.usedCore"), currentDevice.used_core, technical.used_core ?? field.used_core],
     ],
   },
   CABLE: {
-    reviewFields: ({ field, technical }) => [
-      ...buildGenericDeviceReviewFields("Cable", field),
-      { title: "Kapasitas Core", value: valueText(technical.capacity_core ?? field.capacity_core) },
-      { title: "Core Terpakai", value: valueText(technical.used_core ?? field.used_core) },
+    reviewFields: ({ field, technical, t }) => [
+      ...buildGenericDeviceReviewFields("Cable", field, t),
+      { title: t("validation.adapter.coreCapacity"), value: valueText(technical.capacity_core ?? field.capacity_core) },
+      { title: t("validation.adapter.usedCore"), value: valueText(technical.used_core ?? field.used_core) },
     ],
-    comparisonPairs: ({ field, technical, currentDevice, lookupLabels }) => [
-      ...buildGenericDeviceComparisonPairs("Cable", field, currentDevice, lookupLabels),
-      ["Kapasitas Core", currentDevice.capacity_core, technical.capacity_core ?? field.capacity_core],
-      ["Core Terpakai", currentDevice.used_core, technical.used_core ?? field.used_core],
+    comparisonPairs: ({ field, technical, currentDevice, lookupLabels, t }) => [
+      ...buildGenericDeviceComparisonPairs("Cable", field, currentDevice, lookupLabels, t),
+      [t("validation.adapter.coreCapacity"), currentDevice.capacity_core, technical.capacity_core ?? field.capacity_core],
+      [t("validation.adapter.usedCore"), currentDevice.used_core, technical.used_core ?? field.used_core],
     ],
   },
   GENERIC: {
-    reviewFields: ({ item, field, technical }) => [
-      ...buildGenericDeviceReviewFields(getFieldValidationType(item), field),
-      ...buildTechnicalReviewFields(technical),
+    reviewFields: ({ item, field, technical, t }) => [
+      ...buildGenericDeviceReviewFields(getFieldValidationType(item), field, t),
+      ...buildTechnicalReviewFields(technical, t),
     ],
-    comparisonPairs: ({ item, field, technical, currentDevice, lookupLabels }) => [
-      ...buildGenericDeviceComparisonPairs(getFieldValidationType(item), field, currentDevice, lookupLabels),
-      ...buildTechnicalComparisonPairs(technical, currentDevice),
+    comparisonPairs: ({ item, field, technical, currentDevice, lookupLabels, t }) => [
+      ...buildGenericDeviceComparisonPairs(getFieldValidationType(item), field, currentDevice, lookupLabels, t),
+      ...buildTechnicalComparisonPairs(technical, currentDevice, t),
     ],
   },
 };
@@ -129,98 +135,105 @@ export function buildAssetRequestSummary(
   item: RequestRecord,
   requestType: RequestTypeDisplay,
   lookupLabels: RequestLookupLabels,
+  t: TFn = (key) => key,
 ) {
   const payload = getCreateAssetPayload(item);
-  return `${requestType.operationLabel} ${requestType.resourceLabel} | Status ${valueText(payload.status || payload.status_pop)} | Region ${getRegionDisplay(payload.region_name || payload.region_id || item.region_id, lookupLabels)}`;
+  return t("validation.adapter.assetSummary", {
+    operation: requestType.operationLabel,
+    resource: requestType.resourceLabel,
+    status: valueText(payload.status || payload.status_pop),
+    region: getRegionDisplay(payload.region_name || payload.region_id || item.region_id, lookupLabels),
+  });
 }
 
 export function buildCreateAssetReviewFields(
   item: RequestRecord,
   lookupLabels: RequestLookupLabels,
+  t: TFn = (key) => key,
 ) {
   const payload = getCreateAssetPayload(item);
   const resourceName = String(item.payload_snapshot?.resource_name || "").trim();
   const common = [
-    { title: "Region", value: getRegionDisplay(payload.region_name || payload.region_id || item.region_id, lookupLabels) },
-    { title: "POP", value: getPopDisplay(payload.pop_name || payload.pop_id, lookupLabels) },
-    { title: "Status", value: valueText(payload.status || payload.status_pop) },
+    { title: t("validation.field.region"), value: getRegionDisplay(payload.region_name || payload.region_id || item.region_id, lookupLabels) },
+    { title: t("validation.field.pop"), value: getPopDisplay(payload.pop_name || payload.pop_id, lookupLabels) },
+    { title: t("validation.field.status"), value: valueText(payload.status || payload.status_pop) },
   ];
 
   if (resourceName === "pops" || item.payload_snapshot?.pop) {
     return [
-      { title: "POP Name", value: valueText(payload.pop_name) },
-      { title: "POP Code", value: valueText(payload.pop_code) },
+      { title: t("validation.adapter.popName"), value: valueText(payload.pop_name) },
+      { title: t("validation.adapter.popCode"), value: valueText(payload.pop_code) },
       ...common,
-      { title: "POP Type", value: valueText(payload.pop_type) },
-      { title: "Longitude", value: valueText(payload.longitude) },
-      { title: "Latitude", value: valueText(payload.latitude) },
-      { title: "Address", value: valueText(payload.address) },
+      { title: t("validation.adapter.popType"), value: valueText(payload.pop_type) },
+      { title: t("validation.field.longitude"), value: valueText(payload.longitude) },
+      { title: t("validation.field.latitude"), value: valueText(payload.latitude) },
+      { title: t("validation.field.address"), value: valueText(payload.address) },
     ];
   }
 
   if (resourceName === "routes" || item.payload_snapshot?.route) {
     return [
-      { title: "Route Name", value: valueText(payload.route_name) },
-      { title: "Route Type", value: valueText(payload.route_type) },
+      { title: t("validation.adapter.routeName"), value: valueText(payload.route_name) },
+      { title: t("validation.adapter.routeType"), value: valueText(payload.route_type) },
       ...common,
-      { title: "Project", value: getProjectDisplay(payload.project_id, lookupLabels) },
-      { title: "Distance", value: valueText(payload.distance_meters) },
+      { title: t("validation.field.project"), value: getProjectDisplay(payload.project_id, lookupLabels) },
+      { title: t("validation.adapter.distance"), value: valueText(payload.distance_meters) },
     ];
   }
 
   if (resourceName === "projects" || item.payload_snapshot?.project) {
     return [
-      { title: "Project Name", value: valueText(payload.project_name) },
+      { title: t("validation.adapter.projectName"), value: valueText(payload.project_name) },
       ...common,
-      { title: "Vendor", value: valueText(payload.vendor_name) },
-      { title: "BAST", value: valueText(payload.bast_number) },
-      { title: "SPK", value: valueText(payload.spk_number) },
-      { title: "Start Date", value: valueText(payload.start_date) },
-      { title: "End Date", value: valueText(payload.end_date) },
-      { title: "Budget", value: valueText(payload.budget_value) },
+      { title: t("validation.adapter.vendor"), value: valueText(payload.vendor_name) },
+      { title: t("validation.adapter.bast"), value: valueText(payload.bast_number) },
+      { title: t("validation.adapter.spk"), value: valueText(payload.spk_number) },
+      { title: t("validation.adapter.startDate"), value: valueText(payload.start_date) },
+      { title: t("validation.adapter.endDate"), value: valueText(payload.end_date) },
+      { title: t("validation.adapter.budget"), value: valueText(payload.budget_value) },
     ];
   }
 
   if (resourceName === "portConnections" || item.payload_snapshot?.portConnection) {
     const context = item.payload_snapshot?.context || {};
     return [
-      { title: "From Device", value: valueText(context.upstream_device_name) },
-      { title: "From Port", value: valueText(context.upstream_port_label) },
-      { title: "To Device", value: valueText(context.odp_device_name) },
-      { title: "To Port", value: valueText(context.odp_port_label) },
+      { title: t("validation.topo.fromDevice"), value: valueText(context.upstream_device_name) },
+      { title: t("validation.topo.field.fromPort"), value: valueText(context.upstream_port_label) },
+      { title: t("validation.topo.toDevice"), value: valueText(context.odp_device_name) },
+      { title: t("validation.topo.field.toPort"), value: valueText(context.odp_port_label) },
       ...common,
-      { title: "Connection Type", value: valueText(payload.connection_type) },
-      { title: "Cable", value: valueText(context.cable_device_id ? "Cable selected" : "-") },
-      { title: "Core Start", value: valueText(payload.core_start) },
-      { title: "Core End", value: valueText(payload.core_end) },
-      { title: "Fiber Count", value: valueText(payload.fiber_count) },
+      { title: t("validation.topo.field.connectionType"), value: valueText(payload.connection_type) },
+      { title: t("validation.topo.field.cable"), value: valueText(context.cable_device_id ? t("validation.topo.cableSelected") : "-") },
+      { title: t("validation.topo.field.coreStart"), value: valueText(payload.core_start) },
+      { title: t("validation.topo.field.coreEnd"), value: valueText(payload.core_end) },
+      { title: t("validation.topo.field.fiberCount"), value: valueText(payload.fiber_count) },
     ];
   }
 
   return [
-    { title: "Device Type", value: valueText(payload.device_type_key) },
-    { title: "Device Name", value: valueText(payload.device_name) },
+    { title: t("validation.adapter.deviceType"), value: valueText(payload.device_type_key) },
+    { title: t("validation.field.deviceName"), value: valueText(payload.device_name) },
     ...common,
-    { title: "Project", value: getProjectDisplay(payload.project_id, lookupLabels) },
-    { title: "Tipe ODP", value: valueText(payload.odp_type) },
-    { title: "Jenis Instalasi", value: valueText(payload.installation_type) },
-    { title: "Total Port", value: valueText(payload.total_ports) },
-    { title: "Used Port", value: valueText(payload.used_ports) },
-    { title: "Splitter Ratio", value: valueText(payload.splitter_ratio) },
-    { title: "Serial Number", value: valueText(payload.serial_number) },
-    { title: "Longitude", value: valueText(payload.longitude) },
-    { title: "Latitude", value: valueText(payload.latitude) },
-    { title: "Address", value: valueText(payload.address) },
+    { title: t("validation.field.project"), value: getProjectDisplay(payload.project_id, lookupLabels) },
+    { title: t("validation.field.tipeOdp"), value: valueText(payload.odp_type) },
+    { title: t("validation.field.jenisInstalasi"), value: valueText(payload.installation_type) },
+    { title: t("validation.adapter.totalPort"), value: valueText(payload.total_ports) },
+    { title: t("validation.adapter.usedPort"), value: valueText(payload.used_ports) },
+    { title: t("validation.adapter.splitter"), value: valueText(payload.splitter_ratio) },
+    { title: t("validation.field.serialNumber"), value: valueText(payload.serial_number) },
+    { title: t("validation.field.longitude"), value: valueText(payload.longitude) },
+    { title: t("validation.field.latitude"), value: valueText(payload.latitude) },
+    { title: t("validation.field.address"), value: valueText(payload.address) },
   ];
 }
 
-export function buildFieldValidationReviewFields(item: RequestRecord) {
+export function buildFieldValidationReviewFields(item: RequestRecord, t: TFn = (key) => key) {
   const context = buildFieldValidationContext(item, {}, {
     regions: {},
     pops: {},
     projects: {},
     users: {},
-  });
+  }, t);
   return getFieldValidationRenderer(item).reviewFields(context);
 }
 
@@ -229,9 +242,12 @@ export function buildFieldValidationComparisonFields(
   currentDevice: Record<string, unknown>,
   lookupLabels: RequestLookupLabels,
   isChanged: (before: unknown, after: unknown) => boolean,
+  t: TFn = (key) => key,
 ) {
-  const context = buildFieldValidationContext(item, currentDevice, lookupLabels);
+  const context = buildFieldValidationContext(item, currentDevice, lookupLabels, t);
   const isOdp = getFieldValidationType(item) === "ODP";
+  // ODP rows carry a renamed device name; keep them visible even when both sides render "-".
+  const alwaysKeep = [t("validation.adapter.oldDeviceName"), t("validation.adapter.newDeviceName")];
   return getFieldValidationRenderer(item)
     .comparisonPairs(context)
     .map(([label, before, after]) => ({
@@ -241,7 +257,7 @@ export function buildFieldValidationComparisonFields(
       changed: isChanged(before, after),
     }))
     .filter((field) => {
-      if (isOdp && (field.label === "Nama ODP Lama" || field.label === "Nama ODP Baru")) {
+      if (isOdp && alwaysKeep.includes(field.label)) {
         return true;
       }
       return field.before !== "-" || field.after !== "-";
@@ -252,6 +268,7 @@ function buildFieldValidationContext(
   item: RequestRecord,
   currentDevice: Record<string, unknown>,
   lookupLabels: RequestLookupLabels,
+  t: TFn = (key) => key,
 ): FieldValidationContext {
   const field = item.payload_snapshot?.field_validation || {};
   const summary = item.payload_snapshot?.port_summary || {};
@@ -263,6 +280,7 @@ function buildFieldValidationContext(
     summary,
     currentDevice,
     lookupLabels,
+    t,
   };
 }
 
@@ -281,16 +299,20 @@ function getFieldValidationType(item: RequestRecord) {
   return field.odp_type || field.installation_type || field.splitter_ratio ? "ODP" : "DEVICE";
 }
 
-function buildGenericDeviceReviewFields(deviceTypeLabel: string, field: Record<string, unknown>) {
+function buildGenericDeviceReviewFields(
+  deviceTypeLabel: string,
+  field: Record<string, unknown>,
+  t: TFn = (key) => key,
+) {
   return [
-    { title: "Device Type", value: valueText(deviceTypeLabel) },
-    { title: "Tanggal Validasi", value: valueText(field.validation_date) },
-    { title: "ID Inventory", value: valueText(field.inventory_id) },
-    { title: "Nama Device", value: valueText(field.new_device_name || field.old_device_name) },
-    { title: "Status Device", value: valueText(field.device_status) },
-    { title: "POP", value: getPopLabel({ fallback: field.pop_name, optional: true }) },
-    { title: "Longitude", value: valueText(field.longitude) },
-    { title: "Latitude", value: valueText(field.latitude) },
+    { title: t("validation.adapter.deviceType"), value: valueText(deviceTypeLabel) },
+    { title: t("validation.field.validationDate"), value: valueText(field.validation_date) },
+    { title: t("validation.adapter.inventoryId"), value: valueText(field.inventory_id) },
+    { title: t("validation.field.deviceName"), value: valueText(field.new_device_name || field.old_device_name) },
+    { title: t("validation.adapter.statusDevice"), value: valueText(field.device_status) },
+    { title: t("validation.field.pop"), value: getPopLabel({ fallback: field.pop_name, optional: true }) },
+    { title: t("validation.field.longitude"), value: valueText(field.longitude) },
+    { title: t("validation.field.latitude"), value: valueText(field.latitude) },
   ];
 }
 
@@ -299,44 +321,46 @@ function buildGenericDeviceComparisonPairs(
   field: Record<string, unknown>,
   currentDevice: Record<string, unknown>,
   lookupLabels: RequestLookupLabels,
+  t: TFn = (key) => key,
 ): Array<[string, unknown, unknown]> {
   const currentPop = currentDevice.pop_name || getPopDisplay(currentDevice.pop_id, lookupLabels);
   return [
-    ["Device Type", currentDevice.device_type_key, deviceTypeLabel],
-    ["Nama Device", currentDevice.device_name || field.old_device_name, field.new_device_name || field.old_device_name],
-    ["Status Device", currentDevice.status, field.device_status],
-    ["POP", currentPop, field.pop_name || getPopDisplay(field.pop_id, lookupLabels)],
-    ["Longitude", currentDevice.longitude, field.longitude],
-    ["Latitude", currentDevice.latitude, field.latitude],
-    ["Address", currentDevice.address, field.address],
+    [t("validation.adapter.deviceType"), currentDevice.device_type_key, deviceTypeLabel],
+    [t("validation.field.deviceName"), currentDevice.device_name || field.old_device_name, field.new_device_name || field.old_device_name],
+    [t("validation.adapter.statusDevice"), currentDevice.status, field.device_status],
+    [t("validation.field.pop"), currentPop, field.pop_name || getPopDisplay(field.pop_id, lookupLabels)],
+    [t("validation.field.longitude"), currentDevice.longitude, field.longitude],
+    [t("validation.field.latitude"), currentDevice.latitude, field.latitude],
+    [t("validation.field.address"), currentDevice.address, field.address],
   ];
 }
 
-function buildTechnicalReviewFields(technical: Record<string, unknown>) {
+function buildTechnicalReviewFields(technical: Record<string, unknown>, t: TFn = (key) => key) {
   return Object.entries(technical)
     .filter(([, value]) => value !== undefined && value !== null && value !== "")
-    .map(([key, value]) => ({ title: getTechnicalFieldLabel(key), value: valueText(value) }));
+    .map(([key, value]) => ({ title: getTechnicalFieldLabel(key, t), value: valueText(value) }));
 }
 
 function buildTechnicalComparisonPairs(
   technical: Record<string, unknown>,
   currentDevice: Record<string, unknown>,
+  t: TFn = (key) => key,
 ): Array<[string, unknown, unknown]> {
   return Object.entries(technical)
     .filter(([, value]) => value !== undefined && value !== null && value !== "")
-    .map(([key, value]) => [getTechnicalFieldLabel(key), currentDevice[key], value]);
+    .map(([key, value]) => [getTechnicalFieldLabel(key, t), currentDevice[key], value]);
 }
 
-function getTechnicalFieldLabel(key: string) {
+function getTechnicalFieldLabel(key: string, t: TFn = (key) => key) {
   const labels: Record<string, string> = {
-    splitter_ratio: "Splitter",
-    total_ports: "Total Port",
-    used_ports: "Used Port",
-    capacity_core: "Kapasitas Core",
-    used_core: "Core Terpakai",
-    management_ip: "Management IP",
-    serial_number: "Serial Number",
-    address: "Address",
+    splitter_ratio: t("validation.adapter.splitter"),
+    total_ports: t("validation.adapter.totalPort"),
+    used_ports: t("validation.adapter.usedPort"),
+    capacity_core: t("validation.adapter.coreCapacity"),
+    used_core: t("validation.adapter.usedCore"),
+    management_ip: t("validation.field.managementIp"),
+    serial_number: t("validation.field.serialNumber"),
+    address: t("validation.field.address"),
   };
   return labels[key] || key.replace(/_/g, " ");
 }

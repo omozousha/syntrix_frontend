@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 import { AlertTriangle, ArrowRight, Check, Clock, Inbox, Loader2, ShieldCheck, X } from "lucide-react";
 import { ApprovalActions } from "@/components/features/requests/approval-actions";
 import { EvidenceChecklistPreview } from "@/components/features/requests/evidence-checklist-preview";
@@ -144,7 +145,9 @@ type ReviewContext = {
   rejectDialogDescription: string;
   toneClassName: string;
 };
+
 export default function ValidationRequestsPage() {
+  const { t } = useTranslate();
   const { token, me } = useSession();
   const normalizedRole = normalizeRole(me.role);
   const canAdminRegionQueue = normalizedRole === "adminregion";
@@ -165,6 +168,7 @@ export default function ValidationRequestsPage() {
   const [resultDialogOpen, setResultDialogOpen] = useState(false);
   const [resultDialogTitle, setResultDialogTitle] = useState("");
   const [resultDialogDescription, setResultDialogDescription] = useState("");
+  const [resultDialogVariant, setResultDialogVariant] = useState<"success" | "error">("success");
   const [evidencePreviewOpen, setEvidencePreviewOpen] = useState(false);
   const [evidencePreviewUrl, setEvidencePreviewUrl] = useState("");
   const [evidencePreviewLabel, setEvidencePreviewLabel] = useState("");
@@ -189,7 +193,7 @@ export default function ValidationRequestsPage() {
     () => {
       const keyword = searchTerm.trim().toLowerCase();
       return items.filter((item) => {
-        const requestType = getRequestType(item);
+        const requestType = getRequestType(item, t);
         const matchesType = typeFilter === "all" || requestType.kind === typeFilter;
         const matchesStatus = statusFilter === "all" || item.current_status === statusFilter;
         const matchesSearch =
@@ -199,7 +203,7 @@ export default function ValidationRequestsPage() {
             item.id,
             getOdpName(item),
             requestType.label,
-            getRequestSummary(item, lookupLabels),
+            getRequestSummary(item, lookupLabels, t),
           ]
             .filter(Boolean)
             .join(" ")
@@ -208,14 +212,14 @@ export default function ValidationRequestsPage() {
         return matchesType && matchesStatus && matchesSearch;
       });
     },
-    [items, lookupLabels, searchTerm, statusFilter, typeFilter],
+    [items, lookupLabels, searchTerm, statusFilter, typeFilter, t],
   );
   const selected = useMemo(
     () => filteredItems.find((item) => item.id === selectedId) || filteredItems[0] || null,
     [filteredItems, selectedId],
   );
   const queueSummary = useMemo(() => buildQueueSummary(items), [items]);
-  const selectedType = getRequestType(selected);
+  const selectedType = getRequestType(selected, t);
   const evidenceRefs = useMemo(() => getRequestAttachmentRefs(selected), [selected]);
   const visibleEvidenceRefs = useMemo(() => {
     const byKey = new Map<string, EvidenceRef>();
@@ -231,12 +235,12 @@ export default function ValidationRequestsPage() {
     });
     return Array.from(byKey.values());
   }, [evidenceRefs, filteredItems, selected]);
-  const attachmentLabel = selectedType.kind === "field_validation" ? "Evidence" : "Attachment";
+  const attachmentLabel = selectedType.kind === "field_validation" ? t("validation.eyebrow.evidence") : t("validation.eyebrow.attachment");
   const isAdminRegionView = activeQueue === "adminregion";
   const isRejectedBySuperadmin = selected?.current_status === "rejected_by_superadmin";
   const reviewContext = useMemo(
-    () => getReviewContext(activeQueue, selectedType, selected?.current_status),
-    [activeQueue, selectedType, selected?.current_status],
+    () => getReviewContext(t, activeQueue, selectedType, selected?.current_status),
+    [activeQueue, selectedType, selected?.current_status, t],
   );
 
   useEffect(() => {
@@ -358,7 +362,7 @@ export default function ValidationRequestsPage() {
       setItems(rows);
       setSelectedId((prev) => (prev && rows.some((row) => row.id === prev) ? prev : rows[0]?.id || ""));
     } catch (err) {
-      setError((err as Error).message || "Gagal memuat queue request.");
+      setError((err as Error).message || t("validation.result.loadFailTitle"));
     } finally {
       setLoading(false);
     }
@@ -375,19 +379,15 @@ export default function ValidationRequestsPage() {
           ? `/validation-requests/${selected.id}/adminregion/approve`
           : `/validation-requests/${selected.id}/superadmin/approve`;
       await apiFetch(path, { method: "POST", token });
-      const message = `Request ${selected.request_id || "terkait"} berhasil di-approve.`;
+      const message = t("validation.result.approveDescription", { target: selected.request_id || t("validation.result.related") });
       setSuccess(message);
       setDetailDrawerOpen(false);
-      setResultDialogTitle("Approve Berhasil");
-      setResultDialogDescription(message);
-      setResultDialogOpen(true);
+      openResult(t("validation.result.approveSuccess"), message, false);
       await loadQueue();
     } catch (err) {
-      const message = (err as Error).message || "Approve gagal.";
+      const message = (err as Error).message || t("validation.result.approveFailed");
       setError(message);
-      setResultDialogTitle("Approve Gagal");
-      setResultDialogDescription(message);
-      setResultDialogOpen(true);
+      openResult(t("validation.result.approveFailed"), message, true);
     } finally {
       setActing(false);
     }
@@ -397,7 +397,7 @@ export default function ValidationRequestsPage() {
     if (!selected) return;
     const note = rejectNote.trim();
     if (note.length < 10) {
-      setRejectError("Catatan reject minimal 10 karakter.");
+      setRejectError(t("validation.result.rejectMinimal"));
       return;
     }
     setActing(true);
@@ -413,14 +413,12 @@ export default function ValidationRequestsPage() {
       setRejectDialogOpen(false);
       setDetailDrawerOpen(false);
       setRejectNote("");
-      const message = `Request ${selected.request_id || "terkait"} berhasil di-reject.`;
+      const message = t("validation.result.rejectDescription", { target: selected.request_id || t("validation.result.related") });
       setSuccess(message);
-      setResultDialogTitle("Reject Berhasil");
-      setResultDialogDescription(message);
-      setResultDialogOpen(true);
+      openResult(t("validation.result.rejectSuccess"), message, false);
       await loadQueue();
     } catch (err) {
-      const message = (err as Error).message || "Reject gagal.";
+      const message = (err as Error).message || t("validation.result.rejectFailed");
       setError(message);
       setRejectError(message);
     } finally {
@@ -435,19 +433,15 @@ export default function ValidationRequestsPage() {
     setSuccess("");
     try {
       await apiFetch(`/validation-requests/${selected.id}/adminregion/resubmit`, { method: "POST", token });
-      const message = `Request ${selected.request_id || "terkait"} berhasil di-resubmit ke superadmin.`;
+      const message = t("validation.result.resubmitDescription", { target: selected.request_id || t("validation.result.related") });
       setSuccess(message);
       setDetailDrawerOpen(false);
-      setResultDialogTitle("Resubmit Berhasil");
-      setResultDialogDescription(message);
-      setResultDialogOpen(true);
+      openResult(t("validation.result.resubmitSuccess"), message, false);
       await loadQueue();
     } catch (err) {
-      const message = (err as Error).message || "Resubmit gagal.";
+      const message = (err as Error).message || t("validation.result.resubmitFailed");
       setError(message);
-      setResultDialogTitle("Resubmit Gagal");
-      setResultDialogDescription(message);
-      setResultDialogOpen(true);
+      openResult(t("validation.result.resubmitFailed"), message, true);
     } finally {
       setActing(false);
     }
@@ -482,7 +476,7 @@ export default function ValidationRequestsPage() {
     if (bulkConfirmAction === "reject") {
       const note = bulkRejectNote.trim();
       if (note.length < 10) {
-        setBulkRejectError("Catatan reject minimal 10 karakter.");
+        setBulkRejectError(t("validation.result.rejectMinimal"));
         return;
       }
       setBulkRejectError("");
@@ -508,21 +502,22 @@ export default function ValidationRequestsPage() {
       setBulkRejectNote("");
       setBulkRejectError("");
       setBulkSelectedIds(new Set());
+      const actionWord = t(bulkConfirmAction === "approve" ? "validation.bulkDialog.actionApprove" : "validation.bulkDialog.actionReject");
       const message =
         failed.length === 0
-          ? `${succeededCount} request berhasil di-${bulkConfirmAction === "approve" ? "approve" : "reject"}.`
-          : `${succeededCount} berhasil, ${failed.length} gagal di-${bulkConfirmAction === "approve" ? "approve" : "reject"}.`;
+          ? t("validation.result.bulkDescription", { succeeded: succeededCount, action: actionWord })
+          : t("validation.result.bulkPartial", { succeeded: succeededCount, failed: failed.length, action: actionWord });
       setSuccess(message);
-      setResultDialogTitle(bulkConfirmAction === "approve" ? "Bulk Approve Selesai" : "Bulk Reject Selesai");
-      setResultDialogDescription(message);
-      setResultDialogOpen(true);
+      openResult(
+        t(bulkConfirmAction === "approve" ? "validation.result.bulkApproveSuccess" : "validation.result.bulkRejectSuccess"),
+        message,
+        false,
+      );
       await loadQueue();
     } catch (err) {
-      const message = (err as Error).message || "Bulk action gagal.";
+      const message = (err as Error).message || t("validation.result.bulkActionFailed");
       setError(message);
-      setResultDialogTitle("Bulk Action Gagal");
-      setResultDialogDescription(message);
-      setResultDialogOpen(true);
+      openResult(t("validation.result.bulkActionFailed"), message, true);
     } finally {
       setBulkActionLoading(false);
     }
@@ -590,7 +585,7 @@ export default function ValidationRequestsPage() {
     if (!selected) return;
     const name = editPayloadForm.device_name?.trim();
     if (!name) {
-      setEditPayloadError("Nama device tidak boleh kosong.");
+      setEditPayloadError(t("validation.result.deviceNameEmpty"));
       return;
     }
     setEditPayloadSaving(true);
@@ -630,14 +625,12 @@ export default function ValidationRequestsPage() {
 
       setEditPayloadOpen(false);
       setDetailDrawerOpen(false);
-      const message = `Koreksi data ${name} berhasil disimpan dan dikirim ulang (resubmit) ke Superadmin.`;
+      const message = t("validation.result.resubmitPayloadSuccess", { name });
       setSuccess(message);
-      setResultDialogTitle("Resubmit Berhasil");
-      setResultDialogDescription(message);
-      setResultDialogOpen(true);
+      openResult(t("validation.result.resubmitSuccess"), message, false);
       await loadQueue();
     } catch (err) {
-      setEditPayloadError((err as Error).message || "Gagal meng-update dan resubmit payload.");
+      setEditPayloadError((err as Error).message || t("validation.result.resubmitPayloadFail"));
     } finally {
       setEditPayloadSaving(false);
     }
@@ -653,7 +646,7 @@ export default function ValidationRequestsPage() {
         // try next candidate
       }
     }
-    setError("Gagal membuka evidence (404).");
+    setError(t("validation.result.openEvidenceFail"));
   }
 
   async function previewEvidence(candidates: string[], label: string) {
@@ -683,6 +676,13 @@ export default function ValidationRequestsPage() {
     }
   }
 
+  function openResult(title: string, description: string, isError: boolean) {
+    setResultDialogTitle(title);
+    setResultDialogDescription(description);
+    setResultDialogVariant(isError ? "error" : "success");
+    setResultDialogOpen(true);
+  }
+
   function selectRequestForReview(id: string) {
     setSelectedId(id);
     if (typeof window === "undefined" || !window.matchMedia("(min-width: 1536px)").matches) {
@@ -692,21 +692,21 @@ export default function ValidationRequestsPage() {
 
   function renderSelectedDetail() {
     if (!selected) {
-      return <OperationalState title="Pilih request" description="Pilih salah satu request di panel kiri untuk melihat detail review." />;
+      return <OperationalState title={t("validation.selectRequest")} description={t("validation.selectRequestDescription")} />;
     }
 
     return (
       <>
         <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 min-[1800px]:grid-cols-5">
-          <InfoSlot title="Tipe Request">
+          <InfoSlot title={t("validation.detail.requestType")}>
             <RequestTypeBadge kind={selectedType.kind} label={selectedType.label} className="max-w-full whitespace-normal break-words text-left text-[10px]" />
           </InfoSlot>
-          <Info title="Device" value={getOdpName(selected)} />
+          <Info title={t("validation.detail.device")} value={getOdpName(selected)} />
           <RequestActorLine value={getSubmitterText(selected, lookupLabels)} />
-          <Info title="Current Owner" value={getNextOwnerLabel(selected.current_status)} />
-          <Info title="Updated" value={formatDateTime(selected.updated_at)} />
+          <Info title={t("validation.detail.currentOwner")} value={getNextOwnerLabel(selected.current_status, t)} />
+          <Info title={t("validation.detail.updated")} value={formatDateTime(selected.updated_at)} />
         </div>
-        <ActorTimelineCard item={selected} lookupLabels={lookupLabels} />
+        <ActorTimelineCard item={selected} lookupLabels={lookupLabels} t={t} />
 
         <RequestStageBanner context={reviewContext} />
 
@@ -727,20 +727,21 @@ export default function ValidationRequestsPage() {
             isFieldValidation={false}
             onPreview={previewEvidence}
             onDownload={openEvidence}
+            t={t}
           />
         ) : null}
 
         {!isAdminRegionView ? (
           <div className="flex flex-wrap gap-2">
             <Button asChild type="button" size="sm" variant="outline">
-              <Link href={`/audit-trail?request_id=${encodeURIComponent(selected.request_id || "")}`}>Lihat Audit Trail</Link>
+              <Link href={`/audit-trail?request_id=${encodeURIComponent(selected.request_id || "")}`}>{t("validation.detail.auditTrail")}</Link>
             </Button>
             {selectedType.kind === "archive_asset" && selected.entity_id ? (
               <Button asChild type="button" size="sm" variant="outline">
                 <Link
                   href={`/trash?entity_type=${encodeURIComponent("devices")}&entity_id=${encodeURIComponent(selected.entity_id || "")}`}
                 >
-                  Buka Trash Device
+                  {t("validation.detail.openTrashDevice")}
                 </Link>
               </Button>
             ) : null}
@@ -748,15 +749,15 @@ export default function ValidationRequestsPage() {
         ) : null}
 
         {selectedType.kind === "field_validation" || (selected.payload_snapshot?.device_ports || []).length ? (
-          <PortSummaryCard ports={selected.payload_snapshot?.device_ports || []} />
+          <PortSummaryCard ports={selected.payload_snapshot?.device_ports || []} t={t} />
         ) : null}
-        <TechnicalSnapshotDetails item={selected} />
+        <TechnicalSnapshotDetails item={selected} t={t} />
 
         {selected.adminregion_review_note ? (
-          <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">Catatan Admin Region: {selected.adminregion_review_note}</p>
+          <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">{t("validation.detail.adminRegionNote", { note: selected.adminregion_review_note })}</p>
         ) : null}
         {selected.superadmin_review_note ? (
-          <p className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">Catatan Superadmin: {selected.superadmin_review_note}</p>
+          <p className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">{t("validation.detail.superadminNote", { note: selected.superadmin_review_note })}</p>
         ) : null}
 
         <ApprovalActions
@@ -782,7 +783,7 @@ export default function ValidationRequestsPage() {
       <ScrollArea className="h-full min-h-0 w-full">
         <div className="pr-3">
           <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-            Halaman ini hanya untuk Admin Region/Superadmin.
+            {t("validation.accessDenied")}
           </div>
         </div>
       </ScrollArea>
@@ -796,18 +797,18 @@ export default function ValidationRequestsPage() {
           <div className="flex items-center justify-between gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <Badge variant="secondary" className="h-6 max-w-[46vw] truncate px-2 font-mono text-[9px] uppercase tracking-[0.15em]">
-                Approval Center
+                {t("validation.approvalCenter")}
               </Badge>
               <Badge variant="outline" className="h-6 max-w-[34vw] truncate px-2 font-mono text-[9px] uppercase tracking-[0.12em]">
-                {activeQueue === "adminregion" ? "Admin Region" : "Superadmin"}
+                {activeQueue === "adminregion" ? t("validation.adminRegionQueue") : t("validation.superadminQueue")}
               </Badge>
               <span className="hidden min-w-0 text-[11px] text-muted-foreground md:inline">
-                Review asset, evidence, dan approval.
+                {t("validation.headerCaption")}
               </span>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={() => void loadQueue()} disabled={loading || acting} className="h-7 min-h-7 shrink-0 px-2 text-xs">
               <Loader2 className={`size-3.5 sm:mr-1.5 ${loading ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">Refresh</span>
+              <span className="hidden sm:inline">{t("validation.refresh")}</span>
             </Button>
           </div>
         </div>
@@ -820,9 +821,9 @@ export default function ValidationRequestsPage() {
         {!loading ? (
           <div className="grid min-w-0 gap-4 2xl:grid-cols-[380px_minmax(0,1fr)]">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 2xl:col-span-2">
-              <OperationalKpiCard label="Queue" value={items.length} caption={activeQueue === "adminregion" ? "Review Admin Region" : "Approval Superadmin"} icon={Inbox} tone="blue" />
-              <OperationalKpiCard label="Validation" value={queueSummary.validation} caption="Field validation request" icon={ShieldCheck} tone="emerald" />
-              <OperationalKpiCard label="Asset Change" value={queueSummary.assetChanges} caption="Create, update, archive" icon={Clock} tone="amber" />
+              <OperationalKpiCard label={t("validation.kpi.queue")} value={items.length} caption={activeQueue === "adminregion" ? t("validation.kpi.queueAdminRegion") : t("validation.kpi.queueSuperadmin")} icon={Inbox} tone="blue" />
+              <OperationalKpiCard label={t("validation.kpi.validation")} value={queueSummary.validation} caption={t("validation.kpi.fieldValidation")} icon={ShieldCheck} tone="emerald" />
+              <OperationalKpiCard label={t("validation.kpi.assetChange")} value={queueSummary.assetChanges} caption={t("validation.kpi.createUpdateArchive")} icon={Clock} tone="amber" />
             </div>
             <RequestList
               filteredCount={filteredItems.length}
@@ -830,26 +831,26 @@ export default function ValidationRequestsPage() {
               searchTerm={searchTerm}
               typeFilter={typeFilter}
               statusFilter={statusFilter}
-              summarySlot={<QueueSummaryChips summary={queueSummary} />}
+              summarySlot={<QueueSummaryChips summary={queueSummary} t={t} />}
               checkedAll={bulkAllChecked}
               onCheckedAllChange={(checked) => toggleBulkSelectAll(checked)}
               bulkActionsSlot={
                 bulkSelectedCount > 0 ? (
                   <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2">
                     <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-primary">
-                      {bulkSelectedCount} dipilih
+                      {t("validation.bulkSelected", { count: bulkSelectedCount })}
                     </span>
                     <div className="ml-auto flex flex-wrap gap-1.5">
                       <Button type="button" size="sm" variant="default" className="h-7 px-2 text-xs" disabled={bulkActionLoading} onClick={() => requestBulkConfirm("approve")}>
                         <Check className="mr-1 size-3.5" />
-                        Bulk Approve
+                        {t("validation.bulkApprove")}
                       </Button>
                       <Button type="button" size="sm" variant="destructive" className="h-7 px-2 text-xs" disabled={bulkActionLoading} onClick={() => requestBulkConfirm("reject")}>
                         <X className="mr-1 size-3.5" />
-                        Bulk Reject
+                        {t("validation.bulkReject")}
                       </Button>
                       <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={clearBulkSelection}>
-                        Batal
+                        {t("common.cancel")}
                       </Button>
                     </div>
                   </div>
@@ -861,7 +862,7 @@ export default function ValidationRequestsPage() {
             >
                 {filteredItems.length ? (
                   filteredItems.map((item) => {
-                    const requestType = getRequestType(item);
+                    const requestType = getRequestType(item, t);
                     return (
                       <RequestCard
                         key={item.id}
@@ -872,8 +873,8 @@ export default function ValidationRequestsPage() {
                         typeKind={requestType.kind}
                         typeLabel={requestType.label}
                         status={item.current_status}
-                        summary={getRequestSummary(item, lookupLabels)}
-                        ownerLabel={getNextOwnerLabel(item.current_status)}
+                        summary={getRequestSummary(item, lookupLabels, t)}
+                        ownerLabel={getNextOwnerLabel(item.current_status, t)}
                         updatedAt={formatDateTime(item.updated_at)}
                         quickOpenHref={getQuickOpenHref(item)}
                         onSelect={() => selectRequestForReview(item.id)}
@@ -881,7 +882,7 @@ export default function ValidationRequestsPage() {
                           <EvidenceThumbStrip
                             refs={getRequestAttachmentRefs(item)}
                             thumbUrls={evidenceThumbUrls}
-                            label={requestType.kind === "field_validation" ? "Evidence" : "Attachment"}
+                            label={requestType.kind === "field_validation" ? t("validation.eyebrow.evidence") : t("validation.eyebrow.attachment")}
                             onPreview={previewEvidence}
                           />
                         }
@@ -890,9 +891,9 @@ export default function ValidationRequestsPage() {
                   })
                 ) : (
                   <OperationalState
-                    title="Tidak ada request"
-                    description="Tidak ada request yang cocok dengan filter dan pencarian saat ini."
-                    actionLabel="Reset Filter"
+                    title={t("validation.emptyTitle")}
+                    description={t("validation.emptyDescription")}
+                    actionLabel={t("validation.resetFilter")}
                     onAction={() => {
                       setSearchTerm("");
                       setTypeFilter("all");
@@ -906,7 +907,7 @@ export default function ValidationRequestsPage() {
               <CardHeader className="border-b border-border/60 bg-muted/20 px-3 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <CardTitle className="text-base font-semibold tracking-tight">{getOdpName(selected) || "Pilih Request"}</CardTitle>
+                    <CardTitle className="text-base font-semibold tracking-tight">{getOdpName(selected) || t("validation.selectRequestTitle")}</CardTitle>
                     <CardDescription className="text-xs">{selectedType.description}</CardDescription>
                   </div>
                   {selected ? (
@@ -924,7 +925,7 @@ export default function ValidationRequestsPage() {
         <Sheet open={detailDrawerOpen} onOpenChange={setDetailDrawerOpen}>
           <SheetContent side="bottom" className="max-h-[88vh] gap-0 rounded-t-lg p-0 2xl:hidden">
             <SheetHeader className="border-b px-4 py-3 text-left">
-              <SheetTitle>{getOdpName(selected) || "Detail Request"}</SheetTitle>
+              <SheetTitle>{getOdpName(selected) || t("validation.detailRequestTitle")}</SheetTitle>
               <SheetDescription>{selectedType.description}</SheetDescription>
             </SheetHeader>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
@@ -937,7 +938,7 @@ export default function ValidationRequestsPage() {
                   {renderSelectedDetail()}
                 </>
               ) : (
-                <OperationalState title="Pilih request" description="Pilih salah satu request untuk melihat detail review." />
+                <OperationalState title={t("validation.selectRequest")} description={t("validation.selectRequestMobile")} />
               )}
             </div>
           </SheetContent>
@@ -953,33 +954,31 @@ export default function ValidationRequestsPage() {
         >
           <AlertDialogContent className="!w-[min(92vw,720px)] !max-w-[min(92vw,720px)]">
             <AlertDialogHeader>
-              <AlertDialogTitle>Koreksi Data &amp; Resubmit</AlertDialogTitle>
-              <AlertDialogDescription>
-                Perbarui data request yang ditolak Superadmin. Perubahan disimpan ke payload lalu request dikirim ulang ke antrean Superadmin.
-              </AlertDialogDescription>
+              <AlertDialogTitle>{t("validation.dialog.koreksiData")}</AlertDialogTitle>
+              <AlertDialogDescription>{t("validation.dialog.koreksiDescription")}</AlertDialogDescription>
             </AlertDialogHeader>
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="edit-device-name">Nama Device / Asset</Label>
+                <Label htmlFor="edit-device-name">{t("validation.dialog.editDeviceName")}</Label>
                 <Input
                   id="edit-device-name"
                   value={editPayloadForm.device_name}
                   onChange={(e) => setEditPayloadForm((prev) => ({ ...prev, device_name: e.target.value }))}
-                  placeholder="Nama device..."
+                  placeholder={t("validation.dialog.placeholderDeviceName")}
                 />
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>POP</Label>
+                  <Label>{t("validation.dialog.popLabel")}</Label>
                   <Select
                     value={editPayloadForm.pop_id}
                     onValueChange={(value) => setEditPayloadForm((prev) => ({ ...prev, pop_id: value }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Pilih POP" />
+                      <SelectValue placeholder={t("validation.dialog.placeholderPop")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Tanpa POP</SelectItem>
+                      <SelectItem value="__none__">{t("validation.dialog.noPop")}</SelectItem>
                       {payloadPopOptions.map((option) => (
                         <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
                       ))}
@@ -987,16 +986,16 @@ export default function ValidationRequestsPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Project</Label>
+                  <Label>{t("validation.dialog.projectLabel")}</Label>
                   <Select
                     value={editPayloadForm.project_id}
                     onValueChange={(value) => setEditPayloadForm((prev) => ({ ...prev, project_id: value }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Pilih Project" />
+                      <SelectValue placeholder={t("validation.dialog.placeholderProject")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Tanpa Project</SelectItem>
+                      <SelectItem value="__none__">{t("validation.dialog.noProject")}</SelectItem>
                       {payloadProjectOptions.map((option) => (
                         <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
                       ))}
@@ -1006,13 +1005,13 @@ export default function ValidationRequestsPage() {
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Status</Label>
+                  <Label>{t("validation.dialog.statusLabel")}</Label>
                   <Select
                     value={editPayloadForm.status}
                     onValueChange={(value) => setEditPayloadForm((prev) => ({ ...prev, status: value }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Pilih status" />
+                      <SelectValue placeholder={t("validation.dialog.placeholderStatus")} />
                     </SelectTrigger>
                     <SelectContent>
                       {["draft", "installed", "active", "inactive", "maintenance", "retired"].map((status) => (
@@ -1022,24 +1021,24 @@ export default function ValidationRequestsPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Kapasitas Port / Core</Label>
+                  <Label>{t("validation.dialog.capacityLabel")}</Label>
                   <Input
                     type="number"
                     min={1}
                     value={editPayloadForm.total_ports}
                     onChange={(e) => setEditPayloadForm((prev) => ({ ...prev, total_ports: e.target.value }))}
-                    placeholder="Contoh: 8"
+                    placeholder={t("validation.dialog.placeholderCapacity")}
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Splitter Ratio</Label>
+                <Label>{t("validation.dialog.splitterRatio")}</Label>
                 <Select
                   value={editPayloadForm.splitter_ratio}
                   onValueChange={(value) => setEditPayloadForm((prev) => ({ ...prev, splitter_ratio: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Pilih splitter ratio" />
+                    <SelectValue placeholder={t("validation.dialog.placeholderSplitter")} />
                   </SelectTrigger>
                   <SelectContent>
                     {["1:4", "1:8", "1:16", "1:32", "1:64"].map((ratio) => (
@@ -1050,32 +1049,32 @@ export default function ValidationRequestsPage() {
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Longitude</Label>
+                  <Label>{t("validation.dialog.longitude")}</Label>
                   <Input
                     type="number"
                     step="any"
                     value={editPayloadForm.longitude}
                     onChange={(e) => setEditPayloadForm((prev) => ({ ...prev, longitude: e.target.value }))}
-                    placeholder="106.84513"
+                    placeholder={t("validation.dialog.placeholderLongitude")}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Latitude</Label>
+                  <Label>{t("validation.dialog.latitude")}</Label>
                   <Input
                     type="number"
                     step="any"
                     value={editPayloadForm.latitude}
                     onChange={(e) => setEditPayloadForm((prev) => ({ ...prev, latitude: e.target.value }))}
-                    placeholder="-6.21462"
+                    placeholder={t("validation.dialog.placeholderLatitude")}
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Alamat</Label>
+                <Label>{t("validation.dialog.address")}</Label>
                 <Input
                   value={editPayloadForm.address}
                   onChange={(e) => setEditPayloadForm((prev) => ({ ...prev, address: e.target.value }))}
-                  placeholder="Alamat lokasi..."
+                  placeholder={t("validation.dialog.placeholderAddress")}
                 />
               </div>
               {editPayloadError ? (
@@ -1086,10 +1085,10 @@ export default function ValidationRequestsPage() {
             </div>
             <AlertDialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditPayloadOpen(false)} disabled={editPayloadSaving}>
-                Batal
+                {t("common.cancel")}
               </Button>
               <Button type="button" variant="default" onClick={() => void saveAndResubmitPayload()} disabled={editPayloadSaving}>
-                {editPayloadSaving ? "Menyimpan & Resubmit..." : "Simpan & Resubmit"}
+                {editPayloadSaving ? t("validation.dialog.saving") : t("validation.dialog.saveResubmit")}
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1116,7 +1115,7 @@ export default function ValidationRequestsPage() {
                 setRejectNote(event.target.value);
                 if (rejectError) setRejectError("");
               }}
-              placeholder="Tulis alasan reject..."
+              placeholder={t("validation.rejectDialog.placeholder")}
               className="min-h-24 w-full rounded-md border bg-background p-2 text-sm outline-none ring-0"
             />
             {rejectError ? (
@@ -1126,10 +1125,10 @@ export default function ValidationRequestsPage() {
             ) : null}
             <AlertDialogFooter>
               <Button type="button" variant="outline" onClick={() => setRejectDialogOpen(false)} disabled={acting}>
-                Batal
+                {t("common.cancel")}
               </Button>
               <Button type="button" variant="destructive" onClick={() => void rejectSelected()} disabled={acting}>
-                {acting ? "Memproses..." : "Submit Reject"}
+                {acting ? t("validation.rejectDialog.submitting") : t("validation.rejectDialog.submit")}
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1150,11 +1149,13 @@ export default function ValidationRequestsPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {bulkConfirmAction === "approve" ? "Bulk Approve Request?" : "Bulk Reject Request?"}
+                {bulkConfirmAction === "approve" ? t("validation.bulkDialog.approveTitle") : t("validation.bulkDialog.rejectTitle")}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                Apakah Anda yakin ingin {bulkConfirmAction === "approve" ? "menyetujui" : "menolak"} sebanyak{" "}
-                <span className="font-semibold text-foreground">{bulkSelectedCount}</span> request terpilih secara massal?
+                {t("validation.bulkDialog.confirmBody", {
+                  action: t(bulkConfirmAction === "approve" ? "validation.bulkDialog.actionApprove" : "validation.bulkDialog.actionReject"),
+                  count: bulkSelectedCount,
+                })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             {bulkConfirmAction === "reject" ? (
@@ -1165,7 +1166,7 @@ export default function ValidationRequestsPage() {
                     setBulkRejectNote(event.target.value);
                     if (bulkRejectError) setBulkRejectError("");
                   }}
-                  placeholder="Tulis alasan reject (minimal 10 karakter)..."
+                  placeholder={t("validation.bulkDialog.rejectPlaceholder")}
                   className="min-h-24 w-full rounded-md border bg-background p-2 text-sm outline-none ring-0"
                 />
                 {bulkRejectError ? (
@@ -1177,7 +1178,7 @@ export default function ValidationRequestsPage() {
             ) : null}
             <AlertDialogFooter>
               <Button type="button" variant="outline" onClick={() => setBulkConfirmOpen(false)} disabled={bulkActionLoading}>
-                Batal
+                {t("common.cancel")}
               </Button>
               <Button
                 type="button"
@@ -1185,7 +1186,7 @@ export default function ValidationRequestsPage() {
                 onClick={() => void runBulkAction()}
                 disabled={bulkActionLoading || (bulkConfirmAction === "reject" && bulkRejectNote.trim().length < 10)}
               >
-                {bulkActionLoading ? "Memproses..." : "Lanjutkan"}
+                {bulkActionLoading ? t("common.processing") : t("validation.bulkDialog.continue")}
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1195,8 +1196,8 @@ export default function ValidationRequestsPage() {
           open={resultDialogOpen}
           title={resultDialogTitle}
           description={resultDialogDescription}
-          variant={resultDialogTitle.toLowerCase().includes("gagal") ? "error" : "success"}
-          actionLabel="OK"
+          variant={resultDialogVariant}
+          actionLabel={t("common.ok")}
           onOpenChange={(open) => {
             if (open) {
               setResultDialogOpen(true);
@@ -1218,7 +1219,7 @@ export default function ValidationRequestsPage() {
         >
           <AlertDialogContent className="!w-[min(92vw,960px)] !max-w-[min(92vw,960px)] p-3 sm:p-4">
             <AlertDialogHeader>
-              <AlertDialogTitle>Preview {attachmentLabel}</AlertDialogTitle>
+              <AlertDialogTitle>{t("validation.evidence.previewTitle", { type: attachmentLabel })}</AlertDialogTitle>
               <AlertDialogDescription>{evidencePreviewLabel || "-"}</AlertDialogDescription>
             </AlertDialogHeader>
             {evidencePreviewUrl ? (
@@ -1228,7 +1229,7 @@ export default function ValidationRequestsPage() {
               </div>
             ) : null}
             <AlertDialogFooter>
-              <AlertDialogAction>Tutup</AlertDialogAction>
+              <AlertDialogAction>{t("validation.evidence.close")}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -1238,10 +1239,12 @@ export default function ValidationRequestsPage() {
 }
 
 function RequestPageSkeleton({ activeQueue }: { activeQueue: QueueType }) {
+  const { t } = useTranslate();
+  const kpiLabels = [t("validation.skeleton.queueLabel"), t("validation.skeleton.validationLabel"), t("validation.skeleton.assetChangeLabel")];
   return (
     <div className="grid min-w-0 gap-4 2xl:grid-cols-[380px_minmax(0,1fr)]">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 2xl:col-span-2">
-        {["Queue", "Validation", "Asset Change"].map((label) => (
+        {kpiLabels.map((label) => (
           <Card key={label}>
             <CardContent className="p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
@@ -1257,7 +1260,7 @@ function RequestPageSkeleton({ activeQueue }: { activeQueue: QueueType }) {
         searchTerm=""
         typeFilter="all"
         statusFilter="all"
-        summarySlot={<Badge variant="outline">{activeQueue === "adminregion" ? "Queue Admin Region" : "Queue Superadmin"}</Badge>}
+        summarySlot={<Badge variant="outline">{activeQueue === "adminregion" ? t("validation.skeleton.adminQueueBadge") : t("validation.skeleton.superadminQueueBadge")}</Badge>}
         onSearchChange={() => undefined}
         onTypeFilterChange={() => undefined}
         onStatusFilterChange={() => undefined}
@@ -1293,6 +1296,7 @@ function RequestPageSkeleton({ activeQueue }: { activeQueue: QueueType }) {
 }
 
 function getReviewContext(
+  t: TFn,
   queue: QueueType,
   requestType: RequestType,
   status?: RequestStatus | null,
@@ -1304,47 +1308,47 @@ function getReviewContext(
   if (viewerRole === "adminregion") {
     return {
       viewerRole,
-      stageLabel: isResubmission ? "Revisi Admin Region" : "Review Admin Region",
-      stageTitle: isValidation ? "Pemeriksaan awal sebelum eskalasi" : "Verifikasi awal perubahan asset",
+      stageLabel: isResubmission ? t("validation.review.revisiAdminRegion") : t("validation.review.adminRegionReview"),
+      stageTitle: isValidation ? t("validation.review.stage.validationPemeriksaan") : t("validation.review.stage.verifikasiAwal"),
       stageDescription: isResubmission
-        ? "Request ini sempat dikembalikan superadmin. Pastikan catatan sudah ditindaklanjuti sebelum dikirim ulang."
+        ? t("validation.review.stage.resubmission")
         : isValidation
-          ? "Cocokkan hasil lapangan, evidence, dan temuan sebelum meneruskan request ke superadmin."
-          : "Pastikan perubahan administratif sudah lengkap sebelum diteruskan ke approval final.",
-      ownerLabel: "Tanggung jawab saat ini: Admin Region",
-      approveLabel: isValidation ? "Approve ke Superadmin" : "Teruskan ke Superadmin",
-      rejectLabel: isValidation ? "Reject ke Validator" : "Reject Request",
-      rejectDialogTitle: isValidation ? "Reject ke Validator" : "Reject Request",
+          ? t("validation.review.stage.cocokkanLapangan")
+          : t("validation.review.stage.lengkapiAdmin"),
+      ownerLabel: t("validation.review.owner.adminRegion"),
+      approveLabel: isValidation ? t("validation.review.approve.keSuperadmin") : t("validation.review.approve.teruskan"),
+      rejectLabel: isValidation ? t("validation.review.reject.keValidator") : t("validation.review.reject.request"),
+      rejectDialogTitle: isValidation ? t("validation.review.reject.keValidator") : t("validation.review.reject.request"),
       rejectDialogDescription: isValidation
-        ? "Catatan reject akan menjadi arahan revisi untuk validator. Minimal 10 karakter."
-        : "Catatan reject wajib minimal 10 karakter.",
+        ? t("validation.review.rejectDialog.validation")
+        : t("validation.review.rejectDialog.adminRegion"),
       toneClassName: "border-amber-200/80 bg-amber-50/60 text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/15 dark:text-amber-200",
     };
   }
 
   return {
     viewerRole,
-    stageLabel: "Approval Final",
-    stageTitle: isValidation ? "Keputusan akhir validasi ODP" : "Keputusan akhir perubahan asset",
+    stageLabel: t("validation.review.approvalFinal"),
+    stageTitle: isValidation ? t("validation.review.stage.keputusanAkhirValidasi") : t("validation.review.stage.keputusanAkhirAsset"),
     stageDescription: isValidation
-      ? "Nilai final asset akan mengikuti keputusan di tahap ini setelah data lapangan dinyatakan layak."
-      : "Perubahan pada request ini akan diterapkan ke data utama setelah disetujui.",
-    ownerLabel: "Tanggung jawab saat ini: Superadmin",
+      ? t("validation.review.stage.nilaiFinalAsset")
+      : t("validation.review.stage.perubahanDiterapkan"),
+    ownerLabel: t("validation.review.owner.superadmin"),
     approveLabel:
       requestType.kind === "create_asset"
-        ? "Approve Create"
+        ? t("validation.review.approve.create")
         : requestType.kind === "update_asset"
-          ? "Approve Update"
+          ? t("validation.review.approve.update")
           : requestType.kind === "provision_asset"
-            ? "Approve Provision"
+            ? t("validation.review.approve.provision")
             : requestType.kind === "topology_connection"
-              ? "Approve Connection"
+              ? t("validation.review.approve.connection")
               : requestType.kind === "archive_asset"
-                ? "Approve Archive"
-                : "Approve Final",
-    rejectLabel: "Reject ke Admin Region",
-    rejectDialogTitle: "Reject ke Admin Region",
-    rejectDialogDescription: "Catatan reject wajib minimal 10 karakter dan akan menjadi tindak lanjut admin region.",
+                ? t("validation.review.approve.archive")
+                : t("validation.review.approve.final"),
+    rejectLabel: t("validation.review.reject.keAdminRegion"),
+    rejectDialogTitle: t("validation.review.reject.keAdminRegion"),
+    rejectDialogDescription: t("validation.review.stage.rejectMinimal"),
     toneClassName: "border-validation/40 bg-validation/20 text-[oklch(0.250_0.120_200)] dark:border-validation/50 dark:bg-validation/15 dark:text-validation-foreground",
   };
 }
@@ -1471,18 +1475,18 @@ function InfoSlot({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function ActorTimelineCard({ item, lookupLabels }: { item: ValidationRequestItem; lookupLabels: LookupLabels }) {
+function ActorTimelineCard({ item, lookupLabels, t }: { item: ValidationRequestItem; lookupLabels: LookupLabels; t: TFn }) {
   const submitterText = getSubmitterText(item, lookupLabels);
   const rows = [
     {
       actionType: item.adminregion_action_type,
-      label: formatActorAction(item.adminregion_action_type, "Admin Region review"),
+      label: formatActorAction(item.adminregion_action_type, t("validation.timeline.adminRegionReview"), t),
       name: getActorText(item.adminregion_actor_name, item.adminregion_actor_email, item.adminregion_actor_user_code),
       at: item.adminregion_action_at,
     },
     {
       actionType: item.superadmin_action_type,
-      label: formatActorAction(item.superadmin_action_type, "Superadmin review"),
+      label: formatActorAction(item.superadmin_action_type, t("validation.timeline.superadminReview"), t),
       name: getActorText(item.superadmin_actor_name, item.superadmin_actor_email, item.superadmin_actor_user_code),
       at: item.superadmin_action_at,
     },
@@ -1496,7 +1500,7 @@ function ActorTimelineCard({ item, lookupLabels }: { item: ValidationRequestItem
 
   return (
     <div className="min-w-0 rounded-md border bg-muted/20 px-2.5 py-2">
-      <p className="text-[10px] uppercase leading-4 text-muted-foreground">Actor Timeline</p>
+      <p className="text-[10px] uppercase leading-4 text-muted-foreground">{t("validation.timeline.header")}</p>
       <div className="mt-1 grid min-w-0 gap-1 sm:grid-cols-2 xl:grid-cols-3">
         {rows.map((row) => (
           <div key={row.label} className="min-w-0 rounded-md border bg-background/70 px-2 py-1.5">
@@ -1524,7 +1528,7 @@ function getOdpName(item: ValidationRequestItem | null) {
   return item.request_id || "-";
 }
 
-function getRequestType(item: ValidationRequestItem | null) {
+function getRequestType(item: ValidationRequestItem | null, t: TFn = (key) => key) {
   const source = String(item?.payload_snapshot?.source || "").trim();
   if (isTopologyConnectionRequest(item)) {
     const operationLabel =
@@ -1537,8 +1541,8 @@ function getRequestType(item: ValidationRequestItem | null) {
       kind: "topology_connection" as const,
       resourceLabel: "Topology Connection",
       operationLabel,
-      label: `${operationLabel} Topology Connection Request`,
-      description: "Review relasi port-to-port, route, cable, dan core sebelum topology final berubah.",
+      label: t("validation.type.topologyConnection"),
+      description: t("validation.type.topologyDescription"),
     };
   }
 
@@ -1548,8 +1552,8 @@ function getRequestType(item: ValidationRequestItem | null) {
       kind: "create_asset" as const,
       resourceLabel,
       operationLabel: "Create",
-      label: `Create ${resourceLabel} Request`,
-      description: `Review data ${resourceLabel.toLowerCase()} baru dari Admin Region sebelum masuk Asset Overview.`,
+      label: t("validation.type.createAsset", { resource: resourceLabel }),
+      description: t("validation.type.createDescription", { resource: resourceLabel }),
     };
   }
 
@@ -1559,8 +1563,8 @@ function getRequestType(item: ValidationRequestItem | null) {
       kind: "update_asset" as const,
       resourceLabel,
       operationLabel: "Update",
-      label: `Update ${resourceLabel} Request`,
-      description: `Review perubahan ${resourceLabel.toLowerCase()} sebelum nilai final diterapkan.`,
+      label: t("validation.type.updateAsset", { resource: resourceLabel }),
+      description: t("validation.type.updateDescription", { resource: resourceLabel }),
     };
   }
 
@@ -1570,8 +1574,8 @@ function getRequestType(item: ValidationRequestItem | null) {
       kind: "archive_asset" as const,
       resourceLabel,
       operationLabel: "Archive",
-      label: `Archive ${resourceLabel} Request`,
-      description: `Review permintaan arsip sebelum asset dikeluarkan dari data aktif.`,
+      label: t("validation.type.archiveAsset", { resource: resourceLabel }),
+      description: t("validation.type.archiveDescription"),
     };
   }
 
@@ -1580,8 +1584,8 @@ function getRequestType(item: ValidationRequestItem | null) {
       kind: "provision_asset" as const,
       resourceLabel: "Device Port",
       operationLabel: "Provision",
-      label: "Provision Port Device Request",
-      description: "Review port yang akan dibuat sebelum masuk inventory final.",
+      label: t("validation.type.provisionAsset"),
+      description: t("validation.type.provisionDescription"),
     };
   }
 
@@ -1589,8 +1593,8 @@ function getRequestType(item: ValidationRequestItem | null) {
     kind: "field_validation" as const,
     resourceLabel: "Device",
     operationLabel: "Validation",
-    label: "Field Validation Request",
-    description: "Review hasil validasi lapangan, checklist, evidence, lalu approve/reject.",
+    label: t("validation.type.fieldValidation"),
+    description: t("validation.type.validationDescription"),
   };
 }
 
@@ -1600,30 +1604,34 @@ function isTopologyConnectionRequest(item: ValidationRequestItem | null) {
   return resourceName === "portConnections" || entityType === "portConnection" || Boolean(item?.payload_snapshot?.portConnection);
 }
 
-function getRequestSummary(item: ValidationRequestItem, lookupLabels: LookupLabels) {
+function getRequestSummary(item: ValidationRequestItem, lookupLabels: LookupLabels, t: TFn = (key) => key) {
   const requestType = getRequestType(item);
   if (requestType.kind !== "field_validation") {
     if (requestType.kind === "topology_connection") {
       const context = item.payload_snapshot?.context || {};
-      return `${requestType.operationLabel} ${formatTopologyEndpoint(context)} | Core ${formatCoreRange(getCreateAssetPayload(item))}`;
+      return t("validation.requestSummary.topologyConnection", {
+        operation: requestType.operationLabel,
+        endpoint: formatTopologyEndpoint(context),
+        range: formatCoreRange(getCreateAssetPayload(item)),
+      });
     }
     if (requestType.kind === "provision_asset") {
       const device = item.payload_snapshot?.device || {};
       const createCount = Array.isArray(item.payload_snapshot?.port_objects) ? item.payload_snapshot.port_objects.length : 0;
-      return `Provision ${createCount} port | Device ${valueText(device.device_name || device.device_id || item.entity_id)}`;
+      return t("validation.requestSummary.provision", { count: createCount, device: valueText(device.device_name || device.device_id || item.entity_id) });
     }
-    return buildAssetRequestSummary(item, requestType, lookupLabels);
+    return buildAssetRequestSummary(item, requestType, lookupLabels, t);
   }
 
-  return `${getInspectionSummary(item.payload_snapshot?.field_inspection)} | ${getPortSummary(item.payload_snapshot?.device_ports || [])}`;
+  return `${getInspectionSummary(item.payload_snapshot?.field_inspection, t)} | ${getPortSummary(item.payload_snapshot?.device_ports || [], t)}`;
 }
 
-function getNextOwnerLabel(status?: RequestStatus | null) {
-  if (status === "rejected_by_adminregion") return "Tindak lanjut: Validator";
-  if (status === "rejected_by_superadmin") return "Tindak lanjut: Admin Region";
-  if (status === "validated") return "Selesai";
-  if (status === "ongoing_validated" || status === "pending_async") return "Menunggu reviewer aktif";
-  return "Menunggu proses";
+function getNextOwnerLabel(status?: RequestStatus | null, t: TFn = (key) => key) {
+  if (status === "rejected_by_adminregion") return t("validation.owner.revisiValidator");
+  if (status === "rejected_by_superadmin") return t("validation.owner.revisiAdminRegion");
+  if (status === "validated") return t("validation.owner.selesai");
+  if (status === "ongoing_validated" || status === "pending_async") return t("validation.owner.menungguReviewer");
+  return t("validation.owner.menungguProses");
 }
 
 function getQuickOpenHref(item: ValidationRequestItem) {
@@ -1672,15 +1680,17 @@ function buildQueueSummary(items: ValidationRequestItem[]) {
 
 function QueueSummaryChips({
   summary,
+  t,
 }: {
   summary: ReturnType<typeof buildQueueSummary>;
+  t: TFn;
 }) {
   return (
     <div className="flex flex-wrap gap-1">
-      <QueueSummaryChip label="Total" value={summary.total} tone="slate" />
-      <QueueSummaryChip label="Validation" value={summary.validation} tone="emerald" />
-      <QueueSummaryChip label="Asset" value={summary.assetChanges} tone="sky" />
-      <QueueSummaryChip label="Rejected" value={summary.rejected} tone="rose" />
+      <QueueSummaryChip label={t("validation.queueChip.total")} value={summary.total} tone="slate" />
+      <QueueSummaryChip label={t("validation.queueChip.validation")} value={summary.validation} tone="emerald" />
+      <QueueSummaryChip label={t("validation.queueChip.asset")} value={summary.assetChanges} tone="sky" />
+      <QueueSummaryChip label={t("validation.queueChip.rejected")} value={summary.rejected} tone="rose" />
     </div>
   );
 }
@@ -1702,24 +1712,26 @@ function QueueSummaryChip({ label, value, tone }: { label: string; value: number
   );
 }
 
-function getCreateAssetReviewFields(item: ValidationRequestItem, lookupLabels: LookupLabels) {
-  return buildCreateAssetReviewDisplayFields(item, lookupLabels);
+function getCreateAssetReviewFields(item: ValidationRequestItem, lookupLabels: LookupLabels, t: TFn = (key) => key) {
+  return buildCreateAssetReviewDisplayFields(item, lookupLabels, t);
 }
 
-function getFieldValidationReviewFields(item: ValidationRequestItem) {
-  return buildFieldValidationReviewDisplayFields(item);
+function getFieldValidationReviewFields(item: ValidationRequestItem, t: TFn = (key) => key) {
+  return buildFieldValidationReviewDisplayFields(item, t);
 }
 
 function buildFieldValidationComparisonFields(
   item: ValidationRequestItem,
   currentDevice: Record<string, unknown>,
   lookupLabels: LookupLabels,
+  t: TFn = (key) => key,
 ) {
   return buildFieldValidationComparisonDisplayFields(
     item,
     currentDevice,
     lookupLabels,
     (before, after) => normalizeComparableValue(before) !== normalizeComparableValue(after),
+    t,
   );
 }
 
@@ -1778,20 +1790,21 @@ function CreateAssetRequestReview({
   requestType: RequestType;
   lookupLabels: LookupLabels;
 }) {
-  const fields = getCreateAssetReviewFields(item, lookupLabels);
+  const { t } = useTranslate();
+  const fields = getCreateAssetReviewFields(item, lookupLabels, t);
   const visibleFields = fields.filter((field) => field.value !== "-");
   const identityFields = visibleFields.slice(0, 4);
   const remainingFields = visibleFields.slice(4);
   return (
     <div className="space-y-2 rounded-md border p-2.5">
       <ReviewSectionHeader
-        eyebrow="Create"
-        title={`${requestType.resourceLabel} Baru`}
-        description="Cek identitas inti, relasi lokasi, dan kapasitas awal sebelum approve."
+        eyebrow={t("validation.eyebrow.create")}
+        title={t("validation.create.titleSuffix", { resource: requestType.resourceLabel })}
+        description={t("validation.review.createDescription")}
       />
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="rounded-md border bg-muted/20 p-2">
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Identitas Asset</p>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t("validation.section.identitasAsset")}</p>
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             {identityFields.map((field) => (
               <Info key={field.title} title={field.title} value={field.value} />
@@ -1800,7 +1813,7 @@ function CreateAssetRequestReview({
         </div>
         {remainingFields.length ? (
           <div className="rounded-md border p-2">
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Konteks Operasional</p>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t("validation.section.konteksOperasional")}</p>
             <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
               {remainingFields.map((field) => (
                 <Info key={field.title} title={field.title} value={field.value} />
@@ -1822,34 +1835,35 @@ function UpdateAssetRequestReview({
   requestType: RequestType;
   lookupLabels: LookupLabels;
 }) {
-  const diffFields = getUpdateDiffFields(item, lookupLabels);
+  const { t } = useTranslate();
+  const diffFields = getUpdateDiffFields(item, lookupLabels, t);
   return (
     <div className="space-y-2 rounded-md border p-2.5">
       <ReviewSectionHeader
-        eyebrow="Update"
-        title={`${requestType.resourceLabel} Update`}
-        description="Fokus utama reviewer ada pada perubahan nilai sebelum dan sesudah."
+        eyebrow={t("validation.eyebrow.update")}
+        title={t("validation.update.titleSuffix", { resource: requestType.resourceLabel })}
+        description={t("validation.review.updateDescription")}
       />
       <div className="grid grid-cols-1 gap-2 md:grid-cols-[160px_minmax(0,1fr)]">
         <div className="rounded-md border bg-muted/20 p-2">
-          <p className="text-xs font-medium text-muted-foreground">Field Berubah</p>
+          <p className="text-xs font-medium text-muted-foreground">{t("validation.section.fieldBerubah")}</p>
           <p className="mt-1 text-3xl font-semibold tracking-tight">{diffFields.length}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Bandingkan perubahan inti sebelum approve.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("validation.section.bandingkanPerubahan")}</p>
         </div>
         <div className="rounded-md border p-2">
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Perubahan Field</p>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t("validation.section.perubahanField")}</p>
           {diffFields.length ? (
             <div className="space-y-1">
               {diffFields.map((field) => (
                 <div key={field.key} className="grid grid-cols-1 gap-1 rounded border bg-background px-2 py-1.5 text-xs sm:grid-cols-[150px_1fr_1fr]">
                   <span className="font-medium">{field.key}</span>
-                  <span className="text-muted-foreground">Sebelum: {field.before}</span>
-                  <span>Sesudah: {field.after}</span>
+                  <span className="text-muted-foreground">{t("validation.section.sebelum")} {field.before}</span>
+                  <span>{t("validation.section.sesudah")} {field.after}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">Tidak ada field yang berubah pada request ini.</p>
+            <p className="text-xs text-muted-foreground">{t("validation.section.tidakAdaFieldBerubah")}</p>
           )}
         </div>
       </div>
@@ -1866,16 +1880,17 @@ function ArchiveAssetRequestReview({
   requestType: RequestType;
   lookupLabels: LookupLabels;
 }) {
-  const fields = getCreateAssetReviewFields(item, lookupLabels);
+  const { t } = useTranslate();
+  const fields = getCreateAssetReviewFields(item, lookupLabels, t);
   return (
     <div className="space-y-2 rounded-md border border-rose-200 bg-rose-50/40 p-2.5">
       <ReviewSectionHeader
-        eyebrow="Archive"
-        title={`${requestType.resourceLabel} Akan Diarsipkan`}
-        description="Pastikan asset yang dipilih benar sebelum dikeluarkan dari data aktif."
+        eyebrow={t("validation.eyebrow.archive")}
+        title={t("validation.archive.titleSuffix", { resource: requestType.resourceLabel })}
+        description={t("validation.review.archiveDescription")}
       />
       <div className="rounded-md border border-rose-200 bg-background/80 p-2">
-        <p className="mb-1.5 text-xs font-medium text-rose-700">Konfirmasi Identitas Asset</p>
+        <p className="mb-1.5 text-xs font-medium text-rose-700">{t("validation.section.konfirmasiIdentitas")}</p>
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {fields.map((field) => (
             <Info key={field.title} title={field.title} value={field.value} />
@@ -1883,13 +1898,14 @@ function ArchiveAssetRequestReview({
         </div>
       </div>
       <div className="rounded-md border border-rose-200 bg-rose-100/40 p-2 text-xs text-rose-900">
-        Request ini akan mengeluarkan asset dari data aktif setelah disetujui.
+        {t("validation.section.arsipDariDataAktif")}
       </div>
     </div>
   );
 }
 
 function ProvisionPortsRequestReview({ item }: { item: ValidationRequestItem }) {
+  const { t } = useTranslate();
   const payload = item.payload_snapshot || {};
   const device = payload.device || {};
   const template = payload.template || {};
@@ -1897,27 +1913,27 @@ function ProvisionPortsRequestReview({ item }: { item: ValidationRequestItem }) 
   return (
     <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-2.5">
       <ReviewSectionHeader
-        eyebrow="Provision"
-        title="Port Device Akan Dibuat"
-        description="Port baru diterapkan ke inventory hanya setelah approval final superadmin."
+        eyebrow={t("validation.eyebrow.provision")}
+        title={t("validation.tipo.title")}
+        description={t("validation.review.provisionDescription")}
       />
       <div className="grid grid-cols-1 gap-2 md:grid-cols-[180px_minmax(0,1fr)]">
         <div className="rounded-md border border-amber-200 bg-background/80 p-2">
-          <p className="text-xs font-medium text-muted-foreground">Port Dibuat</p>
+          <p className="text-xs font-medium text-muted-foreground">{t("validation.section.portDibuat")}</p>
           <p className="mt-1 text-3xl font-semibold tracking-tight">{ports.length}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Existing: {valueText(payload.existing_port_count)}
+            {t("validation.section.existing", { value: valueText(payload.existing_port_count) })}
           </p>
         </div>
         <div className="rounded-md border border-amber-200 bg-background/80 p-2">
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Konteks Provisioning</p>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t("validation.section.konteksProvisioning")}</p>
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-            <Info title="Device" value={valueText(device.device_name || device.device_id || item.entity_id)} />
-            <Info title="Type" value={valueText(device.device_type_key)} />
-            <Info title="Profile" value={valueText(payload.profile_name || template.profile_name)} />
-            <Info title="Template Port" value={valueText(template.total_ports)} />
-            <Info title="Start Index" value={valueText(template.start_port_index)} />
-            <Info title="Missing Index" value={Array.isArray(payload.missing_port_indexes) ? payload.missing_port_indexes.join(", ") : "-"} />
+            <Info title={t("validation.tipo.device")} value={valueText(device.device_name || device.device_id || item.entity_id)} />
+            <Info title={t("validation.tipo.type")} value={valueText(device.device_type_key)} />
+            <Info title={t("validation.tipo.profile")} value={valueText(payload.profile_name || template.profile_name)} />
+            <Info title={t("validation.tipo.templatePort")} value={valueText(template.total_ports)} />
+            <Info title={t("validation.tipo.startIndex")} value={valueText(template.start_port_index)} />
+            <Info title={t("validation.tipo.missingIndex")} value={Array.isArray(payload.missing_port_indexes) ? payload.missing_port_indexes.join(", ") : "-"} />
           </div>
         </div>
       </div>
@@ -1934,12 +1950,13 @@ function TopologyConnectionRequestReview({
   requestType: RequestType;
   lookupLabels: LookupLabels;
 }) {
+  const { t } = useTranslate();
   const payload = getCreateAssetPayload(item);
   const before = item.payload_snapshot?.before || {};
   const context = item.payload_snapshot?.context || {};
-  const diffFields = getTopologyConnectionDiffFields(item, lookupLabels);
+  const diffFields = getTopologyConnectionDiffFields(item, lookupLabels, t);
   const isCreate = requestType.operationLabel === "Create";
-  const title = isCreate ? "Connection Baru" : `${requestType.operationLabel} Connection`;
+  const title = isCreate ? t("validation.topo.connectionBaru") : t("validation.topo.connectionOperation", { operation: requestType.operationLabel });
 
   const fromDeviceType = String(context.upstream_device_type_key || "").trim().toUpperCase();
   const toDeviceType = String(context.odp_device_type_key || "").trim().toUpperCase();
@@ -1950,63 +1967,63 @@ function TopologyConnectionRequestReview({
   return (
     <div className="space-y-2 rounded-md border border-cyan-200 bg-cyan-50/40 p-2.5">
       <ReviewSectionHeader
-        eyebrow="Topology"
+        eyebrow={t("validation.eyebrow.topology")}
         title={title}
-        description="Review endpoint, route, cable, dan core range sebelum relasi topology diterapkan ke inventory final."
+        description={t("validation.review.topologyDescription")}
       />
 
       {/* Device Type Relation Badge */}
       {hasRelationContext ? (
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-cyan-200 bg-cyan-100/40 px-3 py-2">
-          <RelationTypeBadge typeKey={fromDeviceType} label={fromDeviceType || "Device"} />
+          <RelationTypeBadge typeKey={fromDeviceType} label={fromDeviceType || t("validation.topo.deviceFallback")} />
           <ArrowRight className="size-4 text-muted-foreground" />
-          <RelationTypeBadge typeKey={toDeviceType} label={toDeviceType || "Device"} />
+          <RelationTypeBadge typeKey={toDeviceType} label={toDeviceType || t("validation.topo.deviceFallback")} />
           <span className="text-[11px] text-muted-foreground">
-            — {fromDirection === "out" ? "Feeder Out" : fromDirection === "in" ? "Input" : ""}
+            — {fromDirection === "out" ? t("validation.direction.feederOut") : fromDirection === "in" ? t("validation.direction.input") : ""}
             {fromDirection && toDirection ? " → " : ""}
-            {toDirection === "in" ? "Distribution In" : toDirection === "out" ? "Output" : ""}
+            {toDirection === "in" ? t("validation.direction.distributionIn") : toDirection === "out" ? t("validation.direction.output") : ""}
           </span>
         </div>
       ) : null}
 
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_220px]">
         <div className="rounded-md border border-cyan-200 bg-background/80 p-2">
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Endpoint Connection</p>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t("validation.section.endpointConnection")}</p>
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             <Info
-              title="From Device"
+              title={t("validation.topo.fromDevice")}
               value={valueText(context.upstream_device_name || context.from_device_name || payload.from_device_name)}
             />
             <Info
-              title="From Port"
+              title={t("validation.topo.field.fromPort")}
               value={valueText(context.upstream_port_label || context.from_port_label || payload.from_port_label)}
             />
             <Info
-              title="To Device"
+              title={t("validation.topo.toDevice")}
               value={valueText(context.odp_device_name || context.to_device_name || payload.to_device_name)}
             />
             <Info
-              title="To Port"
+              title={t("validation.topo.field.toPort")}
               value={valueText(context.odp_port_label || context.to_port_label || payload.to_port_label)}
             />
           </div>
         </div>
         <div className="rounded-md border border-cyan-200 bg-background/80 p-2">
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Status</p>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t("validation.section.status")}</p>
           <div className="space-y-1.5">
-            <Info title="Operation" value={requestType.operationLabel} />
-            <Info title="Connection Status" value={valueText(payload.status || before.status)} />
+            <Info title={t("validation.topo.operation")} value={requestType.operationLabel} />
+            <Info title={t("validation.topo.connectionStatus")} value={valueText(payload.status || before.status)} />
           </div>
         </div>
       </div>
 
       <div className="rounded-md border border-cyan-200 bg-background/80 p-2">
-        <p className="mb-1.5 text-xs font-medium text-muted-foreground">Route, Cable, dan Core</p>
+        <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t("validation.section.routeCableCore")}</p>
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
-          <Info title="Route" value={formatTopologyRelationValue("route_id", payload.route_id || before.route_id, lookupLabels)} />
-          <Info title="Cable" value={valueText(context.cable_device_name || payload.cable_device_name || (payload.cable_device_id ? "Cable selected" : before.cable_device_id ? "Existing cable" : "-"))} />
-          <Info title="Core Range" value={formatCoreRange(payload)} />
-          <Info title="Fiber Count" value={valueText(payload.fiber_count || before.fiber_count)} />
+          <Info title={t("validation.topo.field.route")} value={formatTopologyRelationValue("route_id", payload.route_id || before.route_id, lookupLabels, t)} />
+          <Info title={t("validation.topo.field.cable")} value={valueText(context.cable_device_name || payload.cable_device_name || (payload.cable_device_id ? t("validation.topo.cableSelected") : before.cable_device_id ? t("validation.topo.existingCable") : "-"))} />
+          <Info title={t("validation.topo.coreRange")} value={formatCoreRange(payload)} />
+          <Info title={t("validation.topo.field.fiberCount")} value={valueText(payload.fiber_count || before.fiber_count)} />
         </div>
       </div>
 
@@ -2016,10 +2033,9 @@ function TopologyConnectionRequestReview({
           <div className="flex items-start gap-2">
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
             <div className="space-y-0.5">
-              <p className="text-xs font-medium text-amber-900">Potensi Konflik Core Range</p>
+              <p className="text-xs font-medium text-amber-900">{t("validation.section.konflikCoreRange")}</p>
               <p className="text-[11px] text-amber-800">
-                Core range <span className="font-medium">{formatCoreRange(payload)}</span> pada kabel ini mungkin
-                bertumpuk dengan koneksi aktif lain. Verifikasi occupancy core sebelum approve.
+                {t("validation.section.konflikCoreDeskripsi", { range: formatCoreRange(payload) })}
               </p>
             </div>
           </div>
@@ -2028,19 +2044,19 @@ function TopologyConnectionRequestReview({
 
       {!isCreate ? (
         <div className="rounded-md border border-cyan-200 bg-background/80 p-2">
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Before/After Topology</p>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t("validation.section.beforeAfterTopology")}</p>
           {diffFields.length ? (
             <div className="space-y-1">
               {diffFields.map((field) => (
                 <div key={field.key} className="grid grid-cols-1 gap-1 rounded border bg-background px-2 py-1.5 text-xs sm:grid-cols-[150px_1fr_1fr]">
                   <span className="font-medium">{field.key}</span>
-                  <span className="break-words text-muted-foreground">Sebelum: {field.before}</span>
-                  <span className="break-words">Sesudah: {field.after}</span>
+                  <span className="break-words text-muted-foreground">{t("validation.section.sebelum")} {field.before}</span>
+                  <span className="break-words">{t("validation.section.sesudah")} {field.after}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">Tidak ada perubahan teknis yang terdeteksi pada snapshot request ini.</p>
+            <p className="text-xs text-muted-foreground">{t("validation.section.tidakAdaPerubahanTeknis")}</p>
           )}
         </div>
       ) : null}
@@ -2089,38 +2105,40 @@ function ValidationRequestReview({
   onPreviewEvidence: (candidates: string[], label: string) => Promise<void>;
   onDownloadEvidence: (candidates: string[]) => Promise<void>;
 }) {
-  const fieldRows = getFieldValidationReviewFields(item);
+  const { t } = useTranslate();
+  const fieldRows = getFieldValidationReviewFields(item, t);
   const comparisonRows = buildFieldValidationComparisonFields(
     item,
     currentDeviceSnapshot || item.payload_snapshot?.before || item.payload_snapshot?.device || {},
     lookupLabels,
+    t,
   );
-  const inspectionSummary = getInspectionSummary(item.payload_snapshot?.field_inspection);
-  const portSummary = getPortSummary(item.payload_snapshot?.device_ports || []);
+  const inspectionSummary = getInspectionSummary(item.payload_snapshot?.field_inspection, t);
+  const portSummary = getPortSummary(item.payload_snapshot?.device_ports || [], t);
   const validationDescription =
     reviewContext.viewerRole === "adminregion"
-      ? "Bandingkan input validator dengan evidence dan temuan sebelum diteruskan ke superadmin."
-      : "Pastikan asset final yang akan diterapkan sesuai hasil validasi dan ringkasan bukti.";
+      ? t("validation.validationDesc.adminRegion")
+      : t("validation.validationDesc.superadmin");
   return (
     <div className="space-y-2">
       <div className="space-y-2 rounded-md border p-2.5">
         <ReviewSectionHeader
-          eyebrow="Field Validation"
-          title="Identitas & Kapasitas Aktual"
+          eyebrow={t("validation.eyebrow.fieldValidation")}
+          title={t("validation.section.identitasKapasitas")}
           description={validationDescription}
         />
         <div className={`rounded-md border px-2 py-1.5 text-xs ${reviewContext.toneClassName}`}>
           {reviewContext.viewerRole === "adminregion"
-            ? "Fokus review: kelengkapan field, kecocokan evidence, dan kejelasan temuan."
-            : "Fokus review: kelayakan finalisasi data asset setelah tahap admin region selesai."}
+            ? t("validation.focus.adminRegionValidation")
+            : t("validation.focus.superadminValidation")}
         </div>
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
           <div className="rounded-md border bg-muted/20 px-2 py-1.5">
-            <p className="text-xs font-medium text-muted-foreground">Checklist Kondisi</p>
+            <p className="text-xs font-medium text-muted-foreground">{t("validation.section.checklistKondisi")}</p>
             <p className="mt-1 text-sm font-semibold">{inspectionSummary}</p>
           </div>
           <div className="rounded-md border bg-muted/20 px-2 py-1.5">
-            <p className="text-xs font-medium text-muted-foreground">Port & Redaman</p>
+            <p className="text-xs font-medium text-muted-foreground">{t("validation.section.portRedaman")}</p>
             <p className="mt-1 text-sm font-semibold">{portSummary}</p>
           </div>
         </div>
@@ -2137,7 +2155,7 @@ function ValidationRequestReview({
         onDownload={onDownloadEvidence}
       />
       <div className="rounded-md border p-2.5">
-        <p className="mb-1.5 text-sm font-medium">Temuan</p>
+        <p className="mb-1.5 text-sm font-medium">{t("validation.section.temuan")}</p>
         <p className="text-xs text-muted-foreground">{item.finding_note || "-"}</p>
       </div>
     </div>
@@ -2196,6 +2214,7 @@ function EvidenceReviewCard({
   isFieldValidation,
   onPreview,
   onDownload,
+  t,
 }: {
   title: string;
   refs: EvidenceRef[];
@@ -2203,20 +2222,17 @@ function EvidenceReviewCard({
   isFieldValidation: boolean;
   onPreview: (candidates: string[], label: string) => Promise<void>;
   onDownload: (candidates: string[]) => Promise<void>;
+  t: TFn;
 }) {
   return (
     <div className="rounded-xl border border-border/60 p-2.5 shadow-2xs">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <ReviewSectionHeader
-          eyebrow="Evidence"
-          title={`Foto ${title}`}
-          description={
-            isFieldValidation
-              ? "Preview evidence aktif dari request validasi ini. Evidence histori tetap tersedia di detail ODP."
-              : "Preview attachment request untuk membantu review perubahan asset."
-          }
+          eyebrow={t("validation.eyebrow.evidence")}
+          title={t("validation.evidence.photoTitle", { title })}
+          description={isFieldValidation ? t("validation.evidence.activeDescription") : t("validation.evidence.attachmentDescription")}
         />
-        {isFieldValidation ? <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-normal">Request aktif</Badge> : null}
+        {isFieldValidation ? <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-normal">{t("validation.evidence.requestActive")}</Badge> : null}
       </div>
       {refs.length ? (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -2232,7 +2248,7 @@ function EvidenceReviewCard({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={thumbUrls[ref.key]} alt={`${title} ${index + 1}`} className="size-full object-cover" />
                 ) : (
-                  <span className="flex size-full items-center justify-center font-mono text-[9px] text-muted-foreground">No preview</span>
+                  <span className="flex size-full items-center justify-center font-mono text-[9px] text-muted-foreground">{t("validation.evidence.noPreviewShort")}</span>
                 )}
               </button>
               <div className="flex items-center justify-between gap-2 p-1.5">
@@ -2245,14 +2261,14 @@ function EvidenceReviewCard({
                   disabled={!ref.available}
                   className="h-6 px-2 font-mono text-[9px] uppercase tracking-normal"
                 >
-                  Download
+                  {t("validation.evidence.download")}
                 </Button>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Tidak ada {title.toLowerCase()} pada request ini.</p>
+        <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">{t("validation.section.belumAda", { type: title.toLowerCase() })}</p>
       )}
     </div>
   );
@@ -2301,13 +2317,13 @@ function ReviewSectionHeader({
   );
 }
 
-function PortSummaryCard({ ports }: { ports: Array<Record<string, unknown>> }) {
+function PortSummaryCard({ ports, t }: { ports: Array<Record<string, unknown>>; t: TFn }) {
   return (
     <div className="rounded-md border p-2.5">
-      <p className="mb-1.5 text-sm font-medium">Port & Redaman</p>
+      <p className="mb-1.5 text-sm font-medium">{t("validation.portSummaryCard")}</p>
       {ports.length ? (
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
-          {renderPortStats(ports).map((stat) => (
+          {renderPortStats(ports, t).map((stat) => (
             <div key={stat.label} className="rounded-md border bg-muted/20 px-2 py-1.5">
               <p className="text-[11px] uppercase text-muted-foreground">{stat.label}</p>
               <p className="text-base font-semibold">{stat.value}</p>
@@ -2315,19 +2331,19 @@ function PortSummaryCard({ ports }: { ports: Array<Record<string, unknown>> }) {
           ))}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">Tidak ada perubahan port pada request ini.</p>
+        <p className="text-xs text-muted-foreground">{t("validation.portSummary.noChanges")}</p>
       )}
     </div>
   );
 }
 
-function TechnicalSnapshotDetails({ item }: { item: ValidationRequestItem }) {
+function TechnicalSnapshotDetails({ item, t }: { item: ValidationRequestItem; t: TFn }) {
   return (
     <details className="min-w-0 rounded-md border p-2.5">
-      <summary className="cursor-pointer text-sm font-medium">Lihat Data Teknis (raw)</summary>
-      <p className="mb-2 mt-3 text-sm font-medium">Snapshot Device</p>
+      <summary className="cursor-pointer text-sm font-medium">{t("validation.technicalSnapshots")}</summary>
+      <p className="mb-2 mt-3 text-sm font-medium">{t("validation.technicalSnapshots.device")}</p>
       <pre className="max-h-48 overflow-auto rounded bg-muted/40 p-2 text-xs">{JSON.stringify(getCreateAssetPayload(item), null, 2)}</pre>
-      <p className="mb-2 mt-3 text-sm font-medium">Snapshot Ports</p>
+      <p className="mb-2 mt-3 text-sm font-medium">{t("validation.technicalSnapshots.ports")}</p>
       <pre className="max-h-48 overflow-auto rounded bg-muted/40 p-2 text-xs">{JSON.stringify(item.payload_snapshot?.device_ports || [], null, 2)}</pre>
     </details>
   );
@@ -2345,53 +2361,53 @@ function getCreateAssetPayload(item: ValidationRequestItem) {
   );
 }
 
-function getUpdateDiffFields(item: ValidationRequestItem, lookupLabels: LookupLabels) {
+function getUpdateDiffFields(item: ValidationRequestItem, lookupLabels: LookupLabels, t: TFn = (key) => key) {
   const changes = item.payload_snapshot?.resource_payload || {};
   const before = item.payload_snapshot?.before || {};
   return Object.entries(changes)
     .filter(([key, after]) => !areValuesEquivalent(before[key], after))
     .map(([key, after]) => ({
-      key: getUpdateFieldLabel(key),
+      key: getUpdateFieldLabel(key, t),
       before: formatUpdateFieldValue(key, before[key], lookupLabels),
       after: formatUpdateFieldValue(key, after, lookupLabels),
     }));
 }
 
-function getTopologyConnectionDiffFields(item: ValidationRequestItem, lookupLabels: LookupLabels) {
+function getTopologyConnectionDiffFields(item: ValidationRequestItem, lookupLabels: LookupLabels, t: TFn = (key) => key) {
   const changes = item.payload_snapshot?.resource_payload || {};
   const before = item.payload_snapshot?.before || {};
   return Object.entries(changes)
     .filter(([key, after]) => !areValuesEquivalent(before[key], after))
     .map(([key, after]) => ({
-      key: getTopologyConnectionFieldLabel(key),
-      before: formatTopologyRelationValue(key, before[key], lookupLabels),
-      after: formatTopologyRelationValue(key, after, lookupLabels),
+      key: getTopologyConnectionFieldLabel(key, t),
+      before: formatTopologyRelationValue(key, before[key], lookupLabels, t),
+      after: formatTopologyRelationValue(key, after, lookupLabels, t),
     }));
 }
 
-function getTopologyConnectionFieldLabel(key: string) {
+function getTopologyConnectionFieldLabel(key: string, t: TFn = (key) => key) {
   const labels: Record<string, string> = {
-    from_port_id: "From Port",
-    to_port_id: "To Port",
-    connection_type: "Connection Type",
-    status: "Status",
-    route_id: "Route",
-    cable_device_id: "Cable",
-    core_start: "Core Start",
-    core_end: "Core End",
-    fiber_count: "Fiber Count",
-    notes: "Notes",
+    from_port_id: t("validation.topo.field.fromPort"),
+    to_port_id: t("validation.topo.field.toPort"),
+    connection_type: t("validation.topo.field.connectionType"),
+    status: t("validation.topo.field.status"),
+    route_id: t("validation.topo.field.route"),
+    cable_device_id: t("validation.topo.field.cable"),
+    core_start: t("validation.topo.field.coreStart"),
+    core_end: t("validation.topo.field.coreEnd"),
+    fiber_count: t("validation.topo.field.fiberCount"),
+    notes: t("validation.topo.field.notes"),
   };
-  return labels[key] || getUpdateFieldLabel(key);
+  return labels[key] || getUpdateFieldLabel(key, t);
 }
 
-function formatTopologyRelationValue(key: string, value: unknown, lookupLabels: LookupLabels) {
+function formatTopologyRelationValue(key: string, value: unknown, lookupLabels: LookupLabels, t: TFn = (key) => key) {
   if (key === "route_id") return valueText(value);
   if (key === "region_id") return getRegionDisplay(value, lookupLabels);
   if (key === "pop_id") return getPopDisplay(value, lookupLabels);
   if (key === "project_id") return getProjectDisplay(value, lookupLabels);
-  if (key.endsWith("_port_id")) return value ? "Port selected" : "-";
-  if (key === "cable_device_id") return value ? "Cable selected" : "-";
+  if (key.endsWith("_port_id")) return value ? t("validation.topo.portSelected") : t("validation.topo.minus");
+  if (key === "cable_device_id") return value ? t("validation.topo.cableSelected") : t("validation.topo.minus");
   return valueText(value);
 }
 
@@ -2411,27 +2427,27 @@ function formatCoreRange(payload: Record<string, unknown>) {
   return start !== "-" ? start : end;
 }
 
-function getUpdateFieldLabel(key: string) {
+function getUpdateFieldLabel(key: string, t: TFn = (key) => key) {
   const labels: Record<string, string> = {
-    region_id: "Region",
-    pop_id: "POP",
-    project_id: "Project",
-    tenant_id: "Tenant",
-    device_name: "Nama Device",
-    status: "Status",
-    installation_date: "Installation Date",
-    validation_status: "Validation Status",
-    validation_date: "Validation Date",
-    serial_number: "Serial Number",
-    management_ip: "Management IP",
-    total_ports: "Total Ports",
-    used_ports: "Used Ports",
-    splitter_ratio: "Splitter Ratio",
-    odp_type: "Tipe ODP",
-    installation_type: "Jenis Instalasi",
-    longitude: "Longitude",
-    latitude: "Latitude",
-    address: "Address",
+    region_id: t("validation.field.region"),
+    pop_id: t("validation.field.pop"),
+    project_id: t("validation.field.project"),
+    tenant_id: t("validation.field.tenant"),
+    device_name: t("validation.field.namaDevice"),
+    status: t("validation.field.status"),
+    installation_date: t("validation.field.installationDate"),
+    validation_status: t("validation.field.validationStatus"),
+    validation_date: t("validation.field.validationDate"),
+    serial_number: t("validation.field.serialNumber"),
+    management_ip: t("validation.field.managementIp"),
+    total_ports: t("validation.field.totalPorts"),
+    used_ports: t("validation.field.usedPorts"),
+    splitter_ratio: t("validation.field.splitterRatio"),
+    odp_type: t("validation.field.tipeOdp"),
+    installation_type: t("validation.field.jenisInstalasi"),
+    longitude: t("validation.field.longitude"),
+    latitude: t("validation.field.latitude"),
+    address: t("validation.field.address"),
   };
   return labels[key] || key;
 }
@@ -2557,13 +2573,13 @@ function getSubmitterText(item: ValidationRequestItem, lookupLabels: LookupLabel
   return getActorText(item.submitted_by_name, item.submitted_by_email, item.submitted_by_user_code, getUserText(item.submitted_by_user_id, lookupLabels));
 }
 
-function formatActorAction(value: unknown, fallback: string) {
+function formatActorAction(value: unknown, fallback: string, t: TFn) {
   const action = String(value || "").trim().toLowerCase();
-  if (action === "approved_by_adminregion") return "Admin Region approved";
-  if (action === "rejected_by_adminregion") return "Admin Region rejected";
-  if (action === "resubmitted_by_adminregion") return "Admin Region resubmitted";
-  if (action === "approved_by_superadmin") return "Superadmin approved";
-  if (action === "rejected_by_superadmin") return "Superadmin rejected";
+  if (action === "approved_by_adminregion") return t("validation.timeline.adminApproved");
+  if (action === "rejected_by_adminregion") return t("validation.timeline.adminRejected");
+  if (action === "resubmitted_by_adminregion") return t("validation.timeline.adminResubmitted");
+  if (action === "approved_by_superadmin") return t("validation.timeline.superApproved");
+  if (action === "rejected_by_superadmin") return t("validation.timeline.superRejected");
   return fallback;
 }
 
@@ -2579,11 +2595,11 @@ function objectRecordValues(value: unknown) {
   );
 }
 
-function getInspectionSummary(inspection?: Record<string, unknown> | null) {
+function getInspectionSummary(inspection?: Record<string, unknown> | null, t: TFn = (key) => key) {
   const checks = objectRecordValues(inspection?.condition_checks);
-  if (!checks.length) return "Kondisi -";
+  if (!checks.length) return t("validation.inspection.kondisiMinus");
   const good = checks.filter((item) => ["Baik", "Bersih", "Lengkap", "Rapi"].includes(String(item.condition || ""))).length;
-  return `Kondisi ${good}/${checks.length} baik`;
+  return t("validation.inspection.kondisiCount", { good, total: checks.length });
 }
 
 
@@ -2594,7 +2610,7 @@ function extractApiData(result: { data?: Record<string, unknown> } | Record<stri
   return result as Record<string, unknown>;
 }
 
-function renderPortStats(ports: Array<Record<string, unknown>>) {
+function renderPortStats(ports: Array<Record<string, unknown>>, t: TFn = (key) => key) {
   const rows = Array.isArray(ports) ? ports : [];
   const total = rows.length;
   const used = rows.filter((row) => String(row.status || "").toLowerCase() === "used").length;
@@ -2602,18 +2618,18 @@ function renderPortStats(ports: Array<Record<string, unknown>>) {
   const reserved = rows.filter((row) => String(row.status || "").toLowerCase() === "reserved").length;
   const down = rows.filter((row) => String(row.status || "").toLowerCase() === "down").length;
   return [
-    { label: "Total", value: String(total) },
-    { label: "Used", value: String(used) },
-    { label: "Idle", value: String(idle) },
-    { label: "Reserved", value: String(reserved) },
-    { label: "Down", value: String(down) },
+    { label: t("validation.portStat.total"), value: String(total) },
+    { label: t("validation.portStat.used"), value: String(used) },
+    { label: t("validation.portStat.idle"), value: String(idle) },
+    { label: t("validation.portStat.reserved"), value: String(reserved) },
+    { label: t("validation.portStat.down"), value: String(down) },
   ];
 }
 
-function getPortSummary(ports: Array<Record<string, unknown>>) {
-  const stats = renderPortStats(ports);
-  const total = stats.find((item) => item.label === "Total")?.value || "0";
-  const used = stats.find((item) => item.label === "Used")?.value || "0";
-  const idle = stats.find((item) => item.label === "Idle")?.value || "0";
-  return `Port ${used}/${total} used | idle ${idle}`;
+function getPortSummary(ports: Array<Record<string, unknown>>, t: TFn = (key) => key) {
+  const stats = renderPortStats(ports, t);
+  const total = stats.find((item) => item.label === t("validation.portStat.total"))?.value || "0";
+  const used = stats.find((item) => item.label === t("validation.portStat.used"))?.value || "0";
+  const idle = stats.find((item) => item.label === t("validation.portStat.idle"))?.value || "0";
+  return t("validation.portSummary", { used, total, idle });
 }
