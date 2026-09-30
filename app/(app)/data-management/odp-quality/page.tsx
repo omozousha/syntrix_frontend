@@ -13,6 +13,8 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
+import { useTranslate } from "@/lib/use-locale";
+import { type MessageKey } from "@/lib/locales";
 
 type GenericItem = {
   id: string;
@@ -70,7 +72,7 @@ type IssueRow = {
   odpDeviceName: string;
   portLabel: string;
   portStatus: string;
-  note: string;
+  note: MessageKey;
   auditEntityType: string;
   auditEntityId: string;
   requestStatus?: string;
@@ -78,22 +80,23 @@ type IssueRow = {
 
 type SortMode = "severity_then_odp" | "odp_id_asc" | "odp_id_desc" | "port_status";
 
-const ISSUE_OPTIONS: Array<{ key: IssueKey; label: string; severity: "high" | "medium" }> = [
-  { key: "odp-without-ports", label: "ODP tanpa port", severity: "high" },
-  { key: "odp-pending-validation", label: "ODP belum tervalidasi", severity: "medium" },
-  { key: "odp-used-without-endpoint", label: "Port used tanpa Customer/ONT", severity: "high" },
-  { key: "odp-assigned-not-used", label: "Port assigned tapi status bukan used", severity: "high" },
-  { key: "odp-down-maintenance", label: "Port down/maintenance", severity: "medium" },
-  { key: "odp-pending-adminregion", label: "Pending Admin Region", severity: "medium" },
-  { key: "odp-pending-superadmin", label: "Pending Superadmin", severity: "medium" },
-  { key: "odp-rejected-adminregion", label: "Rejected Admin Region", severity: "high" },
-  { key: "odp-rejected-superadmin", label: "Rejected Superadmin", severity: "high" },
-  { key: "odp-evidence-missing", label: "Evidence kurang", severity: "high" },
+const ISSUE_OPTIONS: Array<{ key: IssueKey; labelKey: MessageKey; severity: "high" | "medium" }> = [
+  { key: "odp-without-ports", labelKey: "odpQuality.issue.odpWithoutPorts", severity: "high" },
+  { key: "odp-pending-validation", labelKey: "odpQuality.issue.odpPendingValidation", severity: "medium" },
+  { key: "odp-used-without-endpoint", labelKey: "odpQuality.issue.odpUsedWithoutEndpoint", severity: "high" },
+  { key: "odp-assigned-not-used", labelKey: "odpQuality.issue.odpAssignedNotUsed", severity: "high" },
+  { key: "odp-down-maintenance", labelKey: "odpQuality.issue.odpDownMaintenance", severity: "medium" },
+  { key: "odp-pending-adminregion", labelKey: "odpQuality.issue.pendingAdminRegion", severity: "medium" },
+  { key: "odp-pending-superadmin", labelKey: "odpQuality.issue.pendingSuperadmin", severity: "medium" },
+  { key: "odp-rejected-adminregion", labelKey: "odpQuality.issue.rejectedAdminRegion", severity: "high" },
+  { key: "odp-rejected-superadmin", labelKey: "odpQuality.issue.rejectedSuperadmin", severity: "high" },
+  { key: "odp-evidence-missing", labelKey: "odpQuality.issue.evidenceMissing", severity: "high" },
 ];
 
 export default function OdpQualityPage() {
   const searchParams = useSearchParams();
   const { token } = useSession();
+  const { t } = useTranslate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rows, setRows] = useState<IssueRow[]>([]);
@@ -161,14 +164,14 @@ export default function OdpQualityPage() {
       <div className="space-y-4 pr-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="space-y-1">
-            <h2 className="text-2xl font-semibold tracking-tight">ODP Quality Issues</h2>
-            <p className="text-sm text-muted-foreground">{activeMeta.label}</p>
+            <h2 className="text-2xl font-semibold tracking-tight">{t("odpQuality.title")}</h2>
+            <p className="text-sm text-muted-foreground">{t(activeMeta.labelKey)}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm">
               <Link href={backHref}>
                 <ArrowLeft className="mr-2 size-4" />
-                Kembali
+                {t("odpQuality.back")}
               </Link>
             </Button>
             <Button
@@ -181,7 +184,7 @@ export default function OdpQualityPage() {
               }}
             >
               <Loader2 className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
-              Refresh
+              {t("odpQuality.refresh")}
             </Button>
           </div>
         </div>
@@ -192,7 +195,7 @@ export default function OdpQualityPage() {
             const isActive = option.key === activeIssue;
             return (
               <Button key={option.key} asChild variant={isActive ? "default" : "outline"} size="sm" className="h-auto min-h-12 justify-start px-3 py-2 text-left">
-                <Link href={href}>{option.label}</Link>
+                <Link href={href}>{t(option.labelKey)}</Link>
               </Button>
             );
           })}
@@ -200,19 +203,19 @@ export default function OdpQualityPage() {
 
         <Card>
           <CardHeader className="px-3 py-2">
-            <CardTitle className="text-sm">Filter Triase</CardTitle>
+            <CardTitle className="text-sm">{t("odpQuality.filterTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-5">
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Cari ODP ID / nama / port / catatan..."
+              placeholder={t("odpQuality.searchPlaceholder")}
             />
             <Combobox
               value={portStatusFilter}
               onValueChange={setPortStatusFilter}
               options={[
-                { value: "all", label: "Semua status port" },
+                { value: "all", label: t("odpQuality.allPortStatus") },
                 { value: "used", label: "used" },
                 { value: "idle", label: "idle" },
                 { value: "reserved", label: "reserved" },
@@ -224,10 +227,10 @@ export default function OdpQualityPage() {
               value={sortMode}
               onValueChange={(value) => setSortMode(value as SortMode)}
               options={[
-                { value: "severity_then_odp", label: "Sort: Severity + ODP ID" },
-                { value: "odp_id_asc", label: "Sort: ODP ID A-Z" },
-                { value: "odp_id_desc", label: "Sort: ODP ID Z-A" },
-                { value: "port_status", label: "Sort: Status Port" },
+                { value: "severity_then_odp", label: t("odpQuality.sortSeverity") },
+                { value: "odp_id_asc", label: t("odpQuality.sortAsc") },
+                { value: "odp_id_desc", label: t("odpQuality.sortDesc") },
+                { value: "port_status", label: t("odpQuality.sortPort") },
               ]}
             />
             <Button
@@ -239,29 +242,29 @@ export default function OdpQualityPage() {
                 setSortMode("severity_then_odp");
               }}
             >
-              Reset
+              {t("odpQuality.reset")}
             </Button>
-            <Button type="button" variant="outline" onClick={() => exportIssueCsv(sortedRows, activeMeta.label)}>
+            <Button type="button" variant="outline" onClick={() => exportIssueCsv(sortedRows, t(activeMeta.labelKey))}>
               <Download className="mr-2 size-4" />
-              Export CSV
+              {t("odpQuality.exportCsv")}
             </Button>
           </CardContent>
         </Card>
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {loading ? <AppLoading label="Memuat issue ODP..." /> : null}
+        {loading ? <AppLoading label={t("odpQuality.loading")} /> : null}
 
         {!loading ? (
           <Card>
             <CardHeader className="px-3 py-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-sm">{activeMeta.label}</CardTitle>
+                <CardTitle className="text-sm">{t(activeMeta.labelKey)}</CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{sortedRows.length}/{rows.length}</Badge>
                   <Badge variant={activeMeta.severity === "high" ? "destructive" : "secondary"}>{activeMeta.severity}</Badge>
                 </div>
               </div>
-              <CardDescription>{sortedRows.length} issue sesuai filter</CardDescription>
+              <CardDescription>{t("odpQuality.count", { count: sortedRows.length })}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 px-3 pb-3 pt-0">
               {sortedRows.length ? (
@@ -275,28 +278,28 @@ export default function OdpQualityPage() {
                       <Badge variant="outline">{row.portStatus || "-"}</Badge>
                     </div>
                     <p className="mt-2 text-xs">
-                      <span className="font-medium">Port:</span> {row.portLabel}
+                      <span className="font-medium">{t("odpQuality.portPrefix")}:</span> {row.portLabel}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">{row.note}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{t(row.note)}</p>
                     {row.requestStatus ? (
-                      <p className="mt-1 text-[11px] text-muted-foreground">Workflow: {row.requestStatus}</p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">{t("odpQuality.workflowPrefix")}: {row.requestStatus}</p>
                     ) : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button asChild variant="outline" size="sm">
-                        <Link href={`/data-management/list/odp/${row.odpId}`}>Open ODP</Link>
+                        <Link href={`/data-management/list/odp/${row.odpId}`}>{t("odpQuality.openOdp")}</Link>
                       </Button>
                       <Button asChild variant="outline" size="sm">
                         <Link
                           href={`/audit-trail?entity_type=${encodeURIComponent(row.auditEntityType)}&entity_id=${encodeURIComponent(row.auditEntityId)}`}
                         >
-                          Audit Trail
+                          {t("odpQuality.auditTrail")}
                         </Link>
                       </Button>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">Tidak ada issue yang cocok dengan filter saat ini.</p>
+                <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">{t("odpQuality.empty")}</p>
               )}
             </CardContent>
           </Card>
@@ -353,32 +356,34 @@ async function loadData(
     if (issue === "odp-without-ports") {
       rows = devices
         .filter((item) => !portsByOdp.has(item.id))
-        .map((item) => toRow(issue, item, null, "ODP belum memiliki data port."));
+        .map((item) => toRow(issue, item, null, "odpQuality.note.noPorts"));
     }
     if (issue === "odp-pending-validation") {
       rows = devices
         .filter((item) => !isValidated(item))
-        .map((item) => toRow(issue, item, null, "ODP belum tervalidasi final."));
+        .map((item) => toRow(issue, item, null, "odpQuality.note.notValidated"));
     }
     if (issue === "odp-used-without-endpoint") {
       rows = odpPorts
         .filter((port) => port.status === "used" && !hasAnyValue(port, ["customer_id", "ont_device_id"]))
-        .map((port) => toRow(issue, odpMap.get(String(port.device_id)) || null, port, "Port status used tanpa customer/ONT."));
+        .map((port) => toRow(issue, odpMap.get(String(port.device_id)) || null, port, "odpQuality.note.usedNoCustomer"));
     }
     if (issue === "odp-assigned-not-used") {
       rows = odpPorts
         .filter((port) => hasAnyValue(port, ["customer_id", "ont_device_id"]) && port.status !== "used")
-        .map((port) => toRow(issue, odpMap.get(String(port.device_id)) || null, port, "Customer/ONT terisi, tapi status port bukan used."));
+        .map((port) => toRow(issue, odpMap.get(String(port.device_id)) || null, port, "odpQuality.note.assignedNotUsed"));
     }
     if (issue === "odp-down-maintenance") {
       rows = odpPorts
         .filter((port) => port.status === "down" || port.status === "maintenance")
-        .map((port) => toRow(issue, odpMap.get(String(port.device_id)) || null, port, "Port berada pada status down/maintenance."));
+        .map((port) => toRow(issue, odpMap.get(String(port.device_id)) || null, port, "odpQuality.note.downMaintenance"));
     }
 
     setRows(rows);
     setLastIssueKey(issue);
   } catch (err) {
+    // ponytail: fallback resolved here, not at render, to avoid re-fetch on locale toggle;
+    // upgrade path: store a MessageKey when err is not an Error.
     setError((err as Error).message || "Gagal memuat issue ODP.");
     setRows([]);
     setLastIssueKey(issue);
@@ -387,7 +392,7 @@ async function loadData(
   }
 }
 
-function toRow(issue: IssueKey, odp: GenericItem | null, port: DevicePortItem | null, note: string): IssueRow {
+function toRow(issue: IssueKey, odp: GenericItem | null, port: DevicePortItem | null, note: MessageKey): IssueRow {
   const odpId = String(odp?.id || port?.device_id || "");
   const portIdx = port?.port_index != null ? Number(port.port_index) : 0;
   const hasPort = Boolean(port?.id);
@@ -444,15 +449,13 @@ function toQualityQueueKey(issue: IssueKey) {
   return "evidence_missing";
 }
 
-function getWorkflowIssueNote(issue: IssueKey, request: ValidationQualityRequest) {
-  if (issue === "odp-pending-adminregion") return "Request menunggu review Admin Region.";
-  if (issue === "odp-pending-superadmin") return "Request menunggu approval final Superadmin.";
-  if (issue === "odp-rejected-adminregion") return "Request ditolak Admin Region dan perlu tindak lanjut validator.";
-  if (issue === "odp-rejected-superadmin") return "Request ditolak Superadmin dan perlu review ulang Admin Region.";
+function getWorkflowIssueNote(issue: IssueKey, request: ValidationQualityRequest): MessageKey {
+  if (issue === "odp-pending-adminregion") return "odpQuality.note.pendingAdmin";
+  if (issue === "odp-pending-superadmin") return "odpQuality.note.pendingSuper";
+  if (issue === "odp-rejected-adminregion") return "odpQuality.note.rejectedAdmin";
+  if (issue === "odp-rejected-superadmin") return "odpQuality.note.rejectedSuper";
   const evidenceCount = request.evidence_attachments?.length || 0;
-  return evidenceCount
-    ? "Request punya attachment, tetapi masih masuk antrean evidence kurang."
-    : "Request aktif belum memiliki evidence attachment.";
+  return evidenceCount ? "odpQuality.note.evidenceMissing" : "odpQuality.note.evidenceNone";
 }
 
 function exportIssueCsv(rows: IssueRow[], issueLabel: string) {
