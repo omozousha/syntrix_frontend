@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslate } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 
 type CustomerStatusSummary = {
   status: string;
@@ -19,12 +21,12 @@ type PopBentoCustomerTileProps = {
   loading?: boolean;
 };
 
-const STATUS_LABEL_MAP: Record<string, string> = {
-  active: "Aktif",
-  inactive: "Tidak Aktif",
-  terminated: "Dihentikan",
-  suspended: "Ditangguhkan",
-  prospect: "Prospek",
+const STATUS_LABEL_KEY: Record<string, MessageKey> = {
+  active: "common.status.active",
+  inactive: "common.status.inactive",
+  terminated: "common.status.terminated",
+  suspended: "common.status.suspended",
+  prospect: "common.status.prospect",
 };
 
 const STATUS_TONE_MAP: Record<string, string> = {
@@ -41,6 +43,8 @@ export function PopBentoCustomerTile({
   statusSummary,
   loading = false,
 }: PopBentoCustomerTileProps) {
+  const { t, locale } = useTranslate();
+  const numberLocale = locale === "en" ? "en-US" : "id-ID";
   const activeCount = statusSummary.find((s) => s.status === "active")?.count ?? 0;
   const nonActiveCount = totalCustomers - activeCount;
   const listHref = `/data-management/list/customer?pop_id=${encodeURIComponent(popId)}`;
@@ -55,7 +59,7 @@ export function PopBentoCustomerTile({
               <Users className="size-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-foreground">Pelanggan &amp; Titik Layanan</h2>
+              <h2 className="text-sm font-bold text-foreground">{t("customerTile.title")}</h2>
               <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                 Active Service Endpoints
               </p>
@@ -69,7 +73,7 @@ export function PopBentoCustomerTile({
             className="rounded-full font-mono text-[11px] uppercase tracking-wider transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] gap-1.5"
           >
             <Link href={listHref}>
-              Lihat Semua
+              {t("customerTile.viewAll")}
               <ArrowRight className="size-3" />
             </Link>
           </Button>
@@ -80,13 +84,13 @@ export function PopBentoCustomerTile({
           {/* Total */}
           <div className="rounded-xl border border-border/40 bg-muted/20 p-4 space-y-2 transition-all duration-300 hover:border-primary/40">
             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Total Pelanggan
+              {t("customerTile.total")}
             </p>
             {loading ? (
               <Skeleton className="h-7 w-16" />
             ) : (
               <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
-                {totalCustomers.toLocaleString("id-ID")}
+                {totalCustomers.toLocaleString(numberLocale)}
               </p>
             )}
             <Badge
@@ -94,40 +98,40 @@ export function PopBentoCustomerTile({
               className="rounded-full font-mono text-[10px] uppercase tracking-wide"
             >
               <Users className="size-2.5 mr-1" />
-              Semua Status
+              {t("customerTile.allStatus")}
             </Badge>
           </div>
 
           {/* Aktif */}
           <div className="rounded-xl border border-border/40 bg-muted/20 p-4 space-y-2 transition-all duration-300 hover:border-emerald-500/40">
             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Pelanggan Aktif
+              {t("customerTile.active")}
             </p>
             {loading ? (
               <Skeleton className="h-7 w-12" />
             ) : (
               <p className="font-mono text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                {activeCount.toLocaleString("id-ID")}
+                {activeCount.toLocaleString(numberLocale)}
               </p>
             )}
             <Badge
               className="rounded-full font-mono text-[10px] uppercase tracking-wide bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
             >
               <CheckCircle2 className="size-2.5 mr-1" />
-              Aktif
+              {t("common.status.active")}
             </Badge>
           </div>
 
           {/* Non-Aktif */}
           <div className="rounded-xl border border-border/40 bg-muted/20 p-4 space-y-2 transition-all duration-300 hover:border-border/60">
             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Non-Aktif
+              {t("customerTile.inactive")}
             </p>
             {loading ? (
               <Skeleton className="h-7 w-12" />
             ) : (
               <p className="font-mono text-2xl font-bold tabular-nums text-muted-foreground">
-                {nonActiveCount.toLocaleString("id-ID")}
+                {nonActiveCount.toLocaleString(numberLocale)}
               </p>
             )}
             <Badge
@@ -135,7 +139,7 @@ export function PopBentoCustomerTile({
               className="rounded-full font-mono text-[10px] uppercase tracking-wide"
             >
               <XCircle className="size-2.5 mr-1" />
-              Terminated / Lainnya
+              {t("customerTile.inactiveBadge")}
             </Badge>
           </div>
         </div>
@@ -144,7 +148,7 @@ export function PopBentoCustomerTile({
         {statusSummary.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">
-              Breakdown Status:
+              {t("customerTile.breakdown")}
             </p>
             {statusSummary.map((s) => (
               <Link key={s.status} href={`${listHref}&status=${encodeURIComponent(s.status)}`}>
@@ -152,8 +156,8 @@ export function PopBentoCustomerTile({
                   variant="outline"
                   className={`rounded-full font-mono text-[10px] uppercase tracking-wide cursor-pointer transition-all duration-200 hover:border-primary/60 ${STATUS_TONE_MAP[s.status] ?? "text-muted-foreground"}`}
                 >
-                  {STATUS_LABEL_MAP[s.status] ?? s.status}:{" "}
-                  <span className="tabular-nums ml-1 font-bold">{s.count.toLocaleString("id-ID")}</span>
+                  {t(STATUS_LABEL_KEY[s.status] ?? "common.status.unknown")}:{" "}
+                  <span className="tabular-nums ml-1 font-bold">{s.count.toLocaleString(numberLocale)}</span>
                 </Badge>
               </Link>
             ))}
@@ -167,9 +171,9 @@ export function PopBentoCustomerTile({
               <Users className="size-5" />
             </div>
             <div>
-              <p className="text-sm font-medium text-foreground">Belum ada pelanggan</p>
+              <p className="text-sm font-medium text-foreground">{t("customerTile.emptyTitle")}</p>
               <p className="text-xs text-muted-foreground">
-                Belum ada pelanggan yang terhubung ke POP ini.
+                {t("customerTile.emptyDescription")}
               </p>
             </div>
             <Button
@@ -178,7 +182,7 @@ export function PopBentoCustomerTile({
               variant="outline"
               className="rounded-full font-mono text-[11px] uppercase tracking-wider transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
             >
-              <Link href={listHref}>Buka Daftar Pelanggan</Link>
+              <Link href={listHref}>{t("customerTile.emptyAction")}</Link>
             </Button>
           </div>
         )}

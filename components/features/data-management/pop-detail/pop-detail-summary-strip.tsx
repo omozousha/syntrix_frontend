@@ -5,6 +5,7 @@ import { ArrowRight, CircleDot, Database, Split, Users } from "lucide-react";
 import { OperationalKpiCard } from "@/components/operational-ui";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useTranslate } from "@/lib/use-locale";
 
 type PopDetailSummaryStripProps = {
   popId: string;
@@ -23,22 +24,24 @@ export function PopDetailSummaryStrip({
   totalCustomers,
   loading = false,
 }: PopDetailSummaryStripProps) {
+  const { t, locale } = useTranslate();
+  const numberLocale = locale === "en" ? "en-US" : "id-ID";
   const customerListHref = `/data-management/list/customer?pop_id=${encodeURIComponent(popId)}`;
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <OperationalKpiCard
-        label="Total Device"
-        value={loading ? "..." : totalDevices.toLocaleString("id-ID")}
-        caption="Perangkat aktif terpasang"
+        label={t("popSummary.device")}
+        value={loading ? "..." : totalDevices.toLocaleString(numberLocale)}
+        caption={t("popSummary.deviceCaption")}
         icon={Database}
         tone="blue"
         compact
       />
 
       <OperationalKpiCard
-        label="Total ODP"
-        value={loading ? "..." : totalOdp.toLocaleString("id-ID")}
+        label={t("popSummary.odp")}
+        value={loading ? "..." : totalOdp.toLocaleString(numberLocale)}
         caption="Optical Distribution Point"
         icon={Split}
         tone="blue"
@@ -46,9 +49,9 @@ export function PopDetailSummaryStrip({
       />
 
       <OperationalKpiCard
-        label="Total Port"
-        value={loading ? "..." : totalPorts.toLocaleString("id-ID")}
-        caption="Kapasitas port perangkat"
+        label={t("popSummary.port")}
+        value={loading ? "..." : totalPorts.toLocaleString(numberLocale)}
+        caption={t("popSummary.portCaption")}
         icon={CircleDot}
         tone="slate"
         compact
@@ -62,7 +65,7 @@ export function PopDetailSummaryStrip({
                 <Users className="size-3.5" />
               </div>
               <p className="font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground leading-tight">
-                Total Customer
+                {t("popSummary.customer")}
               </p>
             </div>
             <Button
@@ -71,20 +74,20 @@ export function PopDetailSummaryStrip({
               size="icon"
               className="size-6 rounded-full text-muted-foreground hover:text-foreground"
             >
-              <Link href={customerListHref} title="Buka Daftar Pelanggan POP">
+              <Link href={customerListHref} title={t("popSummary.openCustomerList")}>
                 <ArrowRight className="size-3" />
               </Link>
             </Button>
           </div>
           <div>
             <p className="font-mono text-lg font-bold tabular-nums text-foreground leading-tight">
-              {loading ? "..." : totalCustomers.toLocaleString("id-ID")}
+              {loading ? "..." : totalCustomers.toLocaleString(numberLocale)}
             </p>
             <Link
               href={customerListHref}
               className="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline mt-0.5"
             >
-              <span>Pelanggan terhubung</span>
+              <span>{t("popSummary.customerLinked")}</span>
               <ArrowRight className="size-2.5" />
             </Link>
           </div>
