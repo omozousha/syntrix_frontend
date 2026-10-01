@@ -16,6 +16,7 @@ import {
   savePopVisibleDeviceTypes,
 } from "@/lib/pop-device-config";
 import { deviceTypeKeyToSlug } from "@/lib/data-management-config";
+import { useTranslate } from "@/lib/use-locale";
 
 type PopBentoRackKpiTileProps = {
   totalRacks: number;
@@ -38,6 +39,7 @@ export function PopBentoRackKpiTile({
   token,
   onVisibleTypesChange,
 }: PopBentoRackKpiTileProps) {
+  const { t } = useTranslate();
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   const availableU = Math.max(0, totalU - usedU);
@@ -67,7 +69,7 @@ export function PopBentoRackKpiTile({
               <Server className="size-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-foreground">Utilisasi Ruang Rak &amp; Inventaris Perangkat</h2>
+              <h2 className="text-sm font-bold text-foreground">{t("rackKpi.title")}</h2>
               <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">EIA-310 Cabinet Capacity</p>
             </div>
           </div>
@@ -82,14 +84,14 @@ export function PopBentoRackKpiTile({
                 className="h-8 rounded-xl border-border/60 bg-muted/20 text-xs font-mono font-medium hover:bg-muted/40 active:scale-[0.98]"
               >
                 <SlidersHorizontal className="mr-1.5 size-3.5 text-muted-foreground" />
-                <span>Atur Tampilan ({visibleDeviceTypes.length})</span>
+                <span>{t("rackKpi.configureDisplay", { count: visibleDeviceTypes.length })}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80 rounded-2xl border-border/60 bg-popover/95 p-4 shadow-lg backdrop-blur-xl space-y-3">
               <div className="space-y-1">
-                <p className="text-xs font-bold text-foreground">Filter Tampilan Perangkat POP</p>
+                <p className="text-xs font-bold text-foreground">{t("rackKpi.filterTitle")}</p>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Pilih tipe perangkat yang ingin ditampilkan di ringkasan POP. Pengaturan tersimpan di akun Anda.
+                  {t("rackKpi.filterDescription")}
                 </p>
               </div>
 
@@ -102,7 +104,7 @@ export function PopBentoRackKpiTile({
                   className="h-7 text-[10px] rounded-lg border-border/60 flex-1"
                   onClick={() => applyPreset(POP_INDOOR_PRESET)}
                 >
-                  Indoor Rak Saja
+                  {t("rackKpi.presetIndoor")}
                 </Button>
                 <Button
                   type="button"
@@ -111,7 +113,7 @@ export function PopBentoRackKpiTile({
                   className="h-7 text-[10px] rounded-lg border-border/60 flex-1"
                   onClick={() => applyPreset(POP_ALL_PRESET)}
                 >
-                  Semua Aset
+                  {t("rackKpi.presetAll")}
                 </Button>
               </div>
 
@@ -153,40 +155,40 @@ export function PopBentoRackKpiTile({
         {/* Rack KPI Metric Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Total Rak Fisik</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("rackKpi.totalRacksLabel")}</p>
             <p className="font-mono tabular-nums text-2xl font-bold text-foreground">{totalRacks}</p>
-            <p className="text-[10px] text-muted-foreground">Cabinet Terpasang</p>
+            <p className="text-[10px] text-muted-foreground">{t("rackKpi.totalRacksCaption")}</p>
           </div>
 
           <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Total Kapasitas</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("rackKpi.totalCapacity")}</p>
             <p className="font-mono tabular-nums text-2xl font-bold text-foreground">
               {totalU} <span className="text-xs font-normal text-muted-foreground">U</span>
             </p>
-            <p className="text-[10px] text-muted-foreground">Slot Ruang Rak</p>
+            <p className="text-[10px] text-muted-foreground">{t("rackKpi.capacityCaption")}</p>
           </div>
 
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-1">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Slot Terpakai</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-emerald-600 dark:text-emerald-400">{t("rackKpi.usedSlots")}</p>
             <p className="font-mono tabular-nums text-2xl font-bold text-emerald-600 dark:text-emerald-400">
               {usedU} <span className="text-xs font-normal">U</span>
             </p>
-            <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">({occupancyPercent}% Occupancy)</p>
+            <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">({t("rackKpi.usedCaption", { percent: occupancyPercent })})</p>
           </div>
 
           <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3 space-y-1">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-sky-600 dark:text-sky-400">Slot Tersedia</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-sky-600 dark:text-sky-400">{t("rackKpi.availableSlots")}</p>
             <p className="font-mono tabular-nums text-2xl font-bold text-sky-600 dark:text-sky-400">
               {availableU} <span className="text-xs font-normal">U</span>
             </p>
-            <p className="text-[10px] text-sky-600/80 dark:text-sky-400/80">Siap Dipakai</p>
+            <p className="text-[10px] text-sky-600/80 dark:text-sky-400/80">{t("rackKpi.availableCaption")}</p>
           </div>
         </div>
 
         {/* Occupancy Progress Bar */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs font-mono text-[10px] text-muted-foreground">
-            <span>Kepadatan Rak Ruang POP</span>
+            <span>{t("rackKpi.density")}</span>
             <span className="font-bold text-foreground">{occupancyPercent}%</span>
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-muted/60 border border-border/40">
@@ -202,10 +204,10 @@ export function PopBentoRackKpiTile({
         {/* Filtered Device Inventory Breakdown Chips */}
         <div className="pt-3 border-t border-border/40 space-y-2">
           <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-            Rangkuman Perangkat Terpilih ({visibleDeviceTypes.length} Tipe Aktif)
+            {t("rackKpi.summaryLabel", { count: visibleDeviceTypes.length })}
           </p>
           <div className="flex flex-wrap items-center gap-1.5">
-            {POP_DEVICE_TYPES.filter((t) => visibleDeviceTypes.includes(t.key)).map((type) => {
+            {POP_DEVICE_TYPES.filter((dev) => visibleDeviceTypes.includes(dev.key)).map((type) => {
               const count = deviceTypeCounts[type.key] || 0;
               const slug = deviceTypeKeyToSlug(type.key);
               return (
