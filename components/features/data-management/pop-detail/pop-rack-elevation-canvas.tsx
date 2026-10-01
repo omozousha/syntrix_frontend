@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { deviceTypeKeyToSlug } from "@/lib/data-management-config";
+import { useTranslate } from "@/lib/use-locale";
 import type { DeviceToMount, RackOption } from "./pop-rack-mount-modal";
 
 type PopRackElevationCanvasProps = {
@@ -68,6 +69,7 @@ export function PopRackElevationCanvas({
   unmountedCount = 0,
   onToggleUnmountedTray,
 }: PopRackElevationCanvasProps) {
+  const { t } = useTranslate();
   const activeRack = racks.find((r) => r.id === selectedRackId) || racks[0];
   const maxU = activeRack?.rack_u_height || 42;
 
@@ -194,7 +196,7 @@ export function PopRackElevationCanvas({
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
           <div className="flex flex-wrap items-center gap-1.5">
             {racks.length === 0 ? (
-              <span className="text-xs text-muted-foreground">Belum ada Rak Cabinet di POP ini.</span>
+              <span className="text-xs text-muted-foreground">{t("rackElevation.noRack")}</span>
             ) : (
               racks.map((rack) => {
                 const isActive = rack.id === activeRack?.id;
@@ -220,7 +222,7 @@ export function PopRackElevationCanvas({
                             size="sm"
                             variant="default"
                             className="h-8 w-7 rounded-l-none px-0 border-l border-primary-foreground/20"
-                            title="Opsi Rak"
+                            title={t("rackElevation.rackOptions")}
                           >
                             <MoreVertical className="size-3.5" />
                           </Button>
@@ -229,14 +231,14 @@ export function PopRackElevationCanvas({
                           {onEditRack ? (
                             <DropdownMenuItem onClick={() => onEditRack(activeRack)}>
                               <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-                              <span>Edit Nama &amp; Ukuran</span>
+                              <span>{t("rackElevation.editRack")}</span>
                             </DropdownMenuItem>
                           ) : null}
 
                           {onResetRack ? (
                             <DropdownMenuItem onClick={() => setConfirmResetOpen(true)}>
                               <RotateCcw className="mr-2 size-3.5 text-amber-500" />
-                              <span>Reset Slot Rak</span>
+                              <span>{t("rackElevation.resetRack")}</span>
                             </DropdownMenuItem>
                           ) : null}
 
@@ -248,7 +250,7 @@ export function PopRackElevationCanvas({
                               className="text-destructive focus:text-destructive"
                             >
                               <Trash2 className="mr-2 size-3.5" />
-                              <span>Hapus Rak Cabinet</span>
+                              <span>{t("rackElevation.deleteRack")}</span>
                             </DropdownMenuItem>
                           ) : null}
                         </DropdownMenuContent>
@@ -268,17 +270,17 @@ export function PopRackElevationCanvas({
                 variant="outline"
                 className="h-8 rounded-xl border-border/60 bg-muted/20 text-xs font-mono font-medium hover:bg-muted/40 active:scale-[0.98]"
                 onClick={onToggleUnmountedTray}
-                title={showUnmountedTray ? "Sembunyikan Tray Perangkat" : "Tampilkan Tray Perangkat"}
+                title={showUnmountedTray ? t("rackElevation.hideTray") : t("rackElevation.showTray")}
               >
                 {showUnmountedTray ? (
                   <>
                     <PanelRightClose className="mr-1.5 size-3.5 text-muted-foreground" />
-                    <span>Sembunyikan Tray ({unmountedCount})</span>
+                    <span>{t("rackElevation.hideTrayWithCount", { count: unmountedCount })}</span>
                   </>
                 ) : (
                   <>
                     <PanelRightOpen className="mr-1.5 size-3.5 text-primary" />
-                    <span>Perangkat Belum Terpasang ({unmountedCount})</span>
+                    <span>{t("rackElevation.unmountedWithCount", { count: unmountedCount })}</span>
                   </>
                 )}
               </Button>
@@ -292,7 +294,7 @@ export function PopRackElevationCanvas({
               onClick={onCreateNewRack}
             >
               <Plus className="mr-1.5 size-3.5" />
-              <span>Tambah Rak Baru</span>
+              <span>{t("rackElevation.addRack")}</span>
             </Button>
           </div>
         </div>
@@ -301,13 +303,13 @@ export function PopRackElevationCanvas({
         {!activeRack ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/10 p-10 text-center text-xs text-muted-foreground space-y-3">
             <Server className="size-10 text-muted-foreground/40" />
-            <p className="font-semibold text-sm text-foreground">Belum Ada Rak Terpasang</p>
+            <p className="font-semibold text-sm text-foreground">{t("rackElevation.emptyTitle")}</p>
             <p className="max-w-sm">
-              Buat rack cabinet pertama (misal 42U) untuk mulai menata posisi OLT, OTB, Switch, dan Rectifier.
+              {t("rackElevation.emptyDescription")}
             </p>
             <Button type="button" size="sm" onClick={onCreateNewRack}>
               <Plus className="mr-1.5 size-4" />
-              Buat Rak Sekarang
+              {t("rackElevation.createNow")}
             </Button>
           </div>
         ) : (
@@ -382,7 +384,7 @@ export function PopRackElevationCanvas({
                               </div>
 
                               <div className="flex items-center gap-1 shrink-0">
-                                <Button asChild variant="ghost" size="icon" className="size-6 rounded-md hover:bg-muted" title="Buka Detail Perangkat">
+                                <Button asChild variant="ghost" size="icon" className="size-6 rounded-md hover:bg-muted" title={t("rackElevation.openDetail")}>
                                   <Link href={`/data-management/list/${deviceTypeKeyToSlug(device.device_type_key)}/${device.id}`}>
                                     <ExternalLink className="size-3 text-muted-foreground" />
                                   </Link>
@@ -394,7 +396,7 @@ export function PopRackElevationCanvas({
                                   className="size-6 rounded-md text-destructive hover:bg-destructive/10"
                                   onClick={() => handleUnmount(device.id)}
                                   disabled={unmountingId === device.id}
-                                  title="Lepas dari Rak (Unmount)"
+                                  title={t("rackElevation.unmountTitle")}
                                 >
                                   <Unlink className="size-3" />
                                 </Button>
@@ -402,7 +404,7 @@ export function PopRackElevationCanvas({
                             </>
                           ) : (
                             <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 font-mono italic">
-                              <span>↳ span slot {device.device_name}</span>
+                              <span>{t("rackElevation.spanSlot", { name: device.device_name })}</span>
                             </div>
                           )}
                         </div>
@@ -435,10 +437,10 @@ export function PopRackElevationCanvas({
                       {/* Empty Slot Area */}
                       <div className="flex-1 flex items-center justify-between px-3 py-1 border border-dashed border-transparent group-hover:border-border/60 text-xs text-muted-foreground/60 group-hover:text-muted-foreground">
                         <span className="font-mono text-[10px] tracking-wide">
-                          {isHovered ? (dragCollides ? "Slot bentrok!" : "Lepas untuk memasang di sini") : "Slot Kosong"}
+                          {isHovered ? (dragCollides ? t("rackElevation.slotBentrok") : t("rackElevation.slotDropHere")) : t("rackElevation.slotEmpty")}
                         </span>
                         <span className="opacity-0 group-hover:opacity-100 font-mono text-[10px] uppercase tracking-wider text-primary font-semibold transition-opacity">
-                          + Pasang
+                          {t("rackElevation.mountAction")}
                         </span>
                       </div>
                     </div>
@@ -461,20 +463,20 @@ export function PopRackElevationCanvas({
         <AlertDialogContent className="max-w-md rounded-2xl border-border/60 shadow-lg glass-inset p-5 sm:p-6 space-y-4">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-base font-bold text-foreground">
-              Reset Semua Slot {activeRack?.device_name}?
+              {t("rackElevation.resetTitle", { name: activeRack?.device_name ?? "" })}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
-              Semua perangkat yang terpasang di dalam rak ini akan dilepas dan dikembalikan ke <strong>Perangkat Belum Terpasang</strong>. Perangkat tidak akan terhapus dari POP.
+              {t("rackElevation.resetDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-2 border-t border-border/40">
-            <AlertDialogCancel className="rounded-xl border-border/60 text-xs">Batal</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl border-border/60 text-xs">{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="rounded-xl bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700"
               onClick={() => void handleConfirmReset()}
               disabled={actionLoading}
             >
-              {actionLoading ? "Mereset..." : "Ya, Kosongkan Rak"}
+              {actionLoading ? t("common.processing") : t("rackElevation.resetAction")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -485,20 +487,20 @@ export function PopRackElevationCanvas({
         <AlertDialogContent className="max-w-md rounded-2xl border-border/60 shadow-lg glass-inset p-5 sm:p-6 space-y-4">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-base font-bold text-destructive">
-              Hapus Rak {activeRack?.device_name}?
+              {t("rackElevation.deleteTitle", { name: activeRack?.device_name ?? "" })}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
-              Rak cabinet ini akan dihapus dari inventaris POP. Perangkat yang berada di dalamnya akan otomatis dilepas (unmounted) terlebih dahulu sehingga data perangkat tetap aman.
+              {t("rackElevation.deleteDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-2 border-t border-border/40">
-            <AlertDialogCancel className="rounded-xl border-border/60 text-xs">Batal</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl border-border/60 text-xs">{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="rounded-xl bg-destructive text-destructive-foreground text-xs font-semibold hover:bg-destructive/90"
               onClick={() => void handleConfirmDelete()}
               disabled={actionLoading}
             >
-              {actionLoading ? "Menghapus..." : "Ya, Hapus Rak"}
+              {actionLoading ? t("common.processing") : t("rackElevation.deleteAction")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
