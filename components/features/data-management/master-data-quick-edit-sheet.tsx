@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslate } from "@/lib/use-locale";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -40,6 +41,7 @@ export function MasterDataQuickEditSheet({
   hasFieldErrors,
   onSave,
 }: MasterDataQuickEditSheetProps) {
+  const { t } = useTranslate();
   const disabled = actionLoading || hasFieldErrors;
 
   return (
@@ -53,7 +55,7 @@ export function MasterDataQuickEditSheet({
             Quick Edit {categoryLabel}
           </SheetTitle>
           <SheetDescription className="text-xs text-muted-foreground">
-            Ubah data langsung dari list tanpa meninggalkan halaman.
+            {t("masterData.quickEdit.description")}
           </SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto thin-scrollbar px-4">
@@ -89,7 +91,7 @@ export function MasterDataQuickEditSheet({
             disabled={disabled}
             className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
           >
-            Batal
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
@@ -97,7 +99,7 @@ export function MasterDataQuickEditSheet({
             disabled={disabled}
             className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
           >
-            {actionLoading ? "Menyimpan..." : "Simpan Perubahan"}
+            {actionLoading ? t("common.saving") : t("common.save")}
           </Button>
         </SheetFooter>
       </SheetContent>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslate } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
@@ -33,6 +35,7 @@ export function MasterDataRenameDialog({
   actionLoading,
   onConfirm,
 }: MasterDataRenameDialogProps) {
+  const { t } = useTranslate();
   return (
     <AlertDialog open={open} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent className="rounded-2xl border border-border/60 shadow-lg glass-inset">
@@ -44,13 +47,13 @@ export function MasterDataRenameDialog({
             Rename {categoryLabel}
           </AlertDialogTitle>
           <AlertDialogDescription className="text-xs text-muted-foreground">
-            Perbarui nama data tanpa keluar dari halaman list.
+            {t("masterData.rename.description")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <Input
           value={value}
           onChange={(e) => onValueChange(e.target.value)}
-          placeholder={`Masukkan ${label}`}
+          placeholder={t("masterData.rename.placeholder", { label })}
           className="h-9 rounded-xl border-border/60 bg-card text-xs shadow-2xs glass-inset"
         />
         <AlertDialogFooter>
@@ -58,14 +61,14 @@ export function MasterDataRenameDialog({
             disabled={actionLoading}
             className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
           >
-            Batal
+            {t("common.cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
             disabled={actionLoading}
             onClick={onConfirm}
             className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
           >
-            {actionLoading ? "Menyimpan..." : "Simpan"}
+            {actionLoading ? t("common.saving") : t("common.save")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

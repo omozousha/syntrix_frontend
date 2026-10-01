@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslate } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,21 +40,22 @@ export function MasterDataUsageCheckDialog({
   onForceDelete: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslate();
   return (
     <AlertDialog open={usageCheck !== null && usageCheck.total > 0} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent className="rounded-2xl border border-border/60 shadow-lg glass-inset">
         <AlertDialogHeader>
           <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
-            PERINGATAN / DEPENDENSI
+            {t("masterData.usage.eyebrow")}
           </p>
           <AlertDialogTitle className="text-base font-semibold">
-            Data Masih Digunakan
+            {t("masterData.usage.title")}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-3">
               <div className="rounded-2xl border border-amber-300/60 bg-amber-50/70 p-3.5 dark:bg-amber-950/20 glass-inset">
                 <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400">
-                  {usageCheck?.total} data masih menggunakan referensi ini
+                  {t("masterData.usage.count", { count: usageCheck?.total ?? 0 })}
                 </p>
                 {usageCheck?.by_type
                   ? Object.entries(usageCheck.by_type).map(([table, info]) => (
@@ -79,7 +82,7 @@ export function MasterDataUsageCheckDialog({
                     ))
                   : null}
                 <p className="mt-2.5 text-xs text-amber-700/80 dark:text-amber-400/80">
-                  Hapus tetap bisa dilakukan, namun data yang merujuk mungkin rusak atau kehilangan referensi.
+                  {t("masterData.usage.hint")}
                 </p>
               </div>
             </div>
@@ -90,13 +93,13 @@ export function MasterDataUsageCheckDialog({
             onClick={onClose}
             className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
           >
-            Batal
+            {t("common.cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={() => void onForceDelete()}
             className="rounded-full bg-destructive font-mono text-[10px] uppercase tracking-[0.08em] text-destructive-foreground transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-destructive/90 active:scale-[0.98]"
           >
-            Tetap Hapus
+            {t("masterData.usage.forceDelete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -113,20 +116,21 @@ export function MasterDataDeleteConfirmDialog({
   onSubmitDelete,
   onClose,
 }: MasterDataDeleteDialogProps) {
+  const { t } = useTranslate();
   return (
     <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent className="rounded-2xl border border-border/60 shadow-lg glass-inset">
         <AlertDialogHeader>
           <p className={`font-mono text-[9px] uppercase tracking-[0.18em] ${isSoftDeleteResource ? "text-amber-600 dark:text-amber-400" : "text-destructive"}`}>
-            MASTER DATA / {isSoftDeleteResource ? "ARSIPKAN" : "HAPUS PERMANEN"}
+            MASTER DATA / {isSoftDeleteResource ? t("masterData.delete.action.archive") : t("masterData.delete.action.deletePermanently")}
           </p>
           <AlertDialogTitle className="text-base font-semibold">
-            {isSoftDeleteResource ? "Arsipkan" : "Hapus"} {categoryLabel}?
+            {t(isSoftDeleteResource ? "masterData.delete.action.archive" : "masterData.delete.action.delete")} {categoryLabel}?
           </AlertDialogTitle>
           <AlertDialogDescription className="text-xs text-muted-foreground">
             {isSoftDeleteResource
-              ? "Data akan dipindahkan ke arsip (soft delete) dan tidak tampil di list utama. Bisa dipulihkan dari halaman Trash."
-              : "Aksi ini tidak bisa dibatalkan. Data yang dipilih akan dihapus permanen dari sistem."}
+              ? t("masterData.delete.description.soft")
+              : t("masterData.delete.description.permanent")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -134,7 +138,7 @@ export function MasterDataDeleteConfirmDialog({
             disabled={actionLoading || usageLoading}
             className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
           >
-            Batal
+            {t("common.cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
             disabled={actionLoading || usageLoading}
@@ -146,10 +150,10 @@ export function MasterDataDeleteConfirmDialog({
             }`}
           >
             {actionLoading
-              ? isSoftDeleteResource ? "Mengarsipkan..." : "Menghapus..."
+              ? t(isSoftDeleteResource ? "masterData.delete.action.archiving" : "masterData.delete.action.deleting")
               : usageLoading
-                ? "Memeriksa referensi..."
-                : isSoftDeleteResource ? "Arsipkan" : "Hapus Permanen"}
+                ? t("masterData.delete.action.checking")
+                : t(isSoftDeleteResource ? "masterData.delete.action.archivePermanently" : "masterData.delete.action.deletePermanently")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
