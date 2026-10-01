@@ -14,6 +14,7 @@ import {
 } from "./port-tray-types";
 import { PortTrayCard } from "./port-tray-card";
 import { PortTrayBadge } from "./port-tray-badge";
+import { useTranslate } from "@/lib/use-locale";
 
 export function PortTrayContainer({
   devicePorts,
@@ -52,6 +53,7 @@ export function PortTrayContainer({
   onPortClick?: (port: DevicePort) => void;
   className?: string;
 }) {
+  const { t } = useTranslate();
   // Resolve layout config: prefer explicit, otherwise auto-generate
   const layoutConfig: TrayLayoutConfig | null = useMemo(() => {
     if (layoutConfigProp) return layoutConfigProp;
@@ -76,7 +78,7 @@ export function PortTrayContainer({
     return (
       <div className="space-y-2 rounded-md border p-3">
         <p className="text-sm font-medium">{sectionTitle}</p>
-        <AppLoading label={`Memuat ${isCable ? "core" : "port"}...`} />
+        <AppLoading label={t("portContainer.loadingTarget", { target: isCable ? "core" : "port" })} />
       </div>
     );
   }

@@ -1,9 +1,12 @@
+"use client";
+
 import { CheckCircle2, XCircle } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
+import { useTranslate } from "@/lib/use-locale";
 
 type OdpCoreChainSummary = {
   is_complete: boolean;
@@ -55,13 +58,14 @@ export function OdpPortMetrics({
   reservedPorts: number;
   downPorts: number;
 }) {
+  const { t } = useTranslate();
   return (
     <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-      <OdpMetric label="Total Port" value={totalPorts} />
-      <OdpMetric label="Used" value={usedPorts} tone="used" />
-      <OdpMetric label="Idle" value={idlePorts} tone="idle" />
-      <OdpMetric label="Reserved" value={reservedPorts} tone="reserved" />
-      <OdpMetric label="Down/Maint." value={downPorts} tone="down" />
+      <OdpMetric label={t("coreChainMetric.totalPort")} value={totalPorts} />
+      <OdpMetric label={t("coreChainMetric.used")} value={usedPorts} tone="used" />
+      <OdpMetric label={t("coreChainMetric.idle")} value={idlePorts} tone="idle" />
+      <OdpMetric label={t("coreChainMetric.reserved")} value={reservedPorts} tone="reserved" />
+      <OdpMetric label={t("coreChainMetric.downMaint")} value={downPorts} tone="down" />
     </div>
   );
 }
@@ -103,16 +107,17 @@ export function OdpCoreChainSummarySection({
     coreEnd?: number;
   }) => void;
 }) {
+  const { t } = useTranslate();
   return (
     <div className="rounded-md border p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">Core Chain Summary</p>
+        <p className="text-sm font-medium">{t("coreChain.title")}</p>
         <Badge variant={coreChainSummary?.is_complete ? "secondary" : "outline"}>
-          {coreChainSummary?.is_complete ? "Complete" : "Incomplete"}
+          {coreChainSummary?.is_complete ? t("coreChain.complete") : t("coreChain.incomplete")}
         </Badge>
       </div>
       {loading ? (
-        <AppLoading label="Memuat rantai core ODP..." />
+        <AppLoading label={t("coreChain.loading")} />
       ) : coreChainSummary ? (
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
@@ -140,13 +145,13 @@ export function OdpCoreChainSummarySection({
           ) : null}
           {coreChainSummary.upstream_port_candidates?.length ? (
             <div className="space-y-1 rounded-md border p-2">
-              <p className="text-xs font-medium">Suggested Upstream Ports</p>
+              <p className="text-xs font-medium">{t("coreChain.suggestedUpstreamPorts")}</p>
               <div className="grid grid-cols-1 gap-2 pb-1 md:grid-cols-2">
                 <Combobox
                   value={effectiveDraftTargetPortId || "__none__"}
                   onValueChange={(value) => onDraftTargetPortChange(value === "__none__" ? "" : value)}
                   options={[
-                    { value: "__none__", label: "Pilih port ODP target" },
+                    { value: "__none__", label: t("coreChain.selectTargetPort") },
                     ...odpPortOptions,
                   ]}
                   triggerClassName="h-8 text-xs"
@@ -160,7 +165,7 @@ export function OdpCoreChainSummarySection({
                 <Input
                   type="number"
                   min={1}
-                  placeholder="Core start (opsional)"
+                  placeholder={t("coreChain.coreStartPlaceholder")}
                   value={draftCoreStart}
                   onChange={(event) => onDraftCoreStartChange(event.target.value)}
                   className="h-8 text-xs"
@@ -168,7 +173,7 @@ export function OdpCoreChainSummarySection({
                 <Input
                   type="number"
                   min={1}
-                  placeholder="Core end (opsional)"
+                  placeholder={t("coreChain.coreEndPlaceholder")}
                   value={draftCoreEnd}
                   onChange={(event) => onDraftCoreEndChange(event.target.value)}
                   className="h-8 text-xs"
@@ -198,7 +203,7 @@ export function OdpCoreChainSummarySection({
                         })
                       }
                     >
-                      {creatingDraftLink ? "..." : "Draft Link"}
+                      {creatingDraftLink ? "..." : t("coreChain.draftLink")}
                     </Button>
                   </div>
                 ))}
@@ -207,7 +212,7 @@ export function OdpCoreChainSummarySection({
           ) : null}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">Ringkasan rantai core belum tersedia.</p>
+        <p className="text-xs text-muted-foreground">{t("coreChain.summaryUnavailable")}</p>
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import { AppLoading } from "@/components/app-loading-new";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslate } from "@/lib/use-locale";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -74,6 +75,7 @@ export function OdcCoreChainSummarySection({
   loading: boolean;
   onRefresh?: () => void;
 }) {
+  const { t } = useTranslate();
   if (!chainSummary && !loading) return null;
 
   return (
@@ -104,7 +106,7 @@ export function OdcCoreChainSummarySection({
       </CardHeader>
       <CardContent className="px-3 pb-3 pt-0">
         {loading ? (
-          <AppLoading label="Memuat status chain ODC..." />
+          <AppLoading label={t("chainSection.loadingOdc")} />
         ) : chainSummary ? (
           <div className="space-y-3">
             {/* 6 Check Status */}
@@ -184,7 +186,7 @@ export function OdcCoreChainSummarySection({
             {/* Suggestions */}
             {chainSummary.suggestions && chainSummary.suggestions.length > 0 && (
               <div className="rounded-md border bg-muted/20 p-2">
-                <p className="mb-1 text-xs font-medium">Saran Perbaikan</p>
+                <p className="mb-1 text-xs font-medium">{t("chainSection.recommendations")}</p>
                 <div className="space-y-1">
                   {chainSummary.suggestions.map((item) => (
                     <p key={item.key} className="text-xs text-muted-foreground">
@@ -207,7 +209,7 @@ export function OdcCoreChainSummarySection({
             )}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Status chain ODC belum tersedia.</p>
+          <p className="text-xs text-muted-foreground">{t("chainSection.odcUnavailable")}</p>
         )}
       </CardContent>
     </Card>
@@ -239,6 +241,7 @@ export function OtbCoreChainSummarySection({
   loading: boolean;
   onRefresh?: () => void;
 }) {
+  const { t } = useTranslate();
   if (!chainSummary && !loading) return null;
 
   return (
@@ -269,7 +272,7 @@ export function OtbCoreChainSummarySection({
       </CardHeader>
       <CardContent className="px-3 pb-3 pt-0">
         {loading ? (
-          <AppLoading label="Memuat chain OTB..." />
+          <AppLoading label={t("chainSection.loadingOtb")} />
         ) : chainSummary ? (
           <div className="space-y-3">
             {/* Metrics */}
@@ -281,7 +284,7 @@ export function OtbCoreChainSummarySection({
                 value={`${chainSummary.total_core_used}/${chainSummary.total_core_capacity}`}
               />
               <div className="rounded-md border bg-background p-2">
-                <p className="text-[10px] font-medium uppercase text-muted-foreground">Utilisasi</p>
+                <p className="text-[10px] font-medium uppercase text-muted-foreground">{t("chainSection.utilization")}</p>
                 <p className={`mt-1 text-lg font-semibold ${
                   chainSummary.total_core_capacity > 0
                     ? chainSummary.total_core_used / chainSummary.total_core_capacity > 0.8
@@ -329,7 +332,7 @@ export function OtbCoreChainSummarySection({
             )}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Status chain OTB belum tersedia.</p>
+          <p className="text-xs text-muted-foreground">{t("chainSection.otbUnavailable")}</p>
         )}
       </CardContent>
     </Card>

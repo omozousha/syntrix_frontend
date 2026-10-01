@@ -12,6 +12,7 @@ import {
 } from "./port-tray-types";
 import { OltPortCard } from "./olt-port-card";
 import { PortTrayBadge } from "./port-tray-badge";
+import { useTranslate } from "@/lib/use-locale";
 
 export function OltPortContainer({
   devicePorts,
@@ -35,6 +36,7 @@ export function OltPortContainer({
   onPortClick?: (port: DevicePort) => void;
   className?: string;
 }) {
+  const { t } = useTranslate();
   const layoutConfig: TrayLayoutConfig = useMemo(
     () => generateOltLayout(totalPorts || 24, ponPortCount, uplinkPortCount),
     [totalPorts, ponPortCount, uplinkPortCount],
@@ -54,7 +56,7 @@ export function OltPortContainer({
     return (
       <div className="space-y-2 rounded-md border p-3">
         <p className="text-sm font-medium">Port OLT</p>
-        <AppLoading label="Memuat port OLT..." />
+        <AppLoading label={t("portContainer.loadingOlt")} />
       </div>
     );
   }

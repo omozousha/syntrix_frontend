@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
+import { useTranslate } from "@/lib/use-locale";
 
 type CableRow = {
   id: string;
@@ -24,6 +25,7 @@ export function OdcDistributionCablesSection({
   deviceId: string;
   token: string | null;
 }) {
+  const { t } = useTranslate();
   const [cables, setCables] = useState<CableRow[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -47,14 +49,14 @@ export function OdcDistributionCablesSection({
     void loadCables();
   }, [deviceId, token]);
 
-  if (loading) return <AppLoading label="Memuat kabel distribusi..." />;
+  if (loading) return <AppLoading label={t("cableSection.loading")} />;
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           <Cable className="size-4 text-muted-foreground" />
-          Kabel Distribusi
+          {t("cableSection.title")}
         </CardTitle>
         <Button type="button" variant="ghost" size="icon" className="size-7" onClick={loadCables}>
           <RefreshCw className="size-3.5" />
@@ -62,7 +64,7 @@ export function OdcDistributionCablesSection({
       </CardHeader>
       <CardContent className="space-y-2 px-3 pb-3 pt-0">
         {cables.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Belum ada kabel distribusi tercatat.</p>
+          <p className="text-xs text-muted-foreground">{t("cableSection.empty")}</p>
         ) : (
           cables.map((cable) => (
             <div key={cable.id} className="flex items-center gap-3 rounded-md border bg-muted/20 p-2 text-xs">

@@ -12,6 +12,7 @@ import {
 } from "./port-tray-types";
 import { SwitchPortCard } from "./switch-port-card";
 import { PortTrayBadge } from "./port-tray-badge";
+import { useTranslate } from "@/lib/use-locale";
 
 export function SwitchPortContainer({
   devicePorts,
@@ -35,6 +36,7 @@ export function SwitchPortContainer({
   onPortClick?: (port: DevicePort) => void;
   className?: string;
 }) {
+  const { t } = useTranslate();
   const layoutConfig: TrayLayoutConfig = useMemo(
     () => generateSwitchLayout(totalPorts || 48, accessPortCount, uplinkPortCount),
     [totalPorts, accessPortCount, uplinkPortCount],
@@ -49,7 +51,7 @@ export function SwitchPortContainer({
     return (
       <div className="space-y-2 rounded-md border p-3">
         <p className="text-sm font-medium">Port Switch</p>
-        <AppLoading label="Memuat port switch..." />
+        <AppLoading label={t("portContainer.loadingSwitch")} />
       </div>
     );
   }
