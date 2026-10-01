@@ -1,3 +1,5 @@
+"use client";
+
 import type { LucideIcon } from "lucide-react";
 import { OperationalKpiCard } from "@/components/operational-ui";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
