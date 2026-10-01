@@ -5,6 +5,7 @@ import { FileText, Copy, Check, Calendar, Landmark, User, Phone, ShieldAlert, Al
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 export type PopSitePropertyData = {
   pbb_nop?: string | null;
@@ -29,6 +30,20 @@ function formatRupiah(val?: string | number | null) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(num);
 }
 
+const BUILDING_STATUS_MAP: Record<string, string> = {
+  "sewa lahan / ruko": "Land / Building Lease",
+  "milik sendiri": "Owned",
+  sewa: "Lease",
+  owned: "Owned",
+  own: "Owned",
+};
+
+function formatPropertyStatus(status: string | null | undefined, locale: string, t: TFn): string {
+  if (!status) return t("propertyTile.defaultStatus");
+  if (locale !== "en") return status;
+  return BUILDING_STATUS_MAP[status.toLowerCase()] ?? status;
+}
+
 function formatDate(val?: string | null) {
   if (!val) return "-";
   try {
@@ -40,7 +55,7 @@ function formatDate(val?: string | null) {
   }
 }
 
-function getLeaseRemainingDays(endDateStr?: string | null): { days: number; text: string; tone: "ok" | "warning" | "expired" } | null {
+function getLeaseRemainingDays(endDateStr?: string | null, t?: TFn): { days: number; text: string; tone: "ok" | "warning" | "expired" } | null {
   if (!endDateStr) return null;
   try {
     const end = new Date(endDateStr);
@@ -48,15 +63,16 @@ function getLeaseRemainingDays(endDateStr?: string | null): { days: number; text
     const now = new Date();
     const diffMs = end.getTime() - now.getTime();
     const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    if (days < 0) return { days, text: "Kontrak Kadaluarsa", tone: "expired" };
-    if (days <= 60) return { days, text: `Sisa ${days} Hari (Mendekati Jatuh Tempo)`, tone: "warning" };
-    return { days, text: `Sisa ${days} Hari`, tone: "ok" };
+    if (days < 0) return { days, text: t ? t("propertyTile.expired") : "Kontrak Kadaluarsa", tone: "expired" };
+    if (days <= 60) return { days, text: t ? t("propertyTile.daysRemaining", { days }) : `Sisa ${days} Hari (Mendekati Jatuh Tempo)`, tone: "warning" };
+    return { days, text: t ? t("propertyTile.daysOk", { days }) : `Sisa ${days} Hari`, tone: "ok" };
   } catch {
     return null;
   }
 }
 
 export function PopBentoPropertyTile({ property }: PopBentoPropertyTileProps) {
+  const { t, locale } = useTranslate();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   function copyText(text: string, key: string) {
@@ -67,10 +83,11 @@ export function PopBentoPropertyTile({ property }: PopBentoPropertyTileProps) {
   }
 
   const pbbNop = property?.pbb_nop || "";
-  const buildingStatus = property?.building_status || "Sewa Lahan / Ruko";
-  const isOwned = buildingStatus.toLowerCase().includes("milik") || buildingStatus.toLowerCase().includes("owned");
+  const rawBuildingStatus = property?.building_status || "Sewa Lahan / Ruko";
+  const buildingStatus = formatPropertyStatus(rawBuildingStatus, locale, t);
+  const isOwned = rawBuildingStatus.toLowerCase().includes("milik") || rawBuildingStatus.toLowerCase().includes("owned");
   const leaseEnd = property?.lease_end_date;
-  const leaseStatus = isOwned ? null : getLeaseRemainingDays(leaseEnd);
+  const leaseStatus = isOwned ? null : getLeaseRemainingDays(leaseEnd, t);
 
   return (
     <Card className="rounded-2xl border-border/60 shadow-xs glass-inset transition-all duration-300">
@@ -82,8 +99,8 @@ export function PopBentoPropertyTile({ property }: PopBentoPropertyTileProps) {
               <Landmark className="size-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-foreground">Legalitas Site, Kontrak &amp; Pajak PBB</h2>
-              <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Property &amp; Lease Facility</p>
+              <h2 className="text-sm font-bold text-foreground">{t("propertyTile.title")}</h2>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{t("propertyTile.eyebrow")}</p>
             </div>
           </div>
 
@@ -99,7 +116,7 @@ export function PopBentoPropertyTile({ property }: PopBentoPropertyTileProps) {
                 : "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400"
             }`}
           >
-            {isOwned ? "Milik Sendiri" : leaseStatus?.text || buildingStatus}
+            {isOwned ? t("propertyTile.owned") : leaseStatus?.text || buildingStatus}
           </Badge>
         </div>
 
@@ -116,68 +133,68 @@ export function PopBentoPropertyTile({ property }: PopBentoPropertyTileProps) {
                   size="icon"
                   className="size-4 p-0 rounded-sm hover:bg-muted"
                   onClick={() => copyText(pbbNop, "nop")}
-                  title="Salin NOP PBB"
+                  title={t("propertyTile.copyNop")}
                 >
                   {copiedKey === "nop" ? <Check className="size-2.5 text-emerald-500" /> : <Copy className="size-2.5 text-muted-foreground" />}
                 </Button>
               ) : null}
             </div>
             <p className="font-mono tabular-nums text-sm font-bold text-foreground truncate">
-              {pbbNop || "Belum Didaftarkan"}
+              {pbbNop || t("propertyTile.unregistered")}
             </p>
-            <p className="text-[10px] text-muted-foreground">Nomor Objek Pajak</p>
+            <p className="text-[10px] text-muted-foreground">{t("propertyTile.nopCaption")}</p>
           </div>
 
           {/* Periode Kontrak Sewa */}
           <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
-            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Masa Sewa Kontrak</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("propertyTile.leasePeriod")}</span>
             <p className="font-mono tabular-nums text-sm font-bold text-foreground truncate">
-              {property?.lease_end_date ? formatDate(property.lease_end_date) : isOwned ? "Permanen (Aset)" : "-"}
+              {property?.lease_end_date ? formatDate(property.lease_end_date) : isOwned ? t("propertyTile.permanent") : "-"}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {property?.lease_start_date ? `Mulai: ${formatDate(property.lease_start_date)}` : "Jatuh tempo kontrak"}
+              {property?.lease_start_date ? t("propertyTile.leaseStart", { date: formatDate(property.lease_start_date) }) : t("propertyTile.leaseExpiry")}
             </p>
           </div>
 
           {/* Pemilik Lahan (Landlord) */}
           <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
-            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Pemilik Lahan / PIC</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("propertyTile.landlord")}</span>
             <p className="text-sm font-bold text-foreground truncate" title={property?.landlord_name || "-"}>
               {property?.landlord_name || "-"}
             </p>
             <p className="font-mono text-[10px] text-muted-foreground truncate">
-              {property?.landlord_contact ? `HP: ${property.landlord_contact}` : "Kontak belum diisi"}
+              {property?.landlord_contact ? t("propertyTile.contact", { phone: property.landlord_contact }) : t("propertyTile.contactEmpty")}
             </p>
           </div>
 
           {/* Biaya Sewa Tahunan */}
           <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
-            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Biaya Sewa / Tahun</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("propertyTile.leaseCost")}</span>
             <p className="font-mono tabular-nums text-sm font-bold text-foreground truncate">
-              {isOwned ? "Rp 0 (Milik Sendiri)" : formatRupiah(property?.annual_lease_cost)}
+              {isOwned ? t("propertyTile.ownedCost") : formatRupiah(property?.annual_lease_cost)}
             </p>
-            <p className="text-[10px] text-muted-foreground">Beban operasional site</p>
+            <p className="text-[10px] text-muted-foreground">{t("propertyTile.leaseCostCaption")}</p>
           </div>
         </div>
 
         {/* Secondary Info: Status Lahan & Izin PBG/IMB */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-border/40 text-xs">
           <div className="space-y-0.5">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Status Bangunan / Lahan</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("propertyTile.landStatus")}</p>
             <p className="font-semibold text-foreground truncate">{buildingStatus}</p>
           </div>
 
           <div className="space-y-0.5">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">No. Izin / IMB / PBG</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("propertyTile.permit")}</p>
             <p className="font-mono tabular-nums font-semibold text-foreground truncate">
               {property?.permit_number || "-"}
             </p>
           </div>
 
           <div className="space-y-0.5">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Catatan Legalitas</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("propertyTile.legalNotes")}</p>
             <p className="text-muted-foreground truncate italic">
-              {property?.legal_notes || "Tidak ada catatan hukum khusus."}
+              {property?.legal_notes || t("propertyTile.legalNotesEmpty")}
             </p>
           </div>
         </div>
