@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { downloadAttachmentFile } from "@/lib/attachment-utils";
+import { useTranslate } from "@/lib/use-locale";
 
 export type PopDocumentRef = {
   id: string;
@@ -83,6 +84,7 @@ export function PopBentoDocumentsTile({
   onUploadDocument,
   onDeleteDocument,
 }: PopBentoDocumentsTileProps) {
+  const { t } = useTranslate();
   const [uploading, setUploading] = useState(false);
   const [uploadCategory, setUploadCategory] = useState("kontrak_sewa");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -100,7 +102,7 @@ export function PopBentoDocumentsTile({
       setShowUploadForm(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
-      alert((err as Error).message || "Gagal mengunggah berkas dokumen.");
+      alert((err as Error).message || t("documentsTile.uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -112,19 +114,19 @@ export function PopBentoDocumentsTile({
     try {
       await downloadAttachmentFile(doc.id, token);
     } catch (err) {
-      alert((err as Error).message || "Gagal mengunduh berkas.");
+      alert((err as Error).message || t("documentsTile.downloadFailed"));
     } finally {
       setDownloadingId(null);
     }
   }
 
   async function handleDelete(doc: PopDocumentRef) {
-    if (!onDeleteDocument || !confirm(`Hapus berkas "${doc.original_name}"?`)) return;
+    if (!onDeleteDocument || !confirm(t("documentsTile.deleteConfirm", { name: doc.original_name }))) return;
     setDeletingId(doc.id);
     try {
       await onDeleteDocument(doc.id);
     } catch (err) {
-      alert((err as Error).message || "Gagal menghapus berkas.");
+      alert((err as Error).message || t("documentsTile.deleteFailed"));
     } finally {
       setDeletingId(null);
     }
@@ -140,7 +142,7 @@ export function PopBentoDocumentsTile({
               <Paperclip className="size-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-foreground">Berkas &amp; Dokumen Site POP</h2>
+              <h2 className="text-sm font-bold text-foreground">{t("documentsTile.title")}</h2>
               <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                 Kontrak Sewa, Surat Izin PBG, Bukti PBB &amp; BAST
               </p>
@@ -149,7 +151,7 @@ export function PopBentoDocumentsTile({
 
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="font-mono tabular-nums text-[10px] uppercase">
-              {documents.length} Berkas
+              {t("documentsTile.count", { count: documents.length })}
             </Badge>
             {canEdit && onUploadDocument ? (
               <Button
@@ -160,7 +162,7 @@ export function PopBentoDocumentsTile({
                 onClick={() => setShowUploadForm(!showUploadForm)}
               >
                 <Plus className="mr-1.5 size-3.5" />
-                <span>{showUploadForm ? "Tutup Form" : "Upload Berkas"}</span>
+                <span>{showUploadForm ? t("documentsTile.hideForm") : t("documentsTile.uploadButton")}</span>
               </Button>
             ) : null}
           </div>
@@ -170,16 +172,16 @@ export function PopBentoDocumentsTile({
         {showUploadForm ? (
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-3.5 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-foreground">Unggah Dokumen Site Baru</p>
+              <p className="text-xs font-bold text-foreground">{t("documentsTile.uploadTitle")}</p>
               <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">PDF / Word / Excel</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               <div className="space-y-1">
-                <Label className="text-xs font-medium">Kategori Dokumen</Label>
+                <Label className="text-xs font-medium">{t("documentsTile.categoryLabel")}</Label>
                 <Select value={uploadCategory} onValueChange={setUploadCategory}>
                   <SelectTrigger className="h-9 rounded-xl border-border/60 bg-background text-xs">
-                    <SelectValue placeholder="Pilih Kategori" />
+                    <SelectValue placeholder={t("documentsTile.categoryPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-border/60">
                     {POP_DOCUMENT_CATEGORIES.map((cat) => (
@@ -192,7 +194,7 @@ export function PopBentoDocumentsTile({
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs font-medium">Pilih File Berkas</Label>
+                <Label className="text-xs font-medium">{t("documentsTile.fileLabel")}</Label>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -207,7 +209,7 @@ export function PopBentoDocumentsTile({
             {uploading ? (
               <div className="flex items-center gap-2 text-xs text-primary font-medium pt-1">
                 <Loader2 className="size-3.5 animate-spin" />
-                <span>Mengunggah dokumen ke cloud storage...</span>
+                <span>{t("documentsTile.uploading")}</span>
               </div>
             ) : null}
           </div>
@@ -217,9 +219,9 @@ export function PopBentoDocumentsTile({
         {documents.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/10 p-8 text-center text-xs text-muted-foreground space-y-2">
             <FileText className="size-8 text-muted-foreground/50 mb-1" />
-            <p className="font-semibold text-foreground">Belum Ada Berkas Dokumen Terlampir</p>
+            <p className="font-semibold text-foreground">{t("documentsTile.emptyTitle")}</p>
             <p className="max-w-md text-[11px] leading-relaxed">
-              Unggah salinan dokumen resmi site seperti <strong>Surat Perjanjian Sewa Lahan</strong>, <strong>Tanda Lunas PBB</strong>, dan <strong>Izin PBG/IMB</strong> untuk memudahkan audit fisik.
+              {t("documentsTile.emptyDescription")}
             </p>
           </div>
         ) : (
@@ -254,7 +256,7 @@ export function PopBentoDocumentsTile({
 
                   <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-border/40">
                     <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground truncate">
-                      {POP_DOCUMENT_CATEGORIES.find((c) => c.value === doc.document_tag)?.label || "Dokumen Site"}
+                      {POP_DOCUMENT_CATEGORIES.find((c) => c.value === doc.document_tag)?.label || t("documentsTile.defaultLabel")}
                     </span>
 
                     <div className="flex items-center gap-1">
@@ -265,14 +267,14 @@ export function PopBentoDocumentsTile({
                         className="h-7 text-[10px] rounded-lg px-2 text-primary hover:bg-primary/10"
                         onClick={() => void handleDownload(doc)}
                         disabled={isDownloading}
-                        title="Unduh Berkas"
+                        title={t("documentsTile.downloadTooltip")}
                       >
                         {isDownloading ? (
                           <Loader2 className="size-3 animate-spin" />
                         ) : (
                           <>
                             <Download className="mr-1 size-3" />
-                            Unduh
+                            {t("documentsTile.downloadAction")}
                           </>
                         )}
                       </Button>
@@ -285,7 +287,7 @@ export function PopBentoDocumentsTile({
                           className="size-7 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                           onClick={() => void handleDelete(doc)}
                           disabled={isDeleting}
-                          title="Hapus Berkas"
+                          title={t("documentsTile.deleteTooltip")}
                         >
                           {isDeleting ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
                         </Button>
