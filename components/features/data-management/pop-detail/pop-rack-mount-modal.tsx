@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
+import { useTranslate } from "@/lib/use-locale";
 import { isRackMountable } from "@/lib/pop-device-config";
 
 export type DeviceToMount = {
@@ -45,6 +46,7 @@ export function PopRackMountModal({
   unmountedDevices,
   onMount,
 }: PopRackMountModalProps) {
+  const { t } = useTranslate();
   const [targetRackId, setTargetRackId] = useState(selectedRackId);
   const [deviceId, setDeviceId] = useState(initialDevice?.id || "");
   const [uPosition, setUPosition] = useState(String(initialU || 1));
@@ -65,13 +67,13 @@ export function PopRackMountModal({
 
   async function handleConfirm() {
     if (!deviceId) {
-      setError("Pilih perangkat yang ingin dipasang ke rak.");
+      setError(t("pop.rackMount.error.selectDevice"));
       return;
     }
     const pos = parseInt(uPosition, 10);
     const height = parseInt(uHeight, 10);
     if (Number.isNaN(pos) || pos < 1 || pos > maxU) {
-      setError(`Posisi U harus berada di antara 1 dan ${maxU}.`);
+      setError(t("pop.rackMount.error.uRange", { maxU }));
       return;
     }
 
@@ -81,7 +83,7 @@ export function PopRackMountModal({
       await onMount(deviceId, targetRackId || activeRack.id, pos, height);
       onOpenChange(false);
     } catch (err) {
-      setError((err as Error).message || "Gagal memasang perangkat ke rak.");
+      setError((err as Error).message || t("pop.rackMount.error.mountFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -105,9 +107,9 @@ export function PopRackMountModal({
               <Server className="size-4" />
             </div>
             <div>
-              <DialogTitle className="text-base font-bold">Pasang Perangkat ke Slot Rak</DialogTitle>
+              <DialogTitle className="text-base font-bold">{t("pop.rackMount.title")}</DialogTitle>
               <DialogDescription className="text-xs">
-                Tentukan posisi slot U awal dan tinggi unit perangkat di cabinet.
+                {t("pop.rackMount.description")}
               </DialogDescription>
             </div>
           </div>
@@ -116,10 +118,10 @@ export function PopRackMountModal({
         <div className="space-y-3 pt-2">
           {racks.length > 1 ? (
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Pilih Rak Cabinet</Label>
+              <Label className="text-xs font-semibold">{t("pop.rackMount.selectCabinet")}</Label>
               <Select value={targetRackId || activeRack?.id} onValueChange={setTargetRackId}>
                 <SelectTrigger className="h-9 rounded-xl border-border/60 text-xs">
-                  <SelectValue placeholder="Pilih Rak" />
+                  <SelectValue placeholder={t("pop.rackMount.selectRack")} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-border/60">
                   {racks.map((r) => (
@@ -133,7 +135,7 @@ export function PopRackMountModal({
           ) : null}
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Perangkat</Label>
+            <Label className="text-xs font-semibold">{t("pop.rackMount.device")}</Label>
             {initialDevice ? (
               <div className="rounded-xl border border-border/60 bg-muted/20 p-2.5 text-xs font-medium">
                 {initialDevice.device_name} <span className="font-mono text-[10px] text-muted-foreground">({initialDevice.device_type_key})</span>
@@ -147,26 +149,26 @@ export function PopRackMountModal({
                   if (selected?.u_height) setUHeight(String(selected.u_height));
                 }}
                 options={deviceOptions}
-                placeholder="Pilih perangkat POP"
-                searchPlaceholder="Cari perangkat..."
-                emptyText="Semua perangkat sudah terpasang di rak."
+                placeholder={t("pop.rackMount.selectDevice")}
+                searchPlaceholder={t("pop.rackMount.searchDevice")}
+                emptyText={t("pop.rackMount.allMounted")}
               />
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Posisi U (1–{maxU})</Label>
+              <Label className="text-xs font-semibold">{t("pop.rackMount.uPositionLabel", { maxU })}</Label>
               <Select value={uPosition} onValueChange={setUPosition}>
                 <SelectTrigger className="h-9 rounded-xl border-border/60 font-mono text-xs">
-                  <SelectValue placeholder="Posisi U" />
+                  <SelectValue placeholder={t("pop.rackMount.uPositionSelect")} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-border/60 max-h-48">
                   {Array.from({ length: maxU }).map((_, idx) => {
                     const u = maxU - idx;
                     return (
                       <SelectItem key={u} value={String(u)} className="font-mono text-xs">
-                        Slot U{u}
+                        {t("pop.rackMount.slotU", { u })}
                       </SelectItem>
                     );
                   })}
@@ -175,10 +177,10 @@ export function PopRackMountModal({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Tinggi Unit (U)</Label>
+              <Label className="text-xs font-semibold">{t("pop.rackMount.unitHeightLabel")}</Label>
               <Select value={uHeight} onValueChange={setUHeight}>
                 <SelectTrigger className="h-9 rounded-xl border-border/60 font-mono text-xs">
-                  <SelectValue placeholder="Tinggi U" />
+                  <SelectValue placeholder={t("pop.rackMount.unitHeightSelect")} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-border/60">
                   <SelectItem value="1" className="font-mono text-xs">1U (Standard)</SelectItem>
@@ -202,7 +204,7 @@ export function PopRackMountModal({
             onClick={() => onOpenChange(false)}
             disabled={submitting}
           >
-            Batal
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
@@ -210,7 +212,7 @@ export function PopRackMountModal({
             onClick={() => void handleConfirm()}
             disabled={submitting || !deviceId}
           >
-            {submitting ? "Memasang..." : "Pasang ke Rak"}
+            {submitting ? t("pop.rackMount.mounting") : t("pop.rackMount.mount")}
           </Button>
         </DialogFooter>
       </DialogContent>
