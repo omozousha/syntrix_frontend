@@ -7,26 +7,28 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useTranslate } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 import type { RackOption } from "./pop-rack-mount-modal";
 
-export const EIA310_RACK_HEIGHT_OPTIONS = [
-  { value: "48", label: "48U — High Density Telco Cabinet" },
-  { value: "45", label: "45U — Tall POP Cabinet" },
-  { value: "42", label: "42U — Standard Full Cabinet (EIA-310-D Recommended)" },
-  { value: "27", label: "27U — Mid Server Rack" },
-  { value: "24", label: "24U — Half Cabinet (Secondary Shelter)" },
-  { value: "18", label: "18U — Large Wallmount" },
-  { value: "15", label: "15U — Mid Wallmount" },
-  { value: "12", label: "12U — Standard Wallmount" },
-  { value: "9", label: "9U — Compact Edge Enclosure" },
-  { value: "6", label: "6U — Micro ODF Box" },
-] as const;
+export const EIA310_RACK_HEIGHT_OPTIONS: ReadonlyArray<{ value: string; labelKey: MessageKey }> = [
+  { value: "48", labelKey: "popRack.height.48" },
+  { value: "45", labelKey: "popRack.height.45" },
+  { value: "42", labelKey: "popRack.height.42" },
+  { value: "27", labelKey: "popRack.height.27" },
+  { value: "24", labelKey: "popRack.height.24" },
+  { value: "18", labelKey: "popRack.height.18" },
+  { value: "15", labelKey: "popRack.height.15" },
+  { value: "12", labelKey: "popRack.height.12" },
+  { value: "9", labelKey: "popRack.height.9" },
+  { value: "6", labelKey: "popRack.height.6" },
+];
 
-export const RACK_TYPE_OPTIONS = [
-  { value: "closed_cabinet", label: "Closed Cabinet (Pintu Kaca / Perforated)" },
-  { value: "open_frame", label: "Open Frame Rack (4-Post / 2-Post)" },
-  { value: "outdoor_enclosure", label: "Outdoor Weatherproof Cabinet (IP65)" },
-] as const;
+export const RACK_TYPE_OPTIONS: ReadonlyArray<{ value: string; labelKey: MessageKey }> = [
+  { value: "closed_cabinet", labelKey: "popRack.type.closedCabinet" },
+  { value: "open_frame", labelKey: "popRack.type.openFrame" },
+  { value: "outdoor_enclosure", labelKey: "popRack.type.outdoorEnclosure" },
+];
 
 type PopRackFormDialogProps = {
   open: boolean;
@@ -45,6 +47,7 @@ export function PopRackFormDialog({
   defaultNextName = "Rack 01",
   onSubmit,
 }: PopRackFormDialogProps) {
+  const { t } = useTranslate();
   const [name, setName] = useState(defaultNextName);
   const [uHeight, setUHeight] = useState("42");
   const [rackType, setRackType] = useState("closed_cabinet");
@@ -69,12 +72,12 @@ export function PopRackFormDialog({
   async function handleConfirm() {
     const trimmed = name.trim();
     if (!trimmed) {
-      setError("Nama rak tidak boleh kosong.");
+      setError(t("popRack.nameRequired"));
       return;
     }
     const height = parseInt(uHeight, 10);
     if (Number.isNaN(height) || height < 1 || height > 60) {
-      setError("Tinggi U harus berada di antara 1U dan 60U.");
+      setError(t("popRack.heightRange"));
       return;
     }
 
@@ -88,7 +91,7 @@ export function PopRackFormDialog({
       });
       onOpenChange(false);
     } catch (err) {
-      setError((err as Error).message || "Gagal menyimpan konfigurasi rak.");
+      setError((err as Error).message || t("popRack.saveFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -104,10 +107,10 @@ export function PopRackFormDialog({
             </div>
             <div>
               <DialogTitle className="text-base font-bold">
-                {mode === "create" ? "Tambah Rak Cabinet Baru" : "Edit Konfigurasi Rak"}
+                {mode === "create" ? t("popRack.createTitle") : t("popRack.editTitle")}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Standar internasional EIA-310-D (Lebar 19&quot; rack mount).
+                {t("popRack.description")}
               </DialogDescription>
             </div>
           </div>
@@ -115,25 +118,25 @@ export function PopRackFormDialog({
 
         <div className="space-y-3 pt-2 text-xs">
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Nama / Label Rak</Label>
+            <Label className="text-xs font-semibold">{t("popRack.nameLabel")}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Contoh: Rack 01 atau RK-A1"
+              placeholder={t("popRack.namePlaceholder")}
               className="h-9 rounded-xl border-border/60 text-xs"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Kapasitas Tinggi Slot (U-Height)</Label>
+            <Label className="text-xs font-semibold">{t("popRack.uHeightLabel")}</Label>
             <Select value={uHeight} onValueChange={setUHeight}>
               <SelectTrigger className="h-9 rounded-xl border-border/60 font-mono text-xs">
-                <SelectValue placeholder="Pilih kapasitas U" />
+                <SelectValue placeholder={t("popRack.uHeightPlaceholder")} />
               </SelectTrigger>
               <SelectContent className="rounded-xl border-border/60 max-h-56">
                 {EIA310_RACK_HEIGHT_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value} className="text-xs font-mono">
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -141,15 +144,15 @@ export function PopRackFormDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Tipe Form Factor Cabinet</Label>
+            <Label className="text-xs font-semibold">{t("popRack.typeLabel")}</Label>
             <Select value={rackType} onValueChange={setRackType}>
               <SelectTrigger className="h-9 rounded-xl border-border/60 text-xs">
-                <SelectValue placeholder="Pilih tipe cabinet" />
+                <SelectValue placeholder={t("popRack.typePlaceholder")} />
               </SelectTrigger>
               <SelectContent className="rounded-xl border-border/60">
                 {RACK_TYPE_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -157,9 +160,9 @@ export function PopRackFormDialog({
           </div>
 
           <div className="rounded-xl border border-border/50 bg-muted/20 p-2.5 space-y-1 text-[11px] text-muted-foreground">
-            <p className="font-semibold text-foreground">Standar Spesifikasi:</p>
-            <p>• Lebar Standar: <strong>19 inci</strong> (EIA-310-D compatible)</p>
-            <p>• Penomoran Slot: U1 (paling bawah) s/d U{uHeight} (paling atas)</p>
+            <p className="font-semibold text-foreground">{t("popRack.specTitle")}</p>
+            <p>{t("popRack.specWidth")}</p>
+            <p>{t("popRack.specNumbering", { u: uHeight || 0 })}</p>
           </div>
 
           {error ? <p className="text-xs text-destructive font-medium">{error}</p> : null}
@@ -173,7 +176,7 @@ export function PopRackFormDialog({
             onClick={() => onOpenChange(false)}
             disabled={submitting}
           >
-            Batal
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
@@ -181,7 +184,7 @@ export function PopRackFormDialog({
             onClick={() => void handleConfirm()}
             disabled={submitting || !name.trim()}
           >
-            {submitting ? "Menyimpan..." : mode === "create" ? "Buat Rak" : "Simpan Perubahan"}
+            {submitting ? t("common.saving") : mode === "create" ? t("popRack.createAction") : t("popRack.saveAction")}
           </Button>
         </DialogFooter>
       </DialogContent>
