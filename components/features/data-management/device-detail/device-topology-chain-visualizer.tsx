@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
+import { useTranslate } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 
 type NodeData = {
   id: string;
@@ -47,14 +49,15 @@ type DeviceTopologyChainVisualizerProps = {
 };
 
 export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopologyChainVisualizerProps) {
+  const { t } = useTranslate();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ key: MessageKey; detail?: string } | null>(null);
   const [graph, setGraph] = useState<{ nodes: NodeData[]; edges: EdgeData[] }>({ nodes: [], edges: [] });
 
   async function loadTraceData() {
     if (!token || !deviceId) return;
     setLoading(true);
-    setError("");
+    setError(null);
     try {
       const res = await apiFetch<TraceResponse>(
         `/topology/trace?device_id=${encodeURIComponent(deviceId)}&direction=both&max_depth=6`,
@@ -63,10 +66,11 @@ export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopolog
       if (res && res.graph) {
         setGraph(res.graph);
       } else {
-        throw new Error("Format respons trace tidak valid.");
+        setError({ key: "chainVisualizer.invalidResponse" });
       }
     } catch (err) {
-      setError((err as Error).message || "Gagal memuat visualisasi rantai koneksi.");
+      const detail = (err as Error).message;
+      setError({ key: "chainVisualizer.loadFailed", detail: detail || undefined });
     } finally {
       setLoading(false);
     }
@@ -107,11 +111,11 @@ export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopolog
         <CardContent className="p-6 flex flex-col items-center justify-center text-center space-y-3">
           <AlertTriangle className="size-10 text-destructive" />
           <div>
-            <h4 className="text-sm font-semibold text-destructive">Gagal Memuat Rantai Koneksi</h4>
-            <p className="text-xs text-muted-foreground mt-1 max-w-md">{error}</p>
+            <h4 className="text-sm font-semibold text-destructive">{t("chainVisualizer.errorTitle")}</h4>
+            <p className="text-xs text-muted-foreground mt-1 max-w-md">{error.detail || t(error.key)}</p>
           </div>
           <Button size="sm" variant="outline" onClick={() => void loadTraceData()}>
-            <RefreshCw className="mr-2 size-3" /> Coba Lagi
+            <RefreshCw className="mr-2 size-3" /> {t("chainVisualizer.retry")}
           </Button>
         </CardContent>
       </Card>
@@ -123,12 +127,12 @@ export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopolog
       <Card className="w-full border-dashed">
         <CardContent className="p-6 flex flex-col items-center justify-center text-center space-y-2">
           <Network className="size-8 text-muted-foreground/60" />
-          <h4 className="text-sm font-medium">Visualisasi Rantai Tidak Tersedia</h4>
+          <h4 className="text-sm font-medium">{t("chainVisualizer.unavailableTitle")}</h4>
           <p className="text-xs text-muted-foreground max-w-sm">
-            Perangkat ini belum terhubung ke perangkat hulu (OTB) atau hilir (ODP) dalam topologi jaringan aktif.
+            {t("chainVisualizer.unavailableDescription")}
           </p>
           <Button size="sm" variant="outline" onClick={() => void loadTraceData()}>
-            <RefreshCw className="mr-2 size-3" /> Refresh
+            <RefreshCw className="mr-2 size-3" /> {t("chainVisualizer.refresh")}
           </Button>
         </CardContent>
       </Card>
@@ -141,10 +145,10 @@ export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopolog
         <div>
           <CardTitle className="text-sm flex items-center gap-2">
             <Network className="size-4 text-primary" />
-            Visualisasi Rantai Koneksi (OTB → ODC → ODP)
+            {t("chainVisualizer.title")}
           </CardTitle>
           <CardDescription className="text-xs">
-            Representasi skematik relasi kabel feeder & kabel distribusi aktif.
+            {t("chainVisualizer.description")}
           </CardDescription>
         </div>
         <Button size="xs" variant="ghost" onClick={() => void loadTraceData()} disabled={loading}>
@@ -157,10 +161,10 @@ export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopolog
           {/* COLUMN 1: OTB (Uplink / Source) */}
           <div className="space-y-3 flex flex-col justify-center border rounded-lg p-3 bg-card/60 backdrop-blur-xs min-h-[150px]">
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5 mb-1">
-              <Cpu className="size-3 text-emerald-500" /> Feeder Source (OTB)
+              <Cpu className="size-3 text-emerald-500" /> {t("chainVisualizer.feederSource")}
             </span>
             {otbNodes.length === 0 ? (
-              <div className="text-xs text-muted-foreground italic text-center p-4">Tidak ada OTB terhubung</div>
+              <div className="text-xs text-muted-foreground italic text-center p-4">{t("chainVisualizer.empty.otb")}</div>
             ) : (
               otbNodes.map((node) => (
                 <div key={node.id} className="group relative">
@@ -194,10 +198,10 @@ export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopolog
             )}
 
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5 mb-1">
-              <Server className="size-3 text-amber-500" /> Splitting Point (ODC)
+              <Server className="size-3 text-amber-500" /> {t("chainVisualizer.splittingPoint")}
             </span>
             {odcNodes.length === 0 ? (
-              <div className="text-xs text-muted-foreground italic text-center p-4">Tidak ada ODC terhubung</div>
+              <div className="text-xs text-muted-foreground italic text-center p-4">{t("chainVisualizer.empty.odc")}</div>
             ) : (
               odcNodes.map((node) => {
                 // Find matching feeder edge to show on connection line
@@ -244,10 +248,10 @@ export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopolog
             )}
 
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5 mb-1">
-              <Network className="size-3 text-blue-500" /> End Distribution (ODP)
+              <Network className="size-3 text-blue-500" /> {t("chainVisualizer.endDistribution")}
             </span>
             {odpNodes.length === 0 ? (
-              <div className="text-xs text-muted-foreground italic text-center p-4">Tidak ada ODP terhubung</div>
+              <div className="text-xs text-muted-foreground italic text-center p-4">{t("chainVisualizer.empty.odp")}</div>
             ) : (
               <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
                 {odpNodes.map((node) => {
@@ -294,10 +298,10 @@ export function DeviceTopologyChainVisualizer({ deviceId, token }: DeviceTopolog
             )}
 
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5 mb-1">
-              <Network className="size-3 text-purple-500" /> Drop (ONT)
+              <Network className="size-3 text-purple-500" /> {t("chainVisualizer.dropOnt")}
             </span>
             {ontNodes.length === 0 ? (
-              <div className="text-xs text-muted-foreground italic text-center p-4">Tidak ada ONT terhubung</div>
+              <div className="text-xs text-muted-foreground italic text-center p-4">{t("chainVisualizer.empty.ont")}</div>
             ) : (
               <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
                 {ontNodes.map((node) => {
