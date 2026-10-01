@@ -5,6 +5,7 @@ import { GripVertical, Plus, Layers, Server, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useTranslate } from "@/lib/use-locale";
 import type { DeviceToMount } from "./pop-rack-mount-modal";
 
 type PopUnmountedTrayProps = {
@@ -23,6 +24,7 @@ function getDeviceTypeBadgeStyle(typeKey: string) {
 }
 
 export function PopUnmountedTray({ devices, onSelectDeviceToMount, onClose }: PopUnmountedTrayProps) {
+  const { t } = useTranslate();
   function handleDragStart(e: React.DragEvent, device: DeviceToMount) {
     e.dataTransfer.setData(
       "application/json",
@@ -43,11 +45,11 @@ export function PopUnmountedTray({ devices, onSelectDeviceToMount, onClose }: Po
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
             <Layers className="size-4 text-primary" />
-            <span>Perangkat Belum Terpasang</span>
+            <span>{t("pop.unmountedTray.title")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Badge variant="outline" className="font-mono tabular-nums text-[10px] uppercase">
-              {devices.length} Aset
+              {t("pop.unmountedTray.assetCount", { count: devices.length })}
             </Badge>
             {onClose ? (
               <Button
@@ -56,7 +58,7 @@ export function PopUnmountedTray({ devices, onSelectDeviceToMount, onClose }: Po
                 size="icon"
                 className="size-6 rounded-md hover:bg-muted p-0 text-muted-foreground"
                 onClick={onClose}
-                title="Sembunyikan Tray"
+                title={t("pop.unmountedTray.hideTray")}
               >
                 <X className="size-3.5" />
               </Button>
@@ -65,7 +67,7 @@ export function PopUnmountedTray({ devices, onSelectDeviceToMount, onClose }: Po
         </div>
 
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Hanya perangkat aktif (OLT, Switch, Router, Rectifier) dan OTB yang dapat dipasang ke dalam rak. Tarik kartu langsung ke slot rak atau klik <strong>Pasang</strong>.
+          {t("pop.unmountedTray.hintPrefix")} <strong>{t("pop.unmountedTray.hintAction")}</strong>.
         </p>
 
         {/* Devices List */}
@@ -73,7 +75,7 @@ export function PopUnmountedTray({ devices, onSelectDeviceToMount, onClose }: Po
           {devices.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/10 p-6 text-center text-xs text-muted-foreground">
               <Server className="size-8 text-muted-foreground/50 mb-2" />
-              <span>Semua perangkat indoor di POP ini sudah terpasang rapi di dalam rak.</span>
+              <span>{t("pop.unmountedTray.emptyState")}</span>
             </div>
           ) : (
             devices.map((device) => {
@@ -113,7 +115,7 @@ export function PopUnmountedTray({ devices, onSelectDeviceToMount, onClose }: Po
                     onClick={() => onSelectDeviceToMount(device)}
                   >
                     <Plus className="mr-1 size-3" />
-                    Pasang
+                    {t("pop.unmountedTray.mountAction")}
                   </Button>
                 </div>
               );

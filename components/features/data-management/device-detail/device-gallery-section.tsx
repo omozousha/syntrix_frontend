@@ -1,9 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import { ImagePlus, Images, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { OptimizedImage } from "@/components/ui/optimized-image";
+import { useTranslate } from "@/lib/use-locale";
 
 type AttachmentRef = {
   id: string;
@@ -41,6 +44,7 @@ export function DeviceGallerySection({
   onClearNewImages,
   onRemoveNewImage,
 }: DeviceGallerySectionProps) {
+  const { t } = useTranslate();
   return (
     <section className="rounded-lg border bg-muted/10 p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -50,15 +54,15 @@ export function DeviceGallerySection({
               <Images className="size-4" />
             </span>
             <div>
-              <h3 className="text-sm font-semibold">Galeri device & evidence validasi</h3>
+              <h3 className="text-sm font-semibold">{t("deviceGallery.title")}</h3>
               <p className="max-w-2xl text-xs leading-5 text-muted-foreground">
-                Foto resmi {deviceTypeLabel || "device"} dan evidence validasi approved ditampilkan bersama untuk memudahkan review.
+                {t("deviceGallery.description", { type: deviceTypeLabel || "device" })}
               </p>
             </div>
           </div>
         </div>
         <Badge variant="outline" className="rounded-md tabular-nums">
-          {attachments.length} file
+          {t("deviceGallery.fileCount", { count: attachments.length })}
         </Badge>
       </div>
 
@@ -67,7 +71,7 @@ export function DeviceGallerySection({
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
             {attachments.map((attachment, index) => {
               const src = imagePreviewUrls[attachment.id];
-              const fileName = attachmentNames[attachment.id] || attachment.name || "Attachment tidak tersedia";
+              const fileName = attachmentNames[attachment.id] || attachment.name || t("deviceGallery.unavailable");
               return (
                 <div
                   key={attachment.id}
@@ -89,7 +93,7 @@ export function DeviceGallerySection({
           </div>
         ) : (
           <div className="rounded-md border border-dashed bg-background/60 p-4 text-sm text-muted-foreground">
-            Belum ada foto atau evidence validasi untuk device ini.
+            {t("deviceGallery.empty")}
           </div>
         )}
       </div>
@@ -98,15 +102,15 @@ export function DeviceGallerySection({
         <div className="mt-3 space-y-2 rounded-md border bg-background/70 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-medium">Tambah foto resmi</p>
-              <p className="text-xs text-muted-foreground">File baru masuk sebagai attachment resmi setelah perubahan disimpan.</p>
+              <p className="text-sm font-medium">{t("deviceGallery.addTitle")}</p>
+              <p className="text-xs text-muted-foreground">{t("deviceGallery.addHint")}</p>
             </div>
-            <Badge variant="secondary">{newImageFiles.length} file baru</Badge>
+            <Badge variant="secondary">{t("deviceGallery.newFileCount", { count: newImageFiles.length })}</Badge>
           </div>
           <Input type="file" accept="image/*" multiple onChange={(event) => onNewImageFilesChange(event.target.files)} />
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <ImagePlus className="size-3.5" />
-            Maksimal total {maxImageAttachments} file (existing + baru), masing-masing max 5MB.
+            {t("deviceGallery.maxCount", { max: maxImageAttachments })}
           </div>
           {newImageFiles.length ? (
             <div className="space-y-2 rounded-md border bg-muted/20 p-2">

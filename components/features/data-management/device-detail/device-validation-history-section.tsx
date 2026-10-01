@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppLoading } from "@/components/app-loading-new";
 import { mapValidationStatus } from "@/lib/validation-status";
+import { useTranslate } from "@/lib/use-locale";
 import { ValidationEvidenceAction } from "@/components/features/data-management/device-detail/validation-evidence-action";
 
 type EvidenceAttachment = {
@@ -59,22 +60,23 @@ export function DeviceValidationHistorySection({
   loading,
   onDownloadEvidence,
 }: DeviceValidationHistorySectionProps) {
+  const { t } = useTranslate();
   return (
     <Card>
       <CardHeader className="px-3 py-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle className="text-sm">Validation History</CardTitle>
+            <CardTitle className="text-sm">{t("validationHistory.title")}</CardTitle>
             <CardDescription className="text-xs">
-              Riwayat validasi lapangan untuk {deviceTypeLabel || "device"} dari workflow approval.
+              {t("validationHistory.description", { type: deviceTypeLabel || "device" })}
             </CardDescription>
           </div>
-          <Badge variant="outline">{records.length} record</Badge>
+          <Badge variant="outline">{t("validationHistory.recordCount", { count: records.length })}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-2 px-3 pb-3 pt-0">
         {loading ? (
-          <AppLoading label="Memuat histori validasi..." />
+          <AppLoading label={t("validationHistory.loading")} />
         ) : records.length ? (
           records.map((record) => (
             <GenericValidationHistoryCard
@@ -86,7 +88,7 @@ export function DeviceValidationHistorySection({
           ))
         ) : (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            Belum ada histori validasi lapangan untuk {deviceTypeLabel || "device"} ini.
+            {t("validationHistory.empty", { type: deviceTypeLabel || "device" })}
           </div>
         )}
       </CardContent>
@@ -103,6 +105,7 @@ function GenericValidationHistoryCard({
   deviceTypeLabel: string;
   onDownloadEvidence: () => void;
 }) {
+  const { t, locale } = useTranslate();
   const evidenceCount = countEvidence(record);
   const validationType = valueOf(record.payload?.field_validation_type, deviceTypeLabel || "DEVICE");
   const sectionCandidates: Array<[string, Record<string, unknown> | undefined]> = [
@@ -130,7 +133,7 @@ function GenericValidationHistoryCard({
             ) : null}
             <Badge variant="secondary">{validationType}</Badge>
             <p className="text-xs text-muted-foreground">
-              {record.validation_id || "Validasi"} - {formatDateTime(valueOf(record.validated_at || record.updated_at || record.created_at))}
+              {record.validation_id || t("validationHistory.validationFallback")} - {formatDateTime(valueOf(record.validated_at || record.updated_at || record.created_at), locale)}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -139,10 +142,10 @@ function GenericValidationHistoryCard({
             <span>Superadmin: {actorLabel(record, "superadmin")}</span>
           </div>
           <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-            {record.adminregion_action_at ? <span>Adminregion action: {formatDateTime(record.adminregion_action_at)}</span> : null}
-            {record.superadmin_action_at ? <span>Superadmin action: {formatDateTime(record.superadmin_action_at)}</span> : null}
-            {record.adminregion_review_note ? <span>Adminregion note tersedia</span> : null}
-            {record.superadmin_review_note ? <span>Superadmin note tersedia</span> : null}
+            {record.adminregion_action_at ? <span>{t("validationHistory.adminregionAction")} {formatDateTime(record.adminregion_action_at, locale)}</span> : null}
+            {record.superadmin_action_at ? <span>{t("validationHistory.superadminAction")} {formatDateTime(record.superadmin_action_at, locale)}</span> : null}
+            {record.adminregion_review_note ? <span>{t("validationHistory.adminregionNote")}</span> : null}
+            {record.superadmin_review_note ? <span>{t("validationHistory.superadminNote")}</span> : null}
           </div>
           {sectionCounts.length ? (
             <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
@@ -184,11 +187,11 @@ function valueOf(value: unknown, fallback = "") {
   return text || fallback;
 }
 
-function formatDateTime(value: string) {
+function formatDateTime(value: string, locale: string) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
