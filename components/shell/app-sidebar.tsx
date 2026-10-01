@@ -148,7 +148,7 @@ export function AppSidebar({
                         isActive={itemIsActive}
                         className="relative h-9 rounded-lg px-2.5 text-sm transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-sidebar-accent data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
                       >
-                        <Link href={item.url}>
+                        <Link href={item.url} prefetch={false}>
                           {itemIsActive ? <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" /> : null}
                           {item.icon ? <item.icon className="size-4" /> : null}
                           <span>{t(item.titleKey)}</span>
@@ -183,7 +183,7 @@ export function AppSidebar({
                           {item.items?.map((subItem) => (
                             <SidebarMenuSubItem key={subItem.titleKey}>
                               <SidebarMenuSubButton asChild isActive={isActive(subItem.url)} className="h-8 text-xs data-[active=true]:font-medium data-[active=true]:text-primary">
-                                <Link href={subItem.url}>
+                                <Link href={subItem.url} prefetch={false}>
                                   {subItem.icon ? <subItem.icon className="size-4" /> : null}
                                   <span>{t(subItem.titleKey)}</span>
                                 </Link>
