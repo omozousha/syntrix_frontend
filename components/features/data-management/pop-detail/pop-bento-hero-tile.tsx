@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { mapValidationStatus } from "@/lib/validation-status";
+import { useTranslate } from "@/lib/use-locale";
 
 type PopBentoHeroTileProps = {
   popName: string;
@@ -40,6 +41,7 @@ export function PopBentoHeroTile({
   updatedAt,
   tags,
 }: PopBentoHeroTileProps) {
+  const { t } = useTranslate();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   function copyText(text: string, key: string) {
@@ -85,7 +87,7 @@ export function PopBentoHeroTile({
               className="rounded-full px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wider border-primary/40 bg-primary/10 text-primary"
             >
               <Building2 className="mr-1.5 size-3.5" />
-              {popType || "Point of Presence"}
+              {popType || t("heroTile.typeFallback")}
             </Badge>
             <Badge
               variant="outline"
@@ -100,14 +102,14 @@ export function PopBentoHeroTile({
                     : "bg-slate-400"
                 }`}
               />
-              {statusPop || "Active"}
+              {statusPop || t("heroTile.statusFallback")}
             </Badge>
           </div>
 
           <div className="flex items-center gap-2">
             {updatedAt ? (
               <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
-                Update: {formatDate(updatedAt)}
+                {t("heroTile.updatedAt", { date: formatDate(updatedAt) })}
               </span>
             ) : null}
             <Badge variant="outline" className={`rounded-full font-mono text-[10px] uppercase tracking-wider ${valUi.className}`}>
@@ -119,9 +121,9 @@ export function PopBentoHeroTile({
 
         {/* Title / Name */}
         <div className="space-y-1">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">POP Site Center</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t("heroTile.eyebrow")}</p>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground break-words">
-            {popName || "Unnamed POP"}
+            {popName || t("heroTile.unnamed")}
           </h1>
         </div>
 
@@ -129,7 +131,7 @@ export function PopBentoHeroTile({
         <div className="flex flex-wrap items-center gap-2">
           {popCode ? (
             <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/20 px-2.5 py-1 text-xs">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Code:</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("heroTile.codeLabel")}</span>
               <span className="font-mono tabular-nums font-semibold text-foreground">{popCode}</span>
               <Button
                 type="button"
@@ -137,7 +139,7 @@ export function PopBentoHeroTile({
                 size="icon"
                 className="size-5 rounded-md hover:bg-muted"
                 onClick={() => copyText(popCode, "code")}
-                title="Salin POP Code"
+                title={t("heroTile.copyCode")}
               >
                 {copiedKey === "code" ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3 text-muted-foreground" />}
               </Button>
@@ -146,14 +148,14 @@ export function PopBentoHeroTile({
 
           {regionName ? (
             <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/20 px-2.5 py-1 text-xs">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Region:</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("heroTile.regionLabel")}</span>
               <span className="font-semibold text-foreground">{regionName}</span>
             </div>
           ) : null}
 
           <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/20 px-2.5 py-1 text-xs">
             <Calendar className="size-3 text-muted-foreground" />
-            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Aktif:</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("heroTile.activeLabel")}</span>
             <span className="font-mono tabular-nums font-medium text-foreground">
               {tanggalPopAktif ? formatDate(tanggalPopAktif) : "-"}
             </span>
@@ -161,7 +163,7 @@ export function PopBentoHeroTile({
 
           {tenant ? (
             <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/20 px-2.5 py-1 text-xs">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Tenant:</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("heroTile.tenantLabel")}</span>
               <span className="font-medium text-foreground">{tenant}</span>
             </div>
           ) : null}
@@ -190,13 +192,13 @@ export function PopBentoHeroTile({
               <span>Infrastruktur Daya PLN</span>
             </div>
             <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-              {plnPaymentMethod || "Pasca/Pra-bayar"}
+              {plnPaymentMethod || t("heroTile.paymentFallback")}
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-amber-500/20 text-[11px]">
             <div>
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Nomor CID</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("heroTile.cidLabel")}</p>
               <div className="flex items-center gap-1">
                 <span className="font-mono tabular-nums font-semibold text-foreground">
                   {plnCidNumber || "-"}
@@ -208,7 +210,7 @@ export function PopBentoHeroTile({
                     size="icon"
                     className="size-4 p-0 rounded-sm hover:bg-amber-500/20"
                     onClick={() => copyText(plnCidNumber, "cid")}
-                    title="Salin CID"
+                    title={t("heroTile.copyCid")}
                   >
                     {copiedKey === "cid" ? <Check className="size-2.5 text-emerald-500" /> : <Copy className="size-2.5 text-muted-foreground" />}
                   </Button>
@@ -217,21 +219,21 @@ export function PopBentoHeroTile({
             </div>
 
             <div>
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Daya Wattage</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("heroTile.wattageLabel")}</p>
               <p className="font-mono tabular-nums font-semibold text-foreground">
                 {plnWattage ? `${plnWattage} VA` : "-"}
               </p>
             </div>
 
             <div>
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Phase Daya</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("heroTile.phaseLabel")}</p>
               <p className="font-semibold text-foreground">
-                {plnPhase ? `${plnPhase} Phase` : "1 Phase"}
+                {plnPhase ? `${plnPhase} Phase` : t("heroTile.phaseFallback")}
               </p>
             </div>
 
             <div>
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Metode Bayar</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("heroTile.paymentLabel")}</p>
               <p className="font-semibold text-foreground truncate">
                 {plnPaymentMethod || "-"}
               </p>
