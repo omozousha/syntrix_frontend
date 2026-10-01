@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslate, type TFn } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 
 type DeviceTopologySummary = {
   ports?: {
@@ -139,53 +141,57 @@ type DeviceTechnicalSummarySectionProps = {
   loading?: boolean;
 };
 
-const TYPE_CONFIG = {
+const TYPE_CONFIG: Record<string, { titleKey: MessageKey; descriptionKey: MessageKey; icon: typeof SplitSquareVertical }> = {
   ODC: {
-    title: "Technical ODC",
-    description: "Ringkasan cabinet, port, splitter, dan relasi downstream/upstream.",
+    titleKey: "deviceSummary.type.odc.title",
+    descriptionKey: "deviceSummary.type.odc.description",
     icon: SplitSquareVertical,
   },
   OLT: {
-    title: "Technical OLT",
-    description: "Ringkasan POP/site, port PON/uplink, dan koneksi downstream.",
+    titleKey: "deviceSummary.type.olt.title",
+    descriptionKey: "deviceSummary.type.olt.description",
     icon: Server,
   },
   ONT: {
-    title: "Technical ONT",
-    description: "Ringkasan customer premise, serial, dan assignment service.",
+    titleKey: "deviceSummary.type.ont.title",
+    descriptionKey: "deviceSummary.type.ont.description",
     icon: RadioTower,
   },
   CABLE: {
-    title: "Technical Cable",
-    description: "Ringkasan kapasitas core, fiber inventory, dan koneksi route/core.",
+    titleKey: "deviceSummary.type.cable.title",
+    descriptionKey: "deviceSummary.type.cable.description",
     icon: Cable,
   },
   SWITCH: {
-    title: "Technical Switch",
-    description: "Ringkasan interface, management IP, dan uplink/downlink.",
+    titleKey: "deviceSummary.type.switch.title",
+    descriptionKey: "deviceSummary.type.switch.description",
     icon: Network,
   },
   ROUTER: {
-    title: "Technical Router",
-    description: "Ringkasan interface, management IP, dan koneksi jaringan.",
+    titleKey: "deviceSummary.type.router.title",
+    descriptionKey: "deviceSummary.type.router.description",
     icon: Router,
   },
   DEVICE: {
-    title: "Technical Device",
-    description: "Ringkasan teknikal device berdasarkan inventory dan topology.",
+    titleKey: "deviceSummary.type.device.title",
+    descriptionKey: "deviceSummary.type.device.description",
     icon: Cpu,
   },
 };
+
+type TypeConfig = typeof TYPE_CONFIG[keyof typeof TYPE_CONFIG];
 
 export function DeviceTechnicalSummarySection({
   item,
   topologySummary,
   loading = false,
 }: DeviceTechnicalSummarySectionProps) {
+  const { t, locale } = useTranslate();
+  const numberLocale = locale === "en" ? "en-US" : "id-ID";
   const typeKey = valueOf(item.device_type_key, "DEVICE").toUpperCase();
   const config = TYPE_CONFIG[typeKey as keyof typeof TYPE_CONFIG] || TYPE_CONFIG.DEVICE;
   const Icon = config.icon;
-  const metrics = buildTechnicalMetrics(typeKey, item, topologySummary);
+  const metrics = buildTechnicalMetrics(typeKey, item, topologySummary, t, numberLocale);
   const readiness = topologySummary?.readiness || {};
   const odcRelations = typeKey === "ODC" ? topologySummary?.odc_relations || null : null;
   const odcTopologyActions = typeKey === "ODC" ? buildOdcTopologyActionHrefs(item) : null;
@@ -208,21 +214,21 @@ export function DeviceTechnicalSummarySection({
               <Icon className="size-4" />
             </span>
             <div className="min-w-0">
-              <CardTitle className="text-sm">{config.title}</CardTitle>
-              <CardDescription className="text-xs">{config.description}</CardDescription>
+              <CardTitle className="text-sm">{t(config.titleKey)}</CardTitle>
+              <CardDescription className="text-xs">{t(config.descriptionKey)}</CardDescription>
             </div>
           </div>
-          <Badge variant="outline">{readyCount}/{totalReadinessItems} topology ready</Badge>
+          <Badge variant="outline">{t("deviceSummary.readiness", { ready: readyCount, total: totalReadinessItems })}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3 px-3 pb-3 pt-0">
         {odcTopologyActions ? (
           <div className="flex flex-wrap gap-2">
             <Button asChild size="sm" variant="outline">
-              <Link href={odcTopologyActions.feeder}>Create Feeder Relation</Link>
+              <Link href={odcTopologyActions.feeder}>{t("deviceSummary.createFeederRelation")}</Link>
             </Button>
             <Button asChild size="sm" variant="outline">
-              <Link href={odcTopologyActions.distribution}>Create ODP Relation</Link>
+              <Link href={odcTopologyActions.distribution}>{t("deviceSummary.createOdpRelation")}</Link>
             </Button>
           </div>
         ) : null}
@@ -269,7 +275,7 @@ function buildOdcTopologyActionHrefs(item: Record<string, unknown>) {
   };
 }
 
-function buildTechnicalMetrics(typeKey: string, item: Record<string, unknown>, summary: DeviceTopologySummary | null) {
+function buildTechnicalMetrics(typeKey: string, item: Record<string, unknown>, summary: DeviceTopologySummary | null, t: TFn, numberLocale: string) {
   const totalPorts = numeric(summary?.ports?.summary?.total, summary?.ports?.items?.length, item.total_ports);
   const usedPorts = numeric(item.used_ports);
   const idlePorts = Math.max(0, totalPorts - usedPorts);
@@ -302,14 +308,14 @@ function buildTechnicalMetrics(typeKey: string, item: Record<string, unknown>, s
 
   if (typeKey === "CABLE") {
     return [
-      { label: "Capacity Core", value: formatNumber(capacityCore), hint: "Total core dari inventory kabel." },
+      { label: "Capacity Core", value: formatNumber(capacityCore, numberLocale), hint: t("deviceSummary.hint.cableCapacityCore") },
       {
         label: "Used / Reserved",
-        value: `${formatNumber(usedCore)} / ${formatNumber(reservedCore)}`,
-        hint: `${formatNumber(damagedCore)} damaged, ${formatNumber(lossWarnings)} loss warning.`,
+        value: `${formatNumber(usedCore, numberLocale)} / ${formatNumber(reservedCore, numberLocale)}`,
+        hint: t("deviceSummary.hint.cableDamagedLoss", { damaged: formatNumber(damagedCore, numberLocale), loss: formatNumber(lossWarnings, numberLocale) }),
       },
-      { label: "Route", value: routeLabel || "-", hint: cableLabel ? `Cable: ${cableLabel}` : "Belum ada route terkait." },
-      { label: "Core / Endpoint", value: coreRangeLabel || "-", hint: endpointLabel || "Belum ada endpoint connection terkait." },
+      { label: "Route", value: routeLabel || "-", hint: cableLabel ? `Cable: ${cableLabel}` : t("deviceSummary.hint.noRoute") },
+      { label: "Core / Endpoint", value: coreRangeLabel || "-", hint: endpointLabel || t("deviceSummary.hint.noEndpoint") },
     ];
   }
 
@@ -320,53 +326,54 @@ function buildTechnicalMetrics(typeKey: string, item: Record<string, unknown>, s
     const primaryDownstream = firstOdcRelation(odcRelations?.downstream);
     const splitterRatio = odcRelations?.splitter_ratio || null;
     return [
-      { label: "Port Cabinet", value: formatNumber(totalPorts), hint: `${formatNumber(idlePorts)} idle.` },
-      { label: "Feeder Upstream", value: formatNumber(upstreamTotal), hint: formatOdcRelationHint(primaryUpstream, "Belum ada upstream OTB/POP.") },
+      { label: "Port Cabinet", value: formatNumber(totalPorts, numberLocale), hint: `${formatNumber(idlePorts, numberLocale)} idle.` },
+      { label: "Feeder Upstream", value: formatNumber(upstreamTotal, numberLocale), hint: formatOdcRelationHint(primaryUpstream, t("deviceSummary.hint.noUpstream"), t) },
       {
         label: "Distribution Downstream",
-        value: formatNumber(downstreamTotal),
-        hint: formatOdcRelationHint(primaryDownstream, "Belum ada downstream ODP."),
+        value: formatNumber(downstreamTotal, numberLocale),
+        hint: formatOdcRelationHint(primaryDownstream, t("deviceSummary.hint.noDownstream"), t),
       },
       {
         label: "Core / Route",
-        value: formatNumber(numeric(summary?.core_management?.summary?.core_count)),
-        hint: routeLabel || "Feeder/distribution core approved.",
+        value: formatNumber(numeric(summary?.core_management?.summary?.core_count), numberLocale),
+        hint: routeLabel || t("deviceSummary.hint.coreApproved"),
       },
       {
         label: "Splitter Ratio",
         value: splitterRatio || "-",
-        hint: splitterRatio ? "Splitter ODC terkonfigurasi." : "Splitter ratio belum dikonfigurasi.",
+        hint: splitterRatio ? t("deviceSummary.hint.splitterConfigured") : t("deviceSummary.hint.splitterNotConfigured"),
       },
     ];
   }
 
   if (typeKey === "ONT") {
     return [
-      { label: "Serial Number", value: valueOf(item.serial_number, "-"), hint: "Identitas perangkat pelanggan." },
-      { label: "Service Ports", value: formatNumber(totalPorts), hint: `${formatNumber(usedPorts)} used.` },
-      { label: "Connection", value: formatNumber(connectionTotal), hint: "Relasi ODP/port upstream." },
-      { label: "Installed", value: formatDate(valueOf(item.installation_date)), hint: "Tanggal instalasi jika tersedia." },
+      { label: "Serial Number", value: valueOf(item.serial_number, "-"), hint: t("deviceSummary.hint.ontSerial") },
+      { label: "Service Ports", value: formatNumber(totalPorts, numberLocale), hint: `${formatNumber(usedPorts, numberLocale)} used.` },
+      { label: "Connection", value: formatNumber(connectionTotal, numberLocale), hint: t("deviceSummary.hint.ontConnection") },
+      { label: "Installed", value: formatDate(valueOf(item.installation_date), numberLocale), hint: t("deviceSummary.hint.installedDate") },
     ];
   }
 
   if (typeKey === "OLT" || typeKey === "SWITCH" || typeKey === "ROUTER") {
     return [
-      { label: "Management IP", value: valueOf(item.management_ip, "-"), hint: "Alamat manajemen perangkat." },
-      { label: "Interfaces", value: formatNumber(totalPorts), hint: `${formatNumber(usedPorts)} used, ${formatNumber(idlePorts)} idle.` },
-      { label: "Connection", value: formatNumber(connectionTotal), hint: endpointLabel || "Uplink/downlink topology." },
-      { label: "Status", value: valueOf(item.status, "-"), hint: "Status operasional inventory." },
+      { label: "Management IP", value: valueOf(item.management_ip, "-"), hint: t("deviceSummary.hint.mgmtIp") },
+      { label: "Interfaces", value: formatNumber(totalPorts, numberLocale), hint: `${formatNumber(usedPorts, numberLocale)} used, ${formatNumber(idlePorts, numberLocale)} idle.` },
+      { label: "Connection", value: formatNumber(connectionTotal, numberLocale), hint: endpointLabel || t("deviceSummary.hint.uplinkDownlink") },
+      { label: "Status", value: valueOf(item.status, "-"), hint: t("deviceSummary.hint.operationalStatus") },
     ];
   }
 
   return [
-    { label: "Total Ports", value: formatNumber(totalPorts), hint: `${formatNumber(usedPorts)} used.` },
-    { label: "Capacity Core", value: formatNumber(capacityCore), hint: "Core capacity jika device mendukung." },
-    { label: "Connection", value: formatNumber(connectionTotal), hint: "Relasi topology approved." },
-    { label: "Status", value: valueOf(item.status, "-"), hint: "Status operasional inventory." },
+    { label: "Total Ports", value: formatNumber(totalPorts, numberLocale), hint: `${formatNumber(usedPorts, numberLocale)} used.` },
+    { label: "Capacity Core", value: formatNumber(capacityCore, numberLocale), hint: t("deviceSummary.hint.coreCapacity") },
+    { label: "Connection", value: formatNumber(connectionTotal, numberLocale), hint: t("deviceSummary.hint.topologyApproved") },
+    { label: "Status", value: valueOf(item.status, "-"), hint: t("deviceSummary.hint.operationalStatus") },
   ];
 }
 
 function OdcRelationSummary({ relations, coreOverlapConflicts = [] }: { relations: OdcRelations; coreOverlapConflicts?: Array<{ cable_device_id?: string; first_range?: string; second_range?: string }> }) {
+  const { t } = useTranslate();
   const upstream = relations.upstream || [];
   const downstream = relations.downstream || [];
   const readiness = relations.readiness || {};
@@ -388,11 +395,11 @@ function OdcRelationSummary({ relations, coreOverlapConflicts = [] }: { relation
           <div className="flex items-start gap-2">
             <span className="mt-0.5 shrink-0 text-sm text-red-500">⚠️</span>
             <div className="min-w-0 text-xs text-red-800">
-              <p className="font-medium">Ditemukan {coreOverlapConflicts.length} core overlap conflict(s):</p>
+              <p className="font-medium">{t("deviceSummary.overlapFound", { count: coreOverlapConflicts.length })}</p>
               <ul className="mt-1 list-inside list-disc space-y-0.5">
                 {coreOverlapConflicts.map((conflict, index) => (
                   <li key={index}>
-                    Range {conflict.first_range || "?"} bertabrakan dengan {conflict.second_range || "?"}
+                    {t("deviceSummary.overlapRange", { first: conflict.first_range || "?", second: conflict.second_range || "?" })}
                     {conflict.cable_device_id ? ` (cable: ${conflict.cable_device_id.slice(0, 8)}...)` : ""}
                   </li>
                 ))}
@@ -403,8 +410,8 @@ function OdcRelationSummary({ relations, coreOverlapConflicts = [] }: { relation
       ) : null}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold">Topology ODC</p>
-          <p className="text-xs text-muted-foreground">Relasi physical layer OTB/POP, ODC, kabel, core, dan ODP.</p>
+          <p className="text-sm font-semibold">{t("deviceSummary.odcTopologyTitle")}</p>
+          <p className="text-xs text-muted-foreground">{t("deviceSummary.odcTopologyDesc")}</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {readinessItems.map((item) => (
@@ -472,13 +479,21 @@ function OdcRelationSummary({ relations, coreOverlapConflicts = [] }: { relation
         </div>
       ) : (
         <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-          Splitter ratio belum dikonfigurasi.
+          {t("deviceSummary.hint.splitterNotConfigured")}
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
-        <OdcRelationList title="Feeder Upstream" emptyText="Belum ada relasi feeder dari OTB/POP ke ODC." items={upstream} />
-        <OdcRelationList title="Distribution Downstream" emptyText="Belum ada relasi distribusi dari ODC ke ODP." items={downstream} />
+        <OdcRelationList
+          title={t("deviceSummary.feederUpstreamLabel")}
+          emptyText={t("deviceSummary.feederUpstreamEmpty")}
+          items={upstream}
+        />
+        <OdcRelationList
+          title={t("deviceSummary.distributionDownstreamLabel")}
+          emptyText={t("deviceSummary.distributionDownstreamEmpty")}
+          items={downstream}
+        />
       </div>
     </div>
   );
@@ -493,6 +508,7 @@ function OdcRelationList({
   emptyText: string;
   items: OdcRelationItem[];
 }) {
+  const { t } = useTranslate();
   return (
     <div className="min-w-0 rounded-md border bg-background p-2">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -503,8 +519,8 @@ function OdcRelationList({
         <div className="space-y-2">
           {items.slice(0, 3).map((item) => (
             <div key={item.id || item.connection_id || formatOdcRelationTitle(item)} className="min-w-0 rounded-md border bg-muted/10 px-2 py-2">
-              <p className="truncate text-xs font-medium">{formatOdcRelationTitle(item)}</p>
-              <p className="mt-1 truncate text-[11px] text-muted-foreground">{formatOdcRelationMeta(item)}</p>
+              <p className="truncate text-xs font-medium">{formatOdcRelationTitle(item, t)}</p>
+              <p className="mt-1 truncate text-[11px] text-muted-foreground">{formatOdcRelationMeta(item, t)}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <Badge variant="outline">{valueOf(item.status, "unknown")}</Badge>
                 {firstText(item.labels?.core_range, buildCoreRange(item)) ? (
@@ -513,7 +529,7 @@ function OdcRelationList({
               </div>
             </div>
           ))}
-          {items.length > 3 ? <p className="text-[11px] text-muted-foreground">+{items.length - 3} relasi lainnya.</p> : null}
+          {items.length > 3 ? <p className="text-[11px] text-muted-foreground">{t("deviceSummary.hint.moreRelations", { count: items.length - 3 })}</p> : null}
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">{emptyText}</p>
@@ -526,25 +542,25 @@ function firstOdcRelation(items?: OdcRelationItem[]) {
   return Array.isArray(items) && items.length ? items[0] : null;
 }
 
-function formatOdcRelationTitle(item: OdcRelationItem | null) {
+function formatOdcRelationTitle(item: OdcRelationItem | null, t?: TFn) {
   if (!item) return "";
   return firstText(
     item.labels?.peer,
     item.peer_device?.device_name,
     item.peer_device?.device_id,
     item.labels?.title,
-  ) || "Peer device belum tersedia";
+  ) || (t ? t("deviceSummary.hint.peerDeviceUnavailable") : "Peer device belum tersedia");
 }
 
-function formatOdcRelationHint(item: OdcRelationItem | null, fallback: string) {
+function formatOdcRelationHint(item: OdcRelationItem | null, fallback: string, t: TFn) {
   if (!item) return fallback;
-  const peer = formatOdcRelationTitle(item);
+  const peer = formatOdcRelationTitle(item, t);
   const cable = firstText(item.labels?.cable, item.cable_device?.device_name, item.cable_device?.device_id);
   const core = firstText(item.labels?.core_range, buildCoreRange(item));
   return [peer, cable ? `Cable: ${cable}` : "", core ? `Core ${core}` : ""].filter(Boolean).join(" | ");
 }
 
-function formatOdcRelationMeta(item: OdcRelationItem) {
+function formatOdcRelationMeta(item: OdcRelationItem, t?: TFn) {
   const odcPort = firstText(item.labels?.odc_port, item.odc_port?.port_label, item.odc_port?.port_id);
   const peerPort = firstText(item.labels?.peer_port, item.peer_port?.port_label, item.peer_port?.port_id);
   const cable = firstText(item.labels?.cable, item.cable_device?.device_name, item.cable_device?.device_id);
@@ -553,7 +569,7 @@ function formatOdcRelationMeta(item: OdcRelationItem) {
     odcPort && peerPort ? `${odcPort} -> ${peerPort}` : odcPort || peerPort,
     cable ? `Cable: ${cable}` : "",
     route ? `Route: ${route}` : "",
-  ].filter(Boolean).join(" | ") || "Detail port/cable belum tersedia.";
+  ].filter(Boolean).join(" | ") || (t ? t("deviceSummary.hint.detailUnavailable") : "Detail port/cable belum tersedia.");
 }
 
 function buildCoreRange(item: OdcRelationItem | null) {
@@ -589,15 +605,15 @@ function numeric(...values: unknown[]) {
   return 0;
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("id-ID").format(Number.isFinite(value) ? value : 0);
+function formatNumber(value: number, locale: string) {
+  return new Intl.NumberFormat(locale).format(Number.isFinite(value) ? value : 0);
 }
 
-function formatDate(value: string) {
+function formatDate(value: string, locale: string) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(date);
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date);
 }
 
 function valueOf(value: unknown, fallback = "") {
