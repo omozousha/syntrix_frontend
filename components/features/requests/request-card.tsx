@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequestStatusBadge } from "@/components/features/requests/request-status-badge";
 import { RequestTypeBadge, type RequestTypeKind } from "@/components/features/requests/request-type-badge";
+import { useTranslate } from "@/lib/use-locale";
 
 export function RequestCard({
   selected,
@@ -37,6 +38,7 @@ export function RequestCard({
   evidenceSlot?: ReactNode;
   onSelect: () => void;
 }) {
+  const { t } = useTranslate();
   return (
     <div
       className={`min-w-0 border-b border-border/60 px-3 py-2.5 transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] last:border-b-0 ${
@@ -51,7 +53,7 @@ export function RequestCard({
             onChange={(e) => onCheckedChange(e.target.checked)}
             onClick={(e) => e.stopPropagation()}
             className="mt-1 size-4 shrink-0 cursor-pointer rounded border-input bg-background text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
-            aria-label={`Pilih request ${title}`}
+            aria-label={t("requestCard.select", { title })}
           />
         )}
         <div className="min-w-0 flex-1">
@@ -66,13 +68,13 @@ export function RequestCard({
             </div>
             <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
               <Badge variant="outline" className="max-w-full whitespace-normal break-words text-left font-mono text-[9px] uppercase tracking-normal">{ownerLabel}</Badge>
-              <span className="min-w-0 break-words font-mono text-[10px] text-muted-foreground">Updated: {updatedAt}</span>
+              <span className="min-w-0 break-words font-mono text-[10px] text-muted-foreground">{t("requestCard.updated", { value: updatedAt })}</span>
             </div>
           </button>
           {quickOpenHref ? (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               <Button asChild type="button" size="sm" variant="outline" className="h-6 px-2 text-[11px]">
-                <Link href={quickOpenHref}>Open Detail</Link>
+                <Link href={quickOpenHref}>{t("requestCard.openDetail")}</Link>
               </Button>
             </div>
           ) : null}

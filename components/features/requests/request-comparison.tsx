@@ -1,5 +1,8 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslate } from "@/lib/use-locale";
 
 export type RequestComparisonRow = {
   label: string;
@@ -9,6 +12,7 @@ export type RequestComparisonRow = {
 };
 
 export function RequestComparison({ rows }: { rows: RequestComparisonRow[] }) {
+  const { t } = useTranslate();
   return (
     <div className="rounded-md border p-2.5">
       <RequestComparisonHeader />
@@ -22,13 +26,13 @@ export function RequestComparison({ rows }: { rows: RequestComparisonRow[] }) {
               }`}
             >
               <span className="font-medium">{row.label}</span>
-              <span className="text-muted-foreground">Existing: {row.before}</span>
-              <span>Validator: {row.after}</span>
+              <span className="text-muted-foreground">{t("requestComparison.existing", { value: row.before })}</span>
+              <span>{t("requestComparison.validator", { value: row.after })}</span>
             </div>
           ))}
         </div>
       ) : (
-        <p className="mt-2 text-xs text-muted-foreground">Tidak ada data pembanding pada snapshot request ini.</p>
+        <p className="mt-2 text-xs text-muted-foreground">{t("requestComparison.empty")}</p>
       )}
     </div>
   );
@@ -52,15 +56,16 @@ export function RequestComparisonSkeleton() {
 }
 
 function RequestComparisonHeader() {
+  const { t } = useTranslate();
   return (
     <div className="space-y-0.5">
       <Badge variant="outline" className="w-fit text-[10px] uppercase tracking-normal">
         Compare
       </Badge>
       <div>
-        <p className="text-sm font-medium">Pembanding Data</p>
+        <p className="text-sm font-medium">{t("requestComparison.headerTitle")}</p>
         <p className="text-xs text-muted-foreground">
-          Bandingkan data existing dengan hasil validasi validator sebelum mengambil keputusan.
+          {t("requestComparison.headerDesc")}
         </p>
       </div>
     </div>
