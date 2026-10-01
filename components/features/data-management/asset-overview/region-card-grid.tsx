@@ -6,6 +6,7 @@ import { OperationalState } from "@/components/operational-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { DataCategory } from "@/lib/data-management-config";
+import { useTranslate } from "@/lib/use-locale";
 import { RegionCard, type RegionCoreSummary, type RegionItem } from "./region-card";
 import { RegionInventoryDialog, type DeviceTypeOption } from "./region-inventory-dialog";
 
@@ -43,6 +44,7 @@ export function RegionCardGrid({
   latestDate: (...values: Array<string | null | undefined>) => string | null;
 }) {
   const [selectedRegion, setSelectedRegion] = useState<RegionItem | null>(null);
+  const { t } = useTranslate();
   const deviceTypes = useMemo<DeviceTypeOption[]>(
     () =>
       assetCategories
@@ -55,9 +57,9 @@ export function RegionCardGrid({
     <section className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Daftar Region</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("regionGrid.title")}</h3>
           <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-            Menampilkan <span className="font-mono font-semibold tabular-nums text-foreground">{regions.length}</span> dari <span className="font-mono tabular-nums">{allRegionsCount}</span> region
+            {t("regionGrid.showingPrefix")} <span className="font-mono font-semibold tabular-nums text-foreground">{regions.length}</span> {t("regionGrid.showingMid")} <span className="font-mono tabular-nums">{allRegionsCount}</span> {t("regionGrid.showingSuffix")}
           </p>
         </div>
         <div className="relative w-full sm:w-72">
@@ -65,7 +67,7 @@ export function RegionCardGrid({
           <Input
             value={searchRegion}
             onChange={(event) => onSearchRegionChange(event.target.value)}
-            placeholder="Cari region..."
+            placeholder={t("regionGrid.searchPlaceholder")}
             className="h-9 rounded-full border-border/60 bg-card pl-9 pr-4 text-xs shadow-2xs glass-inset"
           />
         </div>
@@ -73,8 +75,8 @@ export function RegionCardGrid({
 
       {regions.length === 0 ? (
         <OperationalState
-          title={allRegionsCount === 0 ? "Belum ada region" : "Region tidak ditemukan"}
-          description={allRegionsCount === 0 ? "Belum ada data region yang bisa ditampilkan." : "Ubah kata kunci pencarian region."}
+          title={allRegionsCount === 0 ? t("regionGrid.emptyTitle") : t("regionGrid.notFoundTitle")}
+          description={allRegionsCount === 0 ? t("regionGrid.emptyDescription") : t("regionGrid.notFoundDescription")}
         />
       ) : (
         <>
@@ -98,11 +100,11 @@ export function RegionCardGrid({
 
           <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-3">
             <span className="text-xs text-muted-foreground">
-              Menampilkan halaman <span className="font-mono font-medium text-foreground">{safeRegionPage}</span> dari {totalRegionPages}
+              {t("regionGrid.pagePrefix")} <span className="font-mono font-medium text-foreground">{safeRegionPage}</span> {t("regionGrid.showingMid")} {totalRegionPages}
             </span>
             <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={onPrevPage} disabled={safeRegionPage <= 1} className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">Sebelumnya</Button>
-              <Button type="button" variant="outline" size="sm" onClick={onNextPage} disabled={safeRegionPage >= totalRegionPages} className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">Berikutnya</Button>
+              <Button type="button" variant="outline" size="sm" onClick={onPrevPage} disabled={safeRegionPage <= 1} className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">{t("regionGrid.prev")}</Button>
+              <Button type="button" variant="outline" size="sm" onClick={onNextPage} disabled={safeRegionPage >= totalRegionPages} className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">{t("regionGrid.next")}</Button>
             </div>
           </div>
         </>

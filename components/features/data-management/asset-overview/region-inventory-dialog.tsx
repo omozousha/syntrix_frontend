@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { apiFetch, type DevicesListResponse } from "@/lib/api";
 import { deviceTypeKeyToSlug } from "@/lib/data-management-config";
+import { useTranslate } from "@/lib/use-locale";
 import { buildRegionCardDisplay } from "@/lib/display-adapters/asset-overview-display-adapter";
 import { deviceKeys } from "@/lib/query-keys";
 import { RegionDeviceTypeCard } from "./region-device-type-card";
@@ -36,6 +37,7 @@ export function RegionInventoryDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const { t } = useTranslate();
   const [typeSearch, setTypeSearch] = useState("");
   const typeCountQuery = useQuery({
     queryKey: [...deviceKeys.all, "region-type-counts", region?.id || "", deviceTypes.map((item) => item.value).join(",")],
@@ -74,10 +76,10 @@ export function RegionInventoryDialog({
       <DialogContent className="grid max-h-[calc(100dvh-1.5rem)] max-w-6xl grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden rounded-2xl border border-border/60 p-0 shadow-lg glass-inset">
         <DialogHeader className="border-b px-5 pb-4 pt-5 pr-14">
           <div className="flex flex-wrap items-center gap-2">
-            <DialogTitle className="text-lg">Inventory Device {display.name}</DialogTitle>
+            <DialogTitle className="text-lg">{t("regionDialog.titlePrefix")} {display.name}</DialogTitle>
             {display.code ? <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em] glass-inset">{display.code}</Badge> : null}
           </div>
-          <DialogDescription>Pilih tipe device untuk membuka halaman daftar inventory pada region terkait.</DialogDescription>
+          <DialogDescription>{t("regionDialog.description")}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-2 px-5 sm:flex-row sm:items-center sm:justify-between">
@@ -86,12 +88,12 @@ export function RegionInventoryDialog({
             <Input
               value={typeSearch}
               onChange={(event) => setTypeSearch(event.target.value)}
-              placeholder="Cari tipe device..."
+              placeholder={t("regionDialog.searchPlaceholder")}
               className="h-9 rounded-full border-border/60 bg-card pl-9 text-xs shadow-2xs glass-inset"
             />
           </div>
           {typeCountQuery.isFetching ? (
-            <InlineLoader label="Menghitung device..." />
+            <InlineLoader label={t("regionDialog.countingDevice")} />
           ) : null}
         </div>
 
@@ -103,7 +105,7 @@ export function RegionInventoryDialog({
                 <Users className="size-4" />
               </div>
               <div>
-                <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">Pelanggan Region</p>
+                <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">{t("regionDialog.regionCustomers")}</p>
                 <p className="font-mono text-base font-bold tabular-nums text-foreground">
                   {customerCountQuery.isPending ? "..." : (customerCountQuery.data ?? 0).toLocaleString("id-ID")}
                 </p>
@@ -119,7 +121,7 @@ export function RegionInventoryDialog({
                 router.push(`/data-management/list/customer?region_id=${encodeURIComponent(region.id)}`);
               }}
             >
-              Lihat Customer
+              {t("regionDialog.viewCustomers")}
               <ArrowRight className="size-3" />
             </Button>
           </div>
@@ -137,7 +139,7 @@ export function RegionInventoryDialog({
         </div>
 
         <div className="border-t border-border/60 bg-muted/30 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground glass-inset">
-          {typeCountQuery.isPending ? "Menghitung device..." : `${totalRegionDevices.toLocaleString("id-ID")} device dalam ${deviceTypes.length} tipe`}
+          {typeCountQuery.isPending ? t("regionDialog.countingDevice") : t("regionDialog.footerCount", { total: totalRegionDevices.toLocaleString("id-ID"), count: deviceTypes.length })}
         </div>
       </DialogContent>
     </Dialog>
@@ -159,11 +161,12 @@ function DeviceTypeOverview({
   onRetry: () => void;
   onSelect: (option: DeviceTypeOption) => void;
 }) {
+  const { t } = useTranslate();
   if (error) {
-    return <OperationalState title="Jumlah device gagal dimuat" description={error.message} variant="error" actionLabel="Coba lagi" onAction={onRetry} />;
+    return <OperationalState title={t("regionDialog.errorTitle")} description={error.message} variant="error" actionLabel={t("common.retry")} onAction={onRetry} />;
   }
   if (!deviceTypes.length) {
-    return <OperationalState title="Tipe device tidak ditemukan" description="Ubah kata kunci pencarian tipe device." />;
+    return <OperationalState title={t("regionDialog.notFoundTitle")} description={t("regionDialog.notFoundDescription")} />;
   }
   return (
     <div className="grid grid-cols-1 gap-3 pb-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

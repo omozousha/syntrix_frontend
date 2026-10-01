@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowUpRight, Cable, Database, MapPin, Network, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslate } from "@/lib/use-locale";
+import { type MessageKey } from "@/lib/locales";
 import { buildRegionCardDisplay } from "@/lib/display-adapters/asset-overview-display-adapter";
 
 export type RegionItem = {
@@ -38,6 +42,7 @@ export function RegionCard({
   formatKilometers: (valueMeters: number) => string;
   latestDate: (...values: Array<string | null | undefined>) => string | null;
 }) {
+  const { t } = useTranslate();
   const display = buildRegionCardDisplay(region);
   const regionLastUpdated = latestDate(summary?.popLatestUpdatedAt, summary?.deviceLatestUpdatedAt);
 
@@ -55,16 +60,16 @@ export function RegionCard({
               </Badge>
             ) : null}
           </div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Update terakhir: {loading ? "Memuat..." : formatDateTime(regionLastUpdated)}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{t("regionCard.lastUpdatePrefix")} {loading ? t("regionCard.loading") : formatDateTime(regionLastUpdated)}</p>
         </CardHeader>
 
         <CardContent className="grid flex-1 grid-cols-2 gap-2.5 px-4 py-2">
-          <Metric icon={MapPin} label="POP" value={loading ? undefined : String(summary?.pops ?? 0)} />
-          <Metric icon={Database} label="Device" value={loading ? undefined : String(summary?.devices ?? 0)} />
-          <Metric icon={Network} label="Route" value={loading ? undefined : formatKilometers(summary?.routeDistanceMeters ?? 0)} />
-          <Metric icon={Cable} label="Cable on Route" value={loading ? undefined : String(summary?.cableDevices ?? 0)} />
+          <Metric icon={MapPin} labelKey="regionCard.metric.pop" value={loading ? undefined : String(summary?.pops ?? 0)} />
+          <Metric icon={Database} labelKey="regionCard.metric.device" value={loading ? undefined : String(summary?.devices ?? 0)} />
+          <Metric icon={Network} labelKey="regionCard.metric.route" value={loading ? undefined : formatKilometers(summary?.routeDistanceMeters ?? 0)} />
+          <Metric icon={Cable} labelKey="regionCard.metric.cableOnRoute" value={loading ? undefined : String(summary?.cableDevices ?? 0)} />
           <div className="col-span-2">
-            <Metric icon={Users} label="Customer" value={loading ? undefined : String(summary?.customers ?? 0)} />
+            <Metric icon={Users} labelKey="regionCard.metric.customer" value={loading ? undefined : String(summary?.customers ?? 0)} />
           </div>
         </CardContent>
 
@@ -74,7 +79,7 @@ export function RegionCard({
             onClick={(e) => e.stopPropagation()}
             className="flex h-9 w-full items-center justify-between rounded-full border border-border/60 bg-background px-3 font-mono text-[10px] font-medium uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted active:scale-[0.98]"
           >
-            List POP
+            {t("regionCard.listPop")}
             <ArrowUpRight className="size-4 text-muted-foreground group-hover/btn:text-foreground group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform duration-200" />
           </Link>
         </CardFooter>
@@ -83,12 +88,13 @@ export function RegionCard({
   );
 }
 
-function Metric({ icon: Icon, label, value }: { icon: typeof MapPin; label: string; value?: string }) {
+function Metric({ icon: Icon, labelKey, value }: { icon: typeof MapPin; labelKey: MessageKey; value?: string }) {
+  const { t } = useTranslate();
   return (
     <div className="flex min-w-0 items-center gap-2 rounded-xl border border-border/60 bg-muted/5 px-2.5 py-2 glass-inset transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover/btn:border-border/80 group-hover/btn:bg-background">
       <Icon className="size-4 shrink-0 text-muted-foreground/80" />
       <div className="min-w-0">
-        <p className="truncate font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+        <p className="truncate font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{t(labelKey)}</p>
         {value === undefined ? (
           <Skeleton className="mt-1.5 h-4 w-12 rounded" />
         ) : (

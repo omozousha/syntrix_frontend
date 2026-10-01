@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { OperationalKpiCard } from "@/components/operational-ui";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useTranslate } from "@/lib/use-locale";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export type AssetSummaryStat = {
@@ -19,13 +20,14 @@ export function AssetSummaryStrip({
   title: string;
   stats: AssetSummaryStat[];
 }) {
+  const { t } = useTranslate();
   return (
     <section className="space-y-3">
       <div className="rounded-[1.5rem] border border-border/40 bg-muted/10 p-1 shadow-2xs dark:bg-white/[0.01]">
         <div className="rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card p-3.5 shadow-xs glass-inset">
           <div className="flex items-center justify-between gap-3 px-0.5">
             <h3 className="font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</h3>
-            <span className="font-mono text-[9px] font-semibold tabular-nums uppercase tracking-[0.12em] text-muted-foreground/80">{stats.length} metrics</span>
+            <span className="font-mono text-[9px] font-semibold tabular-nums uppercase tracking-[0.12em] text-muted-foreground/80">{t("assetSummary.metrics", { count: stats.length })}</span>
           </div>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
             {stats.map((stat) => (

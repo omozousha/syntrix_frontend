@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -17,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import type { DataCategory } from "@/lib/data-management-config";
+import { useTranslate } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 import { buildRegionCardDisplay } from "@/lib/display-adapters/asset-overview-display-adapter";
 import { QuickCountButton } from "./quick-count-button";
 
@@ -53,6 +57,7 @@ export function FocusedRegionCard({
   onFocusedRegionChange: (value: string) => void;
   formatDateTime: (value?: string | null) => string;
 }) {
+  const { t } = useTranslate();
   const focusedDisplay = buildRegionCardDisplay(focusedRegion);
 
   return (
@@ -82,8 +87,8 @@ export function FocusedRegionCard({
 
       {!focusedRegion ? (
         <OperationalState
-          title="Belum ada region"
-          description="Akun ini belum memiliki scope region yang bisa ditampilkan."
+          title={t("focusedRegion.empty.title")}
+          description={t("focusedRegion.empty.description")}
         />
       ) : (
         <div className="space-y-3">
@@ -97,7 +102,7 @@ export function FocusedRegionCard({
                 <p className="truncate text-sm font-semibold leading-tight">{focusedDisplay.name}</p>
                 {focusedRegionLastUpdated ? (
                   <p className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                    Update: {formatDateTime(focusedRegionLastUpdated)}
+                    {t("assetOverview.caption.update", { value: formatDateTime(focusedRegionLastUpdated) })}
                   </p>
                 ) : null}
               </div>
@@ -112,7 +117,7 @@ export function FocusedRegionCard({
             <CardHeader className="border-b">
               <div className="flex items-center gap-2">
                 <Layers className="size-4 text-muted-foreground" />
-                <CardTitle className="font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Quick Actions</CardTitle>
+                <CardTitle className="font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{t("focusedRegion.quickActions")}</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="pt-3">
@@ -120,23 +125,23 @@ export function FocusedRegionCard({
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <QuickActionCard
                     href="/requests"
-                    label="Approval Queue"
-                    description="Review & approve perubahan data"
+                    label="focusedRegion.action.approvalQueue"
+                    description="focusedRegion.action.approvalQueueDesc"
                     icon={ClipboardList}
                     badge="Pending"
                     variant="default"
                   />
                   <QuickActionCard
                     href={`/data-management/list/odp?region_id=${encodeURIComponent(focusedRegion.id)}`}
-                    label="List ODP"
-                    description="Lihat dan kelola ODP per region"
+                    label="focusedRegion.action.listOdp"
+                    description="focusedRegion.action.listOdpDesc"
                     icon={Map}
                     variant="outline"
                   />
                   <QuickActionCard
                     href={`/data-management/list/odp?validation_status=unvalidated&region_id=${encodeURIComponent(focusedRegion.id)}`}
-                    label="ODP Unvalidated"
-                    description="Pantau ODP belum valid"
+                    label="focusedRegion.action.odpUnvalidated"
+                    description="focusedRegion.action.odpUnvalidatedDesc"
                     icon={ShieldCheck}
                     variant="outline"
                   />
@@ -145,22 +150,22 @@ export function FocusedRegionCard({
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <QuickActionCard
                     href={`/data-management/list/odp?region_id=${encodeURIComponent(focusedRegion.id)}`}
-                    label="Pilih ODP"
-                    description="Pilih ODP untuk validasi lapangan"
+                    label="focusedRegion.action.pilihOdp"
+                    description="focusedRegion.action.pilihOdpDesc"
                     icon={Map}
                     variant="default"
                   />
                   <QuickActionCard
                     href="/requests"
-                    label="Requests"
-                    description="Pantau request validasi"
+                    label="focusedRegion.action.requests"
+                    description="focusedRegion.action.requestsDesc"
                     icon={ShieldCheck}
                     variant="outline"
                   />
                   <QuickActionCard
                     href={`/maps?region_id=${encodeURIComponent(focusedRegion.id)}`}
-                    label="Peta Region"
-                    description="Visual aset berdasarkan peta"
+                    label="focusedRegion.action.regionMap"
+                    description="focusedRegion.action.regionMapDesc"
                     icon={Globe}
                     variant="outline"
                   />
@@ -174,7 +179,7 @@ export function FocusedRegionCard({
             <CardHeader className="border-b">
               <div className="flex items-center gap-2">
                 <Database className="size-4 text-muted-foreground" />
-                <CardTitle className="font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Asset Inventory</CardTitle>
+                <CardTitle className="font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{t("focusedRegion.assetInventory")}</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="pt-3">
@@ -196,11 +201,11 @@ export function FocusedRegionCard({
             <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
               <FileText className="size-3" />
               <span>
-                Total <strong className="font-mono tabular-nums text-foreground">{focusedAssetCategories.length}</strong> kategori aset terdaftar untuk region ini
+                {t("focusedRegion.assetCountPrefix")} <strong className="font-mono tabular-nums text-foreground">{focusedAssetCategories.length}</strong> {t("focusedRegion.assetCountSuffix")}
               </span>
             </div>
             <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.12em] glass-inset">
-              {isAdminRegion ? "Admin Region" : "Validator Field"}
+              {isAdminRegion ? t("focusedRegion.role.adminRegion") : t("focusedRegion.role.validatorField")}
             </Badge>
           </div>
         </div>
@@ -220,12 +225,13 @@ function QuickActionCard({
   variant = "outline",
 }: {
   href: string;
-  label: string;
-  description: string;
+  label: MessageKey;
+  description: MessageKey;
   icon: LucideIcon;
   badge?: string;
   variant?: "default" | "outline";
 }) {
+  const { t } = useTranslate();
   return (
     <Button
       asChild
@@ -240,14 +246,14 @@ function QuickActionCard({
           </div>
           <div className="min-w-0 space-y-0.5">
             <div className="flex items-center gap-2">
-              <span className="truncate text-sm font-medium">{label}</span>
+              <span className="truncate text-sm font-medium">{t(label)}</span>
               {badge ? (
                 <Badge variant="secondary" className="h-4 rounded-full px-1.5 font-mono text-[9px] uppercase tracking-[0.08em] tabular-nums">
                   {badge}
                 </Badge>
               ) : null}
             </div>
-            <p className="truncate font-mono text-[10px] text-muted-foreground">{description}</p>
+            <p className="truncate font-mono text-[10px] text-muted-foreground">{t(description)}</p>
           </div>
         </div>
         <ArrowRight className="size-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 group-hover:translate-x-0.5" />
