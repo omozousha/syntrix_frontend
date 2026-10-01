@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Download, QrCode, Copy, Check, BellRing } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useTranslate } from "@/lib/use-locale";
 
 type DeviceBentoQrTileProps = {
   qrDataUrl: string;
@@ -26,6 +27,7 @@ export function DeviceBentoQrTile({
   canSendReminder = true,
 }: DeviceBentoQrTileProps) {
   const [copied, setCopied] = useState(false);
+  const { t } = useTranslate();
 
   function handleCopy() {
     const url = publicUrl || window.location.href;
@@ -52,7 +54,7 @@ export function DeviceBentoQrTile({
               {qrDataUrl ? (
                 <Image
                   src={qrDataUrl}
-                  alt="QR Code Device"
+                  alt={t("qrBento.alt")}
                   width={140}
                   height={140}
                   className="size-full object-contain"
@@ -61,14 +63,14 @@ export function DeviceBentoQrTile({
               ) : (
                 <div className="flex flex-col items-center justify-center gap-1 text-slate-400">
                   <QrCode className="size-8 animate-pulse" />
-                  <span className="font-mono text-[9px]">Generating...</span>
+                  <span className="font-mono text-[9px]">{t("qrBento.generating")}</span>
                 </div>
               )}
             </div>
           </div>
 
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Pindai untuk verifikasi fisik di lapangan atau unduh label stiker standar.
+            {t("qrBento.description")}
           </p>
         </div>
 
@@ -81,7 +83,7 @@ export function DeviceBentoQrTile({
               onClick={onDownloadQrLabel}
             >
               <Download className="mr-2 size-4" />
-              <span>Unduh Label QR (PNG)</span>
+              <span>{t("qrBento.download")}</span>
             </Button>
           ) : null}
 
@@ -94,7 +96,7 @@ export function DeviceBentoQrTile({
               disabled={reminderDisabled}
             >
               <BellRing className="mr-2 size-3.5 text-primary" />
-              <span>Kirim Reminder Validasi</span>
+              <span>{t("qrBento.reminder")}</span>
             </Button>
           ) : null}
 
@@ -107,12 +109,12 @@ export function DeviceBentoQrTile({
             {copied ? (
               <>
                 <Check className="mr-2 size-3.5 text-emerald-500" />
-                <span className="text-emerald-600 dark:text-emerald-400">Tautan Disalin!</span>
+                <span className="text-emerald-600 dark:text-emerald-400">{t("qrBento.copied")}</span>
               </>
             ) : (
               <>
                 <Copy className="mr-2 size-3.5 text-muted-foreground" />
-                <span>Salin Tautan QR</span>
+                <span>{t("qrBento.copyLink")}</span>
               </>
             )}
           </Button>

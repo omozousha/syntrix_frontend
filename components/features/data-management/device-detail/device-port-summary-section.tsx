@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type DevicePort = {
   id: string;
@@ -77,6 +78,7 @@ export function DevicePortSummarySection({
   readiness,
   loading,
 }: DevicePortSummarySectionProps) {
+  const { t, locale } = useTranslate();
   const [selectedPort, setSelectedPort] = useState<DevicePort | null>(null);
   const statusCounts = useMemo(
     () => ports.reduce<Record<string, number>>((acc, port) => {
@@ -102,15 +104,15 @@ export function DevicePortSummarySection({
               Port Inventory
             </CardTitle>
             <CardDescription className="text-xs">
-              Ringkasan port {deviceTypeLabel || "device"} untuk kebutuhan topology dan assignment.
+              {t("portSummary.description", { device: deviceTypeLabel || "device" })}
             </CardDescription>
           </div>
-          <Badge variant={totalPorts ? "secondary" : "outline"}>{totalPorts} port</Badge>
+          <Badge variant={totalPorts ? "secondary" : "outline"}>{t("portSummary.totalPort", { count: totalPorts })}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3 px-3 pb-3 pt-0">
         {loading ? (
-          <AppLoading label="Memuat port device..." />
+          <AppLoading label={t("portSummary.loading")} />
         ) : totalPorts ? (
           <>
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -146,18 +148,18 @@ export function DevicePortSummarySection({
                     </Badge>
                   </div>
                   <p className="mt-1 truncate text-[11px] text-muted-foreground">
-                    {portAssignmentLabel(port)}
+                    {portAssignmentLabel(port, t)}
                   </p>
                 </Button>
               ))}
             </div>
             {ports.length > 12 ? (
-              <p className="text-xs text-muted-foreground">Menampilkan 12 dari {ports.length} port. Detail lengkap akan masuk ke Topology Management.</p>
+              <p className="text-xs text-muted-foreground">{t("portSummary.paginated", { shown: 12, total: ports.length })}</p>
             ) : null}
           </>
         ) : (
           <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-            Belum ada port untuk device ini. Port template dan provisioning akan menjadi dasar Topology Management.
+            {t("portSummary.noPorts")}
           </div>
         )}
       </CardContent>
@@ -165,7 +167,7 @@ export function DevicePortSummarySection({
         <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-xl sm:mx-auto sm:max-w-2xl">
           <SheetHeader>
             <SheetTitle>{selectedPort?.port_label || `Port ${selectedPort?.port_index ?? "-"}`}</SheetTitle>
-            <SheetDescription>Detail port inventory dan assignment topology.</SheetDescription>
+            <SheetDescription>{t("portSummary.sheetDescription")}</SheetDescription>
           </SheetHeader>
           {selectedPort ? (
             <div className="mt-4 space-y-3">
@@ -201,7 +203,7 @@ export function DevicePortSummarySection({
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-1 text-sm text-muted-foreground">Belum ada port connection untuk port ini.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{t("portSummary.noConnection")}</p>
                 )}
               </div>
               <div className="rounded-md border bg-muted/20 p-3">
@@ -210,7 +212,7 @@ export function DevicePortSummarySection({
               </div>
               <div className="flex justify-end">
                 <Button type="button" variant="outline" size="sm" onClick={() => setSelectedPort(null)}>
-                  Tutup
+                  {t("portSummary.close")}
                 </Button>
               </div>
             </div>
@@ -232,6 +234,7 @@ function TopologyReadinessStrip({
   fiberSummary?: DevicePortSummarySectionProps["fiberSummary"];
   readiness?: DevicePortSummarySectionProps["readiness"];
 }) {
+  const { t } = useTranslate();
   return (
     <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
       <div className="rounded-md border bg-muted/20 p-2">
@@ -241,7 +244,7 @@ function TopologyReadinessStrip({
         </div>
         <p className="mt-1 text-sm font-semibold">{connections}</p>
         <p className="text-[11px] text-muted-foreground">
-          {readiness?.has_connections ? "Topology edge tersedia" : "Belum ada edge"}
+          {readiness?.has_connections ? t("portSummary.edgeAvailable") : t("portSummary.noEdge")}
         </p>
       </div>
       <div className="rounded-md border bg-muted/20 p-2">
@@ -279,11 +282,11 @@ function customerLabel(port: DevicePort) {
   return port.customer_name || port.customer_number || (assignedCustomerId ? "Assigned" : "-");
 }
 
-function portAssignmentLabel(port: DevicePort) {
+function portAssignmentLabel(port: DevicePort, t: TFn) {
   const { ont_device_id: assignedOntDeviceId } = port;
   const customer = customerLabel(port);
   if (customer !== "-") return customer;
-  return assignedOntDeviceId ? "ONT assigned" : "Belum ada assignment";
+  return assignedOntDeviceId ? t("portSummary.ontAssigned") : t("portSummary.noAssignment");
 }
 
 function PortMetric({

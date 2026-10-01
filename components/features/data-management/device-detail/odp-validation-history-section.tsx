@@ -11,6 +11,7 @@ import {
   formatOdpInspectionSummary,
 } from "@/components/features/data-management/device-detail/odp-validation-history-sections";
 import { ValidationEvidenceAction } from "@/components/features/data-management/device-detail/validation-evidence-action";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type OdpValidationChecklistKey = "physical_ok" | "splitter_ok" | "port_mapping_ok" | "qr_label_ok" | "label_ok";
 
@@ -118,6 +119,8 @@ export function OdpValidationHistorySection({
   latestRejectNote?: string | null;
   onDownloadEvidence: (record: OdpValidationRecord) => void;
 }) {
+  const { t, locale } = useTranslate();
+  const numberLocale = locale === "en" ? "en-US" : "id-ID";
   return (
     <div className="space-y-2">
       {latestRequestStatus ? (
@@ -125,16 +128,16 @@ export function OdpValidationHistorySection({
       ) : null}
       {latestRejectNote ? (
         <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900 dark:border-rose-900/60 dark:bg-rose-950/25 dark:text-rose-100">
-          <p className="font-medium">Reject note terakhir</p>
+          <p className="font-medium">{t("odpValidation.lastRejectNote")}</p>
           <p className="mt-1">{latestRejectNote}</p>
         </div>
       ) : null}
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">Histori Validasi</p>
-        <p className="text-xs text-muted-foreground">{records.length} record terbaru</p>
+        <p className="text-sm font-medium">{t("odpValidation.title")}</p>
+        <p className="text-xs text-muted-foreground">{t("odpValidation.recentRecords", { count: records.length })}</p>
       </div>
       {loading ? (
-        <AppLoading label="Memuat histori validasi..." />
+        <AppLoading label={t("odpValidation.loading")} />
       ) : records.length ? (
         <div className="space-y-2">
           {records.map((record, index) => (
@@ -144,12 +147,14 @@ export function OdpValidationHistorySection({
               recordIndex={index}
               validators={validators}
               onDownloadEvidence={() => onDownloadEvidence(record)}
+              t={t}
+              numberLocale={numberLocale}
             />
           ))}
         </div>
       ) : (
         <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-          Belum ada histori validasi lapangan untuk ODP ini.
+          {t("odpValidation.empty")}
         </div>
       )}
     </div>
@@ -161,11 +166,15 @@ function OdpValidationHistoryCard({
   recordIndex,
   validators,
   onDownloadEvidence,
+  t,
+  numberLocale,
 }: {
   record: OdpValidationRecord;
   recordIndex: number;
   validators: ValidatorOption[];
   onDownloadEvidence: () => void;
+  t: TFn;
+  numberLocale: string;
 }) {
   const evidenceCount = extractValidationImageAttachments(record, recordIndex).length;
   const validation = record.payload?.field_validation;
@@ -182,19 +191,19 @@ function OdpValidationHistoryCard({
               </Badge>
             ) : null}
             <p className="text-xs text-muted-foreground">
-              {record.validation_id || "Validasi"} - {formatDateTime(valueOf(record.validated_at || record.created_at))}
+              {record.validation_id || t("odpValidation.fallbackId")} - {formatDateTime(valueOf(record.validated_at || record.created_at), numberLocale)}
             </p>
           </div>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span>Nama: {valueOf(validation?.new_device_name || validation?.old_device_name, "-")}</span>
-            <span>Validator: {getValidatorLabel(record, validators)}</span>
-            <span>Adminregion: {getWorkflowActorLabel(record, "adminregion")}</span>
-            <span>Superadmin: {getWorkflowActorLabel(record, "superadmin")}</span>
-            <span>Tanggal validasi: {formatDate(valueOf(validation?.validation_date))}</span>
+            <span>{t("odpValidation.name")}: {valueOf(validation?.new_device_name || validation?.old_device_name, "-")}</span>
+            <span>{t("odpValidation.validator")}: {getValidatorLabel(record, validators)}</span>
+            <span>{t("odpValidation.adminRegion")}: {getWorkflowActorLabel(record, "adminregion")}</span>
+            <span>{t("odpValidation.superadmin")}: {getWorkflowActorLabel(record, "superadmin")}</span>
+            <span>{t("odpValidation.validationDate")}: {formatDate(valueOf(validation?.validation_date), numberLocale)}</span>
           </div>
           <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-            {record.adminregion_action_at ? <span>Adminregion action: {formatDateTime(record.adminregion_action_at)}</span> : null}
-            {record.superadmin_action_at ? <span>Superadmin action: {formatDateTime(record.superadmin_action_at)}</span> : null}
+            {record.adminregion_action_at ? <span>{t("odpValidation.adminRegionAction")}: {formatDateTime(record.adminregion_action_at, numberLocale)}</span> : null}
+            {record.superadmin_action_at ? <span>{t("odpValidation.superadminAction")}: {formatDateTime(record.superadmin_action_at, numberLocale)}</span> : null}
           </div>
           {record.findings ? <p className="mt-2 text-sm">{record.findings}</p> : null}
         </div>
@@ -203,7 +212,7 @@ function OdpValidationHistoryCard({
         <ValidationEvidenceAction evidenceCount={evidenceCount} onDownload={onDownloadEvidence} />
       </div>
       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-        <span>Kondisi {formatOdpInspectionSummary(record.payload?.field_inspection)}</span>
+        <span>{t("odpValidation.condition")} {formatOdpInspectionSummary(record.payload?.field_inspection, t)}</span>
         <span>Splitter {valueOf(record.payload?.field_validation?.splitter_ratio, "-")}</span>
         <span>Total {record.payload?.port_summary?.total ?? "-"}</span>
         <span>Used {record.payload?.port_summary?.used ?? "-"}</span>
@@ -273,19 +282,19 @@ function valueOf(value: unknown, fallback = "") {
   return text || fallback;
 }
 
-function formatDateTime(value: string) {
+function formatDateTime(value: string, locale: string) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
 }
 
-function formatDate(value: string) {
+function formatDate(value: string, locale: string) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(date);
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date);
 }

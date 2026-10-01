@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
+import { useTranslate } from "@/lib/use-locale";
 
 type TopologyDeviceOption = { id: string; device_name: string; device_type_key: string };
 type TopologyPortOption = { id: string; port_label?: string | null; port_index: number; status: string };
@@ -36,6 +37,7 @@ export function OdpFrontReassignDialog({
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [selectedPortId, setSelectedPortId] = useState("");
   const [saving, setSaving] = useState(false);
+  const { t } = useTranslate();
 
   useEffect(() => {
     if (!token || !odpDeviceId) return;
@@ -97,7 +99,7 @@ export function OdpFrontReassignDialog({
       setOpen(false);
       onSuccess?.();
     } catch (err) {
-      setError((err as Error).message || "Gagal mengganti ODC hulu");
+      setError((err as Error).message || t("odpFront.reassignFailedFallback"));
     } finally {
       setSaving(false);
     }
@@ -107,55 +109,55 @@ export function OdpFrontReassignDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button type="button" variant="outline" size="sm">
-          Ganti ODC Hulu
+          {t("odpFront.trigger")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Ganti ODC Hulu</DialogTitle>
+          <DialogTitle>{t("odpFront.title")}</DialogTitle>
           <DialogDescription>
-            Pilih ODC baru dan port idle untuk mengganti koneksi hulu ODP ini.
+            {t("odpFront.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">ODC Tujuan</label>
+            <label className="text-xs font-medium">{t("odpFront.targetOdc")}</label>
             <Combobox
               value={selectedDeviceId || "__none__"}
               onValueChange={(v) => setSelectedDeviceId(v === "__none__" ? "" : v)}
               options={[
-                { value: "__none__", label: "Pilih ODC" },
+                { value: "__none__", label: t("odpFront.selectOdc") },
                 ...frontDevices.map((d) => ({
                   value: d.id,
                   label: `${d.device_name} (${d.device_type_key})`,
                 })),
               ]}
-              placeholder="Cari ODC..."
-              searchPlaceholder="Cari ODC..."
+              placeholder={t("odpFront.searchOdc")}
+              searchPlaceholder={t("odpFront.searchOdc")}
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Port ODC Idle</label>
+            <label className="text-xs font-medium">{t("odpFront.idlePort")}</label>
             <Combobox
               value={selectedPortId || "__none__"}
               onValueChange={(v) => setSelectedPortId(v === "__none__" ? "" : v)}
               options={[
-                { value: "__none__", label: selectedDeviceId ? "Pilih port ODC" : "Pilih ODC terlebih dahulu" },
+                { value: "__none__", label: selectedDeviceId ? t("odpFront.selectPort") : t("odpFront.selectOdcFirst") },
                 ...frontDevicePorts.map((p) => ({
                   value: p.id,
                   label: p.port_label || `Port #${p.port_index}`,
                 })),
               ]}
-              placeholder={selectedDeviceId ? "Pilih port ODC" : "Pilih ODC terlebih dahulu"}
+              placeholder={selectedDeviceId ? t("odpFront.selectPort") : t("odpFront.selectOdcFirst")}
               disabled={!selectedDeviceId}
             />
           </div>
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>Batal</Button>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("odpFront.cancel")}</Button>
           <Button type="button" onClick={handleReassign} disabled={!selectedDeviceId || !selectedPortId || saving}>
-            {saving ? "Menyimpan..." : "Ganti"}
+            {saving ? t("odpFront.saving") : t("odpFront.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>

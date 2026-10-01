@@ -5,6 +5,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTit
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/label";
+import { useTranslate } from "@/lib/use-locale";
 
 type ValidatorOption = {
   id: string;
@@ -36,6 +37,7 @@ export function ValidationReminderDialog({
   onSelectedValidatorChange: (validatorId: string) => void;
   onSend: () => void;
 }) {
+  const { t } = useTranslate();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-md rounded-2xl border-border/60 shadow-lg glass-inset p-5 sm:p-6">
@@ -44,29 +46,29 @@ export function ValidationReminderDialog({
             <BellRing className="size-4" />
           </div>
           <div>
-            <AlertDialogTitle className="text-base font-semibold">Kirim Reminder Validasi</AlertDialogTitle>
+            <AlertDialogTitle className="text-base font-semibold">{t("validationReminder.title")}</AlertDialogTitle>
             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{deviceTypeLabel}</p>
           </div>
         </div>
 
         <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed pt-1">
-          Pilih validator di region perangkat ini. Notifikasi pengingat akan dikirim langsung ke aplikasi mobile Syntrix-One validator terkait.
+          {t("validationReminder.description")}
         </AlertDialogDescription>
 
         <div className="space-y-2 py-2">
-          <Label className="text-xs font-medium">Pilih Validator</Label>
+          <Label className="text-xs font-medium">{t("validationReminder.selectValidator")}</Label>
           <Combobox
             value={selectedValidatorId || "__none__"}
             onValueChange={(value) => onSelectedValidatorChange(value === "__none__" ? "" : value)}
             disabled={loadingValidators || sendingReminder}
-            placeholder={loadingValidators ? "Memuat validator..." : "Pilih validator"}
-            searchPlaceholder="Cari validator..."
-            emptyText="Tidak ada validator aktif pada region ini."
+            placeholder={loadingValidators ? t("validationReminder.loadingValidator") : t("validationReminder.selectValidatorPlaceholder")}
+            searchPlaceholder={t("validationReminder.searchValidator")}
+            emptyText={t("validationReminder.noValidator")}
             options={[
-              { value: "__none__", label: loadingValidators ? "Memuat validator..." : "Pilih validator" },
+              { value: "__none__", label: loadingValidators ? t("validationReminder.loadingValidator") : t("validationReminder.selectValidatorPlaceholder") },
               ...validators.map((validator) => ({
                 value: validator.id,
-                label: [validator.full_name, validator.user_code || validator.email].filter(Boolean).join(" - ") || "Validator tidak tersedia",
+                label: [validator.full_name, validator.user_code || validator.email].filter(Boolean).join(" - ") || t("validationReminder.validatorUnavailable"),
               })),
             ]}
           />
@@ -81,7 +83,7 @@ export function ValidationReminderDialog({
             onClick={() => onOpenChange(false)}
             disabled={sendingReminder}
           >
-            Batal
+            {t("validationReminder.cancel")}
           </Button>
           <Button
             type="button"
@@ -89,7 +91,7 @@ export function ValidationReminderDialog({
             onClick={onSend}
             disabled={!selectedValidatorId || sendingReminder}
           >
-            {sendingReminder ? "Mengirim..." : "Kirim Reminder"}
+            {sendingReminder ? t("validationReminder.sending") : t("validationReminder.send")}
           </Button>
         </div>
       </AlertDialogContent>

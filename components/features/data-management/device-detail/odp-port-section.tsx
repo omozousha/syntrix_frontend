@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type DevicePort = {
   id: string;
@@ -77,13 +78,15 @@ export function OdpPortSection({
   onUpdatePort: (port: DevicePort, changes: Partial<DevicePort>) => void;
   onArchivePort: (port: DevicePort) => void;
 }) {
+  const { t } = useTranslate();
+
   const splitterOptions = useMemo(() => [
-    { value: "__none__", label: "Tanpa splitter" },
+    { value: "__none__", label: t("odpPortSection.noSplitter") },
     ...splitterProfiles.map((s) => ({
       value: s.id,
-      label: s.output_port_count ? `${s.ratio_label} (${s.output_port_count} port)` : s.ratio_label,
+      label: s.output_port_count ? `${s.ratio_label} (${s.output_port_count} ${t("odpPortSection.portUnit")})` : s.ratio_label,
     })),
-  ], [splitterProfiles]);
+  ], [splitterProfiles, t]);
 
   const splitterRoleOptions = useMemo(() => [
     { value: "input", label: "Input" },
@@ -92,20 +95,20 @@ export function OdpPortSection({
   ], []);
 
   const customerOptions = useMemo(() => [
-    { value: "__none__", label: "Tanpa customer" },
+    { value: "__none__", label: t("odpPortSection.noCustomer") },
     ...customers.map((customer) => ({
       value: customer.id,
-      label: [customer.customer_name, customer.customer_number].filter(Boolean).join(" - ") || "Customer tidak tersedia",
+      label: [customer.customer_name, customer.customer_number].filter(Boolean).join(" - ") || t("odpPortSection.customerUnavailable"),
     })),
-  ], [customers]);
+  ], [customers, t]);
 
   const ontOptions = useMemo(() => [
-    { value: "__none__", label: "Tanpa ONT" },
+    { value: "__none__", label: t("odpPortSection.noOnt") },
     ...ontDevices.map((device) => ({
       value: device.id,
-      label: [device.device_name, device.device_id].filter(Boolean).join(" - ") || "ONT tidak tersedia",
+      label: [device.device_name, device.device_id].filter(Boolean).join(" - ") || t("odpPortSection.ontUnavailable"),
     })),
-  ], [ontDevices]);
+  ], [ontDevices, t]);
 
   const customerMap = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers]);
   const ontMap = useMemo(() => new Map(ontDevices.map((d) => [d.id, d])), [ontDevices]);
@@ -114,12 +117,12 @@ export function OdpPortSection({
   return (
     <div className="space-y-2 rounded-md border p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium">Port ODP</p>
+        <p className="text-sm font-medium">{t("odpPortSection.title")}</p>
         <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-          <LegendDot className="bg-emerald-500" label="used" />
-          <LegendDot className="bg-slate-300" label="idle" />
-          <LegendDot className="bg-amber-400" label="reserved" />
-          <LegendDot className="bg-rose-500" label="down" />
+          <LegendDot className="bg-emerald-500" label={t("odpPortSection.legendUsed")} />
+          <LegendDot className="bg-slate-300" label={t("odpPortSection.legendIdle")} />
+          <LegendDot className="bg-amber-400" label={t("odpPortSection.legendReserved")} />
+          <LegendDot className="bg-rose-500" label={t("odpPortSection.legendDown")} />
         </div>
       </div>
       <div className="rounded-md border border-blue-200 bg-blue-50/70 px-3 py-2 text-xs text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-100">
@@ -127,15 +130,15 @@ export function OdpPortSection({
           <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal">
             Auto-fill
           </Badge>
-          Relasi port ODP
+          {t("odpPortSection.relationTitle")}
         </div>
         <p className="text-blue-900/80 dark:text-blue-100/80">
-          Mengisi customer atau ONT akan mengubah status port menjadi used. Jika keduanya dikosongkan, status kembali idle.
+          {t("odpPortSection.relationDescription")}
         </p>
       </div>
 
       {loadingPorts ? (
-        <AppLoading label="Memuat port ODP..." />
+        <AppLoading label={t("odpPortSection.loading")} />
       ) : ports.length ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
           {ports.map((port) => {
@@ -148,7 +151,7 @@ export function OdpPortSection({
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{port.port_label || `#${port.port_index}`}</p>
-                    <p className="truncate text-xs text-muted-foreground">{describePortAssignmentState(port)}</p>
+                    <p className="truncate text-xs text-muted-foreground">{describePortAssignmentState(port, t)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`h-3 w-3 shrink-0 rounded-full ${getOdpPortStatusClass(port.status)}`} />
@@ -160,7 +163,7 @@ export function OdpPortSection({
                         className="size-7 text-destructive hover:text-destructive"
                         disabled={updatingPortId === port.id}
                         onClick={() => onArchivePort(port)}
-                        title="Archive Port"
+                        title={t("odpPortSection.archivePort")}
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -168,20 +171,20 @@ export function OdpPortSection({
                   </div>
                 </div>
                 <div className="mb-2 grid grid-cols-2 gap-2 text-xs">
-                  <RelationInfo label="Status Aktual" value={port.status || "idle"} />
+                  <RelationInfo label={t("odpPortSection.currentStatus")} value={port.status || "idle"} />
                   <RelationInfo label="CID" value={assignedCustomer?.customer_number || "-"} />
-                  <RelationInfo label="Customer" value={assignedCustomer?.customer_name || "-"} />
-                  <RelationInfo label="ONT" value={assignedOnt?.device_name || assignedOnt?.device_id || "-"} />
+                  <RelationInfo label={t("odpPortSection.customer")} value={assignedCustomer?.customer_name || "-"} />
+                  <RelationInfo label={t("odpPortSection.ont")} value={assignedOnt?.device_name || assignedOnt?.device_id || "-"} />
                   <RelationInfo
-                    label="Redaman Terakhir"
+                    label={t("odpPortSection.lastAttenuation")}
                     value={portSnapshot?.attenuation_db == null ? "-" : `${portSnapshot.attenuation_db} dB`}
                   />
-                  <RelationInfo label="Status Validasi" value={portSnapshot?.status || "-"} />
+                  <RelationInfo label={t("odpPortSection.validationStatus")} value={portSnapshot?.status || "-"} />
                   <RelationInfo
-                    label="Splitter"
+                    label={t("odpPortSection.splitter")}
                     value={assignedSplitter?.ratio_label ? `${assignedSplitter.ratio_label}${port.splitter_role ? ` (${port.splitter_role})` : ""}` : "-"}
                   />
-                  <RelationInfo label="Catatan" value={portSnapshot?.notes || port.notes || "-"} />
+                  <RelationInfo label={t("odpPortSection.notes")} value={portSnapshot?.notes || port.notes || "-"} />
                 </div>
                 {editing ? (
                   <div className="grid grid-cols-1 gap-2 pt-2 border-t border-border/40">
@@ -203,8 +206,8 @@ export function OdpPortSection({
                       }}
                       disabled={updatingPortId === port.id || loadingLookups}
                       triggerClassName="h-9"
-                      searchPlaceholder="Cari customer..."
-                      emptyText="Customer tidak ditemukan."
+                      searchPlaceholder={t("odpPortSection.searchCustomer")}
+                      emptyText={t("odpPortSection.customerNotFound")}
                       options={customerOptions}
                     />
                     <Combobox
@@ -218,8 +221,8 @@ export function OdpPortSection({
                       }}
                       disabled={updatingPortId === port.id || loadingLookups}
                       triggerClassName="h-9"
-                      searchPlaceholder="Cari ONT..."
-                      emptyText="ONT tidak ditemukan."
+                      searchPlaceholder={t("odpPortSection.searchOnt")}
+                      emptyText={t("odpPortSection.ontNotFound")}
                       options={ontOptions}
                     />
                     <Input
@@ -231,7 +234,7 @@ export function OdpPortSection({
                         }
                       }}
                       disabled={updatingPortId === port.id}
-                      placeholder="Catatan port"
+                      placeholder={t("odpPortSection.notesPlaceholder")}
                       className="h-9"
                     />
                     <Combobox
@@ -239,7 +242,7 @@ export function OdpPortSection({
                       onValueChange={(value) => onUpdatePort(port, { splitter_profile_id: value === "__none__" ? null : value })}
                       disabled={updatingPortId === port.id}
                       triggerClassName="h-9"
-                      placeholder="Splitter profile"
+                      placeholder={t("odpPortSection.splitterProfilePlaceholder")}
                       options={splitterOptions}
                     />
                     {port.splitter_profile_id ? (
@@ -248,8 +251,8 @@ export function OdpPortSection({
                         onValueChange={(value) => onUpdatePort(port, { splitter_role: value === "__none__" ? null : value })}
                         disabled={updatingPortId === port.id}
                         triggerClassName="h-9"
-                        placeholder="Splitter role"
-                        options={[{ value: "__none__", label: "Pilih role" }, ...splitterRoleOptions]}
+                        placeholder={t("odpPortSection.splitterRolePlaceholder")}
+                        options={[{ value: "__none__", label: t("odpPortSection.selectRole") }, ...splitterRoleOptions]}
                       />
                     ) : null}
                   </div>
@@ -260,7 +263,7 @@ export function OdpPortSection({
         </div>
       ) : (
         <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-          Belum ada port untuk ODP ini. Gunakan tombol Generate Ports untuk membuat port dari template ODP.
+          {t("odpPortSection.empty")}
         </div>
       )}
     </div>
@@ -292,7 +295,7 @@ function getOdpPortStatusClass(status?: string | null) {
   return "bg-slate-300";
 }
 
-function describePortAssignmentState(port: DevicePort) {
-  if (port.customer_id || port.ont_device_id) return "Endpoint terhubung";
-  return "Belum terhubung customer/ONT";
+function describePortAssignmentState(port: DevicePort, t: TFn) {
+  if (port.customer_id || port.ont_device_id) return t("odpPortSection.endpointConnected");
+  return t("odpPortSection.notConnected");
 }

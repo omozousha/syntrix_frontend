@@ -13,6 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useTranslate } from "@/lib/use-locale";
 import { cn } from "@/lib/utils";
 import {
   type DevicePort,
@@ -66,17 +67,18 @@ export function PortAssignmentDrawer({
   existingConnection?: { id: string; label: string } | null;
 }) {
   const [assignError, setAssignError] = useState("");
+  const { t } = useTranslate();
 
   const isIdle = !port?.status || port.status === "idle";
   const isUsed = port?.status === "used";
 
   const peerDeviceOptions = [
-    { value: "__none__", label: "Pilih device" },
+    { value: "__none__", label: t("portAssign.selectDevice") },
     ...peerDevices,
   ];
 
   const peerPortOptions = [
-    { value: "__none__", label: peerDeviceValue ? "Pilih port" : "Pilih device terlebih dahulu" },
+    { value: "__none__", label: peerDeviceValue ? t("portAssign.selectPort") : t("portAssign.selectDeviceFirst") },
     ...peerPorts,
   ];
 
@@ -84,11 +86,11 @@ export function PortAssignmentDrawer({
     setAssignError("");
     if (!port) return;
     if (!peerDeviceValue) {
-      setAssignError("Pilih device tujuan terlebih dahulu.");
+      setAssignError(t("portAssign.errorDevice"));
       return;
     }
     if (!peerPortValue) {
-      setAssignError("Pilih port tujuan terlebih dahulu.");
+      setAssignError(t("portAssign.errorPort"));
       return;
     }
     onAssign();
@@ -111,10 +113,10 @@ export function PortAssignmentDrawer({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Cable className="size-4" />
-            {port ? `Port ${port.port_label || `#${port.port_index}`}` : "Assign Port"}
+            {port ? `Port ${port.port_label || `#${port.port_index}`}` : t("portAssign.title")}
           </SheetTitle>
           <SheetDescription>
-            {deviceTypeKey} — atur relasi port ini dengan device lain
+            {t("portAssign.sheetDescription", { type: deviceTypeKey })}
           </SheetDescription>
         </SheetHeader>
 
@@ -142,7 +144,7 @@ export function PortAssignmentDrawer({
               </div>
               {port.notes && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Catatan: {port.notes}
+                  {t("portAssign.note")}: {port.notes}
                 </p>
               )}
             </div>
@@ -153,7 +155,7 @@ export function PortAssignmentDrawer({
             <div className="rounded-md border border-blue-200 bg-blue-50/70 px-3 py-2 text-xs text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-100">
               <div className="mb-1 flex items-center gap-2 font-medium">
                 <Link2 className="size-3.5" />
-                Koneksi Aktif
+                {t("portAssign.activeConnection")}
               </div>
               <p className="text-blue-900/80 dark:text-blue-100/80">
                 {existingConnection.label}
@@ -174,7 +176,7 @@ export function PortAssignmentDrawer({
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                Front Port (Hulu)
+                {t("portAssign.frontPort")}
               </button>
               <button
                 type="button"
@@ -186,7 +188,7 @@ export function PortAssignmentDrawer({
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                Rear Port (Hilir)
+                {t("portAssign.rearPort")}
               </button>
             </div>
           )}
@@ -194,15 +196,15 @@ export function PortAssignmentDrawer({
           {/* Peer device selector */}
           <div className="space-y-1.5">
             <p className="text-xs font-medium text-muted-foreground">
-              {direction === "front" ? "Device Hulu (Front)" : "Device Hilir (Rear)"}
+              {direction === "front" ? t("portAssign.frontDevice") : t("portAssign.rearDevice")}
             </p>
             <Combobox
               value={peerDeviceValue}
               onValueChange={onPeerDeviceChange}
               options={peerDeviceOptions}
-              placeholder="Pilih device..."
-              searchPlaceholder="Cari device..."
-              emptyText="Tidak ada device ditemukan."
+              placeholder={t("portAssign.chooseDevice")}
+              searchPlaceholder={t("portAssign.searchDevice")}
+              emptyText={t("portAssign.noDevice")}
               disabled={!isIdle || loading}
             />
           </div>
@@ -210,15 +212,15 @@ export function PortAssignmentDrawer({
           {/* Peer port selector */}
           <div className="space-y-1.5">
             <p className="text-xs font-medium text-muted-foreground">
-              Port pada device {direction === "front" ? "hulu" : "hilir"}
+              {t("portAssign.portOnDevice", { direction: direction === "front" ? t("portAssign.front") : t("portAssign.rear") })}
             </p>
             <Combobox
               value={peerPortValue}
               onValueChange={onPeerPortChange}
               options={peerPortOptions}
-              placeholder="Pilih port..."
-              searchPlaceholder="Cari port..."
-              emptyText={peerDeviceValue ? "Tidak ada port tersedia." : "Pilih device terlebih dahulu."}
+              placeholder={t("portAssign.choosePort")}
+              searchPlaceholder={t("portAssign.searchPort")}
+              emptyText={peerDeviceValue ? t("portAssign.noPort") : t("portAssign.selectDeviceFirst")}
               disabled={!peerDeviceValue || !isIdle || loading}
             />
           </div>
@@ -238,7 +240,7 @@ export function PortAssignmentDrawer({
               disabled={loading}
             >
               <Unlink className="mr-2 size-4" />
-              Putuskan Koneksi
+              {t("portAssign.disconnect")}
             </Button>
           ) : null}
           {isIdle && (
@@ -248,7 +250,7 @@ export function PortAssignmentDrawer({
               disabled={loading || !peerDeviceValue || !peerPortValue}
             >
               <Link2 className="mr-2 size-4" />
-              {loading ? "Menyimpan..." : "Simpan"}
+              {loading ? t("portAssign.saving") : t("portAssign.save")}
             </Button>
           )}
         </SheetFooter>

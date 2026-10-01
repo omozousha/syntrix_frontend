@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { buildQrPreviewPngDataUrl } from "@/lib/qr-label";
+import { useTranslate } from "@/lib/use-locale";
 
 type DeviceQrActionPanelProps = {
   qrDataUrl: string;
@@ -28,10 +29,11 @@ export function DeviceQrActionPanel({
   onOpenReminder,
   onDownloadQrLabel,
 }: DeviceQrActionPanelProps) {
+  const { t } = useTranslate();
   const [previewQr, setPreviewQr] = useState<{ key: string; dataUrl: string }>({ key: "", dataUrl: "" });
   const previewKey = `${qrDataUrl}::${logoDataUrl || ""}`;
   const previewQrDataUrl = previewQr.key === previewKey ? previewQr.dataUrl : "";
-  const label = deviceTypeLabel ? `QR Label ${deviceTypeLabel}` : "QR Label Device";
+  const label = deviceTypeLabel ? t("qrPanel.labelWithType", { deviceType: deviceTypeLabel }) : t("qrPanel.labelDevice");
 
   useEffect(() => {
     if (!qrDataUrl || !logoReady) return;
@@ -61,11 +63,11 @@ export function DeviceQrActionPanel({
           <Image src={previewQrDataUrl} alt={label} width={180} height={180} unoptimized className="size-40" />
         ) : qrDataUrl ? (
           <div className="flex size-40 items-center justify-center rounded-md bg-muted/30 text-center text-xs text-muted-foreground">
-            Memuat logo QR...
+            {t("qrPanel.loadingLogo")}
           </div>
         ) : (
           <div className="flex size-40 items-center justify-center text-xs text-muted-foreground">
-            QR belum tersedia
+            {t("qrPanel.unavailable")}
           </div>
         )}
       </div>
@@ -73,11 +75,11 @@ export function DeviceQrActionPanel({
         {showReminder ? (
           <Button type="button" variant="outline" size="sm" onClick={onOpenReminder} disabled={reminderDisabled}>
             <BellRing className="mr-1.5 size-3.5" />
-            Reminder
+            {t("qrPanel.reminder")}
           </Button>
         ) : null}
         <Button type="button" variant="outline" size="sm" onClick={onDownloadQrLabel} disabled={!qrDataUrl || !logoReady}>
-          Download
+          {t("qrPanel.download")}
         </Button>
       </div>
     </div>
