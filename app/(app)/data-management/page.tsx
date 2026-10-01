@@ -18,6 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
 import { ASSET_DATA_CATEGORIES, buildCategoryApiPath, deviceTypeKeyToSlug, type DataCategory } from "@/lib/data-management-config";
 import { formatDateTime, normalizeRole } from "@/lib/domain-formatters";
+import { useTranslate } from "@/lib/use-locale";
+import { type MessageKey } from "@/lib/locales";
 
 type GenericItem = {
   id: string;
@@ -41,7 +43,7 @@ type DeviceTypeCatalog = {
 
 type CoreStat = {
   key: string;
-  label: string;
+  label: MessageKey;
   value: number;
   unit?: string;
   caption?: string;
@@ -65,24 +67,24 @@ type RegionCategorySummary = Record<string, CategorySummary>;
 
 type DataQualityKpi = {
   key: string;
-  label: string;
+  label: MessageKey;
   value: number;
-  note: string;
+  note: MessageKey;
 };
 
 type DataQualityIssue = {
   key: string;
-  label: string;
+  label: MessageKey;
   value: number;
   severity: "high" | "medium" | "low";
-  note: string;
+  note: MessageKey;
   href: string;
 };
 
 type DataQualityIssueGroup = {
   key: string;
-  title: string;
-  description: string;
+  title: MessageKey;
+  description: MessageKey;
   issues: DataQualityIssue[];
 };
 
@@ -178,6 +180,7 @@ const REGION_PAGE_SIZE = 8;
 
 export default function DataManagementPage() {
   const { token, me } = useSession();
+  const { t } = useTranslate();
   const normalizedRole = useMemo(() => normalizeRole(me.role), [me.role]);
   const isSuperadmin = normalizedRole === "superadmin";
   const isAdminRegion = normalizedRole === "adminregion";
@@ -204,7 +207,7 @@ export default function DataManagementPage() {
   const [qualityLoading, setQualityLoading] = useState(false);
   const [qualityError, setQualityError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ message: string } | null>(null);
 
   const scopeRegionIds = useMemo(
     () => new Set((me.app_user.user_region_scopes || []).map((scope) => scope.region_id)),
@@ -216,7 +219,7 @@ export default function DataManagementPage() {
 
     async function run() {
       setLoading(true);
-      setError("");
+      setError(null);
       try {
         const [regionsRes, deviceTypesRes] = await Promise.all([
           apiFetch<RegionsListResponse>("/regions?page=1&limit=200", { token }),
@@ -259,7 +262,7 @@ export default function DataManagementPage() {
         setGlobalSummary(nextGlobalSummary);
       } catch (err) {
         if (cancelled) return;
-        setError((err as Error).message || "Gagal memuat ringkasan data.");
+        setError({ message: (err as Error).message });
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -272,10 +275,10 @@ export default function DataManagementPage() {
   }, [token, isSuperadmin, scopeRegionIds]);
 
   const subtitle = useMemo(() => {
-    if (isSuperadmin) return "Superadmin - Semua region";
-    if (isAdminRegion) return `Admin Region - ${scopeRegionIds.size} region scope`;
-    return `Validator Field - ${scopeRegionIds.size} region scope`;
-  }, [isSuperadmin, isAdminRegion, scopeRegionIds.size]);
+    if (isSuperadmin) return t("assetOverview.subtitle.superadmin");
+    if (isAdminRegion) return t("assetOverview.subtitle.adminRegion", { count: scopeRegionIds.size });
+    return t("assetOverview.subtitle.validator", { count: scopeRegionIds.size });
+  }, [t, isSuperadmin, isAdminRegion, scopeRegionIds.size]);
 
   const filteredRegions = useMemo(() => {
     const keyword = searchRegion.trim().toLowerCase();
@@ -393,50 +396,50 @@ export default function DataManagementPage() {
     () => [
       {
         key: "regions",
-        label: "Region",
+        label: "assetOverview.stat.regions",
         value: regions.length,
       },
       {
         key: "pop",
-        label: "POP",
+        label: "assetOverview.stat.pop",
         value: globalSummary.pop?.total ?? 0,
         latestUpdatedAt: globalSummary.pop?.latestUpdatedAt,
       },
       {
         key: "devices",
-        label: "Devices",
+        label: "assetOverview.stat.devices",
         value: globalSummary.devices?.total ?? 0,
         latestUpdatedAt: globalSummary.devices?.latestUpdatedAt,
       },
       {
         key: "route-length",
-        label: "Route Length",
+        label: "assetOverview.stat.routeLength",
         value: metersToKilometers(globalSummary.routeMetrics?.total ?? 0),
         unit: "km",
-        caption: `Routes: ${globalSummary.route?.total ?? 0}`,
+        caption: t("assetOverview.caption.routes", { count: globalSummary.route?.total ?? 0 }),
         latestUpdatedAt: globalSummary.routeMetrics?.latestUpdatedAt || globalSummary.route?.latestUpdatedAt,
       },
       {
         key: "cable-devices",
-        label: "Cable Devices",
+        label: "assetOverview.stat.cableDevices",
         value: globalSummary.cable?.total ?? 0,
-        caption: "Inventory",
+        caption: t("assetOverview.caption.inventory"),
         latestUpdatedAt: globalSummary.cable?.latestUpdatedAt,
       },
       {
         key: "projects",
-        label: "Projects",
+        label: "assetOverview.stat.projects",
         value: globalSummary.projects?.total ?? 0,
         latestUpdatedAt: globalSummary.projects?.latestUpdatedAt,
       },
       {
         key: "device-types",
-        label: "Device Types",
+        label: "assetOverview.stat.deviceTypes",
         value: activeDeviceTypesCount,
-        caption: "Master catalog",
+        caption: t("assetOverview.caption.masterCatalog"),
       },
     ],
-    [regions.length, globalSummary, activeDeviceTypesCount],
+    [regions.length, globalSummary, activeDeviceTypesCount, t],
   );
   const visibleCoreStats = useMemo(
     () => (isSuperadmin ? coreStats : coreStats.filter((item) => item.key !== "regions")),
@@ -446,13 +449,13 @@ export default function DataManagementPage() {
     () =>
       visibleCoreStats.map((stat) => ({
         key: stat.key,
-        label: stat.label,
+        label: t(stat.label),
         value: formatStatValue(stat.value, stat.unit),
-        caption: stat.caption || `Update: ${formatDateTime(stat.latestUpdatedAt)}`,
+        caption: stat.caption || t("assetOverview.caption.update", { value: formatDateTime(stat.latestUpdatedAt) }),
         icon: getStatIcon(stat.key),
         tone: getStatTone(stat.key),
       })),
-    [visibleCoreStats],
+    [visibleCoreStats, t],
   );
 
   const focusedRegion = useMemo(
@@ -474,13 +477,13 @@ export default function DataManagementPage() {
 
   const regionOptions = useMemo(
     () => [
-      { value: "all", label: "Semua Region" },
+      { value: "all", label: t("dataQuality.allRegions") },
       ...regions.map((region) => ({
         value: region.id,
         label: `${region.region_name} (${region.region_id})`,
       })),
     ],
-    [regions],
+    [regions, t],
   );
 
   useEffect(() => {
@@ -507,7 +510,7 @@ export default function DataManagementPage() {
         }));
       } catch (err) {
         if (cancelled) return;
-        setQualityError((err as Error).message || "Gagal memuat Data Quality KPI.");
+        setQualityError((err as Error).message);
       } finally {
         if (!cancelled) setQualityLoading(false);
       }
@@ -651,15 +654,15 @@ export default function DataManagementPage() {
           <div className="rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card p-4 shadow-xs glass-inset md:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 space-y-2">
-                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">OPERATIONS / ASSET REPOSITORY</p>
+                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{t("assetOverview.eyebrow")}</p>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className="border-border/60 bg-background/50 font-mono text-[9px] uppercase tracking-[0.12em]">{subtitle}</Badge>
-                  {!isSuperadmin ? <Badge variant="secondary" className="font-mono text-[9px] tabular-nums tracking-[0.12em]">{regions.length} region scope</Badge> : null}
+                  {!isSuperadmin ? <Badge variant="secondary" className="font-mono text-[9px] tabular-nums tracking-[0.12em]">{t("assetOverview.regionScope", { count: regions.length })}</Badge> : null}
                 </div>
                 <div className="space-y-1">
-                  <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">Asset Overview</h2>
+                  <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("assetOverview.title")}</h2>
                   <p className="max-w-2xl text-sm text-muted-foreground leading-normal">
-                    Ringkasan aset pasif, kualitas data, dan relasi inventory berdasarkan scope akun.
+                    {t("assetOverview.description")}
                   </p>
                 </div>
               </div>
@@ -673,18 +676,18 @@ export default function DataManagementPage() {
         </div>
 
         {loading ? <AssetSummaryLoading /> : null}
-        {!loading && error ? <AppLoading label={error} variant="error" /> : null}
+        {!loading && error ? <AppLoading label={error.message || t("assetOverview.loadFailed")} variant="error" /> : null}
 
         {!loading && !error ? (
           <div className="space-y-3">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3">
               <TabsList className={`inline-grid w-fit ${canViewQuality ? "grid-cols-2" : "grid-cols-1"} rounded-full border border-border/50 bg-muted/20 p-1`}>
-                <TabsTrigger value="overview" className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">{isValidator ? "Validator Home" : "Overview"}</TabsTrigger>
-                {canViewQuality ? <TabsTrigger value="quality" className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">Data Quality</TabsTrigger> : null}
+                <TabsTrigger value="overview" className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">{t(isValidator ? "assetOverview.tab.validatorHome" : "assetOverview.tab.overview")}</TabsTrigger>
+                {canViewQuality ? <TabsTrigger value="quality" className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">{t("assetOverview.tab.quality")}</TabsTrigger> : null}
               </TabsList>
 
               <TabsContent value="overview" className="space-y-3">
-                {!isValidator ? <AssetSummaryStrip title={isSuperadmin ? "Ringkasan Global" : "Ringkasan Scope Region"} stats={summaryStats} /> : null}
+                {!isValidator ? <AssetSummaryStrip title={t(isSuperadmin ? "assetOverview.summary.global" : "assetOverview.summary.regionScope")} stats={summaryStats} /> : null}
 
                 {isSuperadmin ? (
                   <RegionCardGrid
@@ -708,7 +711,7 @@ export default function DataManagementPage() {
 
                 {!isSuperadmin ? (
                   <FocusedRegionCard
-                    title={isAdminRegion ? "Inventory Region" : "Area Kerja Validator"}
+                    title={t(isAdminRegion ? "assetOverview.focused.inventoryRegion" : "assetOverview.focused.validatorWorkspace")}
                     focusedRegion={focusedRegion}
                     regions={regions}
                     focusedRegionId={focusedRegionId}
@@ -729,7 +732,7 @@ export default function DataManagementPage() {
                   regionOptions={regionOptions}
                   qualityRegionId={qualityRegionId}
                   qualityLoading={qualityLoading}
-                  qualityError={qualityError}
+                  qualityError={qualityError || t("assetOverview.qualityLoadFailed")}
                   kpis={activeQualityKpis}
                   issues={activeOdpIssues}
                   issueGroups={activeQualityIssueGroups}
@@ -979,92 +982,92 @@ function buildDataQualityReport(
   const metric = (key: keyof NonNullable<TopologyIntegrityResponse["data"]["metrics"]>) => topologyMetrics?.[key] ?? 0;
 
   const kpis: DataQualityKpi[] = [
-    { key: "pop-missing-geo", label: "POP Missing Geo", value: popMissingGeo, note: "POP belum punya latitude/longitude." },
-    { key: "device-missing-pop", label: "Device Missing POP", value: deviceMissingPop, note: "Perangkat belum terhubung ke POP." },
-    { key: "device-missing-image", label: "Device Missing Image", value: deviceMissingImage, note: "Perangkat belum ada image attachment." },
-    { key: "device-missing-geo", label: "Device Missing Geo", value: deviceMissingGeo, note: "Perangkat belum punya koordinat." },
-    { key: "device-missing-serial", label: "Device Missing Serial", value: deviceMissingSerial, note: "Perangkat belum memiliki serial number." },
-    { key: "pending-validation", label: "Pending Validation", value: pendingValidation, note: "POP/device belum memiliki validasi final." },
-    { key: "odp-total", label: "ODP Total", value: odpDevices.length, note: "Total perangkat ODP pada filter ini." },
-    { key: "odp-pending-validation", label: "ODP Pending Validation", value: odpPendingValidation, note: "ODP belum tervalidasi lapangan." },
-    { key: "odp-port-mismatch", label: "ODP Port Mismatch", value: usedWithoutEndpoint + assignedNotUsed, note: "Port ODP dengan status/assignment tidak konsisten." },
+    { key: "pop-missing-geo", label: "dq.kpi.popMissingGeo.label", value: popMissingGeo, note: "dq.kpi.popMissingGeo.note" },
+    { key: "device-missing-pop", label: "dq.kpi.deviceMissingPop.label", value: deviceMissingPop, note: "dq.kpi.deviceMissingPop.note" },
+    { key: "device-missing-image", label: "dq.kpi.deviceMissingImage.label", value: deviceMissingImage, note: "dq.kpi.deviceMissingImage.note" },
+    { key: "device-missing-geo", label: "dq.kpi.deviceMissingGeo.label", value: deviceMissingGeo, note: "dq.kpi.deviceMissingGeo.note" },
+    { key: "device-missing-serial", label: "dq.kpi.deviceMissingSerial.label", value: deviceMissingSerial, note: "dq.kpi.deviceMissingSerial.note" },
+    { key: "pending-validation", label: "dq.kpi.pendingValidation.label", value: pendingValidation, note: "dq.kpi.pendingValidation.note" },
+    { key: "odp-total", label: "dq.kpi.odpTotal.label", value: odpDevices.length, note: "dq.kpi.odpTotal.note" },
+    { key: "odp-pending-validation", label: "dq.kpi.odpPendingValidation.label", value: odpPendingValidation, note: "dq.kpi.odpPendingValidation.note" },
+    { key: "odp-port-mismatch", label: "dq.kpi.odpPortMismatch.label", value: usedWithoutEndpoint + assignedNotUsed, note: "dq.kpi.odpPortMismatch.note" },
     {
       key: "topology-core-overlap",
-      label: "Topology Core Overlap",
+      label: "dq.kpi.topologyCoreOverlap.label",
       value: topologyMetrics?.overlap_core_conflicts ?? 0,
-      note: "Konflik rentang core pada cable yang sama.",
+      note: "dq.kpi.topologyCoreOverlap.note",
     },
     {
       key: "fiber-core-occupancy-drift",
-      label: "Core Occupancy Drift",
+      label: "dq.kpi.fiberCoreOccupancyDrift.label",
       value:
         metric("active_connection_missing_fiber_cores")
         + metric("active_connection_fiber_core_status_mismatches")
         + metric("used_fiber_cores_without_active_connection"),
-      note: "Status core belum sinkron dengan connection approved.",
+      note: "dq.kpi.fiberCoreOccupancyDrift.note",
     },
     {
       key: "fiber-core-color-health",
-      label: "Core Color Health",
+      label: "dq.kpi.fiberCoreColorHealth.label",
       value:
         metric("fiber_cores_missing_tube_color")
         + metric("fiber_cores_missing_core_color")
         + metric("fiber_core_color_mismatches"),
-      note: "Tray/tube/core color perlu dilengkapi atau disesuaikan.",
+      note: "dq.kpi.fiberCoreColorHealth.note",
     },
     {
       key: "topology-orphan-connections",
-      label: "Topology Orphan Connection",
+      label: "dq.kpi.topologyOrphanConnections.label",
       value: topologyMetrics?.orphan_port_connections ?? 0,
-      note: "Koneksi port yang endpoint port-nya tidak valid.",
+      note: "dq.kpi.topologyOrphanConnections.note",
     },
     {
       key: "legacy-links-pending",
-      label: "Legacy Links Pending",
+      label: "dq.kpi.legacyLinksPending.label",
       value: topologyMetrics?.pending_legacy_device_links ?? 0,
-      note: "device_links lama belum ditransisikan ke actual topology.",
+      note: "dq.kpi.legacyLinksPending.note",
     },
   ];
 
   const odpIssues: DataQualityIssue[] = [
     {
       key: "odp-without-ports",
-      label: "ODP tanpa port",
+      label: "dq.issue.odpWithoutPorts.label",
       value: odpWithoutPorts,
       severity: odpWithoutPorts ? "high" : "low",
-      note: "ODP sudah ada, tetapi belum punya data port. Generate port dari detail ODP.",
+      note: "dq.issue.odpWithoutPorts.note",
       href: withIssueHref("odp-without-ports"),
     },
     {
       key: "odp-pending-validation",
-      label: "ODP belum tervalidasi",
+      label: "dq.issue.odpPendingValidation.label",
       value: odpPendingValidation,
       severity: odpPendingValidation ? "medium" : "low",
-      note: "ODP belum punya validasi final dari field team.",
+      note: "dq.issue.odpPendingValidation.note",
       href: withIssueHref("odp-pending-validation"),
     },
     {
       key: "odp-used-without-endpoint",
-      label: "Port used tanpa Customer/ONT",
+      label: "dq.issue.odpUsedWithoutEndpoint.label",
       value: usedWithoutEndpoint,
       severity: usedWithoutEndpoint ? "high" : "low",
-      note: "Port berstatus used tetapi belum diikat ke customer atau ONT.",
+      note: "dq.issue.odpUsedWithoutEndpoint.note",
       href: withIssueHref("odp-used-without-endpoint"),
     },
     {
       key: "odp-assigned-not-used",
-      label: "Port assigned tapi status bukan used",
+      label: "dq.issue.odpAssignedNotUsed.label",
       value: assignedNotUsed,
       severity: assignedNotUsed ? "high" : "low",
-      note: "Customer/ONT sudah terisi, tetapi status port belum used.",
+      note: "dq.issue.odpAssignedNotUsed.note",
       href: withIssueHref("odp-assigned-not-used"),
     },
     {
       key: "odp-down-maintenance",
-      label: "Port down/maintenance",
+      label: "dq.issue.odpDownMaintenance.label",
       value: downOrMaintenancePorts,
       severity: downOrMaintenancePorts ? "medium" : "low",
-      note: "Port ODP sedang down atau maintenance.",
+      note: "dq.issue.odpDownMaintenance.note",
       href: withIssueHref("odp-down-maintenance"),
     },
   ];
@@ -1072,42 +1075,42 @@ function buildDataQualityReport(
   const topologyIssues: DataQualityIssue[] = [
     {
       key: "overlap-core-conflicts",
-      label: "Core range overlap",
+      label: "dq.issue.overlapCoreConflicts.label",
       value: metric("overlap_core_conflicts"),
       severity: metric("overlap_core_conflicts") ? "high" : "low",
-      note: "Dua connection atau lebih memakai rentang core yang saling bertabrakan pada cable yang sama.",
+      note: "dq.issue.overlapCoreConflicts.note",
       href: topologyHref,
     },
     {
       key: "orphan-port-connections",
-      label: "Connection endpoint invalid",
+      label: "dq.issue.orphanPortConnections.label",
       value: metric("orphan_port_connections"),
       severity: metric("orphan_port_connections") ? "high" : "low",
-      note: "Connection mengarah ke port yang tidak ditemukan atau tidak valid.",
+      note: "dq.issue.orphanPortConnections.note",
       href: topologyHref,
     },
     {
       key: "cross-region-connections",
-      label: "Cross-region connection",
+      label: "dq.issue.crossRegionConnections.label",
       value: metric("cross_region_connections"),
       severity: metric("cross_region_connections") ? "high" : "low",
-      note: "Connection punya region yang tidak konsisten dengan endpoint port.",
+      note: "dq.issue.crossRegionConnections.note",
       href: topologyHref,
     },
     {
       key: "same-device-connections",
-      label: "Same-device connection",
+      label: "dq.issue.sameDeviceConnections.label",
       value: metric("same_device_connections"),
       severity: metric("same_device_connections") ? "medium" : "low",
-      note: "Connection memakai dua port di device yang sama dan perlu dicek apakah valid secara operasional.",
+      note: "dq.issue.sameDeviceConnections.note",
       href: topologyHref,
     },
     {
       key: "pending-legacy-links",
-      label: "Legacy links pending",
+      label: "dq.issue.pendingLegacyLinks.label",
       value: metric("pending_legacy_device_links"),
       severity: metric("pending_legacy_device_links") ? "medium" : "low",
-      note: "Device links lama belum ditransisikan ke port connection source of truth.",
+      note: "dq.issue.pendingLegacyLinks.note",
       href: topologyHref,
     },
   ];
@@ -1115,50 +1118,50 @@ function buildDataQualityReport(
   const coreIssues: DataQualityIssue[] = [
     {
       key: "active-connection-missing-fiber-cores",
-      label: "Connection core belum tersedia",
+      label: "dq.issue.activeConnectionMissingFiberCores.label",
       value: metric("active_connection_missing_fiber_cores"),
       severity: metric("active_connection_missing_fiber_cores") ? "high" : "low",
-      note: "Active/cutover connection memakai cable/core range, tetapi row fiber core belum tersedia.",
+      note: "dq.issue.activeConnectionMissingFiberCores.note",
       href: topologyHref,
     },
     {
       key: "active-connection-fiber-core-status-mismatches",
-      label: "Status core tidak sinkron",
+      label: "dq.issue.activeConnectionFiberCoreStatusMismatches.label",
       value: metric("active_connection_fiber_core_status_mismatches"),
       severity: metric("active_connection_fiber_core_status_mismatches") ? "medium" : "low",
-      note: "Core yang dipakai connection aktif belum tercatat sebagai used atau mapping endpoint-nya belum cocok.",
+      note: "dq.issue.activeConnectionFiberCoreStatusMismatches.note",
       href: topologyHref,
     },
     {
       key: "used-fiber-cores-without-active-connection",
-      label: "Core used tanpa connection",
+      label: "dq.issue.usedFiberCoresWithoutActiveConnection.label",
       value: metric("used_fiber_cores_without_active_connection"),
       severity: metric("used_fiber_cores_without_active_connection") ? "medium" : "low",
-      note: "Core masih berstatus used padahal tidak terikat ke active/cutover connection.",
+      note: "dq.issue.usedFiberCoresWithoutActiveConnection.note",
       href: topologyHref,
     },
     {
       key: "fiber-core-color-mismatches",
-      label: "Tube/core color mismatch",
+      label: "dq.issue.fiberCoreColorMismatches.label",
       value: metric("fiber_core_color_mismatches"),
       severity: metric("fiber_core_color_mismatches") ? "medium" : "low",
-      note: "Warna tube atau core berbeda dari standar 12-color cycle yang dipakai.",
+      note: "dq.issue.fiberCoreColorMismatches.note",
       href: topologyHref,
     },
     {
       key: "fiber-cores-loss-warnings",
-      label: "Attenuation warning",
+      label: "dq.issue.fiberCoresLossWarnings.label",
       value: metric("fiber_cores_loss_warnings"),
       severity: metric("fiber_cores_loss_warnings") ? "medium" : "low",
-      note: "Core punya nilai loss di atas threshold operasional.",
+      note: "dq.issue.fiberCoresLossWarnings.note",
       href: topologyHref,
     },
     {
       key: "damaged-active-fiber-cores",
-      label: "Damaged core masih aktif",
+      label: "dq.issue.damagedActiveFiberCores.label",
       value: metric("damaged_active_fiber_cores"),
       severity: metric("damaged_active_fiber_cores") ? "high" : "low",
-      note: "Core damaged masih memiliki connection atau endpoint mapping aktif.",
+      note: "dq.issue.damagedActiveFiberCores.note",
       href: topologyHref,
     },
   ];
@@ -1166,26 +1169,26 @@ function buildDataQualityReport(
   const inventoryIssues: DataQualityIssue[] = [
     {
       key: "device-actual-port-count-mismatches",
-      label: "Port count mismatch",
+      label: "dq.issue.deviceActualPortCountMismatches.label",
       value: metric("device_actual_port_count_mismatches"),
       severity: metric("device_actual_port_count_mismatches") ? "medium" : "low",
-      note: "Jumlah device_ports aktif berbeda dari total_ports pada device.",
+      note: "dq.issue.deviceActualPortCountMismatches.note",
       href: topologyHref,
     },
     {
       key: "cable-fiber-core-count-mismatches",
-      label: "Cable core count mismatch",
+      label: "dq.issue.cableFiberCoreCountMismatches.label",
       value: metric("cable_fiber_core_count_mismatches"),
       severity: metric("cable_fiber_core_count_mismatches") ? "medium" : "low",
-      note: "Jumlah fiber_cores berbeda dari capacity_core pada cable device.",
+      note: "dq.issue.cableFiberCoreCountMismatches.note",
       href: topologyHref,
     },
     {
       key: "routes-missing-endpoint-assets",
-      label: "Route endpoint belum lengkap",
+      label: "dq.issue.routesMissingEndpointAssets.label",
       value: metric("routes_missing_endpoint_assets"),
       severity: metric("routes_missing_endpoint_assets") ? "medium" : "low",
-      note: "Route belum punya start/end asset lengkap untuk topology dan maps.",
+      note: "dq.issue.routesMissingEndpointAssets.note",
       href: topologyHref,
     },
   ];
@@ -1193,26 +1196,26 @@ function buildDataQualityReport(
   const issueGroups: DataQualityIssueGroup[] = [
     {
       key: "topology",
-      title: "Topology Integrity",
-      description: "Kesehatan connection, route, dan transisi source of truth.",
+      title: "dq.group.topology.title",
+      description: "dq.group.topology.description",
       issues: topologyIssues,
     },
     {
       key: "core",
-      title: "Core Management",
-      description: "Occupancy, warna tube/core, damaged core, dan attenuation inventory.",
+      title: "dq.group.core.title",
+      description: "dq.group.core.description",
       issues: coreIssues,
     },
     {
       key: "odp",
-      title: "ODP Operations",
-      description: "Kesiapan ODP, port, assignment, dan status validasi lapangan.",
+      title: "dq.group.odp.title",
+      description: "dq.group.odp.description",
       issues: odpIssues,
     },
     {
       key: "inventory",
-      title: "Inventory Completeness",
-      description: "Kelengkapan port/core/route agar trace dan As-Built siap dipakai.",
+      title: "dq.group.inventory.title",
+      description: "dq.group.inventory.description",
       issues: inventoryIssues,
     },
   ];

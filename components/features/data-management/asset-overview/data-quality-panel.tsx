@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, DatabaseZap, Network, RefreshCcw, ShieldCheck } from "lucide-react";
+import { useTranslate } from "@/lib/use-locale";
 import { AppLoading } from "@/components/app-loading-new";
 import { OperationalState } from "@/components/operational-ui";
 import { Badge } from "@/components/ui/badge";
@@ -11,27 +12,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { type MessageKey } from "@/lib/locales";
 
 type DataQualityKpi = {
   key: string;
-  label: string;
+  label: MessageKey;
   value: number;
-  note: string;
+  note: MessageKey;
 };
 
 type DataQualityIssue = {
   key: string;
-  label: string;
+  label: MessageKey;
   value: number;
   severity: "high" | "medium" | "low";
-  note: string;
+  note: MessageKey;
   href: string;
 };
 
 type DataQualityIssueGroup = {
   key: string;
-  title: string;
-  description: string;
+  title: MessageKey;
+  description: MessageKey;
   issues: DataQualityIssue[];
 };
 
@@ -81,10 +83,11 @@ export function DataQualityPanel({
   onRegionChange: (value: string) => void;
   onRefresh: () => void;
 }) {
+  const { t } = useTranslate();
   const groups = useMemo(
     () => (issueGroups?.length
       ? issueGroups
-      : [{ key: "odp", title: "ODP Operations", description: "Kesiapan ODP, port, assignment, dan validasi.", issues }]),
+      : [{ key: "odp", title: "dataQuality.fallbackGroup.title" as MessageKey, description: "dataQuality.fallbackGroup.description" as MessageKey, issues }]),
     [issueGroups, issues],
   );
   const visibleIssueTotal = health?.totalIssues ?? groups.flatMap((group) => group.issues).reduce((sum, issue) => sum + issue.value, 0);
@@ -113,16 +116,16 @@ export function DataQualityPanel({
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="gap-1 border-border/60 bg-background/50">
                 <ShieldCheck className="size-3 text-emerald-600 dark:text-emerald-400" />
-                Quality Center
+                {t("dataQuality.badge.center")}
               </Badge>
               <Badge variant={criticalTotal ? "destructive" : visibleIssueTotal ? "secondary" : "outline"} className="font-mono text-[10px] uppercase tracking-[0.12em] tabular-nums">
-                {visibleIssueTotal ? `${visibleIssueTotal} issue aktif` : "Sehat"}
+                {visibleIssueTotal ? t("dataQuality.badge.activeIssues", { count: visibleIssueTotal }) : t("dataQuality.badge.healthy")}
               </Badge>
             </div>
             <div>
-              <h3 className="text-base font-semibold tracking-tight">Data Quality & Topology Integrity</h3>
+              <h3 className="text-base font-semibold tracking-tight">{t("dataQuality.title")}</h3>
               <p className="text-xs text-muted-foreground">
-                Pantau kelengkapan asset, ODP operations, port connection, fiber core, dan readiness topology.
+                {t("dataQuality.description")}
               </p>
             </div>
           </div>
@@ -130,18 +133,18 @@ export function DataQualityPanel({
             <Combobox value={qualityRegionId} onValueChange={onRegionChange} options={regionOptions} />
             <Select value={severityFilter} onValueChange={(value) => setSeverityFilter(value as SeverityFilter)}>
               <SelectTrigger size="sm" className="w-full h-9 rounded-xl border-border/60 shadow-2xs">
-                <SelectValue placeholder="Severity" />
+                <SelectValue placeholder={t("dataQuality.severityPlaceholder")} />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                <SelectItem value="all">Semua severity</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-                <SelectItem value="warning">Warning</SelectItem>
-                <SelectItem value="info">Info</SelectItem>
+                <SelectItem value="all">{t("dataQuality.severity.all")}</SelectItem>
+                <SelectItem value="critical">{t("dataQuality.severity.critical")}</SelectItem>
+                <SelectItem value="warning">{t("dataQuality.severity.warning")}</SelectItem>
+                <SelectItem value="info">{t("dataQuality.severity.info")}</SelectItem>
               </SelectContent>
             </Select>
             <Button type="button" variant="outline" size="sm" onClick={onRefresh} disabled={qualityLoading} className="justify-center h-9 rounded-full border-border/60 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
               <RefreshCcw className={`mr-1 size-4 ${qualityLoading ? "animate-spin" : ""}`} />
-              Refresh
+              {t("dataQuality.refresh")}
             </Button>
           </div>
         </div>
@@ -155,27 +158,27 @@ export function DataQualityPanel({
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <HealthCard
-              label="Critical"
+              label={t("dataQuality.health.critical")}
               value={criticalTotal}
-              note="Butuh tindakan sebelum topology dianggap sehat."
+              note={t("dataQuality.health.criticalNote")}
               tone={criticalTotal ? "critical" : "good"}
             />
             <HealthCard
-              label="Warning"
+              label={t("dataQuality.health.warning")}
               value={warningTotal}
-              note="Perlu dibersihkan agar trace dan As-Built konsisten."
+              note={t("dataQuality.health.warningNote")}
               tone={warningTotal ? "warning" : "good"}
             />
             <HealthCard
-              label="Topology"
+              label={t("dataQuality.health.topology")}
               value={health?.topologyIssues ?? 0}
-              note="Connection, route, dan legacy link readiness."
+              note={t("dataQuality.health.topologyNote")}
               tone={health?.topologyIssues ? "warning" : "good"}
             />
             <HealthCard
-              label="Core"
+              label={t("dataQuality.health.core")}
               value={health?.coreIssues ?? 0}
-              note="Occupancy, warna core, damaged core, attenuation."
+              note={t("dataQuality.health.coreNote")}
               tone={health?.coreIssues ? "warning" : "good"}
             />
           </div>
@@ -184,18 +187,18 @@ export function DataQualityPanel({
             {kpis.map((kpi) => (
               <Card key={kpi.key} className="rounded-2xl border border-border/60 bg-card shadow-2xs glass-inset">
                 <CardHeader className="px-4 py-3">
-                  <CardTitle className="font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{kpi.label}</CardTitle>
+                  <CardTitle className="font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{t(kpi.label)}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 pt-0">
                   <p className="text-2xl font-bold font-mono tabular-nums leading-tight">{kpi.value}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{kpi.note}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{t(kpi.note)}</p>
                 </CardContent>
               </Card>
             ))}
             {!kpis.length ? (
               <Card className="rounded-2xl border border-border/60 bg-card shadow-2xs glass-inset sm:col-span-2 xl:col-span-3">
                 <CardContent className="p-0">
-                  <OperationalState title="Belum ada KPI" description="Data quality belum tersedia untuk filter region ini." />
+                  <OperationalState title={t("dataQuality.empty.kpiTitle")} description={t("dataQuality.empty.kpiDescription")} />
                 </CardContent>
               </Card>
             ) : null}
@@ -251,6 +254,7 @@ function HealthCard({
 }
 
 function IssueGroupCard({ group }: { group: DataQualityIssueGroup }) {
+  const { t } = useTranslate();
   const issueTotal = group.issues.reduce((sum, issue) => sum + issue.value, 0);
 
   return (
@@ -260,9 +264,9 @@ function IssueGroupCard({ group }: { group: DataQualityIssueGroup }) {
           <div className="min-w-0">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
               <Network className="size-4 text-muted-foreground" />
-              {group.title}
+              {t(group.title)}
             </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">{group.description}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t(group.description)}</p>
           </div>
           <Badge variant={issueTotal ? "secondary" : "outline"} className="font-mono text-[9px] tabular-nums uppercase tracking-[0.12em] glass-inset">
             {issueTotal}
@@ -281,20 +285,20 @@ function IssueGroupCard({ group }: { group: DataQualityIssueGroup }) {
                   <Badge variant={issue.severity === "high" ? "destructive" : issue.severity === "medium" ? "secondary" : "outline"} className="font-mono text-[9px] uppercase tracking-[0.12em] h-5 px-1.5">
                     {issue.severity}
                   </Badge>
-                  <p className="text-sm font-medium tracking-tight text-foreground">{issue.label}</p>
+                  <p className="text-sm font-medium tracking-tight text-foreground">{t(issue.label)}</p>
                 </div>
-                <p className="text-xs text-muted-foreground leading-normal">{issue.note}</p>
+                <p className="text-xs text-muted-foreground leading-normal">{t(issue.note)}</p>
               </div>
               <Button asChild variant="outline" size="sm" className="w-full justify-between sm:w-32 rounded-full border-border/60 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
                 <Link href={issue.href}>
                   <span className="font-mono font-semibold tabular-nums">{issue.value}</span>
-                  <span className="text-xs">Open</span>
+                  <span className="text-xs">{t("dataQuality.open")}</span>
                 </Link>
               </Button>
             </div>
           ))
         ) : (
-          <OperationalState title="Tidak ada issue" description="Belum ada issue untuk kelompok quality ini." />
+          <OperationalState title={t("dataQuality.empty.issueTitle")} description={t("dataQuality.empty.issueDescription")} />
         )}
       </CardContent>
     </Card>
@@ -310,19 +314,20 @@ function IntegrityFindingsCard({
   severityFilter: SeverityFilter;
   filteredIssueTotal: number;
 }) {
+  const { t } = useTranslate();
   return (
     <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset">
       <CardHeader className="space-y-1.5 px-4 py-4 border-b border-border/50">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <CardTitle className="text-sm font-semibold">Integrity Findings</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t("dataQuality.integrity.title")}</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
-              Detail issue dari backend topology integrity. Filter aktif menampilkan <span className="font-mono font-medium tabular-nums text-foreground">{filteredIssueTotal}</span> item/indikator.
+              {t("dataQuality.integrity.descPrefix")} <span className="font-mono font-medium tabular-nums text-foreground">{filteredIssueTotal}</span> {t("dataQuality.integrity.descSuffix")}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className="border-border/60 bg-background/50 font-mono text-[10px] uppercase tracking-[0.12em] glass-inset">
-              {severityFilter === "all" ? "Semua severity" : severityFilter}
+              {severityFilter === "all" ? t("dataQuality.severity.all") : severityFilter}
             </Badge>
             <Badge variant={issues.length ? "secondary" : "outline"} className="font-mono text-[10px] tabular-nums uppercase tracking-[0.12em] glass-inset">
               {issues.length}
@@ -356,7 +361,7 @@ function IntegrityFindingsCard({
             </div>
           ))
         ) : (
-          <OperationalState title="Tidak ada integrity finding" description="Tidak ada issue detail yang cocok dengan filter severity ini." />
+          <OperationalState title={t("dataQuality.integrity.emptyTitle")} description={t("dataQuality.integrity.emptyDescription")} />
         )}
       </CardContent>
     </Card>
