@@ -69,12 +69,12 @@ export function RequestList({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t("requestList.allTypes")}</SelectItem>
-              <SelectItem value="create_asset">Create</SelectItem>
-              <SelectItem value="update_asset">Update</SelectItem>
-              <SelectItem value="provision_asset">Provision Port</SelectItem>
-              <SelectItem value="topology_connection">Topology Connection</SelectItem>
-              <SelectItem value="archive_asset">Archive</SelectItem>
-              <SelectItem value="field_validation">Field Validation</SelectItem>
+              <SelectItem value="create_asset">{t("requestList.filter.create")}</SelectItem>
+              <SelectItem value="update_asset">{t("requestList.filter.update")}</SelectItem>
+              <SelectItem value="provision_asset">{t("requestList.filter.provision")}</SelectItem>
+              <SelectItem value="topology_connection">{t("requestList.filter.topologyConnection")}</SelectItem>
+              <SelectItem value="archive_asset">{t("requestList.filter.archive")}</SelectItem>
+              <SelectItem value="field_validation">{t("requestList.filter.fieldValidation")}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={onStatusFilterChange}>
@@ -83,12 +83,12 @@ export function RequestList({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t("requestList.allStatuses")}</SelectItem>
-              <SelectItem value="ongoing_validated">Ongoing Validated</SelectItem>
-              <SelectItem value="pending_async">Pending Async</SelectItem>
-              <SelectItem value="rejected_by_adminregion">Rejected by Admin Region</SelectItem>
-              <SelectItem value="rejected_by_superadmin">Rejected by Superadmin</SelectItem>
-              <SelectItem value="validated">Validated</SelectItem>
-              <SelectItem value="unvalidated">Unvalidated</SelectItem>
+              <SelectItem value="ongoing_validated">{t("requestList.filter.ongoingValidated")}</SelectItem>
+              <SelectItem value="pending_async">{t("requestList.filter.pendingAsync")}</SelectItem>
+              <SelectItem value="rejected_by_adminregion">{t("requestList.filter.rejectedByAdminRegion")}</SelectItem>
+              <SelectItem value="rejected_by_superadmin">{t("requestList.filter.rejectedBySuperadmin")}</SelectItem>
+              <SelectItem value="validated">{t("requestList.filter.validated")}</SelectItem>
+              <SelectItem value="unvalidated">{t("requestList.filter.unvalidated")}</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -720,7 +720,7 @@ export default function ValidationRequestsPage() {
             <RequestTypeBadge kind={selectedType.kind} label={selectedType.label} className="max-w-full whitespace-normal break-words text-left text-[10px]" />
           </InfoSlot>
           <Info title={t("validation.detail.device")} value={getOdpName(selected)} />
-          <RequestActorLine value={getSubmitterText(selected, lookupLabels)} />
+          <RequestActorLine label={t("requestActorLine.submittedBy")} value={getSubmitterText(selected, lookupLabels)} />
           <Info title={t("validation.detail.currentOwner")} value={getNextOwnerLabel(selected.current_status, t)} />
           <Info title={t("validation.detail.updated")} value={formatDateTime(selected.updated_at)} />
         </div>
@@ -1549,15 +1549,22 @@ function getOdpName(item: ValidationRequestItem | null) {
 function getRequestType(item: ValidationRequestItem | null, t: TFn = (key) => key) {
   const source = String(item?.payload_snapshot?.source || "").trim();
   if (isTopologyConnectionRequest(item)) {
-    const operationLabel =
+    const rawOp =
       source === "adminregion-update-resource"
-        ? "Update"
+        ? "update"
         : source === "adminregion-archive-resource"
-          ? "Archive"
-          : "Create";
+          ? "archive"
+          : "create";
+    const operationLabel =
+      rawOp === "update"
+        ? t("validation.op.update")
+        : rawOp === "archive"
+          ? t("validation.op.archive")
+          : t("validation.op.create");
     return {
       kind: "topology_connection" as const,
-      resourceLabel: "Topology Connection",
+      rawOperation: rawOp,
+      resourceLabel: t("validation.resource.topologyConnection"),
       operationLabel,
       label: t("validation.type.topologyConnection"),
       description: t("validation.type.topologyDescription"),
@@ -1565,33 +1572,36 @@ function getRequestType(item: ValidationRequestItem | null, t: TFn = (key) => ke
   }
 
   if (source === "adminregion-create-device" || source === "adminregion-create-resource") {
-    const resourceLabel = valueText(item?.payload_snapshot?.resource_label || "Device");
+    const resourceLabel = valueText(item?.payload_snapshot?.resource_label || t("validation.resource.device"));
     return {
       kind: "create_asset" as const,
+      rawOperation: "create",
       resourceLabel,
-      operationLabel: "Create",
+      operationLabel: t("validation.op.create"),
       label: t("validation.type.createAsset", { resource: resourceLabel }),
       description: t("validation.type.createDescription", { resource: resourceLabel }),
     };
   }
 
   if (source === "adminregion-update-resource") {
-    const resourceLabel = valueText(item?.payload_snapshot?.resource_label || "Asset");
+    const resourceLabel = valueText(item?.payload_snapshot?.resource_label || t("validation.resource.asset"));
     return {
       kind: "update_asset" as const,
+      rawOperation: "update",
       resourceLabel,
-      operationLabel: "Update",
+      operationLabel: t("validation.op.update"),
       label: t("validation.type.updateAsset", { resource: resourceLabel }),
       description: t("validation.type.updateDescription", { resource: resourceLabel }),
     };
   }
 
   if (source === "adminregion-archive-resource") {
-    const resourceLabel = valueText(item?.payload_snapshot?.resource_label || "Asset");
+    const resourceLabel = valueText(item?.payload_snapshot?.resource_label || t("validation.resource.asset"));
     return {
       kind: "archive_asset" as const,
+      rawOperation: "archive",
       resourceLabel,
-      operationLabel: "Archive",
+      operationLabel: t("validation.op.archive"),
       label: t("validation.type.archiveAsset", { resource: resourceLabel }),
       description: t("validation.type.archiveDescription"),
     };
@@ -1600,8 +1610,9 @@ function getRequestType(item: ValidationRequestItem | null, t: TFn = (key) => ke
   if (source === "adminregion-provision-device-ports") {
     return {
       kind: "provision_asset" as const,
-      resourceLabel: "Device Port",
-      operationLabel: "Provision",
+      rawOperation: "provision",
+      resourceLabel: t("validation.resource.devicePort"),
+      operationLabel: t("validation.op.provision"),
       label: t("validation.type.provisionAsset"),
       description: t("validation.type.provisionDescription"),
     };
@@ -1609,8 +1620,9 @@ function getRequestType(item: ValidationRequestItem | null, t: TFn = (key) => ke
 
   return {
     kind: "field_validation" as const,
-    resourceLabel: "Device",
-    operationLabel: "Validation",
+    rawOperation: "validation",
+    resourceLabel: t("validation.resource.device"),
+    operationLabel: t("validation.op.validation"),
     label: t("validation.type.fieldValidation"),
     description: t("validation.type.validationDescription"),
   };
@@ -1623,7 +1635,7 @@ function isTopologyConnectionRequest(item: ValidationRequestItem | null) {
 }
 
 function getRequestSummary(item: ValidationRequestItem, lookupLabels: LookupLabels, t: TFn = (key) => key) {
-  const requestType = getRequestType(item);
+  const requestType = getRequestType(item, t);
   if (requestType.kind !== "field_validation") {
     if (requestType.kind === "topology_connection") {
       const context = item.payload_snapshot?.context || {};
@@ -1973,7 +1985,7 @@ function TopologyConnectionRequestReview({
   const before = item.payload_snapshot?.before || {};
   const context = item.payload_snapshot?.context || {};
   const diffFields = getTopologyConnectionDiffFields(item, lookupLabels, t);
-  const isCreate = requestType.operationLabel === "Create";
+  const isCreate = requestType.kind === "create_asset" || requestType.rawOperation === "create";
   const title = isCreate ? t("validation.topo.connectionBaru") : t("validation.topo.connectionOperation", { operation: requestType.operationLabel });
 
   const fromDeviceType = String(context.upstream_device_type_key || "").trim().toUpperCase();

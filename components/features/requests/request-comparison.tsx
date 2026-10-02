@@ -60,7 +60,7 @@ function RequestComparisonHeader() {
   return (
     <div className="space-y-0.5">
       <Badge variant="outline" className="w-fit text-[10px] uppercase tracking-normal">
-        Compare
+        {t("requestComparison.compare")}
       </Badge>
       <div>
         <p className="text-sm font-medium">{t("requestComparison.headerTitle")}</p>
