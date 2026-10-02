@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type CreateKindFlags = {
   isPop: boolean;
@@ -13,25 +14,25 @@ type CreateKindFlags = {
   isCustomer: boolean;
 };
 
-export function getCreateTitle(flags: CreateKindFlags, deviceTypeKey: string) {
-  if (flags.isPop) return "Create POP";
-  if (flags.isProject) return "Create Project";
-  if (flags.isCustomer) return "Create Customer";
-  return `Create ${deviceTypeKey}`;
+export function getCreateTitle(flags: CreateKindFlags, deviceTypeKey: string, t: TFn) {
+  if (flags.isPop) return t("createForm.titlePop");
+  if (flags.isProject) return t("createForm.titleProject");
+  if (flags.isCustomer) return t("createForm.titleCustomer");
+  return t("createForm.titleDevice", { type: deviceTypeKey });
 }
 
-export function getCreateFormTitle(flags: CreateKindFlags) {
-  if (flags.isPop) return "POP Form";
-  if (flags.isProject) return "Project Form";
-  if (flags.isCustomer) return "Customer Form";
-  return "Device Form";
+export function getCreateFormTitle(flags: CreateKindFlags, t: TFn) {
+  if (flags.isPop) return t("createForm.formTitlePop");
+  if (flags.isProject) return t("createForm.formTitleProject");
+  if (flags.isCustomer) return t("createForm.formTitleCustomer");
+  return t("createForm.formTitleDevice");
 }
 
-export function getCreateFormDescription(flags: CreateKindFlags) {
-  if (flags.isPop) return "Field wajib disesuaikan dengan data POP.";
-  if (flags.isProject) return "Field project untuk konteks delivery dan as-built lifecycle.";
-  if (flags.isCustomer) return "Field customer untuk data pelanggan dan lokasi layanan.";
-  return "Field wajib disesuaikan dengan data perangkat.";
+export function getCreateFormDescription(flags: CreateKindFlags, t: TFn) {
+  if (flags.isPop) return t("createForm.descPop");
+  if (flags.isProject) return t("createForm.descProject");
+  if (flags.isCustomer) return t("createForm.descCustomer");
+  return t("createForm.descDevice");
 }
 
 export function CreateFormPageHeader({
@@ -41,20 +42,21 @@ export function CreateFormPageHeader({
   flags: CreateKindFlags;
   deviceTypeKey: string;
 }) {
+  const { t } = useTranslate();
   return (
     <div className="flex items-center justify-between gap-2">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">
-          {getCreateTitle(flags, deviceTypeKey)}
+          {getCreateTitle(flags, deviceTypeKey, t)}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Form menyesuaikan tipe data yang dipilih dari dialog Data Management.
+          {t("createForm.headerSub")}
         </p>
       </div>
       <Button asChild variant="outline">
         <Link href="/data-management">
           <ArrowLeft className="mr-2 size-4" />
-          Kembali
+          {t("createForm.back")}
         </Link>
       </Button>
     </div>
@@ -62,13 +64,14 @@ export function CreateFormPageHeader({
 }
 
 export function CreateFormCardHeader({ flags }: { flags: CreateKindFlags }) {
+  const { t } = useTranslate();
   return (
     <CardHeader>
-      <CardTitle>{getCreateFormTitle(flags)}</CardTitle>
+      <CardTitle>{getCreateFormTitle(flags, t)}</CardTitle>
       <CardDescription className="flex items-center gap-2">
-        {getCreateFormDescription(flags)}
+        {getCreateFormDescription(flags, t)}
         <Badge variant="outline" className="font-normal">
-          Compact Mode
+          {t("createForm.compact")}
         </Badge>
       </CardDescription>
     </CardHeader>

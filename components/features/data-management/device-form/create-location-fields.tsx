@@ -7,6 +7,7 @@ import {
   Field,
   FieldLabel,
 } from "@/components/features/data-management/device-form/form-field-grid";
+import { useTranslate } from "@/lib/use-locale";
 
 type ProvinceOption = {
   id: string;
@@ -46,8 +47,9 @@ export function CreateLocationFields({
   badge?: ReactNode;
   onChange: (patch: Partial<CreateLocationValues>) => void;
 }) {
+  const { t } = useTranslate();
   const provinceOptions: ComboboxOption[] = [
-    { value: "__none__", label: "Pilih provinsi" },
+    { value: "__none__", label: t("createForm.selectProvince") },
     ...provinces.map((item) => ({
       value: item.id,
       label: item.province_name,
@@ -55,7 +57,7 @@ export function CreateLocationFields({
   ];
 
   const cityOptions: ComboboxOption[] = [
-    { value: "__none__", label: "Pilih kota/kabupaten" },
+    { value: "__none__", label: t("createForm.selectCity") },
     ...cities
       .filter((item) => !values.province_id || item.province_id === values.province_id)
       .map((item) => ({
@@ -74,7 +76,7 @@ export function CreateLocationFields({
         badge={badge}
       />
       <div className="space-y-1.5">
-        <FieldLabel label="Province (Master)" tooltip="Pilih provinsi dari master data." badge={badge} />
+        <FieldLabel label="Province (Master)" tooltip={t("createForm.provinceTip")} badge={badge} />
         <Combobox
           value={values.province_id || "__none__"}
           onValueChange={(value) => {
@@ -91,12 +93,12 @@ export function CreateLocationFields({
             });
           }}
           options={provinceOptions}
-          placeholder="Pilih provinsi"
-          searchPlaceholder="Cari provinsi..."
+          placeholder={t("createForm.selectProvince")}
+          searchPlaceholder={t("createForm.searchProvince")}
         />
       </div>
       <div className="space-y-1.5">
-        <FieldLabel label="City/Kabupaten (Master)" tooltip="Pilih kota/kabupaten berdasarkan provinsi." badge={badge} />
+        <FieldLabel label="City/Kabupaten (Master)" tooltip={t("createForm.cityTip")} badge={badge} />
         <Combobox
           key={`city-${values.province_id || "none"}`}
           value={values.city_id || "__none__"}
@@ -113,8 +115,8 @@ export function CreateLocationFields({
           }}
           disabled={!values.province_id}
           options={cityOptions}
-          placeholder="Pilih kota/kabupaten"
-          searchPlaceholder="Cari kota/kabupaten..."
+          placeholder={t("createForm.selectCity")}
+          searchPlaceholder={t("createForm.searchCity")}
         />
       </div>
       {showCoordinates ? (

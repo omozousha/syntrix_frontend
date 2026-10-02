@@ -3,6 +3,7 @@
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Field, FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
 import { normalizeDeviceName } from "@/lib/name-normalization";
+import { useTranslate } from "@/lib/use-locale";
 
 type PopOption = {
   id: string;
@@ -60,9 +61,10 @@ export function DeviceCreateForm({
   onChange: (patch: Partial<DeviceCreateFormValues>) => void;
 }) {
   const isOdp = values.device_type_key === "ODP";
+  const { t } = useTranslate();
 
   const odpTypeOptions: ComboboxOption[] = [
-    { value: "__none__", label: "Pilih tipe ODP" },
+    { value: "__none__", label: t("createForm.selectOdpType") },
     ...odpTypes.map((item) => ({
       value: item.odp_type_name,
       label: [item.odp_type_name, item.odp_type_code].filter(Boolean).join(" - "),
@@ -70,7 +72,7 @@ export function DeviceCreateForm({
   ];
 
   const installationTypeOptions: ComboboxOption[] = [
-    { value: "__none__", label: "Pilih jenis instalasi" },
+    { value: "__none__", label: t("createForm.selectInstallation") },
     ...installationTypes.map((item) => ({
       value: item.installation_type_name,
       label: [item.installation_type_name, item.installation_type_code].filter(Boolean).join(" - "),
@@ -78,7 +80,7 @@ export function DeviceCreateForm({
   ];
 
   const tenantOptions: ComboboxOption[] = [
-    { value: "__none__", label: "Pilih Tenant (Opsional)" },
+    { value: "__none__", label: t("createForm.selectTenantOptional") },
     ...tenants.map((item) => ({
       value: item.id,
       label: item.tenant_code ? `${item.tenant_name} (${item.tenant_code})` : item.tenant_name,
@@ -88,7 +90,7 @@ export function DeviceCreateForm({
   return (
     <>
       <Field
-        label={isOdp ? "Nama ODP" : "Device Name"}
+        label={isOdp ? t("createForm.odpName") : "Device Name"}
         value={values.device_name}
         onChange={(value) => onChange({ device_name: normalizeDeviceName(value) })}
         required
@@ -96,35 +98,35 @@ export function DeviceCreateForm({
       {isOdp ? (
         <>
           <div className="space-y-1.5">
-            <FieldLabel label="Tipe ODP" tooltip="Pilih tipe ODP dari master data." />
+            <FieldLabel label="Tipe ODP" tooltip={t("createForm.odpTypeTip")} />
             <Combobox
               value={values.odp_type || "__none__"}
               onValueChange={(value) => onChange({ odp_type: value === "__none__" ? "" : value })}
               options={odpTypeOptions}
-              placeholder="Pilih tipe ODP"
-              searchPlaceholder="Cari tipe ODP..."
+              placeholder={t("createForm.selectOdpType")}
+              searchPlaceholder={t("createForm.searchOdpType")}
             />
           </div>
           <div className="space-y-1.5">
-            <FieldLabel label="Jenis Instalasi" tooltip="Pilih jenis instalasi dari master data." />
+            <FieldLabel label="Jenis Instalasi" tooltip={t("createForm.installationTip")} />
             <Combobox
               value={values.installation_type || "__none__"}
               onValueChange={(value) => onChange({ installation_type: value === "__none__" ? "" : value })}
               options={installationTypeOptions}
-              placeholder="Pilih jenis instalasi"
-              searchPlaceholder="Cari jenis instalasi..."
+              placeholder={t("createForm.selectInstallation")}
+              searchPlaceholder={t("createForm.searchInstallation")}
             />
           </div>
         </>
       ) : null}
       <div className="space-y-1.5">
-        <FieldLabel label="Tenant" tooltip="Pilih tenant perangkat dari master data." />
+        <FieldLabel label="Tenant" tooltip={t("createForm.tenantTip")} />
         <Combobox
           value={values.tenant_id || "__none__"}
           onValueChange={(value) => onChange({ tenant_id: value === "__none__" ? "" : value })}
           options={tenantOptions}
-          placeholder="Pilih tenant"
-          searchPlaceholder="Cari tenant..."
+          placeholder={t("createForm.selectTenant")}
+          searchPlaceholder={t("createForm.searchTenant")}
         />
       </div>
     </>

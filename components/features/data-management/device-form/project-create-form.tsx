@@ -2,6 +2,7 @@
 
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Field, FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
+import { useTranslate } from "@/lib/use-locale";
 
 type PopOption = {
   id: string;
@@ -34,6 +35,7 @@ export function ProjectCreateForm({
   sectionSpanClass: string;
   onChange: (patch: Partial<ProjectCreateFormValues>) => void;
 }) {
+  const { t } = useTranslate();
   const popOptions: ComboboxOption[] = [
     { value: "__none__", label: "None" },
     ...pops
@@ -51,13 +53,13 @@ export function ProjectCreateForm({
       <Field label="BAST Number" value={values.bast_number} onChange={(value) => onChange({ bast_number: value })} />
       <Field label="SPK Number" value={values.spk_number} onChange={(value) => onChange({ spk_number: value })} />
       <div className="space-y-1.5">
-        <FieldLabel label="POP (opsional)" tooltip="POP utama project." />
+        <FieldLabel label={t("createForm.popOptionalLabel")} tooltip={t("createForm.popProjectTip")} />
         <Combobox
           value={values.pop_id || "__none__"}
           onValueChange={(value) => onChange({ pop_id: value === "__none__" ? "" : value })}
           options={popOptions}
-          placeholder="Pilih POP"
-          searchPlaceholder="Cari POP..."
+          placeholder={t("createForm.selectPop")}
+          searchPlaceholder={t("createForm.searchPop")}
         />
       </div>
       <Field

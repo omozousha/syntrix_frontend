@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type ValidationState = {
   state: "idle" | "valid" | "invalid";
@@ -34,20 +35,22 @@ export function Field({
   badge?: ReactNode;
   required?: boolean;
 }) {
+  const { t } = useTranslate();
   return (
     <div className={`space-y-1.5 ${containerClassName || ""}`}>
-      <FieldLabel label={label} tooltip={tooltip || getDefaultTooltip(label)} badge={badge} required={required} />
+      <FieldLabel label={label} tooltip={tooltip || getDefaultTooltip(label, t)} badge={badge} required={required} />
       <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
     </div>
   );
 }
 
 export function CidField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const validation = validateCid(value);
+  const { t } = useTranslate();
+  const validation = validateCid(value, t);
 
   return (
     <div className="space-y-1.5">
-      <FieldLabel label="CID" tooltip="Customer ID dari sistem layanan/billing. Jika diisi, wajib tepat 8 digit angka." />
+      <FieldLabel label="CID" tooltip={t("fieldTip.cidFormat")} />
       <Input
         type="text"
         inputMode="numeric"
@@ -75,7 +78,8 @@ export function CoordinateField({
   kind: "longitude" | "latitude";
   badge?: ReactNode;
 }) {
-  const validation = validateCoordinateFormat(value, kind);
+  const { t } = useTranslate();
+  const validation = validateCoordinateFormat(value, kind, t);
   const placeholder = kind === "latitude" ? "-6.200000" : "106.816666";
 
   return (
@@ -85,8 +89,8 @@ export function CoordinateField({
         badge={badge}
         tooltip={
           kind === "latitude"
-            ? "Format: -x.xxxxxx (contoh: -6.200000). Wajib minus di depan, minimal 6 digit desimal."
-            : "Format: xxx.xxxxxx (contoh: 106.816666). Tiga digit di depan, minimal 6 digit desimal."
+            ? t("fieldTip.latitudeFormat")
+            : t("fieldTip.longitudeFormat")
         }
       />
       <Input type="text" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
@@ -96,6 +100,7 @@ export function CoordinateField({
 }
 
 export function FieldLabel({ label, tooltip, badge, required }: { label: string; tooltip?: string | null; badge?: ReactNode; required?: boolean }) {
+  const { t } = useTranslate();
   const labelContent = (
     <>
       {label}
@@ -118,7 +123,7 @@ export function FieldLabel({ label, tooltip, badge, required }: { label: string;
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button type="button" className="text-muted-foreground hover:text-foreground" aria-label={`Info ${label}`}>
+            <button type="button" className="text-muted-foreground hover:text-foreground" aria-label={t("createForm.fieldInfo", { label })}>
               <CircleHelp className="size-3.5" />
             </button>
           </TooltipTrigger>
@@ -140,20 +145,20 @@ export function AutoFilledBadge({ label = "Auto-filled" }: { label?: string }) {
   );
 }
 
-export function validateCid(value: string): ValidationState {
+export function validateCid(value: string, t: TFn): ValidationState {
   if (!value.trim()) return { state: "idle", message: "" };
   if (/^\d{8}$/.test(value)) return { state: "valid", message: "8 digit" };
-  return { state: "invalid", message: "CID harus 8 digit angka" };
+  return { state: "invalid", message: t("fieldTip.cidInvalid") };
 }
 
-export function validateCoordinateFormat(value: string, kind: "longitude" | "latitude"): ValidationState {
+export function validateCoordinateFormat(value: string, kind: "longitude" | "latitude", t: TFn): ValidationState {
   const text = value.trim();
   if (!text) return { state: "idle", message: "" };
   const pattern = kind === "latitude" ? /^-\d{1,2}\.\d{6,}$/ : /^\d{3}\.\d{6,}$/;
   if (pattern.test(text)) return { state: "valid", message: "Format OK" };
   return {
     state: "invalid",
-    message: kind === "latitude" ? "Latitude wajib format -x.xxxxxx" : "Longitude wajib format xxx.xxxxxx",
+    message: kind === "latitude" ? t("fieldTip.latInvalid") : t("fieldTip.lngInvalid"),
   };
 }
 
@@ -174,41 +179,41 @@ function normalizeCidInput(value: string) {
   return value.replace(/\D/g, "").slice(0, 8);
 }
 
-function getDefaultTooltip(label: string) {
+function getDefaultTooltip(label: string, t: TFn) {
   const map: Record<string, string> = {
-    "POP Name": "Nama POP yang mudah dikenali di lapangan dan laporan.",
-    "POP Code (3 huruf)": "Kode singkat 3 huruf unik per POP, contoh CBO.",
-    "Device Name": "Nama perangkat sesuai penamaan operasional.",
-    "Customer Name": "Nama pelanggan atau titik layanan.",
-    CID: "Customer ID dari sistem layanan/billing jika tersedia.",
-    "Service Type": "Jenis layanan customer dari master data, misalnya Internet, Metro Ethernet, atau Dedicated Link.",
-    "Contact Name": "Nama PIC customer yang dapat dihubungi.",
-    "Contact Phone": "Nomor telepon PIC customer.",
-    "BAST Number": "Nomor BAST untuk referensi serah terima project.",
-    "SPK Number": "Nomor SPK untuk referensi kontrak pekerjaan.",
-    "Validation Date": "Tanggal validasi terakhir untuk data ini.",
-    Tenant: "Nama tenant/penyewa site POP jika ada. Tenant perangkat dikelola dari master data Tenant.",
-    "PLN CID Number": "Nomor pelanggan listrik PLN untuk POP.",
-    "PLN Payment Method": "Metode pembayaran listrik, misalnya prepaid/postpaid.",
-    "PLN Phase": "Jenis phase listrik, misalnya 1 phase atau 3 phase.",
-    "PLN Wattage": "Daya listrik terpasang pada POP dalam watt.",
-    "POP Type": "Klasifikasi POP, misalnya core/distribution/edge.",
-    "Tanggal POP Aktif": "Tanggal POP mulai beroperasi aktif.",
-    "Tags (comma separated)": "Tag dipisahkan koma untuk pencarian/filter data.",
-    "Capacity Core": "Total kapasitas core pada perangkat.",
-    "Used Core": "Jumlah core yang sudah dipakai.",
-    "Total Ports": "Total port yang tersedia pada perangkat.",
-    "Used Ports": "Jumlah port yang sudah terpakai.",
-    "Splitter Ratio": "Rasio splitter perangkat ODP, misalnya 1:8.",
-    Address: "Alamat lengkap lokasi POP/perangkat/customer. Wajib diisi untuk customer.",
-    City: "Kota/Kabupaten lokasi.",
-    Province: "Provinsi lokasi.",
-    Longitude: "Koordinat bujur lokasi.",
-    Latitude: "Koordinat lintang lokasi.",
-    Title: "Judul yang ditampilkan untuk custom field.",
-    "Field Key": "Kode internal custom field (snake_case), dipakai sebagai key data.",
-    "Options (CSV)": "Opsi nilai untuk select/multiselect, pisahkan dengan koma.",
-    "Help Text": "Bantuan singkat yang akan tampil sebagai tooltip field.",
+    "POP Name": t("fieldTip.popName"),
+    "POP Code (3 huruf)": t("fieldTip.popCode"),
+    "Device Name": t("fieldTip.deviceName"),
+    "Customer Name": t("fieldTip.customerName"),
+    CID: t("fieldTip.cid"),
+    "Service Type": t("fieldTip.serviceType"),
+    "Contact Name": t("fieldTip.contactName"),
+    "Contact Phone": t("fieldTip.contactPhone"),
+    "BAST Number": t("fieldTip.bastNumber"),
+    "SPK Number": t("fieldTip.spkNumber"),
+    "Validation Date": t("fieldTip.validationDate"),
+    Tenant: t("fieldTip.tenant"),
+    "PLN CID Number": t("fieldTip.plnCid"),
+    "PLN Payment Method": t("fieldTip.plnPayment"),
+    "PLN Phase": t("fieldTip.plnPhase"),
+    "PLN Wattage": t("fieldTip.plnWattage"),
+    "POP Type": t("fieldTip.popType"),
+    "Tanggal POP Aktif": t("fieldTip.popActiveDate"),
+    "Tags (comma separated)": t("fieldTip.tags"),
+    "Capacity Core": t("fieldTip.capacityCore"),
+    "Used Core": t("fieldTip.usedCore"),
+    "Total Ports": t("fieldTip.totalPorts"),
+    "Used Ports": t("fieldTip.usedPorts"),
+    "Splitter Ratio": t("fieldTip.splitterRatio"),
+    Address: t("fieldTip.address"),
+    City: t("fieldTip.city"),
+    Province: t("fieldTip.province"),
+    Longitude: t("fieldTip.longitude"),
+    Latitude: t("fieldTip.latitude"),
+    Title: t("fieldTip.title"),
+    "Field Key": t("fieldTip.fieldKey"),
+    "Options (CSV)": t("fieldTip.optionsCsv"),
+    "Help Text": t("fieldTip.helpText"),
   };
   return map[label] || "";
 }

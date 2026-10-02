@@ -2,6 +2,7 @@
 
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { CidField, Field, FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
+import { useTranslate } from "@/lib/use-locale";
 
 type PopOption = {
   id: string;
@@ -46,6 +47,7 @@ export function CustomerCreateForm({
   projects: ProjectOption[];
   onChange: (patch: Partial<CustomerCreateFormValues>) => void;
 }) {
+  const { t } = useTranslate();
   const serviceTypeOptions: ComboboxOption[] = [
     { value: "__none__", label: "None" },
     ...serviceTypes.map((item) => ({
@@ -55,7 +57,7 @@ export function CustomerCreateForm({
   ];
 
   const popOptions: ComboboxOption[] = [
-    { value: "__none__", label: "Pilih POP" },
+    { value: "__none__", label: t("createForm.selectPop") },
     ...pops
       .filter((pop) => !values.region_id || pop.region_id === values.region_id)
       .map((pop) => ({
@@ -70,7 +72,7 @@ export function CustomerCreateForm({
       .filter((project) => !values.region_id || !project.region_id || project.region_id === values.region_id)
       .map((project) => ({
         value: project.id,
-        label: project.project_name || project.project_code || "Project tidak tersedia",
+        label: project.project_name || project.project_code || t("createForm.projectUnavailable"),
       })),
   ];
 
@@ -79,7 +81,7 @@ export function CustomerCreateForm({
       <Field label="Customer Name" value={values.customer_name} onChange={(value) => onChange({ customer_name: value })} />
       <CidField value={values.customer_number} onChange={(value) => onChange({ customer_number: value })} />
       <div className="space-y-1.5">
-        <FieldLabel label="Service Type (opsional)" tooltip="Pilih dari master Service Types agar jenis layanan bisa dikelola ulang." />
+        <FieldLabel label={t("createForm.serviceTypeOptional")} tooltip={t("createForm.serviceTypeTip")} />
         <Combobox
           value={values.service_type_id || "__none__"}
           onValueChange={(value) => {
@@ -94,28 +96,28 @@ export function CustomerCreateForm({
             });
           }}
           options={serviceTypeOptions}
-          placeholder="Pilih service type"
-          searchPlaceholder="Cari service type..."
+          placeholder={t("createForm.selectServiceType")}
+          searchPlaceholder={t("createForm.searchServiceType")}
         />
       </div>
       <div className="space-y-1.5">
-        <FieldLabel label="POP" tooltip="POP/site yang melayani lokasi customer. Wajib dipilih." />
+        <FieldLabel label="POP" tooltip={t("createForm.popCustomerTip")} />
         <Combobox
           value={values.pop_id || "__none__"}
           onValueChange={(value) => onChange({ pop_id: value === "__none__" ? "" : value })}
           options={popOptions}
-          placeholder="Pilih POP"
-          searchPlaceholder="Cari POP..."
+          placeholder={t("createForm.selectPop")}
+          searchPlaceholder={t("createForm.searchPop")}
         />
       </div>
       <div className="space-y-1.5">
-        <FieldLabel label="Project (opsional)" tooltip="Project delivery atau aktivasi yang terkait dengan customer ini." />
+        <FieldLabel label={t("createForm.projectOptional")} tooltip={t("createForm.projectCustomerTip")} />
         <Combobox
           value={values.customer_project_id || "__none__"}
           onValueChange={(value) => onChange({ customer_project_id: value === "__none__" ? "" : value })}
           options={projectOptions}
-          placeholder="Pilih project"
-          searchPlaceholder="Cari project..."
+          placeholder={t("createForm.selectProject")}
+          searchPlaceholder={t("createForm.searchProject")}
         />
       </div>
     </>

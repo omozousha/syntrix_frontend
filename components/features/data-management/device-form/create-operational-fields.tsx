@@ -7,6 +7,7 @@ import {
   Field,
   FieldLabel,
 } from "@/components/features/data-management/device-form/form-field-grid";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type CreateKindFlags = {
   isPop: boolean;
@@ -43,6 +44,7 @@ export function CreateOperationalFields({
   hasCustomerAutoFill: boolean;
   onChange: (patch: Partial<CreateOperationalValues>) => void;
 }) {
+  const { t } = useTranslate();
   return (
     <>
       <StatusField
@@ -66,7 +68,7 @@ export function CreateOperationalFields({
         <div className="space-y-1.5">
           <FieldLabel
             label="Validation Status"
-            tooltip="Device baru selalu dimulai sebagai unvalidated. Status validasi berubah otomatis setelah workflow validator disetujui."
+            tooltip={t("createForm.validationNewTip")}
           />
           <Input value="unvalidated" disabled />
         </div>
@@ -75,13 +77,13 @@ export function CreateOperationalFields({
       {flags.isPop ? (
         <>
           <div className="space-y-1.5">
-            <FieldLabel label="Validation Status" tooltip="Status hasil validasi lapangan/meja. Jika bukan unvalidated, sebaiknya isi Validation Date." />
+            <FieldLabel label="Validation Status" tooltip={t("createForm.validationPopTip")} />
             <Combobox
               value={values.validation_status}
               onValueChange={(value) => onChange({ validation_status: value })}
               options={toOptions(VALIDATION_STATUS_OPTIONS)}
-              placeholder="Pilih status validasi"
-              searchPlaceholder="Cari status validasi..."
+              placeholder={t("createForm.selectValidationStatus")}
+              searchPlaceholder={t("createForm.searchValidationStatus")}
             />
           </div>
 
@@ -108,7 +110,8 @@ function StatusField({
   hasCustomerAutoFill: boolean;
   onChange: (patch: Partial<CreateOperationalValues>) => void;
 }) {
-  const state = getStatusState(flags, values, onChange);
+  const { t } = useTranslate();
+  const state = getStatusState(flags, values, onChange, t);
 
   return (
     <div className="space-y-1.5">
@@ -121,8 +124,8 @@ function StatusField({
         value={state.value}
         onValueChange={state.onValueChange}
         options={state.options}
-        placeholder="Pilih status"
-        searchPlaceholder="Cari status..."
+        placeholder={t("createForm.selectStatus")}
+        searchPlaceholder={t("createForm.searchStatus")}
       />
     </div>
   );
@@ -132,11 +135,12 @@ function getStatusState(
   flags: CreateKindFlags,
   values: CreateOperationalValues,
   onChange: (patch: Partial<CreateOperationalValues>) => void,
+  t: TFn,
 ) {
   if (flags.isPop) {
     return {
       value: values.status_pop,
-      tooltip: "Status operasional POP.",
+      tooltip: t("createForm.statusPopTip"),
       options: toOptions(POP_STATUS_OPTIONS),
       onValueChange: (value: string) => onChange({ status_pop: value }),
     };
@@ -145,7 +149,7 @@ function getStatusState(
   if (flags.isProject) {
     return {
       value: values.project_status,
-      tooltip: "Status progress project.",
+      tooltip: t("createForm.statusProjectTip"),
       options: toOptions(PROJECT_STATUS_OPTIONS),
       onValueChange: (value: string) => onChange({ project_status: value }),
     };
@@ -154,7 +158,7 @@ function getStatusState(
   if (flags.isCustomer) {
     return {
       value: values.customer_status,
-      tooltip: "Status layanan customer.",
+      tooltip: t("createForm.statusCustomerTip"),
       options: toOptions(CUSTOMER_STATUS_OPTIONS),
       onValueChange: (value: string) => onChange({ customer_status: value }),
     };
@@ -162,7 +166,7 @@ function getStatusState(
 
   return {
     value: values.status,
-    tooltip: "Status lifecycle perangkat.",
+    tooltip: t("createForm.statusDeviceTip"),
     options: toOptions(DEVICE_STATUS_OPTIONS),
     onValueChange: (value: string) => onChange({ status: value }),
   };

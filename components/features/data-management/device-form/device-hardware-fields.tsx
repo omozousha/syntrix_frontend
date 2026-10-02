@@ -2,6 +2,7 @@
 
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Field, FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
+import { useTranslate } from "@/lib/use-locale";
 
 type ManufacturerOption = {
   id: string;
@@ -44,39 +45,40 @@ export function DeviceHardwareFields({
   assetModels: AssetModelOption[];
   onChange: (patch: Partial<DeviceHardwareValues>) => void;
 }) {
+  const { t } = useTranslate();
   const manufacturerOptions: ComboboxOption[] = [
-    { value: "__none__", label: "Pilih manufacturer" },
+    { value: "__none__", label: t("createForm.selectManufacturer") },
     ...manufacturers.map((item) => ({
       value: item.id,
-      label: item.manufacturer_name || item.manufacturer_code || "Manufacturer tidak tersedia",
+      label: item.manufacturer_name || item.manufacturer_code || t("createForm.manufacturerUnavailable"),
     })),
   ];
 
   const brandOptions: ComboboxOption[] = [
-    { value: "__none__", label: "Pilih brand" },
+    { value: "__none__", label: t("createForm.selectBrand") },
     ...brands
       .filter((item) => !values.manufacturer_id || !item.manufacturer_id || item.manufacturer_id === values.manufacturer_id)
       .map((item) => ({
         value: item.id,
-        label: item.brand_name || item.brand_code || "Brand tidak tersedia",
+        label: item.brand_name || item.brand_code || t("createForm.brandUnavailable"),
       })),
   ];
 
   const modelOptions: ComboboxOption[] = [
-    { value: "__none__", label: "Pilih model" },
+    { value: "__none__", label: t("createForm.selectModel") },
     ...assetModels
       .filter((item) => !values.brand_id || !item.brand_id || item.brand_id === values.brand_id)
       .filter((item) => !values.manufacturer_id || !item.manufacturer_id || item.manufacturer_id === values.manufacturer_id)
       .map((item) => ({
         value: item.id,
-        label: item.model_name || item.model_code || "Model tidak tersedia",
+        label: item.model_name || item.model_code || t("createForm.modelUnavailable"),
       })),
   ];
 
   return (
     <>
       <div className="space-y-1.5">
-        <FieldLabel label="Manufacturer" tooltip="Pilih manufacturer dari master data." />
+        <FieldLabel label="Manufacturer" tooltip={t("createForm.manufacturerTip")} />
         <Combobox
           value={values.manufacturer_id || "__none__"}
           onValueChange={(value) => {
@@ -87,12 +89,12 @@ export function DeviceHardwareFields({
             onChange({ manufacturer_id: value, brand_id: "", model_id: "" });
           }}
           options={manufacturerOptions}
-          placeholder="Pilih manufacturer"
-          searchPlaceholder="Cari manufacturer..."
+          placeholder={t("createForm.selectManufacturer")}
+          searchPlaceholder={t("createForm.searchManufacturer")}
         />
       </div>
       <div className="space-y-1.5">
-        <FieldLabel label="Brand" tooltip="Pilih brand dari master data (opsional filter by manufacturer)." />
+        <FieldLabel label="Brand" tooltip={t("createForm.brandTip")} />
         <Combobox
           value={values.brand_id || "__none__"}
           onValueChange={(value) => {
@@ -103,25 +105,25 @@ export function DeviceHardwareFields({
             onChange({ brand_id: value, model_id: "" });
           }}
           options={brandOptions}
-          placeholder="Pilih brand"
-          searchPlaceholder="Cari brand..."
+          placeholder={t("createForm.selectBrand")}
+          searchPlaceholder={t("createForm.searchBrand")}
         />
       </div>
       <div className="space-y-1.5">
-        <FieldLabel label="Model" tooltip="Pilih model dari master data (opsional filter by brand/manufacturer)." />
+        <FieldLabel label="Model" tooltip={t("createForm.modelTip")} />
         <Combobox
           value={values.model_id || "__none__"}
           onValueChange={(value) => onChange({ model_id: value === "__none__" ? "" : value })}
           options={modelOptions}
-          placeholder="Pilih model"
-          searchPlaceholder="Cari model..."
+          placeholder={t("createForm.selectModel")}
+          searchPlaceholder={t("createForm.searchModel")}
         />
       </div>
       <Field
         label="Serial Number"
         value={values.serial_number}
         onChange={(value) => onChange({ serial_number: value })}
-        placeholder="Nomor serial perangkat"
+        placeholder={t("createForm.serialPlaceholder")}
       />
     </>
   );

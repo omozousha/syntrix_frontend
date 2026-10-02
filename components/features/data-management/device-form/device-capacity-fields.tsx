@@ -6,6 +6,7 @@ import {
   Field,
   FieldLabel,
 } from "@/components/features/data-management/device-form/form-field-grid";
+import { useTranslate } from "@/lib/use-locale";
 
 type SplitterProfileOption = {
   ratio_label: string;
@@ -56,9 +57,10 @@ export function DeviceCapacityFields({
   const isOdp = values.device_type_key === "ODP";
   const isOdc = values.device_type_key === "ODC";
   const isCable = values.device_type_key === "CABLE";
-  const totalPortsLabel = isOdp ? "Kapasitas ODP" : isOdc ? "Total Port Cabinet" : "Total Ports";
-  const usedPortsLabel = isOdp ? "Port Aktif" : isOdc ? "Port Terpakai" : "Used Ports";
-  const splitterLabel = isOdp ? "Kapasitas Splitter" : isOdc ? "Splitter Profile" : "Splitter Ratio";
+  const { t } = useTranslate();
+  const totalPortsLabel = isOdp ? t("createForm.totalPortsOdp") : isOdc ? t("createForm.totalPortsCabinet") : t("createForm.totalPorts");
+  const usedPortsLabel = isOdp ? t("createForm.usedPortsOdp") : isOdc ? t("createForm.usedPortsCabinet") : t("createForm.usedPorts");
+  const splitterLabel = isOdp ? t("createForm.splitterOdp") : isOdc ? t("createForm.splitterCabinet") : t("createForm.splitterRatio");
 
   // Filter splitter profiles based on device type
   const filteredSplitterProfiles = splitterProfiles.filter((profile) => {
@@ -101,19 +103,19 @@ export function DeviceCapacityFields({
       {showCoreFields ? (
         <>
           <div className="space-y-1.5">
-            <FieldLabel label="Capacity Core" tooltip={isCable ? "Pilih kapasitas core kabel dari master data." : "Pilih kapasitas core perangkat dari master data."} required />
+            <FieldLabel label="Capacity Core" tooltip={isCable ? t("createForm.capacityCableTip") : t("createForm.capacityDeviceTip")} required />
             <Combobox
               value={values.capacity_core || "__none__"}
               onValueChange={(value) => onChange({ capacity_core: value === "__none__" ? "" : value })}
               options={[
-                { value: "__none__", label: "Pilih kapasitas core" },
+                { value: "__none__", label: t("createForm.selectCapacity") },
                 ...activeCoreCapacities.map((item) => ({
                   value: String(item.core_capacity_value),
                   label: `${item.core_capacity_value} Core${item.label ? ` — ${item.label}` : ""}`,
                 })),
               ]}
-              placeholder="Pilih kapasitas core"
-              searchPlaceholder="Cari kapasitas core..."
+              placeholder={t("createForm.selectCapacity")}
+              searchPlaceholder={t("createForm.searchCapacity")}
             />
           </div>
           <Field
@@ -124,7 +126,7 @@ export function DeviceCapacityFields({
           />
           {showCoreWarning ? (
             <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
-              &#9888; Used core ({values.used_core}) melebihi kapasitas core ({values.capacity_core}).
+              {t("createForm.coreExceed", { used: values.used_core, cap: values.capacity_core })}
             </p>
           ) : null}
         </>
@@ -136,17 +138,17 @@ export function DeviceCapacityFields({
             <div className="space-y-1.5">
               <FieldLabel
                 label={totalPortsLabel}
-                tooltip="Untuk splitter ratio 1:16 ke atas, pilih jumlah port aktual terpasang di lapangan."
+                tooltip={t("createForm.portPresetTip")}
               />
               <Combobox
                 value={values.total_ports || "__none__"}
                 onValueChange={(value) => onChange({ total_ports: value === "__none__" ? "" : value })}
                 options={toOptions([
-                  { value: "__none__", label: "Pilih total port" },
+                  { value: "__none__", label: t("createForm.selectTotalPort") },
                   ...splitterPortPresetOptions.map((port) => ({ value: String(port), label: `${port} port` })),
                 ])}
-                placeholder="Pilih total port"
-                searchPlaceholder="Cari total port..."
+                placeholder={t("createForm.selectTotalPort")}
+                searchPlaceholder={t("createForm.searchTotalPort")}
               />
             </div>
           ) : (
@@ -165,7 +167,7 @@ export function DeviceCapacityFields({
           />
           {showPortWarning ? (
             <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
-              &#9888; {usedPortsLabel} ({values.used_ports}) melebihi {totalPortsLabel} ({values.total_ports}).
+              {t("createForm.portExceed", { usedLabel: usedPortsLabel, used: values.used_ports, totalLabel: totalPortsLabel, total: values.total_ports })}
             </p>
           ) : null}
         </>
@@ -175,11 +177,11 @@ export function DeviceCapacityFields({
         <div className="space-y-1.5">
           <FieldLabel
             label={splitterLabel}
-            tooltip="Pilih rasio splitter dari master data."
+            tooltip={t("createForm.splitterTip")}
             badge={<AutoFilledBadge label="Auto-fill" />}
           />
           <p className="text-xs text-muted-foreground">
-            Pilihan splitter akan mengisi rekomendasi kapasitas port. Nilai kapasitas tetap bisa dikoreksi sesuai kondisi lapangan.
+            {t("createForm.splitterHint")}
           </p>
           <Combobox
             value={values.splitter_ratio || "__none__"}
@@ -194,14 +196,14 @@ export function DeviceCapacityFields({
               });
             }}
             options={toOptions([
-              { value: "__none__", label: "Pilih splitter ratio" },
+              { value: "__none__", label: t("createForm.selectSplitter") },
               ...filteredSplitterProfiles.map((item) => ({
                 value: item.ratio_label,
                 label: item.output_port_count ? `${item.ratio_label} (${item.output_port_count} port)` : item.ratio_label,
               })),
             ])}
-            placeholder="Pilih splitter ratio"
-            searchPlaceholder="Cari splitter ratio..."
+            placeholder={t("createForm.selectSplitter")}
+            searchPlaceholder={t("createForm.searchSplitter")}
           />
         </div>
       ) : null}

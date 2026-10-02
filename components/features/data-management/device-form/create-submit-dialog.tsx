@@ -10,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useTranslate } from "@/lib/use-locale";
 
 export type CreateApprovalNotice = {
   title: string;
@@ -32,16 +33,17 @@ export function CreateApprovalDialog({
   notice: CreateApprovalNotice | null;
   onClose: (target: string) => void;
 }) {
+  const { t } = useTranslate();
   return (
     <AlertDialog open={Boolean(notice)}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{notice?.title || "Request approval terkirim"}</AlertDialogTitle>
+          <AlertDialogTitle>{notice?.title || t("createForm.approvalSent")}</AlertDialogTitle>
           <AlertDialogDescription>{notice?.description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogAction onClick={() => onClose(notice?.redirectTo || "/data-management")}>
-            Kembali ke list
+            {t("createForm.backToList")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -5,6 +5,7 @@ import { useSession } from "@/components/session-context";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, X, CheckCircle, AlertCircle } from "lucide-react";
+import { useTranslate } from "@/lib/use-locale";
 
 type ParsedRouteData = {
   coordinates: number[][];
@@ -20,6 +21,7 @@ type RouteFileUploadProps = {
 
 export function RouteFileUploadField({ onParsed, disabled = false }: RouteFileUploadProps) {
   const { token } = useSession();
+  const { t } = useTranslate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -34,7 +36,7 @@ export function RouteFileUploadField({ onParsed, disabled = false }: RouteFileUp
 
     const ext = selectedFile.name.split(".").pop()?.toLowerCase() || "";
     if (!["kml", "kmz"].includes(ext)) {
-      setError("Format file harus KML atau KMZ.");
+      setError(t("createForm.routeFormat"));
       return;
     }
 
@@ -58,10 +60,10 @@ export function RouteFileUploadField({ onParsed, disabled = false }: RouteFileUp
         setParsed(data);
         onParsed(data);
       } else {
-        throw new Error(result.message || "Gagal memproses file.");
+        throw new Error(result.message || t("createForm.routeProcessFail"));
       }
     } catch (err) {
-      const message = (err as Error).message || "Gagal upload file.";
+      const message = (err as Error).message || t("createForm.routeUploadFail");
       setError(message);
       setFile(null);
     } finally {
@@ -115,7 +117,7 @@ export function RouteFileUploadField({ onParsed, disabled = false }: RouteFileUp
         {uploading ? (
           <div className="flex flex-col items-center gap-2">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-sm text-muted-foreground">Memproses file route...</p>
+            <p className="text-sm text-muted-foreground">{t("createForm.routeProcessing")}</p>
           </div>
         ) : parsed ? (
           <div className="flex flex-col items-center gap-2">
@@ -123,9 +125,7 @@ export function RouteFileUploadField({ onParsed, disabled = false }: RouteFileUp
             <div>
               <p className="text-sm font-medium">{file?.name}</p>
               <p className="text-xs text-muted-foreground">
-                📍 {parsed.point_count.toLocaleString()} titik koordinat
-                {"  |  "}📏 {(parsed.length_m / 1000).toFixed(2)} km
-                {"  |  "}📐 {Math.round(parsed.length_m).toLocaleString()} m
+                {t("createForm.routeStats", { points: parsed.point_count.toLocaleString(), km: (parsed.length_m / 1000).toFixed(2), m: Math.round(parsed.length_m).toLocaleString() })}
               </p>
             </div>
           </div>
@@ -139,10 +139,10 @@ export function RouteFileUploadField({ onParsed, disabled = false }: RouteFileUp
             <Upload className="h-8 w-8 text-muted-foreground" />
             <div>
               <p className="text-sm font-medium">
-                Upload Route File (KML/KMZ)
+                {t("createForm.routeUploadTitle")}
               </p>
               <p className="text-xs text-muted-foreground">
-                Drag & drop file KML/KMZ, atau klik untuk pilih file
+                {t("createForm.routeUploadHint")}
               </p>
             </div>
           </div>
@@ -153,7 +153,7 @@ export function RouteFileUploadField({ onParsed, disabled = false }: RouteFileUp
         <div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2">
           <div className="text-xs text-muted-foreground">
             <FileText className="mr-1 inline-block h-3 w-3" />
-            {file?.name} — {(parsed.length_m / 1000).toFixed(2)} km, {parsed.point_count} titik
+            {t("createForm.routeSummary", { name: file?.name || "", km: (parsed.length_m / 1000).toFixed(2), points: parsed.point_count })}
           </div>
           <Button
             type="button"

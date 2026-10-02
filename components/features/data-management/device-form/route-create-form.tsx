@@ -2,6 +2,7 @@
 
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Field, FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
+import { useTranslate } from "@/lib/use-locale";
 
 type PopOption = {
   id: string;
@@ -45,6 +46,7 @@ export function RouteCreateForm({
   routeTypes: RouteTypeOption[];
   onChange: (patch: Partial<RouteCreateFormValues>) => void;
 }) {
+  const { t } = useTranslate();
   const routeTypeOptions: ComboboxOption[] = [
     { value: "__none__", label: "None" },
     ...routeTypes.map((item) => ({
@@ -69,7 +71,7 @@ export function RouteCreateForm({
       .filter((project) => !values.region_id || !project.region_id || project.region_id === values.region_id)
       .map((project) => ({
         value: project.id,
-        label: project.project_name || project.project_code || "Project tidak tersedia",
+        label: project.project_name || project.project_code || t("createForm.projectUnavailable"),
       })),
   ];
 
@@ -77,33 +79,33 @@ export function RouteCreateForm({
     <>
       <Field label="Route Name" value={values.route_name} onChange={(value) => onChange({ route_name: value })} />
       <div className="space-y-1.5">
-        <FieldLabel label="Route Type" tooltip="Pilih dari master Route Types. Kelola opsinya di Tata Kelola Master Data." />
+        <FieldLabel label="Route Type" tooltip={t("createForm.routeTypeTip")} />
         <Combobox
           value={values.route_type || "__none__"}
           onValueChange={(value) => onChange({ route_type: value === "__none__" ? "" : value })}
           options={routeTypeOptions}
-          placeholder="Pilih route type"
-          searchPlaceholder="Cari route type..."
+          placeholder={t("createForm.selectRouteType")}
+          searchPlaceholder={t("createForm.searchRouteType")}
         />
       </div>
       <div className="space-y-1.5">
-        <FieldLabel label="POP (opsional)" tooltip="Titik POP utama untuk route ini." />
+        <FieldLabel label={t("createForm.popOptionalLabel")} tooltip={t("createForm.popRouteTip")} />
         <Combobox
           value={values.pop_id || "__none__"}
           onValueChange={(value) => onChange({ pop_id: value === "__none__" ? "" : value })}
           options={popOptions}
-          placeholder="Pilih POP"
-          searchPlaceholder="Cari POP..."
+          placeholder={t("createForm.selectPop")}
+          searchPlaceholder={t("createForm.searchPop")}
         />
       </div>
       <div className="space-y-1.5">
-        <FieldLabel label="Project (opsional)" tooltip="Project delivery yang menaungi route ini." />
+        <FieldLabel label={t("createForm.projectOptional")} tooltip={t("createForm.projectRouteTip")} />
         <Combobox
           value={values.route_project_id || "__none__"}
           onValueChange={(value) => onChange({ route_project_id: value === "__none__" ? "" : value })}
           options={projectOptions}
-          placeholder="Pilih project"
-          searchPlaceholder="Cari project..."
+          placeholder={t("createForm.selectProject")}
+          searchPlaceholder={t("createForm.searchProject")}
         />
       </div>
       <Field

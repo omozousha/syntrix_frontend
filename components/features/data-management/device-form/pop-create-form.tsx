@@ -2,6 +2,7 @@
 
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Field, FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
+import { useTranslate } from "@/lib/use-locale";
 
 type PopTypeOption = {
   id: string;
@@ -57,6 +58,7 @@ export function PopCreateOperationalFields({
   sectionSpanClass: string;
   onChange: (patch: Partial<PopCreateFormValues>) => void;
 }) {
+  const { t } = useTranslate();
   const tenantOptions: ComboboxOption[] = [
     { value: "__none__", label: "None" },
     ...tenants.map((item) => ({
@@ -76,13 +78,13 @@ export function PopCreateOperationalFields({
   return (
     <>
       <div className="space-y-1.5">
-        <FieldLabel label="Tenant" tooltip="Pilih tenant POP dari master data." />
+        <FieldLabel label="Tenant" tooltip={t("createForm.tenantPopTip")} />
         <Combobox
           value={values.tenant || "__none__"}
           onValueChange={(value) => onChange({ tenant: value === "__none__" ? "" : value })}
           options={tenantOptions}
-          placeholder="Pilih tenant"
-          searchPlaceholder="Cari tenant..."
+          placeholder={t("createForm.selectTenant")}
+          searchPlaceholder={t("createForm.searchTenant")}
         />
       </div>
       <Field label="PLN CID Number" value={values.pln_cid_number} onChange={(value) => onChange({ pln_cid_number: value })} />
@@ -100,7 +102,7 @@ export function PopCreateOperationalFields({
       />
       <Field label="PLN Wattage" type="number" value={values.pln_wattage} onChange={(value) => onChange({ pln_wattage: value })} />
       <div className="space-y-1.5">
-        <FieldLabel label="POP Type" tooltip="Pilih dari master POP Types. Kelola opsinya di Tata Kelola Master Data." />
+        <FieldLabel label="POP Type" tooltip={t("createForm.popTypeTip")} />
         <Combobox
           value={values.pop_type_id || "__none__"}
           onValueChange={(value) => {
@@ -115,8 +117,8 @@ export function PopCreateOperationalFields({
             });
           }}
           options={popTypeOptions}
-          placeholder="Pilih POP type"
-          searchPlaceholder="Cari POP type..."
+          placeholder={t("createForm.selectPopType")}
+          searchPlaceholder={t("createForm.searchPopType")}
         />
       </div>
       <Field
