@@ -174,7 +174,7 @@ export default function LoginPage() {
                 <div className="space-y-1">
                   <p className="text-sm font-medium">Secure role workspace</p>
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    Setelah login, Syntrix membuka dashboard, queue, dan data sesuai role serta scope region akun.
+                    Setelah login, Syntrix membuka dashboard, antrian, dan data sesuai role serta scope region akun.
                   </p>
                 </div>
               </div>
