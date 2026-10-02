@@ -11,6 +11,47 @@ export type EvidenceChecklistRef = {
   available: boolean;
 };
 
+// Maps standar label foto & kondisi dari payload DB (ID) → terjemahan via t()
+function mapInspectionLabel(raw: string | undefined | null, t: TFn): string {
+  if (!raw) return "-";
+  const key = raw.trim().toLowerCase();
+  const MAP: Record<string, string> = {
+    "foto tampak kanan dan kiri": t("evidenceCheck.item.photoSide"),
+    "foto keseluruhan perangkat (jarak dekat)": t("evidenceCheck.item.photoOverallClose"),
+    "foto bagian dalam perangkat (close-up)": t("evidenceCheck.item.photoInside"),
+    "foto keseluruhan perangkat (jarak jauh)": t("evidenceCheck.item.photoOverallFar"),
+    // alias lama dari backend
+    "foto keseluruhan odp sebelum pemeriksaan jarak dekat": t("evidenceCheck.item.photoOverallClose"),
+    "foto bagian dalam odp sebelum pemeriksaan close up": t("evidenceCheck.item.photoInside"),
+    "foto keseluruhan odp sebelum pemeriksaan jarak jauh dengan tiang": t("evidenceCheck.item.photoOverallFar"),
+    "box perangkat": t("evidenceCheck.item.box"),
+    "box odp": t("evidenceCheck.item.box"),
+    "label perangkat": t("evidenceCheck.item.label"),
+    "label odp": t("evidenceCheck.item.label"),
+    "kebersihan perangkat": t("evidenceCheck.item.cleanliness"),
+    "kebersihan odp": t("evidenceCheck.item.cleanliness"),
+    "kerapihan kabel": t("evidenceCheck.item.cableNeatness"),
+    "pigtail dan adapter": t("evidenceCheck.item.pigtailAdapter"),
+  };
+  return MAP[key] ?? raw;
+}
+
+function mapInspectionCondition(raw: string | undefined | null, t: TFn): string {
+  if (!raw) return "-";
+  const key = raw.trim().toLowerCase();
+  const MAP: Record<string, string> = {
+    "baik": t("evidenceCheck.cond.baik"),
+    "rusak": t("evidenceCheck.cond.rusak"),
+    "bersih": t("evidenceCheck.cond.bersih"),
+    "kotor": t("evidenceCheck.cond.kotor"),
+    "rapi": t("evidenceCheck.cond.rapi"),
+    "tidak rapi": t("evidenceCheck.cond.tidakRapi"),
+    "lengkap": t("evidenceCheck.cond.lengkap"),
+    "tidak lengkap": t("evidenceCheck.cond.tidakLengkap"),
+  };
+  return MAP[key] ?? raw;
+}
+
 export function EvidenceChecklistPreview({
   inspection,
   onPreview,
@@ -33,28 +74,31 @@ export function EvidenceChecklistPreview({
         <div className="mb-4">
           <p className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">{t("evidenceCheck.initialInspection")}</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {initialPhotos.map((item, index) => (
-              <div key={`${valueText(item.label, t)}-${index}`} className="rounded-lg border border-border/50 bg-muted/20 p-2.5">
-                <p className="text-xs font-semibold leading-normal text-foreground">{valueText(item.label, t)}</p>
-                <p className="text-[11px] leading-relaxed text-muted-foreground mb-1.5">{t("evidenceCheck.photo")} <span className="font-mono text-[10px]">{getInspectionAttachmentName(item.attachment, t)}</span></p>
-                {getInspectionAttachmentUrl(item.attachment) && (
-                  <OptimizedImage
-                    src={getInspectionAttachmentUrl(item.attachment)}
-                    thumbUrl={getInspectionAttachmentUrl(item.attachment)}
-                    alt={valueText(item.label, t)}
-                    aspectRatio="square"
-                    size="thumb"
-                    className="mb-2 h-24 w-full"
+            {initialPhotos.map((item, index) => {
+              const label = mapInspectionLabel(String(item.label || ""), t);
+              return (
+                <div key={`${label}-${index}`} className="rounded-lg border border-border/50 bg-muted/20 p-2.5">
+                  <p className="text-xs font-semibold leading-normal text-foreground">{label}</p>
+                  <p className="text-[11px] leading-relaxed text-muted-foreground mb-1.5">{t("evidenceCheck.photo")} <span className="font-mono text-[10px]">{getInspectionAttachmentName(item.attachment, t)}</span></p>
+                  {getInspectionAttachmentUrl(item.attachment) && (
+                    <OptimizedImage
+                      src={getInspectionAttachmentUrl(item.attachment)}
+                      thumbUrl={getInspectionAttachmentUrl(item.attachment)}
+                      alt={label}
+                      aspectRatio="square"
+                      size="thumb"
+                      className="mb-2 h-24 w-full"
+                    />
+                  )}
+                  <InspectionEvidenceActions
+                    attachment={item.attachment}
+                    label={`${label} ${index + 1}`}
+                    onPreview={onPreview}
+                    onDownload={onDownload}
                   />
-                )}
-                <InspectionEvidenceActions
-                  attachment={item.attachment}
-                  label={`${valueText(item.label, t)} ${index + 1}`}
-                  onPreview={onPreview}
-                  onDownload={onDownload}
-                />
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       ) : null}
@@ -62,24 +106,28 @@ export function EvidenceChecklistPreview({
         <div>
           <p className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">{t("evidenceCheck.checklist")}</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {conditionChecks.map((item, index) => (
-              <div key={`${valueText(item.label, t)}-${index}`} className="rounded-lg border border-border/50 bg-muted/20 p-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-semibold leading-normal text-foreground">{valueText(item.label, t)}</p>
-                  <Badge variant="outline" className="shrink-0 font-mono text-[9px] uppercase tracking-normal">
-                    {valueText(item.condition, t)}
-                  </Badge>
+            {conditionChecks.map((item, index) => {
+              const label = mapInspectionLabel(String(item.label || ""), t);
+              const condition = mapInspectionCondition(String(item.condition || ""), t);
+              return (
+                <div key={`${label}-${index}`} className="rounded-lg border border-border/50 bg-muted/20 p-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs font-semibold leading-normal text-foreground">{label}</p>
+                    <Badge variant="outline" className="shrink-0 font-mono text-[9px] uppercase tracking-normal">
+                      {condition}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-[11px] leading-normal text-muted-foreground">{t("evidenceCheck.note")}: {valueText(item.note, t)}</p>
+                  <p className="text-[11px] leading-normal text-muted-foreground">{t("evidenceCheck.photo")} <span className="font-mono text-[10px]">{getInspectionAttachmentName(item.attachment, t)}</span></p>
+                  <InspectionEvidenceActions
+                    attachment={item.attachment}
+                    label={`${label} ${index + 1}`}
+                    onPreview={onPreview}
+                    onDownload={onDownload}
+                  />
                 </div>
-                <p className="mt-1 text-[11px] leading-normal text-muted-foreground">{t("evidenceCheck.note")}: {valueText(item.note, t)}</p>
-                <p className="text-[11px] leading-normal text-muted-foreground">{t("evidenceCheck.photo")} <span className="font-mono text-[10px]">{getInspectionAttachmentName(item.attachment, t)}</span></p>
-                <InspectionEvidenceActions
-                  attachment={item.attachment}
-                  label={`${valueText(item.label, t)} ${index + 1}`}
-                  onPreview={onPreview}
-                  onDownload={onDownload}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : null}
