@@ -21,7 +21,6 @@ export type ValidationRule = {
 type TemplateConfig = {
   fileName: string;
   sheetName: string;
-  pageTitle: string;
   columns: ColumnDef[];
   exampleRows: Record<string, string>[];
   instructions: string[][];

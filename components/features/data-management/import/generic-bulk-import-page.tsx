@@ -56,7 +56,6 @@ export function GenericBulkImportPage({ config }: Props) {
   const session = useSession();
   const { t } = useTranslate();
   const {
-    pageTitle,
     entityType,
     deviceTypeKey,
     assetGroup,
@@ -104,12 +103,12 @@ export function GenericBulkImportPage({ config }: Props) {
     }
     setIsChecking(true);
     try {
-      const r = await checkPrerequisite(session.token);
+      const r = await checkPrerequisite(session.token, t);
       setCheckResult(r);
       return r;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      const r = { hasData: false, count: 0, message: `Gagal memeriksa: ${msg}`, entityLabel: "DATA" };
+      const r = { hasData: false, count: 0, message: t("import.page.checkFailed", { msg }), entityLabel: "DATA" };
       setCheckResult(r);
       return r;
     } finally {
@@ -241,7 +240,7 @@ export function GenericBulkImportPage({ config }: Props) {
     }
 
     let preview = parsed.map((data, idx) => {
-      const baseRow = validateRow(data);
+      const baseRow = validateRow(data, t);
       return {
         rowIndex: idx + 2,
         valid: baseRow.valid,
@@ -570,7 +569,7 @@ export function GenericBulkImportPage({ config }: Props) {
     <div className="space-y-6 pr-1.5 pb-8">
       <header className="space-y-2">
         <div className="flex items-center gap-2">
-          <h2 className="text-2xl font-bold tracking-tight">{pageTitle}</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t("import.page.title", { entity: successEntityLabel })}</h2>
           {checkResult && (
             <span
               className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
@@ -659,7 +658,6 @@ export function GenericBulkImportPage({ config }: Props) {
               config={{
                 fileName: templateFileName,
                 sheetName: deviceTypeKey || entityType.toUpperCase(),
-                pageTitle,
                 columns: templateColumns,
                 exampleRows,
                 instructions: config.instructions,

@@ -1,9 +1,9 @@
 import type { ColumnDef, ValidationRule } from "./generic-import-template-download";
 import type { PrerequisiteCheck } from "./generic-bulk-import-prerequisite-dialog";
+import type { TFn } from "@/lib/use-locale";
 import { apiFetch } from "@/lib/api";
 
 export type BulkImportConfig = {
-  pageTitle: string;
   entityType: string;
   deviceTypeKey?: string;
   assetGroup?: string;
@@ -11,8 +11,8 @@ export type BulkImportConfig = {
   exampleRows: Record<string, string>[];
   instructions: string[][];
   validationRules: ValidationRule[];
-  validateRow: (row: Record<string, string>) => { valid: boolean; errors: string[] };
-  checkPrerequisite: (token: string | undefined) => Promise<PrerequisiteCheck | null>;
+  validateRow: (row: Record<string, string>, t: TFn) => { valid: boolean; errors: string[] };
+  checkPrerequisite: (token: string | undefined, t: TFn) => Promise<PrerequisiteCheck | null>;
   storageKey: string;
   requiresPop: boolean;
   requiresRegion: boolean;
@@ -81,47 +81,46 @@ export const ODC_INSTRUCTIONS: string[][] = [
   ["Catatan:", "Asset group 'passive' akan di-set otomatis oleh backend."],
 ];
 
-export function validateOdcRow(row: Record<string, string>): { valid: boolean; errors: string[] } {
+export function validateOdcRow(row: Record<string, string>, t: TFn): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   const dn = getValue(row, "device name");
-  if (!dn) errors.push("device name wajib diisi");
+  if (!dn) errors.push(t("importVal.required", { col: "device name" }));
 
   const dt = getValue(row, "device type").toUpperCase();
-  if (!dt || dt !== "ODC") errors.push("device type harus ODC");
+  if (!dt || dt !== "ODC") errors.push(t("importVal.mustBe", { col: "device type", expected: "ODC" }));
 
   const st = getValue(row, "status").toLowerCase();
   if (!st || !inSet(st, new Set(["draft", "installed", "active", "inactive", "maintenance", "retired"]))) {
-    errors.push("status harus draft/installed/active/inactive/maintenance/retired");
+    errors.push(t("importVal.mustBe", { col: "status", expected: "draft/installed/active/inactive/maintenance/retired" }));
   }
 
-  if (!getValue(row, "region")) errors.push("region wajib diisi");
-  if (!getValue(row, "POP")) errors.push("POP wajib diisi");
+  if (!getValue(row, "region")) errors.push(t("importVal.required", { col: "region" }));
+  if (!getValue(row, "POP")) errors.push(t("importVal.required", { col: "POP" }));
 
   const lng = Number(getValue(row, "longitude"));
   if (!getValue(row, "longitude") || !Number.isFinite(lng) || lng < -180 || lng > 180) {
-    errors.push("longitude harus -180..180");
+    errors.push(t("importVal.mustBe", { col: "longitude", expected: "-180..180" }));
   }
   const lat = Number(getValue(row, "latitude"));
   if (!getValue(row, "latitude") || !Number.isFinite(lat) || lat < -90 || lat > 90) {
-    errors.push("latitude harus -90..90");
+    errors.push(t("importVal.mustBe", { col: "latitude", expected: "-90..90" }));
   }
 
   const cc = Number(getValue(row, "kapasitas core"));
   if (!getValue(row, "kapasitas core") || !Number.isFinite(cc) || cc <= 0 || !Number.isInteger(cc)) {
-    errors.push("kapasitas core harus integer > 0");
+    errors.push(t("importVal.mustBeNumber", { col: "kapasitas core", expected: "> 0" }));
   }
   const tp = Number(getValue(row, "total ports"));
   if (!getValue(row, "total ports") || !Number.isFinite(tp) || tp <= 0 || !Number.isInteger(tp)) {
-    errors.push("total ports harus integer > 0");
+    errors.push(t("importVal.mustBeNumber", { col: "total ports", expected: "> 0" }));
   }
   const it = getValue(row, "installation type");
-  if (!it) errors.push("installation type wajib diisi");
+  if (!it) errors.push(t("importVal.required", { col: "installation type" }));
 
   return { valid: errors.length === 0, errors };
 }
 
 export const ODC_CONFIG: BulkImportConfig = {
-  pageTitle: "IMPOR MASSAL ODC",
   entityType: "devices",
   deviceTypeKey: "ODC",
   assetGroup: "passive",
@@ -130,8 +129,8 @@ export const ODC_CONFIG: BulkImportConfig = {
   instructions: ODC_INSTRUCTIONS,
   validationRules: ODC_VALIDATION_RULES,
   validateRow: validateOdcRow,
-  checkPrerequisite: async (token) => {
-    if (!token) return { hasData: false, count: 0, message: "Tidak ada sesi login.", entityLabel: "POP" };
+  checkPrerequisite: async (token, t) => {
+    if (!token) return { hasData: false, count: 0, message: t("import.page.noSession"), entityLabel: "POP" };
     try {
       const json = await apiFetch<{ data?: { items?: unknown[] } | unknown[]; meta?: { total?: number } }>(
         "/pops?page=1&limit=1",
@@ -142,11 +141,11 @@ export const ODC_CONFIG: BulkImportConfig = {
       return {
         hasData: total > 0,
         count: total,
-        message: total > 0 ? `${total} data POP tersedia.` : "Belum ada data POP.",
+        message: total > 0 ? t("importVal.popAvailable", { count: total }) : t("importVal.noPop"),
         entityLabel: "POP",
       };
     } catch (e) {
-      return { hasData: false, count: 0, message: `Gagal cek POP: ${e instanceof Error ? e.message : e}`, entityLabel: "POP" };
+      return { hasData: false, count: 0, message: t("importVal.checkPopFail", { msg: String(e instanceof Error ? e.message : e) }), entityLabel: "POP" };
     }
   },
   storageKey: "odc-bulk-import-notice-dismissed",
@@ -209,53 +208,52 @@ export const OLT_INSTRUCTIONS: string[][] = [
   ["Catatan:", "Kolom POP wajib diisi. Longitude/latitude diisi otomatis dari koordinat POP bila dikosongkan."],
 ];
 
-export function validateOltRow(row: Record<string, string>): { valid: boolean; errors: string[] } {
+export function validateOltRow(row: Record<string, string>, t: TFn): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   const dn = getValue(row, "device name");
-  if (!dn) errors.push("device name wajib diisi");
+  if (!dn) errors.push(t("importVal.required", { col: "device name" }));
 
   const dt = getValue(row, "device type").toUpperCase();
-  if (!dt || dt !== "OLT") errors.push("device type harus OLT");
+  if (!dt || dt !== "OLT") errors.push(t("importVal.mustBe", { col: "device type", expected: "OLT" }));
 
   const st = getValue(row, "status").toLowerCase();
   if (!st || !inSet(st, new Set(["draft", "installed", "active", "inactive", "maintenance", "retired"]))) {
-    errors.push("status harus draft/installed/active/inactive/maintenance/retired");
+    errors.push(t("importVal.mustBe", { col: "status", expected: "draft/installed/active/inactive/maintenance/retired" }));
   }
-  if (!getValue(row, "region")) errors.push("region wajib diisi");
-  if (!getValue(row, "POP")) errors.push("POP wajib diisi");
+  if (!getValue(row, "region")) errors.push(t("importVal.required", { col: "region" }));
+  if (!getValue(row, "POP")) errors.push(t("importVal.required", { col: "POP" }));
 
   const mgmtIp = getValue(row, "management ip");
   if (!mgmtIp) {
-    errors.push("management ip wajib diisi");
+    errors.push(t("importVal.required", { col: "management ip" }));
   } else if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(mgmtIp)) {
-    errors.push("management ip format tidak valid");
+    errors.push(t("importVal.invalidFormat", { col: "management ip" }));
   }
 
   const vlan = Number(getValue(row, "vlan"));
   if (!getValue(row, "vlan") || !Number.isInteger(vlan) || vlan < 1 || vlan > 4094) {
-    errors.push("vlan harus integer 1-4094");
+    errors.push(t("importVal.mustBeNumber", { col: "vlan", expected: "1-4094" }));
   }
 
   const tp = Number(getValue(row, "total ports"));
   if (!getValue(row, "total ports") || !Number.isFinite(tp) || tp <= 0 || !Number.isInteger(tp)) {
-    errors.push("total ports harus integer > 0");
+    errors.push(t("importVal.mustBeNumber", { col: "total ports", expected: "> 0" }));
   }
 
   const fp = Number(getValue(row, "feeder port count"));
   if (!getValue(row, "feeder port count") || !Number.isFinite(fp) || fp < 0 || !Number.isInteger(fp)) {
-    errors.push("feeder port count harus integer >= 0");
+    errors.push(t("importVal.mustBeNumber", { col: "feeder port count", expected: ">= 0" }));
   }
 
   const uh = getValue(row, "u height");
   if (!uh || !["1", "2", "3", "4", "6"].includes(uh)) {
-    errors.push("u height harus 1, 2, 3, 4, atau 6");
+    errors.push(t("importVal.uHeight"));
   }
 
   return { valid: errors.length === 0, errors };
 }
 
 export const OLT_CONFIG: BulkImportConfig = {
-  pageTitle: "IMPOR MASSAL OLT",
   entityType: "devices",
   deviceTypeKey: "OLT",
   assetGroup: "active",
@@ -264,8 +262,8 @@ export const OLT_CONFIG: BulkImportConfig = {
   instructions: OLT_INSTRUCTIONS,
   validationRules: OLT_VALIDATION_RULES,
   validateRow: validateOltRow,
-  checkPrerequisite: async (token) => {
-    if (!token) return { hasData: false, count: 0, message: "Tidak ada sesi login.", entityLabel: "POP" };
+  checkPrerequisite: async (token, t) => {
+    if (!token) return { hasData: false, count: 0, message: t("import.page.noSession"), entityLabel: "POP" };
     try {
       const json = await apiFetch<{ data?: { items?: unknown[] } | unknown[]; meta?: { total?: number } }>(
         "/pops?page=1&limit=1",
@@ -276,11 +274,11 @@ export const OLT_CONFIG: BulkImportConfig = {
       return {
         hasData: total > 0,
         count: total,
-        message: total > 0 ? `${total} data POP tersedia.` : "Belum ada data POP.",
+        message: total > 0 ? t("importVal.popAvailable", { count: total }) : t("importVal.noPop"),
         entityLabel: "POP",
       };
     } catch (e) {
-      return { hasData: false, count: 0, message: `Gagal cek POP: ${e instanceof Error ? e.message : e}`, entityLabel: "POP" };
+      return { hasData: false, count: 0, message: t("importVal.checkPopFail", { msg: String(e instanceof Error ? e.message : e) }), entityLabel: "POP" };
     }
   },
   storageKey: "olt-bulk-import-notice-dismissed",
@@ -341,57 +339,56 @@ export const OTB_INSTRUCTIONS: string[][] = [
 
 const ALLOWED_CONNECTORS = new Set(["sc/upc", "sc/apc", "lc/upc", "lc/apc", "fc/upc", "fc/apc"]);
 
-export function validateOtbRow(row: Record<string, string>): { valid: boolean; errors: string[] } {
+export function validateOtbRow(row: Record<string, string>, t: TFn): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   const dn = getValue(row, "device name");
-  if (!dn) errors.push("device name wajib diisi");
+  if (!dn) errors.push(t("importVal.required", { col: "device name" }));
 
   const dt = getValue(row, "device type").toUpperCase();
-  if (!dt || dt !== "OTB") errors.push("device type harus OTB");
+  if (!dt || dt !== "OTB") errors.push(t("importVal.mustBe", { col: "device type", expected: "OTB" }));
 
   const st = getValue(row, "status").toLowerCase();
   if (!st || !inSet(st, new Set(["draft", "installed", "active", "inactive", "maintenance", "retired"]))) {
-    errors.push("status harus draft/installed/active/inactive/maintenance/retired");
+    errors.push(t("importVal.mustBe", { col: "status", expected: "draft/installed/active/inactive/maintenance/retired" }));
   }
-  if (!getValue(row, "region")) errors.push("region wajib diisi");
-  if (!getValue(row, "POP")) errors.push("POP wajib diisi");
+  if (!getValue(row, "region")) errors.push(t("importVal.required", { col: "region" }));
+  if (!getValue(row, "POP")) errors.push(t("importVal.required", { col: "POP" }));
 
   // OTB: koordinat opsional — backend mengisi dari koordinat POP terkait.
   const rawLng = getValue(row, "longitude");
   if (rawLng) {
     const lng = Number(rawLng);
     if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
-      errors.push("longitude harus -180..180");
+      errors.push(t("importVal.mustBe", { col: "longitude", expected: "-180..180" }));
     }
   }
   const rawLat = getValue(row, "latitude");
   if (rawLat) {
     const lat = Number(rawLat);
     if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
-      errors.push("latitude harus -90..90");
+      errors.push(t("importVal.mustBe", { col: "latitude", expected: "-90..90" }));
     }
   }
 
   const cc = Number(getValue(row, "kapasitas core"));
   if (!getValue(row, "kapasitas core") || !Number.isFinite(cc) || cc <= 0 || !Number.isInteger(cc)) {
-    errors.push("kapasitas core harus integer > 0");
+    errors.push(t("importVal.mustBeNumber", { col: "kapasitas core", expected: "> 0" }));
   }
 
   const ct = getValue(row, "connector type").toLowerCase().replace(/\s/g, "");
   if (!ct || !ALLOWED_CONNECTORS.has(ct)) {
-    errors.push("connector type harus SC/UPC, SC/APC, LC/UPC, LC/APC, FC/UPC, atau FC/APC");
+    errors.push(t("importVal.connectorType"));
   }
 
   const uh = getValue(row, "u height");
   if (!uh || !["1", "2", "3", "4", "6"].includes(uh)) {
-    errors.push("u height harus 1, 2, 3, 4, atau 6");
+    errors.push(t("importVal.uHeight"));
   }
 
   return { valid: errors.length === 0, errors };
 }
 
 export const OTB_CONFIG: BulkImportConfig = {
-  pageTitle: "IMPOR MASSAL OTB",
   entityType: "devices",
   deviceTypeKey: "OTB",
   assetGroup: "passive",
@@ -400,8 +397,8 @@ export const OTB_CONFIG: BulkImportConfig = {
   instructions: OTB_INSTRUCTIONS,
   validationRules: OTB_VALIDATION_RULES,
   validateRow: validateOtbRow,
-  checkPrerequisite: async (token) => {
-    if (!token) return { hasData: false, count: 0, message: "Tidak ada sesi login.", entityLabel: "POP" };
+  checkPrerequisite: async (token, t) => {
+    if (!token) return { hasData: false, count: 0, message: t("import.page.noSession"), entityLabel: "POP" };
     try {
       const json = await apiFetch<{ data?: { items?: unknown[] } | unknown[]; meta?: { total?: number } }>(
         "/pops?page=1&limit=1",
@@ -412,11 +409,11 @@ export const OTB_CONFIG: BulkImportConfig = {
       return {
         hasData: total > 0,
         count: total,
-        message: total > 0 ? `${total} data POP tersedia.` : "Belum ada data POP.",
+        message: total > 0 ? t("importVal.popAvailable", { count: total }) : t("importVal.noPop"),
         entityLabel: "POP",
       };
     } catch (e) {
-      return { hasData: false, count: 0, message: `Gagal cek POP: ${e instanceof Error ? e.message : e}`, entityLabel: "POP" };
+      return { hasData: false, count: 0, message: t("importVal.checkPopFail", { msg: String(e instanceof Error ? e.message : e) }), entityLabel: "POP" };
     }
   },
   storageKey: "otb-bulk-import-notice-dismissed",
@@ -469,44 +466,43 @@ export const POP_INSTRUCTIONS: string[][] = [
   ["pop type", "Primary / Main POP / POP Outdoor / Distribution / Edge"],
 ];
 
-export function validatePopRow(row: Record<string, string>): { valid: boolean; errors: string[] } {
+export function validatePopRow(row: Record<string, string>, t: TFn): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   const pn = getValue(row, "pop name");
-  if (!pn) errors.push("pop name wajib diisi");
+  if (!pn) errors.push(t("importVal.required", { col: "pop name" }));
 
   const pc = getValue(row, "pop code");
   if (pc && !/^[A-Z]{3}$/.test(pc)) {
-    errors.push("pop code harus 3 huruf uppercase");
+    errors.push(t("importVal.popCode"));
   }
 
-  if (!getValue(row, "region")) errors.push("region wajib diisi");
+  if (!getValue(row, "region")) errors.push(t("importVal.required", { col: "region" }));
 
   const lng = Number(getValue(row, "longitude"));
   if (!getValue(row, "longitude") || !Number.isFinite(lng) || lng < -180 || lng > 180) {
-    errors.push("longitude harus -180..180");
+    errors.push(t("importVal.mustBe", { col: "longitude", expected: "-180..180" }));
   }
   const lat = Number(getValue(row, "latitude"));
   if (!getValue(row, "latitude") || !Number.isFinite(lat) || lat < -90 || lat > 90) {
-    errors.push("latitude harus -90..90");
+    errors.push(t("importVal.mustBe", { col: "latitude", expected: "-90..90" }));
   }
 
   const sp = getValue(row, "status pop").toLowerCase();
   if (sp && !inSet(sp, new Set(["planning", "active", "inactive", "maintenance"]))) {
-    errors.push("status pop harus planning/active/inactive/maintenance");
+    errors.push(t("importVal.mustBe", { col: "status pop", expected: "planning/active/inactive/maintenance" }));
   }
 
   return { valid: errors.length === 0, errors };
 }
 
 export const POP_CONFIG: BulkImportConfig = {
-  pageTitle: "IMPOR MASSAL POP",
   entityType: "pops",
   templateColumns: POP_TEMPLATE_COLUMNS,
   exampleRows: POP_EXAMPLE_ROWS,
   instructions: POP_INSTRUCTIONS,
   validationRules: POP_VALIDATION_RULES,
   validateRow: validatePopRow,
-  checkPrerequisite: async () => ({ hasData: true, count: 0, message: "POP tidak memerlukan data pendukung.", entityLabel: "POP" }),
+  checkPrerequisite: async (_token, t) => ({ hasData: true, count: 0, message: t("importVal.popNoPrereq"), entityLabel: "POP" }),
   storageKey: "pop-bulk-import-notice-dismissed",
   requiresPop: false,
   requiresRegion: true,
@@ -555,47 +551,46 @@ export const CUSTOMER_INSTRUCTIONS: string[][] = [
   ["latitude", "Koordinat desimal (-90 s/d 90)"],
 ];
 
-export function validateCustomerRow(row: Record<string, string>): { valid: boolean; errors: string[] } {
+export function validateCustomerRow(row: Record<string, string>, t: TFn): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   const cn = getValue(row, "customer name");
-  if (!cn) errors.push("customer name wajib diisi");
+  if (!cn) errors.push(t("importVal.required", { col: "customer name" }));
 
   const cid = getValue(row, "CID");
-  if (!cid) errors.push("CID wajib diisi");
+  if (!cid) errors.push(t("importVal.required", { col: "CID" }));
 
-  if (!getValue(row, "region")) errors.push("region wajib diisi");
-  if (!getValue(row, "POP")) errors.push("POP wajib diisi");
+  if (!getValue(row, "region")) errors.push(t("importVal.required", { col: "region" }));
+  if (!getValue(row, "POP")) errors.push(t("importVal.required", { col: "POP" }));
 
   const st = getValue(row, "service type");
-  if (!st) errors.push("service type wajib diisi");
+  if (!st) errors.push(t("importVal.required", { col: "service type" }));
 
   const instDate = getValue(row, "installation date");
   if (instDate && !/^\d{4}-\d{2}-\d{2}$/.test(instDate)) {
-    errors.push("installation date harus format YYYY-MM-DD");
+    errors.push(t("importVal.invalidFormat", { col: "installation date" }));
   }
 
   const lng = Number(getValue(row, "longitude"));
   if (!getValue(row, "longitude") || !Number.isFinite(lng) || lng < -180 || lng > 180) {
-    errors.push("longitude harus -180..180");
+    errors.push(t("importVal.mustBe", { col: "longitude", expected: "-180..180" }));
   }
   const lat = Number(getValue(row, "latitude"));
   if (!getValue(row, "latitude") || !Number.isFinite(lat) || lat < -90 || lat > 90) {
-    errors.push("latitude harus -90..90");
+    errors.push(t("importVal.mustBe", { col: "latitude", expected: "-90..90" }));
   }
 
   return { valid: errors.length === 0, errors };
 }
 
 export const CUSTOMER_CONFIG: BulkImportConfig = {
-  pageTitle: "IMPOR MASSAL CUSTOMER",
   entityType: "customers",
   templateColumns: CUSTOMER_TEMPLATE_COLUMNS,
   exampleRows: CUSTOMER_EXAMPLE_ROWS,
   instructions: CUSTOMER_INSTRUCTIONS,
   validationRules: CUSTOMER_VALIDATION_RULES,
   validateRow: validateCustomerRow,
-  checkPrerequisite: async (token) => {
-    if (!token) return { hasData: false, count: 0, message: "Tidak ada sesi login.", entityLabel: "POP" };
+  checkPrerequisite: async (token, t) => {
+    if (!token) return { hasData: false, count: 0, message: t("import.page.noSession"), entityLabel: "POP" };
     try {
       const [popsJson, svcJson] = await Promise.all([
         apiFetch<{ data?: { items?: unknown[] } | unknown[]; meta?: { total?: number } }>("/pops?page=1&limit=1", { token }),
@@ -607,19 +602,19 @@ export const CUSTOMER_CONFIG: BulkImportConfig = {
       const svcTotal = svcJson?.meta?.total ?? svcArr.length;
 
       if (popTotal === 0) {
-        return { hasData: false, count: 0, message: "Belum ada data POP.", entityLabel: "POP" };
+        return { hasData: false, count: 0, message: t("importVal.noPop"), entityLabel: "POP" };
       }
       if (svcTotal === 0) {
-        return { hasData: false, count: 0, message: "Belum ada data service type.", entityLabel: "Service Type" };
+        return { hasData: false, count: 0, message: t("importVal.noServiceType"), entityLabel: "Service Type" };
       }
       return {
         hasData: true,
         count: popTotal,
-        message: `${popTotal} POP & ${svcTotal} service type tersedia.`,
+        message: t("importVal.popSvcAvailable", { pops: popTotal, svcs: svcTotal }),
         entityLabel: "POP & Service Type",
       };
     } catch (e) {
-      return { hasData: false, count: 0, message: `Gagal cek prasyarat: ${e instanceof Error ? e.message : e}`, entityLabel: "POP" };
+      return { hasData: false, count: 0, message: t("importVal.checkPrereqFail", { msg: String(e instanceof Error ? e.message : e) }), entityLabel: "POP" };
     }
   },
   storageKey: "customer-bulk-import-notice-dismissed",
