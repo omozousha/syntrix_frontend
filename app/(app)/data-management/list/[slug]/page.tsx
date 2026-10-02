@@ -63,6 +63,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Sheet,
@@ -163,6 +164,7 @@ function renderMasterForm(
   isEdit: boolean,
   _rows: GenericItem[],
   _currentEditId: string | undefined,
+  t: TFn,
 ) {
   const config = MASTER_DATA_FORM_CONFIG[resource];
   if (!config) return null;
@@ -176,7 +178,7 @@ function renderMasterForm(
         return itemVal === targetVal && item.id !== _currentEditId;
       });
       if (match) {
-        _setFieldError(field.key, `"${value.trim()}" sudah terdaftar. Gunakan nilai yang berbeda.`);
+        _setFieldError(field.key, t("dataList.alreadyRegistered", { value: value.trim() }));
       }
     }
   };
@@ -204,6 +206,7 @@ function renderMasterForm(
 }
 
 export default function DataManagementListPage() {
+  const { t, locale } = useTranslate();
   const router = useRouter();
   const params = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
@@ -353,7 +356,7 @@ export default function DataManagementListPage() {
           return itemVal === targetVal && item.id !== currentEditingId;
         });
         if (match) {
-          setFieldError(field.key, `"${value.trim()}" sudah terdaftar. Gunakan nilai yang berbeda.`);
+          setFieldError(field.key, t("dataList.alreadyRegistered", { value: value.trim() }));
         }
       } catch {
         // Ignored on blur error
@@ -362,9 +365,9 @@ export default function DataManagementListPage() {
     [category, token, quickEditTarget],
   );
   const selectedPopLabel = useMemo(() => {
-    if (popQueryParam === "__null__") return "POP Belum Ditentukan";
+    if (popQueryParam === "__null__") return t("dataList.unassignedPop");
     return popFilterOptions.find((option) => option.id === popQueryParam)?.label || "";
-  }, [popQueryParam, popFilterOptions]);
+  }, [popQueryParam, popFilterOptions, t]);
   const selectedProjectLabel = useMemo(
     () => projectFilterOptions.find((option) => option.id === projectQueryParam)?.label || "",
     [projectQueryParam, projectFilterOptions],
@@ -561,7 +564,7 @@ export default function DataManagementListPage() {
         setTotal(archiveView === "active" ? (result.meta?.total ?? nextRows.length) : nextRows.length);
       } catch (err) {
         if (cancelled) return;
-        setError((err as Error).message || "Gagal memuat data.");
+        setError((err as Error).message || t("dataList.loadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -596,7 +599,7 @@ export default function DataManagementListPage() {
         setPopFilterOptions(
           (result.data || []).map((item) => ({
             id: String(item.id),
-            label: [item.pop_name, item.pop_code || item.pop_id].filter(Boolean).join(" | ") || "POP tidak tersedia",
+            label: [item.pop_name, item.pop_code || item.pop_id].filter(Boolean).join(" | ") || t("dataList.popUnavailable"),
             regionId: String(item.region_id || ""),
           })),
         );
@@ -643,7 +646,7 @@ export default function DataManagementListPage() {
         if (cancelled) return;
         const options = (result.data || []).map((item) => ({
           id: String(item.id),
-          label: [item.project_name, item.project_code || item.project_id].filter(Boolean).join(" | ") || "Project tidak tersedia",
+          label: [item.project_name, item.project_code || item.project_id].filter(Boolean).join(" | ") || t("dataList.projectUnavailable"),
           regionId: String(item.region_id || ""),
           popId: String(item.pop_id || ""),
         }));
@@ -715,7 +718,7 @@ export default function DataManagementListPage() {
             apiFetch<PaginatedResponse<GenericItem>>("/manufacturers?page=1&limit=200", { token }).then((res) => {
               next.manufacturers = (res.data || []).map((item) => ({
                 id: String(item.id),
-                label: String(item.manufacturer_name || item.manufacturer_code || "Manufacturer tidak tersedia"),
+                label: String(item.manufacturer_name || item.manufacturer_code || t("dataList.manufacturerUnavailable")),
               }));
             }),
           );
@@ -725,7 +728,7 @@ export default function DataManagementListPage() {
             apiFetch<PaginatedResponse<GenericItem>>("/brands?page=1&limit=200", { token }).then((res) => {
               next.brands = (res.data || []).map((item) => ({
                 id: String(item.id),
-                label: String(item.brand_name || item.brand_code || "Brand tidak tersedia"),
+                label: String(item.brand_name || item.brand_code || t("dataList.brandUnavailable")),
               }));
             }),
           );
@@ -733,7 +736,7 @@ export default function DataManagementListPage() {
             apiFetch<PaginatedResponse<GenericItem>>("/assetTypes?page=1&limit=200", { token }).then((res) => {
               next.assetTypes = (res.data || []).map((item) => ({
                 id: String(item.id),
-                label: String(item.type_name || item.type_code || "Asset type tidak tersedia"),
+                label: String(item.type_name || item.type_code || t("dataList.assetTypeUnavailable")),
               }));
             }),
           );
@@ -743,7 +746,7 @@ export default function DataManagementListPage() {
             apiFetch<PaginatedResponse<GenericItem>>("/provinces?page=1&limit=200", { token }).then((res) => {
               next.provinces = (res.data || []).map((item) => ({
                 id: String(item.id),
-                label: String(item.province_name || "Province tidak tersedia"),
+                label: String(item.province_name || t("dataList.provinceUnavailable")),
               }));
             }),
           );
@@ -785,7 +788,7 @@ export default function DataManagementListPage() {
           tasks.push(
             apiFetch<PaginatedResponse<GenericItem>>("/manufacturers?page=1&limit=300", { token }).then((res) => {
               (res.data || []).forEach((item) => {
-                next.manufacturers[String(item.id)] = String(item.manufacturer_name || item.manufacturer_code || "Manufacturer tidak tersedia");
+                next.manufacturers[String(item.id)] = String(item.manufacturer_name || item.manufacturer_code || t("dataList.manufacturerUnavailable"));
               });
             }),
           );
@@ -794,7 +797,7 @@ export default function DataManagementListPage() {
           tasks.push(
             apiFetch<PaginatedResponse<GenericItem>>("/brands?page=1&limit=300", { token }).then((res) => {
               (res.data || []).forEach((item) => {
-                next.brands[String(item.id)] = String(item.brand_name || item.brand_code || "Brand tidak tersedia");
+                next.brands[String(item.id)] = String(item.brand_name || item.brand_code || t("dataList.brandUnavailable"));
               });
             }),
           );
@@ -803,7 +806,7 @@ export default function DataManagementListPage() {
           tasks.push(
             apiFetch<PaginatedResponse<GenericItem>>("/provinces?page=1&limit=300", { token }).then((res) => {
               (res.data || []).forEach((item) => {
-                next.provinces[String(item.id)] = String(item.province_name || "Province tidak tersedia");
+                next.provinces[String(item.id)] = String(item.province_name || t("dataList.provinceUnavailable"));
               });
             }),
           );
@@ -1249,7 +1252,7 @@ export default function DataManagementListPage() {
   async function submitRename() {
     if (!renameTarget || !category || !renameConfig) return;
     if (!renameValue.trim()) {
-      setError("Nama tidak boleh kosong.");
+      setError(t("dataList.nameRequired"));
       return;
     }
 
@@ -1267,12 +1270,12 @@ export default function DataManagementListPage() {
       setRenameTarget(null);
       if (result.data?.approval_request) {
         const requestId = getApprovalRequestId(result.data);
-        setSuccess(`${category.label} rename dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+        setSuccess(t("dataList.renameSentApproval", { label: category.label, requestId: requestId ? ` (${requestId})` : "" }));
       } else {
         setRefreshSeed((prev) => prev + 1);
       }
     } catch (err) {
-      setError((err as Error).message || "Gagal melakukan rename.");
+      setError((err as Error).message || t("dataList.renameFailed"));
     } finally {
       setActionLoading(false);
     }
@@ -1291,12 +1294,13 @@ export default function DataManagementListPage() {
       setDeleteTarget(null);
       if (result.data?.approval_request) {
         const requestId = getApprovalRequestId(result.data);
-        setSuccess(`${category.label} ${isSoftDeleteResource ? "archive" : "delete"} dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+        const actionLabel = isSoftDeleteResource ? t("dataList.actionArchive") : t("dataList.actionDelete");
+        setSuccess(t("dataList.deleteSentApproval", { label: category.label, action: actionLabel, requestId: requestId ? ` (${requestId})` : "" }));
       } else {
         setRefreshSeed((prev) => prev + 1);
       }
     } catch (err) {
-      setError((err as Error).message || "Gagal menghapus data.");
+      setError((err as Error).message || t("dataList.deleteFailed"));
     } finally {
       setActionLoading(false);
     }
@@ -1348,7 +1352,7 @@ export default function DataManagementListPage() {
 
     const payload = buildCreatePayload(category.resource, quickEditForm);
     if (!payload) {
-      setQuickEditError("Field wajib belum lengkap. Mohon periksa kembali.");
+      setQuickEditError(t("dataList.requiredFieldsIncomplete"));
       return;
     }
 
@@ -1363,12 +1367,12 @@ export default function DataManagementListPage() {
       setQuickEditTarget(null);
       if (result.data?.approval_request) {
         const requestId = getApprovalRequestId(result.data);
-        setSuccess(`${category.label} update dikirim ke approval superadmin${requestId ? ` (${requestId})` : ""}.`);
+        setSuccess(t("dataList.updateSentApproval", { label: category.label, requestId: requestId ? ` (${requestId})` : "" }));
       } else {
         setRefreshSeed((prev) => prev + 1);
       }
     } catch (err) {
-      setQuickEditError((err as Error).message || "Gagal memperbarui data.");
+      setQuickEditError((err as Error).message || t("dataList.updateFailed"));
     } finally {
       setActionLoading(false);
     }
@@ -1422,7 +1426,7 @@ export default function DataManagementListPage() {
       setBulkActionRequest(null);
       setRefreshSeed((prev) => prev + 1);
     } catch (err) {
-      setError((err as Error).message || "Bulk action gagal diproses.");
+      setError((err as Error).message || t("dataList.bulkActionFailed"));
     } finally {
       setActionLoading(false);
     }
@@ -1473,7 +1477,7 @@ export default function DataManagementListPage() {
   function handleBulkDownloadQr() {
     if (!category || category.resource !== "devices") return;
     if (!selectedRows.length) {
-      setError("Pilih minimal 1 device untuk download QR.");
+      setError(t("dataList.selectAtLeastOneDeviceQr"));
       return;
     }
     setDownloadQrRequest({ type: "selected", count: selectedRows.length });
@@ -1482,7 +1486,7 @@ export default function DataManagementListPage() {
   function handleDownloadFilteredQr() {
     if (!category || category.resource !== "devices") return;
     if (!idsFilter.length) {
-      setError("Tidak ada item pada filter untuk download QR.");
+      setError(t("dataList.noItemsForQrFilter"));
       return;
     }
     setDownloadQrRequest({ type: "filtered", count: idsFilter.length });
@@ -1511,14 +1515,14 @@ export default function DataManagementListPage() {
         const result = await apiFetch<PaginatedResponse<GenericItem>>(path, { token });
         const rows = result.data || [];
         if (!rows.length) {
-          setError("Tidak ada device pada filter untuk download QR.");
+          setError(t("dataList.noDevicesForQrFilter"));
           return;
         }
         count = await buildQrPdf(rows);
       }
-      setSuccess(`${count} QR device berhasil dibuat dalam PDF.`);
+      setSuccess(t("dataList.qrPdfGenerated", { count: String(count) }));
     } catch (err) {
-      setError((err as Error).message || "Gagal membuat bulk QR download.");
+      setError((err as Error).message || t("dataList.bulkQrDownloadFailed"));
     } finally {
       setDownloadingQr(false);
     }
@@ -1535,7 +1539,7 @@ export default function DataManagementListPage() {
       });
       setRefreshSeed((prev) => prev + 1);
     } catch (err) {
-      setError((err as Error).message || "Gagal restore data.");
+      setError((err as Error).message || t("dataList.restoreFailed"));
     } finally {
       setActionLoading(false);
     }
@@ -1547,7 +1551,7 @@ export default function DataManagementListPage() {
 
     const payload = buildCreatePayload(category.resource, createForm);
     if (!payload) {
-      setCreateError("Field wajib belum lengkap. Mohon periksa kembali.");
+      setCreateError(t("dataList.requiredFieldsIncomplete"));
       return;
     }
 
@@ -1561,7 +1565,7 @@ export default function DataManagementListPage() {
       setCreateOpen(false);
       setRefreshSeed((prev) => prev + 1);
     } catch (err) {
-      setCreateError((err as Error).message || "Gagal membuat data baru.");
+      setCreateError((err as Error).message || t("dataList.createFailed"));
     } finally {
       setActionLoading(false);
     }
@@ -1571,11 +1575,11 @@ export default function DataManagementListPage() {
     return (
       <div className="h-full min-h-0 w-full overflow-auto">
         <div className="space-y-3 pr-3">
-          <p className="text-sm text-destructive">Kategori tidak ditemukan.</p>
+          <p className="text-sm text-destructive">{t("dataList.categoryNotFound")}</p>
           <Button asChild variant="outline">
             <Link href="/data-management">
               <ArrowLeft className="mr-2 size-4" />
-              Kembali ke Data Management
+              {t("dataList.backToDataManagement")}
             </Link>
           </Button>
         </div>
@@ -1654,13 +1658,13 @@ export default function DataManagementListPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2 mb-1">
               <span className="font-mono text-[9px] uppercase tracking-[0.2em] rounded-full px-2.5 py-0.5 font-medium border border-border/60 bg-muted/60 text-muted-foreground">
-                Inventory data
+                {t("dataList.inventoryBadge")}
               </span>
             </div>
-            <CardTitle className="text-xl font-bold tracking-tight">Data {category.label}</CardTitle>
+            <CardTitle className="text-xl font-bold tracking-tight">{t("dataList.dataTitle", { label: category.label })}</CardTitle>
             <CardDescription className="text-xs">
-              Total data: <span className="font-mono font-medium tabular-nums text-foreground">{total.toLocaleString("id-ID")}</span>. Klik kanan pada baris untuk aksi cepat.
-              {supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel ? ` Filter POP: ${selectedPopLabel}.` : ""}
+              {t("dataList.cardDesc", { total: total.toLocaleString(locale === "en" ? "en-US" : "id-ID") })}
+              {supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel ? t("dataList.popFilterLabel", { label: selectedPopLabel }) : ""}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1742,7 +1746,7 @@ export default function DataManagementListPage() {
                 <button
                   type="button"
                   onClick={() => setSuccess("")}
-                  aria-label="Tutup notifikasi"
+                  aria-label={t("dataList.closeNotification")}
                   className="shrink-0 rounded p-0.5 text-emerald-600 transition-colors hover:bg-emerald-100 hover:text-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45 dark:text-emerald-400 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-100"
                 >
                   <X className="size-4" />
@@ -1790,7 +1794,7 @@ export default function DataManagementListPage() {
             {isOdpCategory && (odpSummaryLoading || loading) ? (
               <OdpListSkeleton />
             ) : loading ? (
-              <div aria-label="Memuat data list" className="space-y-3">
+              <div aria-label={t("dataList.loadingAria")} className="space-y-3">
                 <div className="hidden md:block rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-xs dark:bg-white/[0.02]">
                   <div className="rounded-[calc(2rem-0.5rem)] border border-border/60 bg-card shadow-xs glass-inset">
                     <div className="flex flex-col">
@@ -1829,23 +1833,23 @@ export default function DataManagementListPage() {
               </div>
             ) : error ? (
               <DataEmptyState
-                title="Gagal memuat data"
+                title={t("dataList.errorTitle")}
                 description={error}
                 variant="error"
-                actionLabel="Coba lagi"
+                actionLabel={t("dataList.retry")}
                 onAction={() => setRefreshSeed((prev) => prev + 1)}
               />
             ) : rows.length === 0 ? (
               <DataEmptyState
-                title="Tidak ada data"
+                title={t("dataList.emptyTitle")}
                 description={
                 supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel
-                  ? `Tidak ada ${category.label} pada POP ${selectedPopLabel}.`
+                  ? t("dataList.emptyPop", { label: category.label, pop: selectedPopLabel })
                   : supportsProjectFilter && projectQueryParam !== "__all" && selectedProjectLabel
-                    ? `Tidak ada ${category.label} pada Project ${selectedProjectLabel}.`
-                  : "Tidak ada data pada filter saat ini."
+                    ? t("dataList.emptyProject", { label: category.label, project: selectedProjectLabel })
+                  : t("dataList.emptyFilter")
                 }
-                actionLabel="Reset Filter"
+                actionLabel={t("dataList.resetFilter")}
                 onAction={resetListFilters}
               />
             ) : (
@@ -1963,7 +1967,11 @@ export default function DataManagementListPage() {
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-3">
               <span className="text-xs text-muted-foreground">
-                Menampilkan <span className="font-mono font-medium text-foreground">{(page - 1) * limit + 1}</span>–<span className="font-mono font-medium text-foreground">{Math.min(page * limit, total)}</span> dari <span className="font-mono font-medium text-foreground">{total.toLocaleString("id-ID")}</span> data
+                {t("dataList.showingEntries", {
+                  start: String((page - 1) * limit + 1),
+                  end: String(Math.min(page * limit, total)),
+                  total: total.toLocaleString(locale === "en" ? "en-US" : "id-ID"),
+                })}
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -1973,7 +1981,7 @@ export default function DataManagementListPage() {
                   onClick={() => navigateToPage(page - 1)}
                   className="rounded-full border-border/60 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                 >
-                  Prev
+                  {t("dataList.prev")}
                 </Button>
                 <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 font-mono text-sm tabular-nums glass-inset">
                   {page} / {Math.max(1, Math.ceil(total / limit))}
@@ -1985,7 +1993,7 @@ export default function DataManagementListPage() {
                   onClick={() => navigateToPage(page + 1)}
                   className="rounded-full border-border/60 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                 >
-                  Next
+                  {t("dataList.next")}
                 </Button>
               </div>
             </div>
@@ -1997,7 +2005,7 @@ export default function DataManagementListPage() {
         open={Boolean(renameTarget)}
         onClose={() => setRenameTarget(null)}
         categoryLabel={category.label}
-        label={renameConfig?.label || "nama baru"}
+        label={renameConfig?.label || t("dataList.newName")}
         value={renameValue}
         onValueChange={setRenameValue}
         actionLoading={actionLoading}
@@ -2026,18 +2034,18 @@ export default function DataManagementListPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Download QR Label PDF?
+              {t("dataList.qrPdfDialogTitle")}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {downloadQrRequest?.type === "selected"
-                ? `Membuat PDF berisi QR label untuk ${downloadQrRequest.count} item yang di-centang.`
-                : `Membuat PDF berisi QR label untuk ${downloadQrRequest?.count || 0} item pada filter aktif.`}
+                ? t("dataList.qrPdfDialogSelectedDesc", { count: String(downloadQrRequest.count) })
+                : t("dataList.qrPdfDialogFilteredDesc", { count: String(downloadQrRequest?.count || 0) })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={downloadingQr}>Batal</AlertDialogCancel>
+            <AlertDialogCancel disabled={downloadingQr}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction disabled={downloadingQr} onClick={() => void executeDownloadQrConfirmed()}>
-              {downloadingQr ? "Membuat PDF..." : "Download PDF"}
+              {downloadingQr ? t("dataList.generatingPdf") : t("dataList.downloadPdf")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2048,23 +2056,26 @@ export default function DataManagementListPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {bulkActionRequest?.action === "delete"
-                ? `${isSoftDeleteResource ? "Arsipkan" : "Hapus"} data terpilih?`
+                ? t("dataList.bulkDeleteTitle", { action: isSoftDeleteResource ? t("dataList.actionArchive") : t("dataList.actionDelete") })
                 : bulkActionRequest?.action === "restore"
-                  ? "Restore data terpilih?"
-                  : `${bulkActionRequest?.action === "activate" ? "Aktifkan" : "Nonaktifkan"} data terpilih?`}
+                  ? t("dataList.bulkRestoreTitle")
+                  : t("dataList.bulkStatusTitle", { action: bulkActionRequest?.action === "activate" ? t("dataList.actionActivate") : t("dataList.actionDeactivate") })}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {bulkActionRequest?.action === "delete"
-                ? `${isSoftDeleteResource ? "Data akan dipindahkan ke arsip." : "Data akan dihapus permanen."} Jumlah: ${bulkActionRequest?.count || 0} item.`
+                ? t("dataList.bulkDeleteDesc", {
+                    notice: isSoftDeleteResource ? t("dataList.archiveNoticeArchive") : t("dataList.archiveNoticeDelete"),
+                    count: String(bulkActionRequest?.count || 0),
+                  })
                 : bulkActionRequest?.action === "restore"
-                  ? `Data terarsip akan dikembalikan ke status aktif. Jumlah: ${bulkActionRequest?.count || 0} item.`
-                  : `Perubahan status akan diterapkan ke ${bulkActionRequest?.count || 0} item.`}
+                  ? t("dataList.bulkRestoreDesc", { count: String(bulkActionRequest?.count || 0) })
+                  : t("dataList.bulkStatusDesc", { count: String(bulkActionRequest?.count || 0) })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Batal</AlertDialogCancel>
+            <AlertDialogCancel disabled={actionLoading}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction disabled={actionLoading} onClick={() => void runBulkActionConfirmed()}>
-              {actionLoading ? "Memproses..." : "Lanjutkan"}
+              {actionLoading ? t("dataList.processing") : t("dataList.continue")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2074,7 +2085,7 @@ export default function DataManagementListPage() {
         open={Boolean(quickEditTarget)}
         onOpenChange={(open) => !open && setQuickEditTarget(null)}
         categoryLabel={category.label}
-        formContent={renderMasterForm(category.resource, quickEditForm, setQuickEditForm, lookupOptions, fieldErrors, setFieldError, clearFieldError, handleFieldBlur, true, rows, quickEditTarget?.id)}
+        formContent={renderMasterForm(category.resource, quickEditForm, setQuickEditForm, lookupOptions, fieldErrors, setFieldError, clearFieldError, handleFieldBlur, true, rows, quickEditTarget?.id, t)}
         showStatus={supportsIsActiveResource(category.resource) && category.resource !== "splitterProfiles"}
         statusValue={quickEditForm.is_active || "true"}
         onStatusChange={(value) => setQuickEditForm((prev) => ({ ...prev, is_active: value }))}
@@ -2087,19 +2098,19 @@ export default function DataManagementListPage() {
       <Sheet open={createOpen} onOpenChange={setCreateOpen}>
         <SheetContent side="right" className="w-full sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle>Create {category.label}</SheetTitle>
-            <SheetDescription>Tambahkan data master baru langsung dari halaman list.</SheetDescription>
+            <SheetTitle>{t("dataList.createTitle", { label: category.label })}</SheetTitle>
+            <SheetDescription>{t("dataList.createDesc")}</SheetDescription>
           </SheetHeader>
           <div className="grid gap-3 px-4">
-            {renderMasterForm(category.resource, createForm, setCreateForm, lookupOptions, fieldErrors, setFieldError, clearFieldError, handleFieldBlur, false, rows, undefined)}
+            {renderMasterForm(category.resource, createForm, setCreateForm, lookupOptions, fieldErrors, setFieldError, clearFieldError, handleFieldBlur, false, rows, undefined, t)}
             {createError ? <p className="text-sm text-destructive">{createError}</p> : null}
           </div>
           <SheetFooter className="mt-2 border-t">
             <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={actionLoading || Object.keys(fieldErrors).length > 0}>
-              Batal
+              {t("common.cancel")}
             </Button>
             <Button type="button" onClick={() => void submitCreate()} disabled={actionLoading || Object.keys(fieldErrors).length > 0}>
-              {actionLoading ? "Menyimpan..." : "Simpan"}
+              {actionLoading ? t("dataList.saving") : t("common.save")}
             </Button>
           </SheetFooter>
         </SheetContent>

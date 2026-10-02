@@ -189,7 +189,7 @@ export function PopBentoHeroTile({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-300">
               <Zap className="size-3.5" />
-              <span>Infrastruktur Daya PLN</span>
+              <span>{t("heroTile.powerInfrastructure")}</span>
             </div>
             <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
               {plnPaymentMethod || t("heroTile.paymentFallback")}
