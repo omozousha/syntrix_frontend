@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 import type { MapDevice } from "@/components/features/maps/topology-map-canvas";
 
 export type MapFilterOptionRow = Record<string, unknown> & {
@@ -66,6 +67,7 @@ function getGoogleMapsUrl(lat?: number | string | null, lng?: number | string | 
 }
 
 function renderPortUtilization(
+  t: TFn,
   totalPorts?: number | null,
   usedPorts?: number | null,
   splitterRatio?: string | null,
@@ -102,7 +104,7 @@ function renderPortUtilization(
           {hasUsed ? `${effectiveUsed}/${total} Port (${percent}%)` : `${total} Port`}
         </span>
         <span className={cn("font-bold", available === 0 ? "text-rose-500" : "text-emerald-500")}>
-          {hasUsed ? `${available} Kosong` : splitterRatio || ""}
+          {hasUsed ? `${available} ${t("mapInspector.available")}` : splitterRatio || ""}
         </span>
       </div>
       {hasUsed && (
@@ -128,6 +130,7 @@ export function MapDeviceInspectorDrawer({
   onConnectDevicesRoute,
   isSidebarOpen = false,
 }: MapDeviceInspectorDrawerProps) {
+  const { t } = useTranslate();
   const [copiedKey, setCopiedKey] = React.useState<string | null>(null);
   const [isMinimized, setIsMinimized] = React.useState(false);
 
@@ -170,7 +173,7 @@ export function MapDeviceInspectorDrawer({
               <Radio className="size-3.5 text-primary animate-pulse" />
             )}
             <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-foreground">
-              {isCompareMode ? `Komparasi (${devices.length})` : devices[0].device_name || "Inspector"}
+              {isCompareMode ? t("mapInspector.compareCount", { count: devices.length }) : devices[0].device_name || t("mapInspector.inspectorFallback")}
             </span>
 
             <div className="h-3 w-px bg-border/60 mx-1" />
@@ -178,17 +181,17 @@ export function MapDeviceInspectorDrawer({
             <button
               type="button"
               onClick={() => setIsMinimized(false)}
-              title="Buka panel inspector"
+              title={t("mapInspector.openPanel")}
               className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider text-primary hover:underline"
             >
               <Maximize2 className="size-3" />
-              <span>Buka</span>
+              <span>{t("mapInspector.open")}</span>
             </button>
 
             <button
               type="button"
               onClick={onClose}
-              title="Tutup inspector"
+              title={t("mapInspector.close")}
               className="size-5 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
               <X className="size-3" />
@@ -209,7 +212,7 @@ export function MapDeviceInspectorDrawer({
   return (
     <aside
       role="complementary"
-      aria-label={isCompareMode ? "Komparasi Perangkat" : "Inspector Perangkat"}
+      aria-label={isCompareMode ? t("mapInspector.compareAria") : t("mapInspector.inspectorAria")}
       className={cn(
         "absolute bottom-3 right-3 z-30 flex flex-col h-[350px] max-h-[46vh] pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
         isSidebarOpen ? "hidden sm:flex sm:left-[362px]" : "flex left-3",
@@ -227,16 +230,16 @@ export function MapDeviceInspectorDrawer({
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground block truncate">
-                    {isCompareMode ? "Komparasi" : "Inspector Perangkat"}
+                    {isCompareMode ? t("mapInspector.compare") : t("mapInspector.inspector")}
                   </span>
                   <Badge variant="outline" className="h-4 rounded-full px-1.5 font-mono text-[8px] font-bold border-primary/30 bg-primary/10 text-primary">
-                    {devices.length} Perangkat
+                    {devices.length} {t("mapInspector.devices")}
                   </Badge>
                 </div>
                 <p className="font-semibold text-xs text-foreground truncate">
                   {isCompareMode
-                    ? "Perbandingan Spesifikasi Multi-Select"
-                    : dev1?.device_name || dev1?.device_id || "Detail Perangkat"}
+                    ? t("mapInspector.compareDesc")
+                    : dev1?.device_name || dev1?.device_id || t("mapInspector.detailFallback")}
                 </p>
               </div>
             </div>
@@ -245,7 +248,7 @@ export function MapDeviceInspectorDrawer({
               <button
                 type="button"
                 onClick={() => setIsMinimized(true)}
-                title="Kecilkan ke floating pill di bawah peta"
+                title={t("mapInspector.minimize")}
                 className="size-7 flex items-center justify-center rounded-full border border-border/60 text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all active:scale-95"
               >
                 <Minus className="size-3.5" />
@@ -270,21 +273,21 @@ export function MapDeviceInspectorDrawer({
                 <>
                   <div className="space-y-2.5">
                     <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block">
-                      Relasi Spasial:
+                      {t("mapInspector.spatialRelations")}:
                     </span>
 
                     <div className="space-y-1 text-xs">
                       <div className="flex items-center justify-between text-[10px] font-mono">
-                        <span className="text-muted-foreground">POP Induk:</span>
+                        <span className="text-muted-foreground">{t("mapInspector.parentPop")}:</span>
                         <span className="font-semibold text-foreground">
-                          {isSamePop ? "✓ Sama" : "Berbeda"}
+                          {isSamePop ? t("mapInspector.same") : t("mapInspector.different")}
                         </span>
                       </div>
 
                       <div className="flex items-center justify-between text-[10px] font-mono">
-                        <span className="text-muted-foreground">Wilayah:</span>
+                        <span className="text-muted-foreground">{t("mapInspector.region")}:</span>
                         <span className="font-semibold text-foreground">
-                          {isSameRegion ? "✓ Sama" : "Berbeda"}
+                          {isSameRegion ? t("mapInspector.same") : t("mapInspector.different")}
                         </span>
                       </div>
                     </div>
@@ -296,15 +299,15 @@ export function MapDeviceInspectorDrawer({
                         type="button"
                         onClick={() => onConnectDevicesRoute(dev1, dev2)}
                         className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-primary/40 bg-primary/20 py-2 font-mono text-[10px] font-bold uppercase tracking-wider text-primary hover:bg-primary/30 active:scale-[0.98] transition-all shadow-xs"
-                        title="Hitung rute jalan OSRM antar kedua perangkat"
+                        title={t("mapInspector.routeBetween")}
                       >
                         <Route className="size-3.5" />
-                        <span>Rute (#1 ➔ #2)</span>
+                        <span>{t("mapInspector.routeBtn")}</span>
                       </button>
                     )}
 
                     <p className="font-mono text-[8px] text-muted-foreground text-center">
-                      Shift + Klik untuk tambah perangkat
+                      {t("mapInspector.shiftAddTip")}
                     </p>
                   </div>
                 </>
@@ -312,7 +315,7 @@ export function MapDeviceInspectorDrawer({
                 <>
                   <div className="space-y-2.5">
                     <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block">
-                      Info Seleksi:
+                      {t("mapInspector.selectionInfo")}:
                     </span>
 
                     <div className="rounded-lg border border-primary/20 bg-background/50 p-2 space-y-1">
@@ -320,7 +323,7 @@ export function MapDeviceInspectorDrawer({
                         Multi-Select
                       </span>
                       <p className="text-[10px] text-muted-foreground leading-snug">
-                        Tahan <kbd className="px-1 py-0.5 rounded border border-border/60 bg-muted/80 text-[8px] font-mono font-bold text-foreground">Shift</kbd> + klik perangkat lain pada peta untuk komparasi langsung.
+                        {t("mapInspector.multiSelectLead")} <kbd className="px-1 py-0.5 rounded border border-border/60 bg-muted/80 text-[8px] font-mono font-bold text-foreground">Shift</kbd> {t("mapInspector.multiSelectTail")}
                       </p>
                     </div>
                   </div>
@@ -331,15 +334,15 @@ export function MapDeviceInspectorDrawer({
                         type="button"
                         onClick={() => onSetNavigationDestination(dev1)}
                         className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-primary/40 bg-primary/20 py-2 font-mono text-[10px] font-bold uppercase tracking-wider text-primary hover:bg-primary/30 active:scale-[0.98] transition-all shadow-xs"
-                        title="Navigasi rute jalan ke perangkat ini"
+                        title={t("mapInspector.navigateHere")}
                       >
                         <Navigation className="size-3.5" />
-                        <span>Rute ke Sini</span>
+                        <span>{t("mapInspector.routeHere")}</span>
                       </button>
                     )}
 
                     <p className="font-mono text-[8px] text-muted-foreground text-center">
-                      1 perangkat aktif di dock
+                      {t("mapInspector.activeInDock", { count: 1 })}
                     </p>
                   </div>
                 </>
@@ -380,7 +383,7 @@ export function MapDeviceInspectorDrawer({
                           <button
                             type="button"
                             onClick={() => onRemoveDevice(device.id)}
-                            title="Hapus perangkat ini"
+                            title={t("mapInspector.removeDevice")}
                             className="size-5 flex items-center justify-center rounded-full text-muted-foreground hover:text-destructive transition-colors"
                           >
                             <X className="size-3" />
@@ -395,7 +398,7 @@ export function MapDeviceInspectorDrawer({
                     {/* Attributes Grid */}
                     <div className="grid grid-cols-2 gap-1.5 text-[10px] py-1.5">
                       <div className="rounded-lg border border-border/40 bg-card/60 p-1.5">
-                        <span className="font-mono text-[7px] uppercase tracking-wider text-muted-foreground block mb-0.5">POP Induk</span>
+                        <span className="font-mono text-[7px] uppercase tracking-wider text-muted-foreground block mb-0.5">{t("mapInspector.parentPop")}</span>
                         <span className="font-semibold text-foreground block truncate" title={popLabel}>{popLabel}</span>
                       </div>
                       <div className="rounded-lg border border-border/40 bg-card/60 p-1.5">
@@ -403,8 +406,8 @@ export function MapDeviceInspectorDrawer({
                         <span className="font-semibold text-foreground block truncate" title={regionLabel}>{regionLabel}</span>
                       </div>
                       <div className="col-span-2 rounded-lg border border-border/40 bg-card/60 p-1.5">
-                        <span className="font-mono text-[7px] uppercase tracking-wider text-muted-foreground block mb-0.5">Utilisasi Port</span>
-                        {renderPortUtilization(device.total_ports, device.used_ports, device.splitter_ratio)}
+                        <span className="font-mono text-[7px] uppercase tracking-wider text-muted-foreground block mb-0.5">{t("mapInspector.portUtil")}</span>
+                        {renderPortUtilization(t, device.total_ports, device.used_ports, device.splitter_ratio)}
                       </div>
                       <div className="col-span-2 rounded-lg border border-border/40 bg-card/60 p-1.5">
                         <div className="flex items-center justify-between font-mono text-[8px]">
@@ -415,7 +418,7 @@ export function MapDeviceInspectorDrawer({
                               onClick={() => handleCopy(`h-coord-${device.id}`, coordString)}
                               className="text-primary hover:underline font-sans"
                             >
-                              {copiedKey === `h-coord-${device.id}` ? "✓" : "Salin"}
+                              {copiedKey === `h-coord-${device.id}` ? "✓" : t("mapInspector.copy")}
                             </button>
                             {gmapsUrl && (
                               <a
@@ -423,7 +426,7 @@ export function MapDeviceInspectorDrawer({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-muted-foreground hover:text-primary inline-flex items-center gap-0.5"
-                                title="Buka di Google Maps eksternal"
+                                title={t("mapInspector.openGmaps")}
                               >
                                 <Globe className="size-2.5" />
                               </a>
@@ -439,14 +442,14 @@ export function MapDeviceInspectorDrawer({
                         href={detailHref}
                         className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-border/60 bg-muted/30 py-1.5 font-mono text-[9px] font-bold uppercase tracking-wider text-foreground hover:bg-muted/60 transition-all active:scale-[0.98]"
                       >
-                        <span>Detail</span>
+                        <span>{t("mapInspector.detail")}</span>
                         <ExternalLink className="size-2.5 text-muted-foreground" />
                       </Link>
                       {onSetNavigationDestination && (
                         <button
                           type="button"
                           onClick={() => onSetNavigationDestination(device)}
-                          title="Navigasi ke perangkat ini"
+                          title={t("mapInspector.navigateTo")}
                           className="size-7 flex items-center justify-center rounded-lg border border-border/60 bg-muted/20 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all active:scale-95 shrink-0"
                         >
                           <Navigation className="size-3" />

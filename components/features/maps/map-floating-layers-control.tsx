@@ -5,6 +5,8 @@ import { Layers, Radio, Tag, Cable, Network, Building } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
+import type { MessageKey } from "@/lib/locales";
 
 export type LayerToggles = {
   devices: boolean;
@@ -22,38 +24,38 @@ export type MapFloatingLayersControlProps = {
 
 const LAYER_CONFIGS: Array<{
   key: keyof LayerToggles;
-  label: string;
-  description: string;
+  labelKey: MessageKey;
+  descKey: MessageKey;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
   {
     key: "devices",
-    label: "Perangkat Jaringan",
-    description: "ODP, ODC, OLT, Closure",
+    labelKey: "mapLayers.devices",
+    descKey: "mapLayers.devicesDesc",
     icon: Radio,
   },
   {
     key: "labels",
-    label: "Label Nama",
-    description: "Nama perangkat di zoom >= 16",
+    labelKey: "mapLayers.labels",
+    descKey: "mapLayers.labelsDesc",
     icon: Tag,
   },
   {
     key: "cables",
-    label: "Kabel Fiber Optik",
-    description: "Jalur kabel & kapasitas core",
+    labelKey: "mapLayers.cables",
+    descKey: "mapLayers.cablesDesc",
     icon: Cable,
   },
   {
     key: "connections",
-    label: "Koneksi Port-to-Port",
-    description: "Garis relasi perangkat",
+    labelKey: "mapLayers.connections",
+    descKey: "mapLayers.connectionsDesc",
     icon: Network,
   },
   {
     key: "poi",
-    label: "Bangunan & Tiang POI",
-    description: "Data OpenStreetMap",
+    labelKey: "mapLayers.poi",
+    descKey: "mapLayers.poiDesc",
     icon: Building,
   },
 ];
@@ -63,6 +65,7 @@ export function MapFloatingLayersControl({
   onToggleLayer,
   className,
 }: MapFloatingLayersControlProps) {
+  const { t } = useTranslate();
   const [open, setOpen] = React.useState(false);
 
   const activeCount = React.useMemo(() => {
@@ -79,8 +82,8 @@ export function MapFloatingLayersControl({
               "relative flex size-9 items-center justify-center rounded-full border border-border/60 bg-card/90 shadow-2xs backdrop-blur-md transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted hover:text-foreground active:scale-[0.95] glass-inset",
               open && "border-primary/50 bg-primary/10 text-primary shadow-[0_0_12px_rgba(var(--primary),0.2)]",
             )}
-            title="Layer Peta"
-            aria-label="Layer Peta"
+            title={t("mapLayers.title")}
+            aria-label={t("mapLayers.title")}
           >
             <Layers className="size-4 text-primary" />
             {activeCount > 0 && (
@@ -102,17 +105,17 @@ export function MapFloatingLayersControl({
             <div className="flex items-center gap-1.5">
               <Layers className="size-3.5 text-primary" />
               <span className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-foreground">
-                Layer Topologi
+                {t("mapLayers.topologyLayers")}
               </span>
             </div>
             <span className="rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 font-mono text-[9px] font-semibold text-primary tabular-nums">
-              {activeCount}/{LAYER_CONFIGS.length} Aktif
+              {activeCount}/{LAYER_CONFIGS.length} {t("mapLayers.active")}
             </span>
           </div>
 
           {/* Layer List */}
           <div className="space-y-1">
-            {LAYER_CONFIGS.map(({ key, label, description, icon: Icon }) => {
+            {LAYER_CONFIGS.map(({ key, labelKey, descKey, icon: Icon }) => {
               const checked = layerToggles[key];
               return (
                 <div
@@ -138,10 +141,10 @@ export function MapFloatingLayersControl({
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-[11px] font-semibold text-foreground leading-none mb-0.5">
-                        {label}
+                        {t(labelKey)}
                       </p>
                       <p className="truncate font-mono text-[9px] text-muted-foreground leading-none">
-                        {description}
+                        {t(descKey)}
                       </p>
                     </div>
                   </div>

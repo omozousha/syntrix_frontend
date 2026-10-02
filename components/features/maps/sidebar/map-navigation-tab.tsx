@@ -22,6 +22,7 @@ import { ButtonLoader } from "@/components/app-loading-new";
 import type { OsgmRouteResult, OsgmRouteStep } from "@/lib/api";
 import type { MapDevice } from "../topology-map-canvas";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 
 type Option = { value: string; label: string };
 
@@ -57,8 +58,7 @@ function getManeuverIcon(type?: string, modifier?: string) {
 }
 
 export function MapNavigationTab({
-  originName = "Lokasi GPS Saya",
-  onSetOriginFromGps,
+  originName = "My GPS Location",  onSetOriginFromGps,
   isGpsLoading,
   onSelectDestinationDevice,
   selectedDestination,
@@ -71,6 +71,7 @@ export function MapNavigationTab({
   deviceOptions,
   onPanToLocation,
 }: MapNavigationTabProps) {
+  const { t } = useTranslate();
   const [activeStepIndex, setActiveStepIndex] = React.useState<number | null>(null);
 
   const handleStepClick = (step: OsgmRouteStep) => {
@@ -88,7 +89,7 @@ export function MapNavigationTab({
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-              Titik Asal
+              {t("mapNav.origin")}
             </span>
             <Button
               type="button"
@@ -103,7 +104,7 @@ export function MapNavigationTab({
               ) : (
                 <MapPin className="mr-1 size-3 text-primary" />
               )}
-              GPS Saya
+              {t("mapNav.myGps")}
             </Button>
           </div>
           <div className="rounded-lg border border-border/50 bg-muted/20 px-2 py-1 font-mono text-[11px] flex items-center gap-2">
@@ -114,7 +115,7 @@ export function MapNavigationTab({
 
         <div className="space-y-1">
           <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
-            Perangkat Tujuan
+            {t("mapNav.destination")}
           </span>
           <Combobox
             value={selectedDestination?.id || ""}
@@ -123,8 +124,8 @@ export function MapNavigationTab({
               if (dev) onSelectDestinationDevice(dev);
             }}
             options={deviceOptions}
-            placeholder="Pilih target perangkat..."
-            searchPlaceholder="Cari nama perangkat..."
+            placeholder={t("mapNav.selectTarget")}
+            searchPlaceholder={t("mapNav.searchDevices")}
           />
         </div>
 
@@ -140,7 +141,7 @@ export function MapNavigationTab({
             ) : (
               <Navigation className="mr-1.5 size-3.5" />
             )}
-            Hitung Rute Jalan
+            {t("mapNav.calculateRoad")}
           </Button>
           {routeResult && (
             <Button
@@ -149,7 +150,7 @@ export function MapNavigationTab({
               size="icon"
               onClick={onClearRoute}
               className="rounded-full size-8 shrink-0"
-              title="Reset Rute"
+              title={t("mapNav.resetRoute")}
             >
               <RotateCcw className="size-3.5" />
             </Button>
@@ -170,7 +171,7 @@ export function MapNavigationTab({
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-xl border border-border/60 bg-muted/20 p-2 text-center shadow-2xs glass-inset">
               <span className="font-mono text-[8px] uppercase tracking-[0.12em] text-muted-foreground block">
-                Total Jarak Rute
+                {t("mapNav.totalDistance")}
               </span>
               <span className="font-mono text-base font-bold tabular-nums text-primary">
                 {routeResult.distance_km} <span className="text-xs font-normal">km</span>
@@ -178,10 +179,10 @@ export function MapNavigationTab({
             </div>
             <div className="rounded-xl border border-border/60 bg-muted/20 p-2 text-center shadow-2xs glass-inset">
               <span className="font-mono text-[8px] uppercase tracking-[0.12em] text-muted-foreground block">
-                Estimasi Tempuh
+                {t("mapNav.travelEta")}
               </span>
               <span className="font-mono text-base font-bold tabular-nums text-emerald-500">
-                {routeResult.duration_minutes} <span className="text-xs font-normal">menit</span>
+                {routeResult.duration_minutes} <span className="text-xs font-normal">{t("mapNav.minutes")}</span>
               </span>
             </div>
           </div>
@@ -213,10 +214,10 @@ export function MapNavigationTab({
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-                Panduan Belokan ({routeResult.steps.length} Langkah)
+                {t("mapNav.turnGuide", { count: routeResult.steps.length })}
               </span>
               <span className="font-mono text-[8px] text-muted-foreground">
-                Klik baris untuk fokus peta
+                {t("mapNav.clickToFocus")}
               </span>
             </div>
 
@@ -243,18 +244,18 @@ export function MapNavigationTab({
 
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-foreground leading-snug">
-                        {step.instruction || "Lanjutkan perjalanan"}
+                        {step.instruction || t("mapNav.continueTrip")}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5 font-mono text-[9px] text-muted-foreground tabular-nums">
                         <span>{step.distance_m >= 1000 ? `${(step.distance_m / 1000).toFixed(1)} km` : `${step.distance_m} m`}</span>
                         {step.duration_s > 0 && (
                           <>
                             <span>•</span>
-                            <span>{Math.round(step.duration_s / 60) || 1} mnt</span>
+                            <span>{Math.round(step.duration_s / 60) || 1} {t("mapNav.minShort")}</span>
                           </>
                         )}
                         {step.location && (
-                          <span className="ml-auto text-[8px] text-primary/70">Fokus ↗</span>
+                          <span className="ml-auto text-[8px] text-primary/70">{t("mapNav.focus")}</span>
                         )}
                       </div>
                     </div>
@@ -270,10 +271,10 @@ export function MapNavigationTab({
         <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 p-3 text-center text-muted-foreground space-y-1">
           <Navigation className="size-4 mx-auto text-primary/60 mb-1" />
           <p className="font-mono text-[9px] uppercase tracking-wider font-semibold text-foreground">
-            Belum Ada Rute Aktif
+            {t("mapNav.noActiveRoute")}
           </p>
           <p className="text-[10px] text-muted-foreground">
-            Pilih perangkat tujuan di atas lalu klik &ldquo;Hitung Rute Jalan&rdquo; untuk memunculkan panduan belokan navigasi.
+            {t("mapNav.noActiveRouteDesc")}
           </p>
         </div>
       )}

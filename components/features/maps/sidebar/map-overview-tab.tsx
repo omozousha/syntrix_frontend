@@ -19,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { MapDevice, MapRoute } from "../topology-map-canvas";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 
 type FilterQueue = "all" | "no_coords" | "unvalidated" | "routes";
 
@@ -45,6 +46,7 @@ export function MapOverviewTab({
   pops = [],
   regions = [],
 }: MapOverviewTabProps) {
+  const { t } = useTranslate();
   const [filterMode, setFilterMode] = React.useState<FilterQueue>("all");
   const [searchQuery, setSearchQuery] = React.useState("");
 
@@ -104,7 +106,7 @@ export function MapOverviewTab({
       {/* 1. Network Asset Telemetry Bento */}
       <div className="space-y-1.5">
         <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground block">
-          Aset Topologi Aktif
+          {t("mapOverview.activeAssets")}
         </span>
         <div className="grid grid-cols-3 gap-1.5 font-mono tabular-nums">
           <div className="rounded-xl border border-border/60 bg-muted/20 p-2 text-center shadow-2xs glass-inset">
@@ -118,7 +120,7 @@ export function MapOverviewTab({
           <div className="rounded-xl border border-border/60 bg-muted/20 p-2 text-center shadow-2xs glass-inset">
             <div className="flex items-center justify-center gap-1 text-muted-foreground mb-0.5">
               <RouteIcon className="size-3" />
-              <span className="text-[8px] uppercase tracking-wider">Rute</span>
+              <span className="text-[8px] uppercase tracking-wider">{t("mapOverview.route")}</span>
             </div>
             <span className="text-sm font-bold text-primary">{routesCount}</span>
           </div>
@@ -126,7 +128,7 @@ export function MapOverviewTab({
           <div className="rounded-xl border border-border/60 bg-muted/20 p-2 text-center shadow-2xs glass-inset">
             <div className="flex items-center justify-center gap-1 text-muted-foreground mb-0.5">
               <Cable className="size-3" />
-              <span className="text-[8px] uppercase tracking-wider">Koneksi</span>
+              <span className="text-[8px] uppercase tracking-wider">{t("mapOverview.connection")}</span>
             </div>
             <span className="text-sm font-bold text-foreground">{connectionsCount}</span>
           </div>
@@ -137,7 +139,7 @@ export function MapOverviewTab({
       <div className="rounded-xl border border-border/60 bg-card p-2.5 shadow-2xs glass-inset space-y-2">
         <div className="flex items-center justify-between">
           <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground font-semibold">
-            Kesehatan Data Geospasial
+            {t("mapOverview.geoHealth")}
           </span>
           <Badge
             variant="outline"
@@ -150,7 +152,7 @@ export function MapOverviewTab({
                   : "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
             )}
           >
-            {coordsRate}% Terpetakan
+            {t("mapOverview.mappedPct", { rate: coordsRate })}
           </Badge>
         </div>
 
@@ -169,8 +171,8 @@ export function MapOverviewTab({
             />
           </div>
           <div className="flex items-center justify-between font-mono text-[9px] tabular-nums text-muted-foreground">
-            <span>Koordinat Valid: {validCoordsCount}</span>
-            <span>Tanpa GPS: {devicesWithoutCoords.length}</span>
+            <span>{t("mapOverview.validCoords", { count: validCoordsCount })}</span>
+            <span>{t("mapOverview.noGpsCount", { count: devicesWithoutCoords.length })}</span>
           </div>
         </div>
       </div>
@@ -181,7 +183,7 @@ export function MapOverviewTab({
           <div className="flex items-center gap-1.5">
             <AlertTriangle className="size-3.5 text-amber-500" />
             <span className="font-mono text-[9px] uppercase tracking-[0.15em] font-bold text-foreground">
-              Antrean Audit Data ({totalIssues})
+              {t("mapOverview.auditQueue", { count: totalIssues })}
             </span>
           </div>
         </div>
@@ -198,7 +200,7 @@ export function MapOverviewTab({
                 : "border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground",
             )}
           >
-            Semua ({devicesWithoutCoords.length + unvalidatedDevices.length})
+            {t("mapOverview.all", { count: devicesWithoutCoords.length + unvalidatedDevices.length })}
           </button>
           <button
             type="button"
@@ -210,7 +212,7 @@ export function MapOverviewTab({
                 : "border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground",
             )}
           >
-            Tanpa GPS ({devicesWithoutCoords.length})
+            {t("mapOverview.noGps", { count: devicesWithoutCoords.length })}
           </button>
           <button
             type="button"
@@ -222,7 +224,7 @@ export function MapOverviewTab({
                 : "border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground",
             )}
           >
-            Belum Valid ({unvalidatedDevices.length})
+            {t("mapOverview.notValid", { count: unvalidatedDevices.length })}
           </button>
           {routesWithoutGeometry.length > 0 && (
             <button
@@ -235,7 +237,7 @@ export function MapOverviewTab({
                   : "border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground",
               )}
             >
-              Rute Putus ({routesWithoutGeometry.length})
+              {t("mapOverview.brokenRoutes", { count: routesWithoutGeometry.length })}
             </button>
           )}
         </div>
@@ -248,7 +250,7 @@ export function MapOverviewTab({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari perangkat dalam antrean..."
+              placeholder={t("mapOverview.searchQueue")}
               className="w-full rounded-lg border border-border/60 bg-card/80 pl-7 pr-2.5 py-1 font-mono text-[9px] text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
             />
           </div>
@@ -264,19 +266,19 @@ export function MapOverviewTab({
               >
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-xs text-foreground truncate">
-                    {route.route_name || route.route_code || "Rute"}
+                    {route.route_name || route.route_code || t("mapOverview.routeFallback")}
                   </span>
                   <span className="font-mono text-[7px] font-bold text-rose-500 uppercase">
-                    Tanpa Geometri
+                    {t("mapOverview.noGeometry")}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-[8px] font-mono text-muted-foreground">
-                  <span>Kode: {route.route_code || "-"}</span>
+                  <span>{t("mapOverview.code")}: {route.route_code || "-"}</span>
                   <Link
                     href={`/data-management/list/routes/${route.id}`}
                     className="text-primary hover:underline"
                   >
-                    Edit Rute ↗
+                    {t("mapOverview.editRoute")} ↗
                   </Link>
                 </div>
               </div>
@@ -315,7 +317,7 @@ export function MapOverviewTab({
                           : "border-amber-500/30 bg-amber-500/10 text-amber-500",
                       )}
                     >
-                      {reason === "no_coords" ? "Tanpa GPS" : "Unvalidated"}
+                      {reason === "no_coords" ? t("mapOverview.noGpsBadge") : "Unvalidated"}
                     </span>
                   </div>
 
@@ -333,7 +335,7 @@ export function MapOverviewTab({
                       onClick={() => onSelectDevice?.(device)}
                       className="flex-1 flex items-center justify-center gap-1 rounded-md border border-primary/40 bg-primary/10 py-1 font-mono text-[8px] font-bold uppercase tracking-wider text-primary hover:bg-primary/20 transition-all active:scale-[0.98]"
                     >
-                      <span>Inspeksi Dock</span>
+                      <span>{t("mapOverview.inspectDock")}</span>
                       <ChevronRight className="size-2.5" />
                     </button>
 
@@ -341,7 +343,7 @@ export function MapOverviewTab({
                       href={detailHref}
                       className="flex items-center justify-center gap-1 rounded-md border border-border/60 bg-muted/30 px-2 py-1 font-mono text-[8px] font-bold uppercase tracking-wider text-foreground hover:bg-muted/60 transition-all"
                     >
-                      <span>Form Edit</span>
+                      <span>{t("mapOverview.editForm")}</span>
                       <ExternalLink className="size-2 text-muted-foreground" />
                     </Link>
                   </div>
@@ -351,15 +353,15 @@ export function MapOverviewTab({
 
             {filteredDevices.length > 30 && (
               <p className="font-mono text-[8px] text-muted-foreground text-center py-1">
-                Menampilkan 30 dari {filteredDevices.length} item antrean. Gunakan pencarian untuk menyaring.
+                {t("mapOverview.showing30", { count: filteredDevices.length })}
               </p>
             )}
 
             {filteredDevices.length === 0 && (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-emerald-700 dark:text-emerald-400 font-mono text-[10px] space-y-1">
                 <CheckCircle2 className="size-4 mx-auto" />
-                <p className="font-bold">Tidak Ada Isu Ditemukan</p>
-                <p className="text-[9px] opacity-80">Seluruh perangkat pada filter ini terpetakan lengkap.</p>
+                <p className="font-bold">{t("mapOverview.noIssues")}</p>
+                <p className="text-[9px] opacity-80">{t("mapOverview.noIssuesDesc")}</p>
               </div>
             )}
           </div>

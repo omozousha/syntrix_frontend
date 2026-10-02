@@ -27,6 +27,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslate } from "@/lib/use-locale";
 
 type MapFloatingMenuProps = {
   fullscreenRef: React.RefObject<HTMLDivElement | null>;
@@ -43,6 +44,7 @@ export function MapFloatingMenu({
   onToggleZenMode,
   className,
 }: MapFloatingMenuProps) {
+  const { t } = useTranslate();
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const [shortcutOpen, setShortcutOpen] = React.useState(false);
   const [isCapturing, setIsCapturing] = React.useState(false);
@@ -107,7 +109,7 @@ export function MapFloatingMenu({
         }
       }
     } catch {
-      toast.error("Mode fullscreen tidak didukung browser ini.");
+      toast.error(t("mapFloatingMenu.fullscreenUnsupported"));
     }
   }, [fullscreenRef]);
 
@@ -128,7 +130,7 @@ export function MapFloatingMenu({
       const ctx = tempCanvas.getContext("2d");
 
       if (!ctx) {
-        toast.error("Gagal menyiapkan canvas snapshot.");
+        toast.error(t("mapFloatingMenu.snapshotFail"));
         return;
       }
 
@@ -159,9 +161,9 @@ export function MapFloatingMenu({
         downloadImage(dataUrl);
       }
 
-      toast.success("Snapshot path & placemark berhasil disimpan!");
+      toast.success(t("mapFloatingMenu.snapshotSuccess"));
     } catch {
-      toast.error("Gagal mengambil screenshot path & placemark.");
+      toast.error(t("mapFloatingMenu.screenshotFail"));
     } finally {
       setIsCapturing(false);
     }
@@ -175,8 +177,8 @@ export function MapFloatingMenu({
             <button
               type="button"
               className="flex size-9 items-center justify-center rounded-full border border-border/60 bg-card/90 shadow-2xs backdrop-blur-md transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted hover:text-foreground active:scale-[0.95] glass-inset"
-              title="Menu Peta & Aksi"
-              aria-label="Menu Peta & Aksi"
+              title={t("mapFloatingMenu.menuTitle")}
+              aria-label={t("mapFloatingMenu.menuTitle")}
             >
               <SlidersHorizontal className="size-4 text-primary" />
             </button>
@@ -190,7 +192,7 @@ export function MapFloatingMenu({
             className="w-56 rounded-2xl border border-border/40 bg-card/95 p-1.5 shadow-lg backdrop-blur-md glass-inset"
           >
             <DropdownMenuLabel className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground px-2 py-1">
-              Aksi & Kontrol Peta
+              {t("mapFloatingMenu.actionsLabel")}
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="my-1 bg-border/40" />
 
@@ -204,7 +206,7 @@ export function MapFloatingMenu({
                 ) : (
                   <EyeOff className="size-4 text-primary" />
                 )}
-                <span>{isZenMode ? "Tampilkan HUD" : "Mode Fokus (Zen)"}</span>
+                <span>{isZenMode ? t("mapFloatingMenu.showHud") : t("mapFloatingMenu.zenMode")}</span>
               </div>
               <Kbd>Z</Kbd>
             </DropdownMenuItem>
@@ -219,7 +221,7 @@ export function MapFloatingMenu({
                 ) : (
                   <Maximize2 className="size-4 text-primary" />
                 )}
-                <span>{isFullscreen ? "Keluar Layar Penuh" : "Layar Penuh"}</span>
+                <span>{isFullscreen ? t("mapFloatingMenu.exitFullscreen") : t("mapFloatingMenu.fullscreen")}</span>
               </div>
               <Kbd>Alt+F</Kbd>
             </DropdownMenuItem>
@@ -231,7 +233,7 @@ export function MapFloatingMenu({
             >
               <div className="flex items-center gap-2 font-medium">
                 <Camera className="size-4 text-primary" />
-                <span>{isCapturing ? "Proses..." : "Tangkap Overlay Path"}</span>
+                <span>{isCapturing ? t("mapFloatingMenu.processing") : t("mapFloatingMenu.captureOverlay")}</span>
               </div>
               <Kbd>Alt+S</Kbd>
             </DropdownMenuItem>
@@ -244,7 +246,7 @@ export function MapFloatingMenu({
             >
               <div className="flex items-center gap-2 font-medium">
                 <Keyboard className="size-4 text-primary" />
-                <span>Tombol Pintas</span>
+                <span>{t("mapFloatingMenu.shortcuts")}</span>
               </div>
               <Kbd>?</Kbd>
             </DropdownMenuItem>
@@ -264,28 +266,28 @@ export function MapFloatingMenu({
                 <Keyboard className="size-4 text-primary" />
               </div>
               <DialogTitle className="font-mono text-sm uppercase tracking-wider">
-                Tombol Pintas Peta
+                {t("mapFloatingMenu.shortcutsTitle")}
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs text-muted-foreground">
-              Daftar kombinasi tombol pintas untuk navigasi cepat di halaman Syntrix Maps.
+              {t("mapFloatingMenu.shortcutsDesc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="mt-3 space-y-2 text-xs">
-            <ShortcutRow label="Mode Fokus / Zen (Sembunyikan HUD)" keys={["Z"]} />
-            <ShortcutRow label="Inspeksi Multi-Device (Maks 3)" keys={["Shift", "Klik Marker"]} />
-            <ShortcutRow label="Inspeksi Single Device" keys={["Klik Marker"]} />
-            <ShortcutRow label="Buka / Tutup Layar Penuh" keys={["Alt", "F"]} />
-            <ShortcutRow label="Tangkap Overlay Path & Placemark" keys={["Alt", "S"]} />
-            <ShortcutRow label="Tutup Detail / Reset Search" keys={["Esc"]} />
-            <ShortcutRow label="Tampilkan Panduan Ini" keys={["Shift", "/"]} />
+            <ShortcutRow label={t("mapShortcuts.zenMode")} keys={["Z"]} />
+            <ShortcutRow label={t("mapShortcuts.multiInspect")} keys={["Shift", t("mapShortcuts.clickMarker")]} />
+            <ShortcutRow label={t("mapShortcuts.singleInspect")} keys={[t("mapShortcuts.clickMarker")]} />
+            <ShortcutRow label={t("mapShortcuts.toggleFullscreen")} keys={["Alt", "F"]} />
+            <ShortcutRow label={t("mapShortcuts.captureOverlay")} keys={["Alt", "S"]} />
+            <ShortcutRow label={t("mapShortcuts.closeReset")} keys={["Esc"]} />
+            <ShortcutRow label={t("mapShortcuts.showGuide")} keys={["Shift", "/"]} />
           </div>
 
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-border/40 bg-muted/20 p-2.5 text-[11px] text-muted-foreground">
             <Info className="size-4 shrink-0 text-primary" />
             <span>
-              Shift + Klik pada placemark device memungkinkan melihat hingga 3 device sekaligus dalam layout grid.
+              {t("mapShortcuts.multiInspectNote")}
             </span>
           </div>
         </DialogContent>

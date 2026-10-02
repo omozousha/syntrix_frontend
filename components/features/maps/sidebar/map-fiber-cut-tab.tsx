@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Cable } from "lucide-react";
 import { Combobox } from "@/components/ui/combobox";
+import { useTranslate } from "@/lib/use-locale";
 
 type Option = { value: string; label: string };
 
@@ -38,34 +39,35 @@ export function MapFiberCutTab({
   cutTargetOptions,
   impactData,
 }: MapFiberCutTabProps) {
+  const { t } = useTranslate();
   return (
     <div className="space-y-2 text-xs">
       <div className="space-y-1">
         <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground block">
-          Mode Simulasi Cut
+          {t("mapStudio.cutSimMode")}
         </span>
         <Combobox
           value={cutMode}
           onValueChange={(val) => onCutModeChange((val as CutMode) || "none")}
           options={[
-            { value: "none", label: "Tanpa Simulasi Cut" },
-            { value: "connection", label: "Simulasi Per Connection" },
-            { value: "cable", label: "Simulasi Per Cable" },
+            { value: "none", label: t("mapStudio.noCut") },
+            { value: "connection", label: t("mapStudio.perConnection") },
+            { value: "cable", label: t("mapStudio.perCable") },
           ]}
-          placeholder="Pilih mode..."
+          placeholder={t("mapStudio.selectMode")}
         />
       </div>
 
       {cutMode !== "none" && (
         <div className="space-y-1">
           <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground block">
-            Target {cutMode === "cable" ? "Cable" : "Connection"}
+            {t("mapStudio.cutTargetLabel", { mode: cutMode === "cable" ? "Cable" : "Connection" })}
           </span>
           <Combobox
             value={cutTarget}
             onValueChange={onCutTargetChange}
             options={cutTargetOptions}
-            placeholder={`Pilih ${cutMode}...`}
+            placeholder={t("mapStudio.selectTarget")}
           />
         </div>
       )}

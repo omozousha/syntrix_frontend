@@ -24,6 +24,7 @@ import type {
   HomepassedCalculationResult,
 } from "@/lib/gis/homepassed-calculator";
 import type { CutMode, FiberCutImpactData } from "./sidebar/map-fiber-cut-tab";
+import { useTranslate } from "@/lib/use-locale";
 
 type Option = { value: string; label: string };
 
@@ -62,6 +63,7 @@ export function BottomContextualStudio({
   cutTargetOptions = [],
   impactData,
 }: BottomContextualStudioProps) {
+  const { t } = useTranslate();
   const [isMinimized, setIsMinimized] = useState(false);
 
   const handleDownloadGeoJson = () => {
@@ -93,7 +95,7 @@ export function BottomContextualStudio({
                 <Cable className="size-4 text-red-500" />
               )}
               <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em]">
-                {isHomepassed ? "Spatial Coverage" : "Fiber Cut Studio"}
+                {isHomepassed ? t("mapStudio.spatialCoverage") : t("mapStudio.fiberCutStudio")}
               </span>
             </div>
 
@@ -103,7 +105,7 @@ export function BottomContextualStudio({
             {isHomepassed ? (
               <div className="flex items-center gap-2 font-mono text-[10px] tabular-nums text-muted-foreground">
                 <span>
-                  Luas: <strong className="text-foreground">{homepassedResult?.totalCoverageAreaKm2 || 0} km²</strong>
+                  {t("mapStudio.coverageArea")}: <strong className="text-foreground">{homepassedResult?.totalCoverageAreaKm2 || 0} km²</strong>
                 </span>
                 <span>•</span>
                 <span>
@@ -116,9 +118,9 @@ export function BottomContextualStudio({
             ) : (
               <div className="flex items-center gap-2 font-mono text-[10px] tabular-nums text-muted-foreground">
                 <span>
-                  Dampak:{" "}
+                  {t("mapStudio.impact")}:{" "}
                   <strong className={impactData?.active ? "text-red-500" : "text-foreground"}>
-                    {impactData?.summary.affected_devices || 0} Device / {impactData?.summary.affected_customers || 0} User
+                    {impactData?.summary.affected_devices || 0} {t("mapStudio.devices")} / {impactData?.summary.affected_customers || 0} {t("mapStudio.users")}
                   </strong>
                 </span>
               </div>
@@ -128,7 +130,7 @@ export function BottomContextualStudio({
               <button
                 type="button"
                 onClick={() => setIsMinimized(false)}
-                title="Perbesar Studio"
+                title={t("mapStudio.expand")}
                 className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <ChevronUp className="size-3.5" />
@@ -136,7 +138,7 @@ export function BottomContextualStudio({
               <button
                 type="button"
                 onClick={onClose}
-                title="Tutup Studio"
+                title={t("mapStudio.closeStudio")}
                 className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="size-3.5" />
@@ -171,7 +173,7 @@ export function BottomContextualStudio({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-foreground">
-                    {isHomepassed ? "Spatial Coverage Studio" : "Fiber Cut Impact Simulator"}
+                    {isHomepassed ? t("mapStudio.spatialCoverageStudio") : t("mapStudio.fiberCutSimulator")}
                   </span>
                   {isHomepassed ? (
                     <Badge
@@ -201,8 +203,8 @@ export function BottomContextualStudio({
                 </div>
                 <p className="text-[10px] text-muted-foreground">
                   {isHomepassed
-                    ? "Estimasi homepassed akurat berbasis radius buffer ODP, koridor kabel, dan data bangunan OpenStreetMap."
-                    : "Analisis blast radius kegagalan jalur serat optik terhadap perangkat dan pelanggan terdampak."}
+                    ? t("mapStudio.homepassedDesc")
+                    : t("mapStudio.fiberCutDesc")}
                 </p>
               </div>
             </div>
@@ -213,12 +215,12 @@ export function BottomContextualStudio({
                 <>
                   <div className="flex items-center gap-1.5 pr-2 border-r border-border/40">
                     <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-                      GIS Aktif
+                      {t("mapStudio.gisActive")}
                     </span>
                     <Switch
                       checked={homepassedEnabled}
                       onCheckedChange={onToggleHomepassedEnabled}
-                      aria-label="Toggle Hitung Homepassed"
+                      aria-label={t("mapStudio.toggleHomepassed")}
                     />
                   </div>
 
@@ -239,7 +241,7 @@ export function BottomContextualStudio({
               <button
                 type="button"
                 onClick={() => setIsMinimized(true)}
-                title="Kecilkan Studio"
+                title={t("mapStudio.minimize")}
                 className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 <ChevronDown className="size-4" />
@@ -247,7 +249,7 @@ export function BottomContextualStudio({
               <button
                 type="button"
                 onClick={onClose}
-                title="Tutup Studio"
+                title={t("mapStudio.closeStudio")}
                 className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 <X className="size-4" />
@@ -263,7 +265,7 @@ export function BottomContextualStudio({
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground font-semibold flex items-center gap-1">
                     <Sliders className="size-3 text-primary" />
-                    Parameter Radius
+                    {t("mapStudio.radiusParameters")}
                   </span>
                   <div className="w-48">
                     <Combobox
@@ -276,10 +278,10 @@ export function BottomContextualStudio({
                         })
                       }
                       options={[
-                        { value: "__all__", label: "Semua Region (Global)" },
+                        { value: "__all__", label: t("mapStudio.allRegionsGlobal") },
                         ...regionOptions.filter((r) => r.value !== "__all__"),
                       ]}
-                      placeholder="Pilih Scope Region"
+                      placeholder={t("mapStudio.selectScopeRegion")}
                     />
                   </div>
                 </div>
@@ -339,7 +341,7 @@ export function BottomContextualStudio({
                             }
                             className="rounded border-border/60 text-primary focus:ring-primary/20"
                           />
-                          <span>Koridor Kabel (Backbone/Feeder)</span>
+                          <span>{t("mapStudio.cableCorridor")}</span>
                         </label>
                         <span className="font-mono tabular-nums text-xs font-bold text-primary">
                           {homepassedConfig.cableRadiusMeters}m
@@ -368,12 +370,12 @@ export function BottomContextualStudio({
               {/* Column 2: Live GIS Telemetry Metrics (4 Cols) */}
               <div className="md:col-span-4 space-y-2 border-b md:border-b-0 md:border-r border-border/40 pb-2 md:pb-0 md:pr-3">
                 <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground font-semibold block">
-                  Telemetri Cakupan Spasial
+                  {t("mapStudio.spatialTelemetry")}
                 </span>
                 <div className="grid grid-cols-2 gap-2 font-mono tabular-nums">
                   <div className="rounded-xl border border-border/40 bg-muted/15 p-2.5">
                     <span className="text-[8px] uppercase tracking-wider text-muted-foreground block">
-                      Luas Area Total
+                      {t("mapStudio.totalArea")}
                     </span>
                     <span className="text-base font-bold text-foreground">
                       {homepassedResult?.totalCoverageAreaKm2 || 0}{" "}
@@ -412,9 +414,9 @@ export function BottomContextualStudio({
                 </div>
 
                 <div className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-1.5 font-mono text-[10px]">
-                  <span className="text-muted-foreground">Efisiensi Deduplikasi:</span>
+                  <span className="text-muted-foreground">{t("mapStudio.dedupEfficiency")}</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                    +{homepassedResult?.overlapSavingsPercentage || 0}% Bebas Ganda
+                    +{homepassedResult?.overlapSavingsPercentage || 0}% {t("mapStudio.dedupFree")}
                   </span>
                 </div>
               </div>
@@ -423,15 +425,15 @@ export function BottomContextualStudio({
               <div className="md:col-span-3 flex flex-col justify-between space-y-2">
                 <div>
                   <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground font-semibold block mb-1">
-                    Metodologi Spasial
+                    {t("mapStudio.spatialMethodology")}
                   </span>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">
-                    Kalkulasi menggunakan Turf.js union buffer berkecepatan tinggi dengan isolasi eksklusif tipe ODP, proteksi water-masking, dan fallback kapasitas port jika OSM POI kosong.
+                    {t("mapStudio.methodologyNote")}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 text-[9px] font-mono text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2 className="size-3 shrink-0" />
-                  <span>BBox Pre-filter terverifikasi aktif</span>
+                  <span>{t("mapStudio.bboxPrefilter")}</span>
                 </div>
               </div>
             </div>
@@ -442,7 +444,7 @@ export function BottomContextualStudio({
               <div className="md:col-span-4 space-y-2 border-b md:border-b-0 md:border-r border-border/40 pb-2 md:pb-0 md:pr-3">
                 <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground font-semibold flex items-center gap-1">
                   <Cable className="size-3 text-red-500" />
-                  Target Putus Serat
+                  {t("mapStudio.cutTarget")}
                 </span>
 
                 <div className="space-y-1.5">
@@ -450,11 +452,11 @@ export function BottomContextualStudio({
                     value={cutMode}
                     onValueChange={(val) => onCutModeChange?.((val as CutMode) || "none")}
                     options={[
-                      { value: "none", label: "Tanpa Simulasi Cut" },
-                      { value: "connection", label: "Simulasi Per Connection" },
-                      { value: "cable", label: "Simulasi Per Cable" },
+                      { value: "none", label: t("mapStudio.noCut") },
+                      { value: "connection", label: t("mapStudio.perConnection") },
+                      { value: "cable", label: t("mapStudio.perCable") },
                     ]}
-                    placeholder="Pilih mode cut..."
+                    placeholder={t("mapStudio.selectCutMode")}
                   />
 
                   {cutMode !== "none" && (
@@ -462,7 +464,7 @@ export function BottomContextualStudio({
                       value={cutTarget}
                       onValueChange={(val) => onCutTargetChange?.(val)}
                       options={cutTargetOptions}
-                      placeholder={`Pilih target ${cutMode}...`}
+                      placeholder={t("mapStudio.selectTarget")}
                     />
                   )}
                 </div>
@@ -471,13 +473,13 @@ export function BottomContextualStudio({
               {/* Column 2: Blast Radius Metrics (5 Cols) */}
               <div className="md:col-span-5 space-y-2 border-b md:border-b-0 md:border-r border-border/40 pb-2 md:pb-0 md:pr-3">
                 <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground font-semibold block">
-                  Estimasi Blast Radius Dampak
+                  {t("mapStudio.blastRadius")}
                 </span>
 
                 <div className="grid grid-cols-4 gap-1.5 font-mono tabular-nums">
                   <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-2 text-center">
                     <span className="text-[8px] uppercase tracking-wider text-muted-foreground block">
-                      Perangkat
+                      {t("mapStudio.devices")}
                     </span>
                     <span className="text-sm font-bold text-red-600 dark:text-red-400">
                       {impactData?.summary.affected_devices || 0}
@@ -486,7 +488,7 @@ export function BottomContextualStudio({
 
                   <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-2 text-center">
                     <span className="text-[8px] uppercase tracking-wider text-muted-foreground block">
-                      Pelanggan
+                      {t("mapStudio.customers")}
                     </span>
                     <span className="text-sm font-bold text-red-600 dark:text-red-400">
                       {impactData?.summary.affected_customers || 0}
@@ -495,7 +497,7 @@ export function BottomContextualStudio({
 
                   <div className="rounded-xl border border-border/40 bg-muted/15 p-2 text-center">
                     <span className="text-[8px] uppercase tracking-wider text-muted-foreground block">
-                      Koneksi
+                      {t("mapStudio.connections")}
                     </span>
                     <span className="text-sm font-bold text-foreground">
                       {impactData?.summary.affected_connections || 0}
@@ -504,7 +506,7 @@ export function BottomContextualStudio({
 
                   <div className="rounded-xl border border-border/40 bg-muted/15 p-2 text-center">
                     <span className="text-[8px] uppercase tracking-wider text-muted-foreground block">
-                      Rute
+                      {t("mapStudio.routes")}
                     </span>
                     <span className="text-sm font-bold text-foreground">
                       {impactData?.summary.affected_routes || 0}
@@ -517,17 +519,17 @@ export function BottomContextualStudio({
               <div className="md:col-span-3 flex flex-col justify-between space-y-2">
                 <div>
                   <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground font-semibold block mb-1">
-                    Status Jalur
+                    {t("mapStudio.lineStatus")}
                   </span>
                   {impactData?.active ? (
                     <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-[10px] text-red-600 dark:text-red-400 flex items-start gap-1.5">
                       <ShieldAlert className="size-4 shrink-0 mt-0.5" />
-                      <span>Simulasi aktif: Jalur downstream terputus disorot merah pada peta.</span>
+                      <span>{t("mapStudio.cutActiveNote")}</span>
                     </div>
                   ) : (
                     <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2 text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                       <CheckCircle2 className="size-4 shrink-0" />
-                      <span>Semua jalur serat beroperasi normal tanpa simulasi gangguan.</span>
+                      <span>{t("mapStudio.allNormalNote")}</span>
                     </div>
                   )}
                 </div>

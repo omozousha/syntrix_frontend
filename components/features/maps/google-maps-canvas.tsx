@@ -17,6 +17,7 @@ import {
   type HomepassedCalculationConfig,
 } from "@/lib/gis/homepassed-calculator";
 import type { MapConnection, MapDevice, MapRoute } from "./topology-map-canvas";
+import { useTranslate } from "@/lib/use-locale";
 
 export type OverpassPOI = {
   id: number;
@@ -167,6 +168,7 @@ const DeviceMarker = React.memo(
     isSearched?: boolean;
     onClick: (device: MapDevice, isMulti: boolean) => void;
   }) => {
+    const { t } = useTranslate();
     const [isHovered, setIsHovered] = React.useState(false);
     const lat = Number(device.latitude);
     const lng = Number(device.longitude);
@@ -224,11 +226,11 @@ const DeviceMarker = React.memo(
               </p>
               {individualHomepassed.isInWater ? (
                 <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-1.5 font-mono text-[9px] font-semibold text-amber-500">
-                  ⚠️ {individualHomepassed.waterWarning || "Koordinat di Perairan / Laut"}
+                  ⚠️ {individualHomepassed.waterWarning || t("mapCanvas.inWater")}
                 </div>
               ) : (
                 <div className="flex items-center justify-between font-mono text-[9px] text-muted-foreground pt-0.5">
-                  <span>Kapasitas:</span>
+                  <span>{t("mapCanvas.capacity")}</span>
                   <span className="font-bold text-foreground tabular-nums">{individualHomepassed.portCapacity} Port</span>
                 </div>
               )}
@@ -256,7 +258,7 @@ const DeviceMarker = React.memo(
                 </div>
               ) : (
                 <div className="flex items-center justify-between pt-0.5 text-[9px] border-t border-border/30 font-mono text-muted-foreground">
-                  <span>Distribusi:</span>
+                  <span>{t("mapCanvas.distribution")}</span>
                   <span className="text-foreground">Feeder / Trunk (Non-ODP)</span>
                 </div>
               )}
@@ -360,6 +362,7 @@ export function GoogleMapsCanvas({
   onMapIdle,
   className,
 }: GoogleMapsCanvasProps) {
+  const { t } = useTranslate();
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useJsApiLoader({ googleMapsApiKey: apiKey, id: "google-maps-script" });
   const mapRef = React.useRef<google.maps.Map | null>(null);
@@ -548,20 +551,20 @@ export function GoogleMapsCanvas({
   return (
     <div
       role="region"
-      aria-label="Peta Operasional Google Maps"
+      aria-label={t("mapCanvas.regionLabel")}
       className="relative h-full w-full overflow-hidden bg-muted/10"
     >
       {!apiKey ? (
         <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-          Google Maps API key belum dikonfigurasi di .env.local
+          {t("mapCanvas.noApiKey")}
         </div>
       ) : loadError ? (
         <div className="flex h-full items-center justify-center text-xs text-red-600">
-          Gagal memuat Google Maps: {loadError.message}
+          {t("mapCanvas.loadFail")}: {loadError.message}
         </div>
       ) : !isLoaded ? (
         <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-          Memuat Google Maps...
+          {t("mapCanvas.loading")}
         </div>
       ) : (
           <GoogleMap
@@ -667,12 +670,12 @@ export function GoogleMapsCanvas({
                 <MarkerF
                   position={osrmPath[0]}
                   icon={svgMarker("#3b82f6")}
-                  title="Titik Awal Rute"
+                  title={t("mapCanvas.routeStart")}
                 />
                 <MarkerF
                   position={osrmPath[osrmPath.length - 1]}
                   icon={svgMarker("#ef4444")}
-                  title="Titik Akhir Rute"
+                  title={t("mapCanvas.routeEnd")}
                 />
               </>
             )}
@@ -692,7 +695,7 @@ export function GoogleMapsCanvas({
 
             {/* User GPS position */}
             {userGpsPosition && (
-              <MarkerF position={userGpsPosition} icon={gpsMarkerUrl} title="Posisi GPS Anda" />
+              <MarkerF position={userGpsPosition} icon={gpsMarkerUrl} title={t("mapCanvas.gpsPosition")} />
             )}
 
             {/* GIS Homepassed Coverage Union Polygon Layer */}

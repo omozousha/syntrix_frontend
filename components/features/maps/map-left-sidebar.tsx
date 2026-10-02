@@ -21,6 +21,7 @@ import type {
   HomepassedCalculationResult,
 } from "@/lib/gis/homepassed-calculator";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 
 import {
   MapOverviewTab,
@@ -92,7 +93,7 @@ export function MapLeftSidebar({
   routesWithoutGeometry = [],
   connectionsWithoutGeometry = [],
   onSelectDevice,
-  originName = "Lokasi GPS Saya",
+  originName = "My GPS Location",
   onSetOriginFromGps,
   isGpsLoading,
   onSelectDestinationDevice,
@@ -107,6 +108,7 @@ export function MapLeftSidebar({
   regions = [],
   className,
 }: MapLeftSidebarProps) {
+  const { t } = useTranslate();
   const [internalActiveTab, setInternalActiveTab] = React.useState<MapTabType>("osrm");
   const activeTab = controlledActiveTab ?? internalActiveTab;
   const setActiveTab = React.useCallback(
@@ -150,11 +152,11 @@ export function MapLeftSidebar({
           type="button"
           onClick={onToggleOpen}
           className="absolute left-3 top-3 z-30 flex items-center gap-1.5 rounded-full border border-border/60 bg-card/90 px-3 py-2 text-xs shadow-md backdrop-blur-md transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted active:scale-[0.98] glass-inset"
-          title="Buka Navigasi & Audit Peta"
+          title={t("mapSidebar.openNav")}
         >
           <Navigation className="size-3.5 text-primary" />
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] font-semibold">
-            Navigasi & Audit
+            {t("mapSidebar.navAudit")}
           </span>
           {totalAuditIssues > 0 && (
             <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
@@ -193,7 +195,7 @@ export function MapLeftSidebar({
                 size="icon"
                 onClick={onToggleOpen}
                 className="size-7 rounded-full"
-                title="Sembunyikan Sidebar"
+                title={t("mapSidebar.hide")}
               >
                 <ChevronLeft className="size-4" />
               </Button>
@@ -204,7 +206,7 @@ export function MapLeftSidebar({
               {/* Option 1: 2-Pill Tab Bar (Navigasi vs Audit) */}
               <div
                 role="tablist"
-                aria-label="Tab Navigasi dan Audit"
+                aria-label={t("mapSidebar.tabsAria")}
                 className="flex items-center gap-1 rounded-full border border-border/60 bg-muted/20 p-1"
               >
                 <button
@@ -223,7 +225,7 @@ export function MapLeftSidebar({
                   )}
                 >
                   <Navigation className="size-3 text-primary" />
-                  <span>Navigasi</span>
+                  <span>{t("mapSidebar.navigation")}</span>
                 </button>
 
                 <button
@@ -242,7 +244,7 @@ export function MapLeftSidebar({
                   )}
                 >
                   <Activity className="size-3 text-amber-500" />
-                  <span>Audit Data</span>
+                  <span>{t("mapSidebar.audit")}</span>
                   {totalAuditIssues > 0 && (
                     <Badge
                       variant="outline"
@@ -259,10 +261,10 @@ export function MapLeftSidebar({
                 <div className="rounded-xl border border-primary/40 bg-primary/5 p-2.5 space-y-1.5 text-xs">
                   <div className="flex items-center gap-1.5 text-primary font-bold">
                     <PieChart className="size-3.5" />
-                    <span className="font-mono text-[9px] uppercase tracking-wider">Spatial Coverage Aktif</span>
+                    <span className="font-mono text-[9px] uppercase tracking-wider">{t("mapSidebar.coverageActive")}</span>
                   </div>
                   <p className="text-[10px] text-muted-foreground leading-snug">
-                    Kalkulator coverage dan fusi poligon homepassed sedang aktif di <strong>Bottom Studio</strong> di dasar peta.
+                    {t("mapSidebar.coverageBanner")} <strong>Bottom Studio</strong> {t("mapSidebar.bannerTail")}
                   </p>
                   <Button
                     type="button"
@@ -271,7 +273,7 @@ export function MapLeftSidebar({
                     onClick={() => setActiveTab("overview")}
                     className="w-full h-6 rounded-md font-mono text-[8px] uppercase tracking-wider"
                   >
-                    Buka Antrean Audit
+                    {t("mapSidebar.openAuditQueue")}
                   </Button>
                 </div>
               )}
@@ -280,10 +282,10 @@ export function MapLeftSidebar({
                 <div className="rounded-xl border border-rose-500/40 bg-rose-500/5 p-2.5 space-y-1.5 text-xs">
                   <div className="flex items-center gap-1.5 text-rose-500 font-bold">
                     <Cable className="size-3.5" />
-                    <span className="font-mono text-[9px] uppercase tracking-wider">Simulasi Fiber Cut Aktif</span>
+                    <span className="font-mono text-[9px] uppercase tracking-wider">{t("mapSidebar.fiberCutActive")}</span>
                   </div>
                   <p className="text-[10px] text-muted-foreground leading-snug">
-                    Simulasi blast radius putus kabel sedang aktif di <strong>Bottom Studio</strong> di dasar peta.
+                    {t("mapSidebar.fiberCutBanner")} <strong>Bottom Studio</strong> {t("mapSidebar.bannerTail")}
                   </p>
                   <Button
                     type="button"
@@ -292,7 +294,7 @@ export function MapLeftSidebar({
                     onClick={() => setActiveTab("overview")}
                     className="w-full h-6 rounded-md font-mono text-[8px] uppercase tracking-wider"
                   >
-                    Buka Antrean Audit
+                    {t("mapSidebar.openAuditQueue")}
                   </Button>
                 </div>
               )}

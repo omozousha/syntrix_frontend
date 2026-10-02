@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown } from "lucide-react";
+import { useTranslate } from "@/lib/use-locale";
 
 type MapStatusDockProps = {
   activeDevicesCount: number;
@@ -21,6 +22,7 @@ export function MapStatusDock({
   cursorCoords,
   onHide,
 }: MapStatusDockProps) {
+  const { t } = useTranslate();
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 bg-card/90 px-3 py-2 text-xs shadow-2xs backdrop-blur-md glass-inset">
       <div className="flex items-center gap-3">
@@ -60,8 +62,8 @@ export function MapStatusDock({
           <button
             type="button"
             onClick={onHide}
-            title="Sembunyikan status dock"
-            aria-label="Sembunyikan status dock"
+            title={t("mapStatusDock.hide")}
+            aria-label={t("mapStatusDock.hide")}
             className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted/50 hover:text-foreground active:scale-[0.95]"
           >
             <ChevronDown className="size-3.5" />

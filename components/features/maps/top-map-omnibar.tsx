@@ -19,6 +19,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { useNominatimSearch, type NominatimResult } from "@/hooks/use-nominatim-search";
 import type { MapDevice } from "./topology-map-canvas";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 
 type Option = { value: string; label: string };
 
@@ -100,6 +101,7 @@ export function TopMapOmnibar({
   isSearchActive = false,
   className,
 }: TopMapOmnibarProps) {
+  const { t } = useTranslate();
   const [query, setQuery] = React.useState("");
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
@@ -181,7 +183,7 @@ export function TopMapOmnibar({
     onSelectLocation({
       lat: parsedCoord.lat,
       lng: parsedCoord.lng,
-      label: `Koordinat: ${parsedCoord.lat}, ${parsedCoord.lng}`,
+      label: `${t("mapOmnibar.coordinate")}: ${parsedCoord.lat}, ${parsedCoord.lng}`,
     });
     setIsSearchOpen(false);
   };
@@ -222,7 +224,7 @@ export function TopMapOmnibar({
                 setIsSearchOpen(true);
               }}
               onFocus={() => setIsSearchOpen(true)}
-              placeholder="Cari ODP, ODC, POP, atau alamat..."
+              placeholder={t("mapOmnibar.searchPlaceholder")}
               className="h-8 w-48 sm:w-64 md:w-80 rounded-xl border border-border/60 bg-muted/20 pl-8 pr-14 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-primary/50 focus:bg-background/80 focus:outline-hidden focus:ring-1 focus:ring-primary/40 transition-all font-mono"
             />
 
@@ -232,8 +234,8 @@ export function TopMapOmnibar({
                 <button
                   type="button"
                   onClick={handleClearQuery}
-                  aria-label="Bersihkan pencarian"
-                  title="Bersihkan pencarian (Hapus pin / highlight)"
+                  aria-label={t("mapOmnibar.clearSearch")}
+                  title={t("mapOmnibar.clearSearchTitle")}
                   className="size-5 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all active:scale-95"
                 >
                   <X className="size-3" />
@@ -265,7 +267,7 @@ export function TopMapOmnibar({
                       <MapPin className="size-4 text-primary shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-primary">
-                          Pusatkan ke Koordinat GPS
+                          {t("mapOmnibar.centerGps")}
                         </p>
                         <p className="font-mono text-[10px] tabular-nums text-primary/80">
                           {parsedCoord.lat}, {parsedCoord.lng}
@@ -279,7 +281,7 @@ export function TopMapOmnibar({
                 {matchedDevices.length > 0 && (
                   <div className="mb-2">
                     <span className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground px-2 py-1 block">
-                      Perangkat Topologi ({matchedDevices.length})
+                      {t("mapOmnibar.topologyDevices")} ({matchedDevices.length})
                     </span>
                     <div className="space-y-1">
                       {matchedDevices.map((device) => (
@@ -302,7 +304,7 @@ export function TopMapOmnibar({
                             </div>
                           </div>
                           <span className="shrink-0 rounded-full bg-primary/10 border border-primary/20 px-1.5 py-0.5 font-mono text-[8px] font-semibold text-primary uppercase">
-                            Pilih
+                            {t("mapOmnibar.select")}
                           </span>
                         </button>
                       ))}
@@ -314,7 +316,7 @@ export function TopMapOmnibar({
                 {geoResults.length > 0 && (
                   <div>
                     <span className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground px-2 py-1 block border-t border-border/30 pt-1.5">
-                      Lokasi Geografis (OpenStreetMap)
+                      {t("mapOmnibar.geographicLocation")}
                     </span>
                     <div className="space-y-1">
                       {geoResults.map((geo) => (
@@ -343,26 +345,26 @@ export function TopMapOmnibar({
                 {geoLoading && (
                   <div className="flex items-center justify-center gap-2 py-3 text-muted-foreground font-mono text-[10px]">
                     <Loader2 className="size-3.5 animate-spin" />
-                    <span>Mencari lokasi geografis...</span>
+                    <span>{t("mapOmnibar.searchingLocation")}</span>
                   </div>
                 )}
 
                 {!hasResults && !geoLoading && (
                   <div className="py-4 text-center font-mono text-[10px] text-muted-foreground">
-                    Tidak ada perangkat atau lokasi yang cocok
+                    {t("mapOmnibar.noMatch")}
                   </div>
                 )}
 
                 {isSearchActive && (
                   <div className="mt-2 pt-2 border-t border-border/40 flex items-center justify-between font-mono text-[9px]">
-                    <span className="text-muted-foreground">Pencarian aktif di peta</span>
+                    <span className="text-muted-foreground">{t("mapOmnibar.searchActive")}</span>
                     <button
                       type="button"
                       onClick={handleClearQuery}
                       className="text-destructive hover:underline flex items-center gap-1 font-semibold"
                     >
                       <X className="size-2.5" />
-                      <span>Hapus Pin / Highlight</span>
+                      <span>{t("mapOmnibar.clearPin")}</span>
                     </button>
                   </div>
                 )}
@@ -382,10 +384,10 @@ export function TopMapOmnibar({
                   ? "border-primary/50 bg-primary/10 text-primary shadow-2xs"
                   : "border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
               )}
-              title="Filter Topologi Jaringan"
+              title={t("mapOmnibar.filterTitle")}
             >
               <SlidersHorizontal className="size-3.5" />
-              <span className="hidden sm:inline">Filter</span>
+              <span className="hidden sm:inline">{t("mapOmnibar.filter")}</span>
               {activeFilterCount > 0 && (
                 <span className="flex size-4 items-center justify-center rounded-full bg-primary font-mono text-[8px] font-bold text-primary-foreground">
                   {activeFilterCount}
@@ -402,7 +404,7 @@ export function TopMapOmnibar({
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-2.5">
               <span className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-foreground">
-                Filter Jaringan
+                {t("mapOmnibar.networkFilter")}
               </span>
               {activeFilterCount > 0 && (
                 <button
@@ -411,7 +413,7 @@ export function TopMapOmnibar({
                   className="inline-flex items-center gap-1 font-mono text-[9px] text-rose-500 hover:underline"
                 >
                   <RotateCcw className="size-2.5" />
-                  <span>Reset</span>
+                  <span>{t("mapOmnibar.reset")}</span>
                 </button>
               )}
             </div>
@@ -425,7 +427,7 @@ export function TopMapOmnibar({
                   value={regionFilter}
                   onValueChange={(val) => onRegionChange(val || "__all__")}
                   options={regionOptions}
-                  placeholder="Semua Region"
+                  placeholder={t("mapOmnibar.allRegions")}
                   className="w-full text-xs"
                 />
               </div>
@@ -438,20 +440,20 @@ export function TopMapOmnibar({
                   value={projectFilter}
                   onValueChange={(val) => onProjectChange(val || "__all__")}
                   options={projectOptions}
-                  placeholder="Semua Project"
+                  placeholder={t("mapOmnibar.allProjects")}
                   className="w-full text-xs"
                 />
               </div>
 
               <div>
                 <label className="font-mono text-[8px] uppercase tracking-wider text-muted-foreground block mb-1">
-                  POP Induk
+                  {t("mapOmnibar.parentPop")}
                 </label>
                 <Combobox
                   value={popFilter}
                   onValueChange={(val) => onPopChange(val || "__all__")}
                   options={popOptions}
-                  placeholder="Semua POP"
+                  placeholder={t("mapOmnibar.allPops")}
                   className="w-full text-xs"
                 />
               </div>
@@ -465,19 +467,19 @@ export function TopMapOmnibar({
                     value={tenantFilter}
                     onValueChange={(val) => onTenantChange(val || "__all__")}
                     options={tenantOptions}
-                    placeholder="Semua"
+                    placeholder={t("mapOmnibar.all")}
                     className="w-full text-xs"
                   />
                 </div>
                 <div>
                   <label className="font-mono text-[8px] uppercase tracking-wider text-muted-foreground block mb-1">
-                    Tipe
+                    {t("mapOmnibar.type")}
                   </label>
                   <Combobox
                     value={deviceType}
                     onValueChange={(val) => onDeviceTypeChange(val || "all")}
                     options={deviceTypeOptions}
-                    placeholder="Semua"
+                    placeholder={t("mapOmnibar.all")}
                     className="w-full text-xs"
                   />
                 </div>
@@ -500,9 +502,9 @@ export function TopMapOmnibar({
                 ? "bg-foreground text-background shadow-xs font-bold"
                 : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
             )}
-            title="Mode Peta Standar"
+            title={t("mapOmnibar.standardMapMode")}
           >
-            <span>Peta</span>
+            <span>{t("mapOmnibar.map")}</span>
           </button>
 
           <button
@@ -514,7 +516,7 @@ export function TopMapOmnibar({
                 ? "border border-cyan-500/50 bg-cyan-500/15 text-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.25)] font-bold"
                 : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
             )}
-            title="Analisis Homepassed GIS"
+            title={t("mapOmnibar.homepassedAnalysis")}
           >
             <PieChart className="size-3 text-cyan-500" />
             <span className="hidden md:inline">Coverage</span>
@@ -529,10 +531,10 @@ export function TopMapOmnibar({
                 ? "border border-primary/50 bg-primary/15 text-primary shadow-xs font-bold"
                 : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
             )}
-            title="Navigasi Rute Jalan OSRM"
+            title={t("mapOmnibar.osrmNavigation")}
           >
             <Navigation className="size-3 text-primary" />
-            <span className="hidden md:inline">Rute</span>
+            <span className="hidden md:inline">{t("mapOmnibar.route")}</span>
           </button>
 
           <button
@@ -544,7 +546,7 @@ export function TopMapOmnibar({
                 ? "border border-rose-500/50 bg-rose-500/15 text-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.25)] font-bold"
                 : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
             )}
-            title="Simulasi Putus Serat Fiber Cut"
+            title={t("mapOmnibar.fiberCutSimulation")}
           >
             <Cable className="size-3 text-rose-500" />
             <span className="hidden md:inline">Fiber Cut</span>

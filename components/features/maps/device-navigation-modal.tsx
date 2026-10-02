@@ -12,6 +12,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useOsrmRouting } from "@/hooks/use-osrm-routing";
+import { useTranslate } from "@/lib/use-locale";
 import type { OsgmRouteResult } from "@/lib/api";
 
 import { MapContainer, Marker, Polyline, TileLayer } from "react-leaflet";
@@ -51,6 +52,8 @@ export function DeviceNavigationModal({
   deviceLat,
   deviceLng,
 }: DeviceNavigationModalProps) {
+  const { t } = useTranslate();
+  const destinationName = deviceName || t("mapNav.destinationFallback");
   const {
     origin,
     setOriginFromGps,
@@ -68,7 +71,7 @@ export function DeviceNavigationModal({
     if (open) {
       setDestination({
         id: deviceId,
-        name: deviceName || "Device Tujuan",
+        name: destinationName,
         latitude: deviceLat,
         longitude: deviceLng,
         type: "device",
@@ -91,10 +94,10 @@ export function DeviceNavigationModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Navigation className="size-5 text-primary" />
-            Navigasi ke {deviceName || "Device"}
+            {t("mapNav.title", { name: deviceName || t("mapNav.deviceFallback") })}
           </DialogTitle>
           <DialogDescription>
-            Hitung rute jalan raya dari posisi Anda (GPS) ke lokasi device menggunakan OSRM.
+            {t("mapNav.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -138,7 +141,7 @@ export function DeviceNavigationModal({
                 disabled={gpsLoading}
               >
                 {gpsLoading ? <Loader2 className="mr-1 size-3 animate-spin" /> : <MapPin className="mr-1 size-3 text-primary" />}
-                {origin ? "Update GPS" : "Gunakan GPS Saya"}
+                {origin ? t("mapNav.updateGps") : t("mapNav.useMyGps")}
               </Button>
               {origin && (
                 <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
@@ -153,7 +156,7 @@ export function DeviceNavigationModal({
               className="w-full rounded-full font-mono text-[10px] uppercase tracking-[0.12em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
             >
               {isRouteLoading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Navigation className="mr-2 size-4" />}
-              Hitung Rute OSRM
+              {t("mapNav.calculateRoute")}
             </Button>
           </div>
 
@@ -190,19 +193,19 @@ export function DeviceNavigationModal({
           <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
             <div className="flex items-center gap-6 font-mono tabular-nums">
               <div className="text-center">
-                <span className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground block">Jarak</span>
+                <span className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground block">{t("mapNav.distance")}</span>
                 <span className="text-base font-semibold text-primary">{route.distance_km} km</span>
               </div>
               <div className="text-center">
-                <span className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground block">Estimasi</span>
+                <span className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground block">{t("mapNav.eta")}</span>
                 <span className="text-base font-semibold text-emerald-600">{route.duration_minutes} min</span>
               </div>
               <div className="text-center">
-                <span className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground block">Langkah</span>
+                <span className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground block">{t("mapNav.steps")}</span>
                 <span className="text-base font-semibold">{route.steps.length}</span>
               </div>
             </div>
-            <Button type="button" variant="ghost" size="icon" onClick={clearRoute} className="rounded-full" title="Reset Rute">
+            <Button type="button" variant="ghost" size="icon" onClick={clearRoute} className="rounded-full" title={t("mapNav.resetRoute")}>
               <RotateCcw className="size-4" />
             </Button>
           </div>

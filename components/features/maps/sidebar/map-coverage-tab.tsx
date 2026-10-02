@@ -9,6 +9,7 @@ import type {
   HomepassedCalculationConfig,
   HomepassedCalculationResult,
 } from "@/lib/gis/homepassed-calculator";
+import { useTranslate } from "@/lib/use-locale";
 
 type Option = { value: string; label: string };
 
@@ -29,6 +30,7 @@ export function MapCoverageTab({
   homepassedResult,
   regionOptions,
 }: MapCoverageTabProps) {
+  const { t } = useTranslate();
   if (!homepassedConfig) return null;
 
   const handleDownloadGeoJson = () => {
@@ -52,19 +54,19 @@ export function MapCoverageTab({
           <div className="flex items-center gap-1.5">
             <PieChart className="size-3.5 text-cyan-500" />
             <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-foreground font-semibold">
-              Cakupan Spasial
+              {t("mapCoverage.title")}
             </span>
           </div>
           <Switch
             checked={homepassedEnabled}
             onCheckedChange={onToggleHomepassedEnabled}
-            aria-label="Toggle Cakupan Spasial"
+            aria-label={t("mapStudio.toggleSpatial")}
           />
         </div>
 
         <div className="space-y-1">
           <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground block">
-            Scope Region Spasial
+            {t("mapStudio.spatialScope")}
           </span>
           <Combobox
             value={homepassedConfig.targetRegionId || "__all__"}
@@ -72,10 +74,10 @@ export function MapCoverageTab({
               onHomepassedConfigChange?.({ ...homepassedConfig, targetRegionId: val || "__all__" })
             }
             options={[
-              { value: "__all__", label: "Semua Region (Global)" },
+              { value: "__all__", label: t("mapStudio.allRegionsGlobal") },
               ...regionOptions.filter((r) => r.value !== "__all__"),
             ]}
-            placeholder="Pilih Scope Region"
+            placeholder={t("mapStudio.selectScopeRegion")}
           />
         </div>
       </div>
@@ -98,7 +100,7 @@ export function MapCoverageTab({
                     }
                     className="rounded border-border/60 text-primary focus:ring-primary/20"
                   />
-                  <span>Radius Perangkat/ODP</span>
+                  <span>{t("mapStudio.odpRadius")}</span>
                 </label>
                 <span className="font-mono tabular-nums text-xs font-bold text-primary">
                   {homepassedConfig.odpRadiusMeters}m
@@ -135,7 +137,7 @@ export function MapCoverageTab({
                     }
                     className="rounded border-border/60 text-primary focus:ring-primary/20"
                   />
-                  <span>Koridor Kabel (Backbone/Feeder)</span>
+                  <span>{t("mapStudio.cableCorridor")}</span>
                 </label>
                 <span className="font-mono tabular-nums text-xs font-bold text-primary">
                   {homepassedConfig.cableRadiusMeters}m
@@ -164,7 +166,7 @@ export function MapCoverageTab({
             <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-cyan-500">
-                  Ringkasan Spasial
+                  {t("mapStudio.spatialSummary")}
                 </span>
                 <Button
                   type="button"
@@ -182,7 +184,7 @@ export function MapCoverageTab({
               <div className="grid grid-cols-2 gap-2 font-mono tabular-nums text-xs">
                 <div className="rounded-lg border border-border/40 bg-card p-2">
                   <span className="text-[8px] uppercase tracking-wider text-muted-foreground block">
-                    Luas Coverage
+                    {t("mapStudio.coverageAreaLabel")}
                   </span>
                   <span className="font-bold text-foreground">
                     {homepassedResult.totalCoverageAreaKm2} km²
@@ -214,9 +216,9 @@ export function MapCoverageTab({
               </div>
 
               <div className="flex items-center justify-between text-[10px] font-mono border-t border-cyan-500/20 pt-1.5">
-                <span className="text-muted-foreground">Efisiensi Irisan:</span>
+                <span className="text-muted-foreground">{t("mapStudio.overlapEfficiency")}</span>
                 <span className="font-bold text-emerald-500">
-                  +{homepassedResult.overlapSavingsPercentage}% Bebas Ganda
+                  +{homepassedResult.overlapSavingsPercentage}% {t("mapStudio.dedupFree")}
                 </span>
               </div>
             </div>

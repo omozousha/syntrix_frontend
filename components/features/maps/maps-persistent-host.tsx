@@ -21,6 +21,7 @@ import {
 } from "@/lib/gis/homepassed-calculator";
 import { cn } from "@/lib/utils";
 import { ChevronUp } from "lucide-react";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 import { MapDeviceInspectorDrawer } from "@/components/features/maps/cards/map-device-inspector-drawer";
 import { LocationDevicePickerCard } from "@/components/features/maps/cards/location-device-picker-card";
 import { BottomContextualStudio } from "@/components/features/maps/bottom-contextual-studio";
@@ -30,8 +31,13 @@ const GoogleMapsCanvas = dynamic(
     import("@/components/features/maps/google-maps-canvas").then(
       (module) => module.GoogleMapsCanvas,
     ),
-  { ssr: false, loading: () => <AppLoading label="Menyiapkan peta Google Maps & data..." /> },
+  { ssr: false, loading: () => <MapBootLoading /> },
 );
+
+function MapBootLoading() {
+  const { t } = useTranslate();
+  return <AppLoading label={t("maps.bootLoading")} />;
+}
 
 type MapConnectionItem = MapConnection & {
   cable_device_id?: string | null;
@@ -112,6 +118,7 @@ export function MapsPersistentHost({ visible }: { visible: boolean }) {
 }
 
 function MapsHostContent({ visible }: { visible: boolean }) {
+  const { t } = useTranslate();
   const { token, me } = useSession();
   const [data, setData] = useState<TopologyMapsResponse["data"] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -328,7 +335,7 @@ function MapsHostContent({ visible }: { visible: boolean }) {
         if (cancelled) return;
         setData(response.data);
       } catch (err) {
-        if (!cancelled) setError((err as Error).message || "Gagal memuat topology map.");
+        if (!cancelled) setError((err as Error).message || t("maps.loadError"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -357,7 +364,7 @@ function MapsHostContent({ visible }: { visible: boolean }) {
 
   const regionOptions = useMemo(
     () => [
-      { value: "__all__", label: "Semua region" },
+      { value: "__all__", label: t("maps.allRegions") },
       ...filterOptions.regions
         .map((item) => ({
           value: String(item.id || ""),
@@ -365,13 +372,13 @@ function MapsHostContent({ visible }: { visible: boolean }) {
         }))
         .filter((item) => item.value),
     ],
-    [filterOptions.regions],
+    [filterOptions.regions, t],
   );
 
   const projectOptions = useMemo(() => {
     const rows = filterOptions.projects.filter((item) => regionFilter === "__all__" || item.region_id === regionFilter);
     return [
-      { value: "__all__", label: "Semua project" },
+      { value: "__all__", label: t("maps.allProjects") },
       ...rows
         .map((item) => ({
           value: String(item.id || ""),
@@ -379,12 +386,12 @@ function MapsHostContent({ visible }: { visible: boolean }) {
         }))
         .filter((item) => item.value),
     ];
-  }, [filterOptions.projects, regionFilter]);
+  }, [filterOptions.projects, regionFilter, t]);
 
   const popOptions = useMemo(() => {
     const rows = filterOptions.pops.filter((item) => regionFilter === "__all__" || item.region_id === regionFilter);
     return [
-      { value: "__all__", label: "Semua POP" },
+      { value: "__all__", label: t("maps.allPops") },
       ...rows
         .map((item) => ({
           value: String(item.id || ""),
@@ -392,11 +399,11 @@ function MapsHostContent({ visible }: { visible: boolean }) {
         }))
         .filter((item) => item.value),
     ];
-  }, [filterOptions.pops, regionFilter]);
+  }, [filterOptions.pops, regionFilter, t]);
 
   const tenantOptions = useMemo(
     () => [
-      { value: "__all__", label: "Semua tenant" },
+      { value: "__all__", label: t("maps.allTenants") },
       ...filterOptions.tenants
         .map((item) => ({
           value: String(item.id || ""),
@@ -404,33 +411,33 @@ function MapsHostContent({ visible }: { visible: boolean }) {
         }))
         .filter((item) => item.value),
     ],
-    [filterOptions.tenants],
+    [filterOptions.tenants, t],
   );
 
   const deviceTypeOptions = useMemo(() => {
     const values = Array.from(
       new Set(devices.map((item) => String(item.device_type_key || "").toUpperCase()).filter(Boolean)),
     ).sort();
-    return [{ value: "all", label: "Semua tipe device" }, ...values.map((value) => ({ value, label: value }))];
-  }, [devices]);
+    return [{ value: "all", label: t("maps.allDeviceTypes") }, ...values.map((value) => ({ value, label: value }))];
+  }, [devices, t]);
 
   const cutTargetOptions = useMemo(() => {
     if (cutMode === "connection") {
       return connections.map((item) => ({
         value: item.id,
-        label: `${deviceLabel(item.from_device)} -> ${deviceLabel(item.to_device)}`,
+        label: `${deviceLabel(item.from_device, t)} -> ${deviceLabel(item.to_device, t)}`,
       }));
     }
     if (cutMode === "cable") {
       const rows = new Map<string, string>();
       connections.forEach((item) => {
         if (!item.cable_device_id) return;
-        rows.set(item.cable_device_id, deviceLabel(item.cable_device));
+        rows.set(item.cable_device_id, deviceLabel(item.cable_device, t));
       });
       return Array.from(rows, ([value, label]) => ({ value, label }));
     }
     return [];
-  }, [connections, cutMode]);
+  }, [connections, cutMode, t]);
 
   const userGpsPosition = useMemo(
     () => (origin?.type === "gps" ? { lat: origin.latitude, lng: origin.longitude } : null),
@@ -472,7 +479,7 @@ function MapsHostContent({ visible }: { visible: boolean }) {
             routesWithoutGeometry={data?.issues.routes_without_geometry || []}
             connectionsWithoutGeometry={data?.issues.connections_without_geometry_context || []}
             onSelectDevice={handleSelectDeviceFromOmnibar}
-            originName={origin?.name || "Lokasi GPS Saya"}
+            originName={origin?.name || t("maps.myGpsLocation")}
             onSetOriginFromGps={setOriginFromGps}
             isGpsLoading={isGpsLoading}
             selectedDestination={destination ? devices.find((d) => d.id === destination.id) : null}
@@ -508,11 +515,11 @@ function MapsHostContent({ visible }: { visible: boolean }) {
             type="button"
             onClick={() => setIsZenMode(false)}
             className="absolute left-3 top-3 z-30 flex items-center gap-1.5 rounded-full border border-primary/40 bg-card/90 px-3 py-1.5 text-xs shadow-md backdrop-blur-md transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted active:scale-[0.98] glass-inset animate-in fade-in"
-            title="Keluar Mode Fokus (Zen)"
+            title={t("maps.exitZenMode")}
           >
             <span className="size-2 rounded-full bg-primary animate-pulse" />
             <span className="font-mono text-[10px] uppercase tracking-[0.12em] font-semibold text-primary">
-              Zen Mode Aktif (Z)
+              {t("maps.zenModeActive")}
             </span>
           </button>
         )}
@@ -549,7 +556,7 @@ function MapsHostContent({ visible }: { visible: boolean }) {
           )}
 
           {loading && !data ? (
-            <AppLoading label="Memuat Google Maps & topologi fiber..." />
+            <AppLoading label={t("maps.loadingTopology")} />
           ) : error ? (
             <AppLoading label={error} variant="error" />
           ) : (
@@ -611,7 +618,7 @@ function MapsHostContent({ visible }: { visible: boolean }) {
               {loading && data && (
                 <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/10 backdrop-blur-[2px]">
                   <div className="rounded-2xl border border-border/40 bg-card/90 p-6 shadow-lg glass-inset max-w-sm w-full mx-4">
-                    <AppLoading label="Memperbarui data topologi..." />
+                    <AppLoading label={t("maps.updatingTopology")} />
                   </div>
                 </div>
               )}
@@ -681,8 +688,8 @@ function MapsHostContent({ visible }: { visible: boolean }) {
                   <button
                     type="button"
                     onClick={() => setDockVisible(true)}
-                    title="Tampilkan status dock"
-                    aria-label="Tampilkan status dock"
+                    title={t("maps.showStatusDock")}
+                    aria-label={t("maps.showStatusDock")}
                     className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card/90 px-3 py-2 text-xs shadow-2xs backdrop-blur-md glass-inset transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted active:scale-[0.98]"
                   >
                     <ChevronUp className="size-4 text-primary" />
@@ -768,7 +775,7 @@ function textValue(value: unknown) {
   return text && text !== "-" ? text : "";
 }
 
-function deviceLabel(device?: MapDevice | null) {
-  if (!device) return "Device belum tersedia";
+function deviceLabel(device: MapDevice | null | undefined, t: TFn) {
+  if (!device) return t("maps.deviceUnavailable");
   return device.device_name || device.device_id || device.device_type_key || "Device";
 }

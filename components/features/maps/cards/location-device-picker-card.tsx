@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 import type { MapDevice } from "@/components/features/maps/topology-map-canvas";
 
 interface LocationDevicePickerCardProps {
@@ -17,6 +18,7 @@ export function LocationDevicePickerCard({
   onSelectDevice,
   inspectDevices,
 }: LocationDevicePickerCardProps) {
+  const { t } = useTranslate();
   const firstLat = devices[0]?.latitude != null ? Number(devices[0].latitude) : NaN;
   const firstLng = devices[0]?.longitude != null ? Number(devices[0].longitude) : NaN;
   const coordText =
@@ -27,7 +29,7 @@ export function LocationDevicePickerCard({
   return (
     <div
       role="dialog"
-      aria-label="Pemilih Perangkat Berkelompok"
+      aria-label={t("mapPicker.groupedDevicesAria")}
       className="absolute left-1/2 top-16 z-30 -translate-x-1/2 w-[min(340px,calc(100vw-2rem))] rounded-2xl border border-border/40 bg-card/95 p-2 shadow-xl backdrop-blur-md glass-inset transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] animate-in fade-in zoom-in-95"
     >
       <div className="rounded-[calc(1rem-0.25rem)] border border-border/60 bg-card/80 p-3">
@@ -41,7 +43,7 @@ export function LocationDevicePickerCard({
               </p>
             </div>
             <h4 className="font-semibold text-xs text-foreground">
-              {devices.length} Device di Lokasi Sama
+              {devices.length} {t("mapPicker.devicesAtSameLocation")}
             </h4>
             <p className="font-mono text-[10px] tabular-nums text-muted-foreground mt-0.5">
               📍 {coordText}
@@ -51,8 +53,8 @@ export function LocationDevicePickerCard({
             type="button"
             onClick={onClose}
             className="shrink-0 size-5 flex items-center justify-center rounded-full border border-border/60 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors active:scale-95"
-            title="Tutup"
-            aria-label="Tutup pemilih perangkat"
+            title={t("mapPicker.close")}
+            aria-label={t("mapPicker.closePicker")}
           >
             <X className="size-3" />
           </button>
@@ -94,11 +96,11 @@ export function LocationDevicePickerCard({
 
                 {isSelected ? (
                   <span className="shrink-0 rounded-full bg-primary/20 border border-primary/40 px-1.5 py-0.5 font-mono text-[8px] font-semibold text-primary">
-                    Terpilih
+                    {t("mapPicker.selected")}
                   </span>
                 ) : (
                   <span className="shrink-0 font-mono text-[9px] text-muted-foreground opacity-60">
-                    Klik
+                    {t("mapPicker.click")}
                   </span>
                 )}
               </button>
@@ -108,7 +110,7 @@ export function LocationDevicePickerCard({
 
         {/* Tip */}
         <p className="mt-2.5 pt-2 border-t border-border/40 font-mono text-[9px] text-muted-foreground text-center">
-          💡 Gunakan <kbd className="rounded border border-border/60 bg-muted px-1 py-0.5 text-[8px] font-semibold">Shift + Klik</kbd> untuk memilih hingga 3 device sekaligus.
+          💡 {t("mapPicker.shiftTip")} <kbd className="rounded border border-border/60 bg-muted px-1 py-0.5 text-[8px] font-semibold">Shift + Klik</kbd> {t("mapPicker.shiftTipTail")}
         </p>
       </div>
     </div>
