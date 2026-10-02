@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { MailCheck, MailWarning, ShieldCheck, Users } from "lucide-react";
+import { useTranslate } from "@/lib/use-locale";
 
 export type AccountSummaryStats = {
   total: number;
@@ -9,12 +12,13 @@ export type AccountSummaryStats = {
 };
 
 export function AccountSummaryCards({ stats }: { stats: AccountSummaryStats }) {
+  const { t } = useTranslate();
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <MetricCard icon={<Users className="size-4 text-sky-500" />} label="Total Akun" value={stats.total} />
-      <MetricCard icon={<MailCheck className="size-4 text-emerald-500" />} label="Email Terverifikasi" value={stats.verified} />
-      <MetricCard icon={<ShieldCheck className="size-4 text-blue-500" />} label="Akun Aktif" value={stats.active} />
-      <MetricCard icon={<MailWarning className="size-4 text-amber-500" />} label="Menunggu Verifikasi" value={stats.pending} />
+      <MetricCard icon={<Users className="size-4 text-sky-500" />} label={t("accountSummary.total")} value={stats.total} />
+      <MetricCard icon={<MailCheck className="size-4 text-emerald-500" />} label={t("accountSummary.verified")} value={stats.verified} />
+      <MetricCard icon={<ShieldCheck className="size-4 text-blue-500" />} label={t("accountSummary.active")} value={stats.active} />
+      <MetricCard icon={<MailWarning className="size-4 text-amber-500" />} label={t("accountSummary.pending")} value={stats.pending} />
     </div>
   );
 }

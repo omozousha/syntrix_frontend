@@ -1,9 +1,12 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AccountPasswordField } from "./account-password-field";
+import { useTranslate } from "@/lib/use-locale";
 
 export type CreateAccountFormState = {
   full_name: string;
@@ -43,22 +46,23 @@ export function CreateAccountSheet({
   onShowConfirmPasswordChange: (visible: boolean) => void;
   onSubmit: () => void;
 }) {
+  const { t } = useTranslate();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Create Account</SheetTitle>
-          <SheetDescription>Akun baru wajib verifikasi email sebelum bisa aktif digunakan.</SheetDescription>
+          <SheetTitle>{t("createAccount.title")}</SheetTitle>
+          <SheetDescription>{t("createAccount.description")}</SheetDescription>
         </SheetHeader>
 
         <div className="space-y-4 p-4">
           <div className="space-y-1.5">
-            <Label htmlFor="create_full_name" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Full Name</Label>
+            <Label htmlFor="create_full_name" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">{t("accountForm.fullName")}</Label>
             <Input
               id="create_full_name"
               value={form.full_name}
               onChange={(event) => onFormChange({ ...form, full_name: event.target.value })}
-              placeholder="Nama lengkap"
+              placeholder={t("createAccount.fullNamePlaceholder")}
             />
           </div>
 
@@ -69,7 +73,7 @@ export function CreateAccountSheet({
               type="email"
               value={form.email}
               onChange={(event) => onFormChange({ ...form, email: event.target.value })}
-              placeholder="user@syntrix.local"
+              placeholder={t("createAccount.emailPlaceholder")}
             />
           </div>
 
@@ -79,8 +83,8 @@ export function CreateAccountSheet({
               value={form.role_name}
               onValueChange={(value) => onFormChange({ ...form, role_name: value })}
               options={roleOptions}
-              placeholder="Pilih role"
-              searchPlaceholder="Cari role..."
+              placeholder={t("createAccount.selectRole")}
+              searchPlaceholder={t("createAccount.searchRole")}
               disabled={roleDisabled}
             />
           </div>
@@ -91,32 +95,32 @@ export function CreateAccountSheet({
               value={form.default_region_id}
               onValueChange={(value) => onFormChange({ ...form, default_region_id: value })}
               options={regionOptions}
-              placeholder="Pilih region"
-              searchPlaceholder="Cari region..."
+              placeholder={t("createAccount.selectRegion")}
+              searchPlaceholder={t("createAccount.searchRegion")}
             />
             <p className="text-xs text-muted-foreground">
-            Daftar region diambil dari Master Data Regions. Admin Region hanya melihat region yang menjadi scope-nya.
+              {t("createAccount.regionHelp")}
             </p>
           </div>
 
           <AccountPasswordField
             id="create_password"
-            label="Password"
+            label={t("accountForm.password")}
             value={form.password}
             visible={showPassword}
             onVisibleChange={onShowPasswordChange}
             onChange={(value) => onFormChange({ ...form, password: value })}
-            placeholder="Minimal 8 karakter"
+            placeholder={t("createAccount.passwordPlaceholder")}
           />
 
           <AccountPasswordField
             id="create_confirm_password"
-            label="Confirm Password"
+            label={t("accountForm.confirmPassword")}
             value={form.confirm_password}
             visible={showConfirmPassword}
             onVisibleChange={onShowConfirmPasswordChange}
             onChange={(value) => onFormChange({ ...form, confirm_password: value })}
-            placeholder="Ulangi password"
+            placeholder={t("createAccount.confirmPlaceholder")}
           />
         </div>
 
@@ -126,14 +130,14 @@ export function CreateAccountSheet({
             className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
             onClick={() => onOpenChange(false)}
           >
-            Batal
+            {t("accountForm.cancel")}
           </Button>
           <Button
             className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
             onClick={onSubmit}
             disabled={saving}
           >
-            {saving ? "Membuat..." : "Create Account"}
+            {saving ? t("createAccount.creating") : t("createAccount.submit")}
           </Button>
         </SheetFooter>
       </SheetContent>

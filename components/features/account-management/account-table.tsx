@@ -1,3 +1,5 @@
+"use client";
+
 import { MailCheck, MailWarning, Send } from "lucide-react";
 import { OperationalState } from "@/components/operational-ui";
 import { SimpleTable } from "@/components/simple-table";
@@ -5,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getVerificationState } from "@/lib/domain-formatters";
 import { getRegionLabel } from "@/lib/relation-labels";
+import { useTranslate } from "@/lib/use-locale";
 
 export type AccountUserRow = {
   id: string;
@@ -39,12 +42,13 @@ export function AccountTable({
   onResendVerification: (user: AccountUserRow) => void;
   onResetFilter: () => void;
 }) {
+  const { t } = useTranslate();
   if (!users.length) {
     return (
       <OperationalState
-        title="Tidak ada akun"
-        description="Tidak ada akun yang cocok dengan filter role, region, atau pencarian saat ini."
-        actionLabel="Reset Filter"
+        title={t("accountTable.emptyTitle")}
+        description={t("accountTable.emptyDescription")}
+        actionLabel={t("accountFilter.reset")}
         onAction={onResetFilter}
       />
     );
@@ -52,7 +56,15 @@ export function AccountTable({
 
   return (
     <SimpleTable
-      headers={["Nama & ID", "Email", "Verifikasi", "Role", "Region", "Status", "Aksi"]}
+      headers={[
+        t("accountTable.colNameId"),
+        t("accountTable.colEmail"),
+        t("accountTable.colVerification"),
+        t("accountTable.colRole"),
+        t("accountTable.colRegion"),
+        t("accountTable.colStatus"),
+        t("accountTable.colAction"),
+      ]}
       rows={users.map((item) => [
         <div key={`${item.id}-name`}>
           <p className="font-medium text-foreground">{item.full_name || "-"}</p>
@@ -70,11 +82,11 @@ export function AccountTable({
         </span>,
         item.is_active ? (
           <Badge key="active" className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-mono text-[9px] uppercase tracking-[0.12em]">
-            Aktif
+            {t("accountTable.active")}
           </Badge>
         ) : (
           <Badge key="inactive" variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.12em]">
-            Nonaktif
+            {t("accountTable.inactive")}
           </Badge>
         ),
         <div key={item.id} className="flex flex-wrap gap-1.5">
@@ -87,7 +99,7 @@ export function AccountTable({
               disabled={!canManageUser(item) || resendLoadingId === item.id}
             >
               <Send className="size-3" />
-              {resendLoadingId === item.id ? "Kirim..." : "Resend"}
+              {resendLoadingId === item.id ? t("accountTable.sending") : t("accountTable.resend")}
             </Button>
           ) : null}
           <Button
@@ -97,7 +109,7 @@ export function AccountTable({
             onClick={() => onEdit(item)}
             disabled={!canManageUser(item)}
           >
-            Edit
+            {t("accountTable.edit")}
           </Button>
           <Button
             size="sm"
@@ -106,7 +118,7 @@ export function AccountTable({
             onClick={() => onDelete(item)}
             disabled={!canManageUser(item)}
           >
-            Hapus
+            {t("accountTable.delete")}
           </Button>
         </div>,
       ])}

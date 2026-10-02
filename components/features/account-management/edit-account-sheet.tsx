@@ -1,9 +1,12 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AccountPasswordField } from "./account-password-field";
+import { useTranslate } from "@/lib/use-locale";
 
 export type EditAccountFormState = {
   full_name: string;
@@ -43,22 +46,23 @@ export function EditAccountSheet({
   onShowConfirmPasswordChange: (visible: boolean) => void;
   onSubmit: () => void;
 }) {
+  const { t } = useTranslate();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Edit Account</SheetTitle>
-          <SheetDescription>Ubah profil, role, region, dan status aktif akun.</SheetDescription>
+          <SheetTitle>{t("editAccount.title")}</SheetTitle>
+          <SheetDescription>{t("editAccount.description")}</SheetDescription>
         </SheetHeader>
 
         <div className="space-y-4 p-4">
           <div className="space-y-1.5">
-            <Label htmlFor="user_full_name" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Nama Lengkap</Label>
+            <Label htmlFor="user_full_name" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">{t("accountForm.fullName")}</Label>
             <Input
               id="user_full_name"
               value={form.full_name}
               onChange={(event) => onFormChange({ ...form, full_name: event.target.value })}
-              placeholder="Nama lengkap"
+              placeholder={t("createAccount.fullNamePlaceholder")}
             />
           </div>
 
@@ -68,8 +72,8 @@ export function EditAccountSheet({
               value={form.role_name}
               onValueChange={(value) => onFormChange({ ...form, role_name: value })}
               options={roleOptions}
-              placeholder="Pilih role"
-              searchPlaceholder="Cari role..."
+              placeholder={t("createAccount.selectRole")}
+              searchPlaceholder={t("createAccount.searchRole")}
               disabled={roleDisabled}
             />
           </div>
@@ -80,50 +84,50 @@ export function EditAccountSheet({
               value={form.default_region_id}
               onValueChange={(value) => onFormChange({ ...form, default_region_id: value })}
               options={regionOptions}
-              placeholder="Pilih region"
-              searchPlaceholder="Cari region..."
+              placeholder={t("createAccount.selectRegion")}
+              searchPlaceholder={t("createAccount.searchRegion")}
             />
             <p className="text-xs text-muted-foreground">
-              Daftar region diambil dari Master Data Regions. Admin Region hanya melihat region yang menjadi scope-nya.
+              {t("createAccount.regionHelp")}
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Status Aktif</Label>
+            <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">{t("editAccount.statusLabel")}</Label>
             <Combobox
               value={form.is_active}
               onValueChange={(value) => onFormChange({ ...form, is_active: value as EditAccountFormState["is_active"] })}
               options={[
-                { value: "true", label: "Aktif" },
-                { value: "false", label: "Nonaktif" },
+                { value: "true", label: t("accountTable.active") },
+                { value: "false", label: t("accountTable.inactive") },
               ]}
-              placeholder="Pilih status"
-              searchPlaceholder="Cari status..."
+              placeholder={t("editAccount.selectStatus")}
+              searchPlaceholder={t("editAccount.searchStatus")}
             />
           </div>
 
           <AccountPasswordField
             id="new_password"
-            label="Password Baru"
+            label={t("editAccount.newPassword")}
             value={form.new_password}
             visible={showPassword}
             onVisibleChange={onShowPasswordChange}
             onChange={(value) => onFormChange({ ...form, new_password: value })}
-            placeholder="Kosongkan jika tidak diganti"
+            placeholder={t("editAccount.newPasswordPlaceholder")}
           />
 
           <AccountPasswordField
             id="confirm_password"
-            label="Konfirmasi Password"
+            label={t("accountForm.confirmPassword")}
             value={form.confirm_password}
             visible={showConfirmPassword}
             onVisibleChange={onShowConfirmPasswordChange}
             onChange={(value) => onFormChange({ ...form, confirm_password: value })}
-            placeholder="Ulangi password baru"
+            placeholder={t("editAccount.confirmPasswordPlaceholder")}
           />
 
           <p className="text-xs text-muted-foreground">
-            Password user lain tidak bisa ditampilkan. Ganti password hanya tersedia untuk akun yang sedang login.
+            {t("editAccount.passwordNote")}
           </p>
         </div>
 
@@ -133,14 +137,14 @@ export function EditAccountSheet({
             className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
             onClick={() => onOpenChange(false)}
           >
-            Batal
+            {t("accountForm.cancel")}
           </Button>
           <Button
             className="rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
             onClick={onSubmit}
             disabled={saving}
           >
-            {saving ? "Menyimpan..." : "Simpan Perubahan"}
+            {saving ? t("editAccount.saving") : t("editAccount.submit")}
           </Button>
         </SheetFooter>
       </SheetContent>
