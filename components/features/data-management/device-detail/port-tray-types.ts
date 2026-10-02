@@ -1,3 +1,5 @@
+import type { TFn } from "@/lib/use-locale";
+
 // ── Port Types ──────────────────────────────────────────────────────────
 
 export type DevicePort = {
@@ -474,9 +476,9 @@ export function buildConnectionMap(
   return map;
 }
 
-export function getConnectionLabel(connection?: PortConnection | null): string {
-  if (!connection) return "Belum terhubung";
-  const typeLabel = connection.connection_type || "terhubung";
-  if (connection.cable_device_id) return `${typeLabel} via kabel`;
+export function getConnectionLabel(connection: PortConnection | null | undefined, t: TFn): string {
+  if (!connection) return t("portTray.notConnected");
+  const typeLabel = connection.connection_type || t("portTray.connected");
+  if (connection.cable_device_id) return t("portTray.connectedViaCable", { type: typeLabel });
   return typeLabel;
 }

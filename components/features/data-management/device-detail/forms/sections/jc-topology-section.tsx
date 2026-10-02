@@ -7,12 +7,14 @@ import {
   Field,
   ComboboxField,
 } from "../../sections/device-technical-helpers";
+import { useTranslate } from "@/lib/use-locale";
 
 export function JcTopologySection(props: TopologySectionProps) {
+  const { t } = useTranslate();
   const lookup = props.topologyLookup || {};
 
   return (
-    <TopologyCard title="Relasi Joint Closure">
+    <TopologyCard title={t("topo.titleJc")}>
       <ComboboxField
         label="From Cable"
         value={props.form.from_cable_id || "__none__"}
@@ -20,8 +22,8 @@ export function JcTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, from_cable_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari cable segmen A..."
-        options={toDeviceOptions(lookup.devices || [], "Pilih from cable")}
+        searchPlaceholder={t("topo.searchCableSegA")}
+        options={toDeviceOptions(lookup.devices || [], t("topo.selectFromCable"), t)}
       />
       <ComboboxField
         label="To Cable"
@@ -30,8 +32,8 @@ export function JcTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, to_cable_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari cable segmen B..."
-        options={toDeviceOptions(lookup.devices || [], "Pilih to cable")}
+        searchPlaceholder={t("topo.searchCableSegB")}
+        options={toDeviceOptions(lookup.devices || [], t("topo.selectToCable"), t)}
       />
       <Field
         label="Core Start"

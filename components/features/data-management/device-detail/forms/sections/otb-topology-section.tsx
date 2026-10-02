@@ -7,12 +7,14 @@ import {
   ComboboxField,
   SelectField,
 } from "../../sections/device-technical-helpers";
+import { useTranslate } from "@/lib/use-locale";
 
 export function OtbTopologySection(props: TopologySectionProps) {
+  const { t } = useTranslate();
   const lookup = props.topologyLookup || {};
 
   return (
-    <TopologyCard title="Relasi Topologi OTB">
+    <TopologyCard title={t("topo.titleOtb")}>
       <ComboboxField
         label="From Device"
         value={props.form.from_device_id || "__none__"}
@@ -20,8 +22,8 @@ export function OtbTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, from_device_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari device upstream..."
-        options={toDeviceOptions(lookup.devices || [], "Pilih from device")}
+        searchPlaceholder={t("topo.searchDeviceUpstream")}
+        options={toDeviceOptions(lookup.devices || [], t("topo.selectFromDevice"), t)}
       />
       <ComboboxField
         label="To Device"
@@ -30,8 +32,8 @@ export function OtbTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, to_device_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari device downstream..."
-        options={toDeviceOptions(lookup.devices || [], "Pilih to device")}
+        searchPlaceholder={t("topo.searchDeviceDownstream")}
+        options={toDeviceOptions(lookup.devices || [], t("topo.selectToDevice"), t)}
       />
       <ComboboxField
         label="From Cable"
@@ -40,8 +42,8 @@ export function OtbTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, from_cable_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari cable masuk..."
-        options={toDeviceOptions(lookup.devices || [], "Pilih from cable")}
+        searchPlaceholder={t("topo.searchFromCable")}
+        options={toDeviceOptions(lookup.devices || [], t("topo.selectFromCable"), t)}
       />
       <ComboboxField
         label="To Cable"
@@ -50,8 +52,8 @@ export function OtbTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, to_cable_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari cable keluar..."
-        options={toDeviceOptions(lookup.devices || [], "Pilih to cable")}
+        searchPlaceholder={t("topo.searchToCable")}
+        options={toDeviceOptions(lookup.devices || [], t("topo.selectToCable"), t)}
       />
       <SelectField
         label="Koneksi Backbone"

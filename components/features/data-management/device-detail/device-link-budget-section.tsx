@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTranslate } from "@/lib/use-locale";
 
 type DeviceLinkBudgetSectionProps = {
   deviceId: string;
@@ -91,6 +92,7 @@ function safeToFixed(val: unknown, digits = 2): string {
 }
 
 export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLinkBudgetSectionProps) {
+  const { t } = useTranslate();
   const [estimate, setEstimate] = useState<LinkBudgetEstimate | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -250,12 +252,12 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
       if (response?.data) {
         setCalcResult(response.data);
         setCalculatedLoss(String(response.data.calculated_loss_db));
-        setSuccess("Kalkulasi link budget berhasil dijalankan.");
+        setSuccess(t("linkBudget.calcSuccess"));
       } else {
-        throw new Error("Respon kalkulasi tidak valid.");
+        throw new Error(t("linkBudget.invalidResponse"));
       }
     } catch (err) {
-      setError((err as Error).message || "Gagal menghitung link budget.");
+      setError((err as Error).message || t("linkBudget.calcFailed"));
     } finally {
       setCalculating(false);
     }
@@ -284,12 +286,12 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
       if (response?.data?.attachment_id) {
         setEvidenceAttachmentId(response.data.attachment_id);
         setUploadedFileName(response.data.original_name || file.name);
-        setSuccess(`File ${file.name} berhasil diunggah.`);
+        setSuccess(t("linkBudget.uploadSuccess", { name: file.name }));
       } else {
-        throw new Error("Gagal mengunggah file bukti.");
+        throw new Error(t("linkBudget.uploadFailed"));
       }
     } catch (err) {
-      setError((err as Error).message || "Gagal mengunggah file bukti.");
+      setError((err as Error).message || t("linkBudget.uploadFailed"));
     } finally {
       setUploadingFile(false);
     }
@@ -329,12 +331,12 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
         setEstimate(response.data);
         setIsEditing(false);
         setIsCalculatorOpen(false);
-        setSuccess("Estimasi link budget berhasil disimpan.");
+        setSuccess(t("linkBudget.saveSuccess"));
       } else {
-        throw new Error("Gagal menyimpan estimasi.");
+        throw new Error(t("linkBudget.saveFailed"));
       }
     } catch (err) {
-      setError((err as Error).message || "Gagal menyimpan data link budget.");
+      setError((err as Error).message || t("linkBudget.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -359,7 +361,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
             Link Budget & Optical Power
           </CardTitle>
           <CardDescription className="font-sans text-xs text-text-secondary">
-            Kalkulator redaman teoritis dan pencatatan hasil ukur lapangan (GPON B+/C+)
+            {t("linkBudget.description")}
           </CardDescription>
         </div>
         {!isEditing && (
@@ -369,7 +371,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
             onClick={() => setIsEditing(true)}
             className="font-mono text-[11px] uppercase tracking-wide border-visible hover:bg-surface-raised"
           >
-            <Edit3 className="mr-1 size-3" /> Edit / Hitung
+            <Edit3 className="mr-1 size-3" /> {t("linkBudget.editButton")}
           </Button>
         )}
       </CardHeader>
@@ -489,24 +491,24 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
               <div className="space-y-3">
                 <div className="border border-visible p-3 rounded-none bg-surface/50 space-y-2">
                   <div>
-                    <span className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">Metode Ukur</span>
+                    <span className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">{t("linkBudget.measurementMethod")}</span>
                     <span className="font-sans text-xs text-text-primary font-medium block mt-0.5">
-                      {estimate.measurement_method === "otdr" && "OTDR (Optical Time Domain Reflectometer)"}
-                      {estimate.measurement_method === "power_meter" && "OPM (Optical Power Meter)"}
-                      {estimate.measurement_method === "manual" && "Manual Wording / Estimasi Lapangan"}
-                      {estimate.measurement_method === "estimate" && "Hanya Estimasi Software"}
+                      {estimate.measurement_method === "otdr" && t("linkBudget.methodOtdr")}
+                      {estimate.measurement_method === "power_meter" && t("linkBudget.methodOpm")}
+                      {estimate.measurement_method === "manual" && t("linkBudget.methodManual")}
+                      {estimate.measurement_method === "estimate" && t("linkBudget.methodEstimate")}
                       {!estimate.measurement_method && "-"}
                     </span>
                   </div>
                   <div>
-                    <span className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">Tanggal Ukur</span>
+                    <span className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">{t("linkBudget.measurementDate")}</span>
                     <span className="font-mono text-xs text-text-primary block mt-0.5">
                       {estimate.measurement_date || "-"}
                     </span>
                   </div>
                   {estimate.evidence_attachment_id && (
                     <div>
-                      <span className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">File Bukti Lapangan</span>
+                      <span className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">{t("linkBudget.evidenceFile")}</span>
                       <span className="text-xs text-interactive flex items-center gap-1 mt-0.5">
                         <FileText className="size-3.5" />
                         ID Attachment: {estimate.evidence_attachment_id.substring(0, 8)}...
@@ -516,9 +518,9 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                 </div>
 
                 <div className="border border-visible p-3 rounded-none bg-surface/50">
-                  <span className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">Catatan Teknis</span>
+                  <span className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">{t("linkBudget.techNotes")}</span>
                   <p className="font-sans text-xs text-text-primary block mt-1 leading-relaxed whitespace-pre-wrap">
-                    {estimate.notes || "Tidak ada catatan."}
+                    {estimate.notes || t("linkBudget.noNotes")}
                   </p>
                 </div>
               </div>
@@ -526,14 +528,14 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
           ) : (
             <div className="text-center py-6 border border-dashed border-visible">
               <Calculator className="size-8 text-text-disabled mx-auto mb-2" />
-              <p className="text-xs text-text-secondary">Belum ada estimasi link budget tersimpan untuk perangkat ini.</p>
+              <p className="text-xs text-text-secondary">{t("linkBudget.noStoredEstimate")}</p>
               <Button
                 variant="outline"
                 size="xs"
                 onClick={() => setIsEditing(true)}
                 className="mt-3 font-mono text-[10px] uppercase border-visible hover:bg-surface-raised"
               >
-                Mulai Hitung / Isi Data
+                {t("linkBudget.startCalculation")}
               </Button>
             </div>
           )
@@ -541,7 +543,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
           /* Editing Form & Calculator */
           <form onSubmit={handleSave} className="space-y-4">
             <div className="flex justify-between items-center pb-2 border-b border-visible">
-              <span className="font-mono text-xs text-text-primary uppercase tracking-wide">Form Estimasi Link Budget</span>
+              <span className="font-mono text-xs text-text-primary uppercase tracking-wide">{t("linkBudget.formTitle")}</span>
               <Button
                 type="button"
                 variant="ghost"
@@ -552,7 +554,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                 }}
                 className="font-mono text-[11px] uppercase tracking-wide hover:bg-surface-raised"
               >
-                <X className="mr-1 size-3" /> Batal
+                <X className="mr-1 size-3" /> {t("linkBudget.cancel")}
               </Button>
             </div>
 
@@ -565,7 +567,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                   onValueChange={(val: "B_plus" | "C_plus") => setGponClass(val)}
                 >
                   <SelectTrigger id="gponClass" className="rounded-none border-visible bg-surface font-sans text-xs">
-                    <SelectValue placeholder="Pilih GPON Class" />
+                    <SelectValue placeholder={t("linkBudget.selectGponClass")} />
                   </SelectTrigger>
                   <SelectContent className="border-visible bg-card font-sans text-xs">
                     <SelectItem value="B_plus">Class B+ (28.0 dB Budget)</SelectItem>
@@ -592,7 +594,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                     onClick={() => setIsCalculatorOpen(!isCalculatorOpen)}
                     className="font-mono text-[11px] border-visible rounded-none hover:bg-surface-raised shrink-0"
                   >
-                    Kalkulator {isCalculatorOpen ? <ChevronUp className="ml-1 size-3.5" /> : <ChevronDown className="ml-1 size-3.5" />}
+                    {t("linkBudget.calculator")} {isCalculatorOpen ? <ChevronUp className="ml-1 size-3.5" /> : <ChevronDown className="ml-1 size-3.5" />}
                   </Button>
                 </div>
               </div>
@@ -615,7 +617,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
               <div className="border border-visible p-4 bg-surface/30 space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="font-mono text-xs uppercase font-semibold text-text-primary tracking-wide">
-                    Simulasi Link Budget Wavelength
+                    {t("linkBudget.simulationTitle")}
                   </h4>
                   <Badge variant="outline" className="font-mono text-[9px] uppercase">
                     Atten @1310nm = 0.35dB/km
@@ -624,23 +626,23 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
 
                 <div className="space-y-2">
                   <Label htmlFor="splitterRatios" className="font-mono text-[10px] text-text-secondary uppercase tracking-wider">
-                    Splitter Ratios (Pisahkan dengan koma)
+                    {t("linkBudget.splitterRatios")}
                   </Label>
                   <Input
                     id="splitterRatios"
-                    placeholder="Contoh: 1:4, 1:8"
+                    placeholder={t("linkBudget.splitterExample")}
                     value={splitterRatios}
                     onChange={(e) => setSplitterRatios(e.target.value)}
                     className="rounded-none border-visible bg-surface font-sans text-xs"
                   />
                   <p className="text-[10px] text-text-secondary font-mono leading-normal">
-                    Standard Splitter Losses: 1:2 (~3.5dB) | 1:4 (~7.2dB) | 1:8 (~10.5dB) | 1:16 (~13.8dB)
+                    {t("linkBudget.splitterLosses")}
                   </p>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <Label className="font-mono text-[10px] text-text-secondary uppercase tracking-wider">Segmen Fiber Kabel</Label>
+                    <Label className="font-mono text-[10px] text-text-secondary uppercase tracking-wider">{t("linkBudget.fiberSegments")}</Label>
                     <Button
                       type="button"
                       variant="outline"
@@ -648,7 +650,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                       onClick={handleAddSegment}
                       className="font-mono text-[10px] uppercase border-visible hover:bg-surface-raised"
                     >
-                      <Plus className="mr-1 size-3" /> Tambah Segmen
+                      <Plus className="mr-1 size-3" /> {t("linkBudget.addSegment")}
                     </Button>
                   </div>
 
@@ -676,7 +678,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                         <div className="col-span-2">
                           <Input
                             type="number"
-                            placeholder="Sambung"
+                            placeholder={t("linkBudget.splicePlaceholder")}
                             value={seg.spliceCount}
                             onChange={(e) => handleSegmentChange(idx, "spliceCount", e.target.value)}
                             className="rounded-none border-visible bg-surface font-mono text-xs h-7"
@@ -685,7 +687,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                         <div className="col-span-3">
                           <Input
                             type="number"
-                            placeholder="Konektor"
+                            placeholder={t("linkBudget.connectorPlaceholder")}
                             value={seg.connectorCount}
                             onChange={(e) => handleSegmentChange(idx, "connectorCount", e.target.value)}
                             className="rounded-none border-visible bg-surface font-mono text-xs h-7"
@@ -714,26 +716,26 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                     disabled={calculating}
                     className="font-mono text-xs uppercase tracking-wider rounded-none bg-primary text-primary-foreground hover:bg-primary/90"
                   >
-                    {calculating ? "Menghitung..." : "Hitung Redaman"}
+                    {calculating ? t("linkBudget.calculating") : t("linkBudget.calculateLoss")}
                   </Button>
                 </div>
 
                 {calcResult && (
                   <div className="border border-visible p-3 bg-surface font-mono text-xs space-y-2 rounded-none">
-                    <p className="font-bold text-[10px] text-text-secondary uppercase tracking-wider">[BREAKDOWN REDAMAN]</p>
+                    <p className="font-bold text-[10px] text-text-secondary uppercase tracking-wider">[{t("linkBudget.breakdownTitle")}]</p>
                     <div className="grid grid-cols-2 gap-2 text-[11px] leading-normal text-text-primary">
-                      <div>Splitter Loss: {calcResult.splitter_loss_db} dB</div>
-                      <div>Fiber Loss: {calcResult.fiber_loss_db} dB</div>
-                      <div>Splice Loss: {calcResult.splice_loss_db} dB ({calcResult.parameters.splice_loss} dB/titik)</div>
-                      <div>Connector Loss: {calcResult.connector_loss_db} dB ({calcResult.parameters.connector_loss} dB/pasang)</div>
-                      <div>Engineering Margin: {calcResult.engineering_margin_db} dB</div>
+                      <div>{t("linkBudget.splitterLoss")}: {calcResult.splitter_loss_db} dB</div>
+                      <div>{t("linkBudget.fiberLoss")}: {calcResult.fiber_loss_db} dB</div>
+                      <div>{t("linkBudget.spliceLoss")}: {calcResult.splice_loss_db} dB ({calcResult.parameters.splice_loss} {t("linkBudget.perPoint")})</div>
+                      <div>{t("linkBudget.connectorLoss")}: {calcResult.connector_loss_db} dB ({calcResult.parameters.connector_loss} {t("linkBudget.perPair")})</div>
+                      <div>{t("linkBudget.engineeringMargin")}: {calcResult.engineering_margin_db} dB</div>
                       <div className="col-span-2 border-t border-visible/50 pt-1 font-bold">
-                        Calculated Loss: {calcResult.calculated_loss_db} dB
+                        {t("linkBudget.calculatedLoss")}: {calcResult.calculated_loss_db} dB
                       </div>
                     </div>
                     {calcResult.warnings && calcResult.warnings.length > 0 && (
                       <div className="space-y-1 mt-2 pt-1 border-t border-visible/50">
-                        <span className="font-semibold text-[9px] text-amber-500 block uppercase">[WARNING CALCULATOR]</span>
+                        <span className="font-semibold text-[9px] text-amber-500 block uppercase">[{t("linkBudget.calcWarning")}]</span>
                         {calcResult.warnings.map((w, i) => (
                           <div key={i} className="text-[10px] text-amber-500 flex items-start gap-1">
                             <span>•</span>
@@ -750,7 +752,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
             {/* Field Measurement Data */}
             <div className="border border-visible p-4 bg-surface/10 space-y-4">
               <h4 className="font-mono text-xs uppercase font-semibold text-text-primary tracking-wide">
-                Hasil Pengukuran Aktual Lapangan
+                {t("linkBudget.actualMeasurements")}
               </h4>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -761,7 +763,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                       id="measuredLoss"
                       type="number"
                       step="0.01"
-                      placeholder="Redaman total aktual"
+                      placeholder={t("linkBudget.measuredLossPlaceholder")}
                       value={measuredLoss}
                       onChange={(e) => setMeasuredLoss(e.target.value)}
                       className="rounded-none border-visible bg-surface font-mono text-xs"
@@ -774,7 +776,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                       id="ontRxPower"
                       type="number"
                       step="0.1"
-                      placeholder="Daya terima di sisi ONT"
+                      placeholder={t("linkBudget.ontRxPlaceholder")}
                       value={ontRxPower}
                       onChange={(e) => setOntRxPower(e.target.value)}
                       className="rounded-none border-visible bg-surface font-mono text-xs"
@@ -787,7 +789,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                       id="oltTxPower"
                       type="number"
                       step="0.1"
-                      placeholder="Daya kirim dari OLT"
+                      placeholder={t("linkBudget.oltTxPlaceholder")}
                       value={oltTxPower}
                       onChange={(e) => setOltTxPower(e.target.value)}
                       className="rounded-none border-visible bg-surface font-mono text-xs"
@@ -797,25 +799,25 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
 
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="measurementMethod" className="font-mono text-[10px] text-text-secondary uppercase tracking-wider">Metode Pengukuran</Label>
+                    <Label htmlFor="measurementMethod" className="font-mono text-[10px] text-text-secondary uppercase tracking-wider">{t("linkBudget.measurementMethod")}</Label>
                     <Select
                       value={measurementMethod}
                       onValueChange={(val: "otdr" | "power_meter" | "manual" | "estimate") => setMeasurementMethod(val)}
                     >
                       <SelectTrigger id="measurementMethod" className="rounded-none border-visible bg-surface font-sans text-xs">
-                        <SelectValue placeholder="Pilih Metode" />
+                        <SelectValue placeholder={t("linkBudget.selectMethod")} />
                       </SelectTrigger>
                       <SelectContent className="border-visible bg-card font-sans text-xs">
-                        <SelectItem value="otdr">OTDR (Optical Time Domain Reflectometer)</SelectItem>
-                        <SelectItem value="power_meter">OPM (Optical Power Meter)</SelectItem>
-                        <SelectItem value="manual">Pengukuran Manual Lapangan</SelectItem>
-                        <SelectItem value="estimate">Hanya Estimasi Perangkat Lunak</SelectItem>
+                        <SelectItem value="otdr">{t("linkBudget.methodOtdr")}</SelectItem>
+                        <SelectItem value="power_meter">{t("linkBudget.methodOpm")}</SelectItem>
+                        <SelectItem value="manual">{t("linkBudget.methodManual")}</SelectItem>
+                        <SelectItem value="estimate">{t("linkBudget.methodEstimate")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="measurementDate" className="font-mono text-[10px] text-text-secondary uppercase tracking-wider">Tanggal Pengukuran</Label>
+                    <Label htmlFor="measurementDate" className="font-mono text-[10px] text-text-secondary uppercase tracking-wider">{t("linkBudget.measurementDate")}</Label>
                     <Input
                       id="measurementDate"
                       type="date"
@@ -826,7 +828,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">Bukti Pengukuran (OTDR File/Photo)</Label>
+                    <Label className="font-mono text-[10px] text-text-secondary uppercase tracking-wider block">{t("linkBudget.measurementEvidence")}</Label>
                     <div className="flex gap-2 items-center">
                       <Input
                         type="file"
@@ -841,10 +843,10 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                         className="font-mono text-xs uppercase tracking-wide px-3 py-2 border border-visible bg-surface hover:bg-surface-raised cursor-pointer flex items-center gap-1.5 rounded-none shrink-0"
                       >
                         <Upload className="size-3.5 text-text-secondary" />
-                        {uploadingFile ? "Mengunggah..." : "Unggah Bukti"}
+                        {uploadingFile ? t("linkBudget.uploading") : t("linkBudget.uploadEvidence")}
                       </Label>
                       <span className="font-sans text-xs text-text-secondary truncate">
-                        {uploadedFileName || (evidenceAttachmentId ? "Bukti sudah terunggah." : "Belum ada bukti dilampirkan")}
+                        {uploadedFileName || (evidenceAttachmentId ? t("linkBudget.evidenceUploaded") : t("linkBudget.noEvidenceAttached"))}
                       </span>
                     </div>
                   </div>
@@ -852,10 +854,10 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
               </div>
 
               <div className="space-y-1.5 mt-2">
-                <Label htmlFor="notes" className="font-mono text-[10px] text-text-secondary uppercase tracking-wider">Catatan Teknis Lapangan</Label>
+                <Label htmlFor="notes" className="font-mono text-[10px] text-text-secondary uppercase tracking-wider">{t("linkBudget.fieldNotes")}</Label>
                 <Textarea
                   id="notes"
-                  placeholder="Tulis detail sambungan atau catatan pengukuran..."
+                  placeholder={t("linkBudget.notesPlaceholder")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="rounded-none border-visible bg-surface font-sans text-xs min-h-[60px]"
@@ -873,7 +875,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                 }}
                 className="font-mono text-xs uppercase tracking-wider border-visible rounded-none hover:bg-surface-raised"
               >
-                Batal
+                {t("linkBudget.cancel")}
               </Button>
               <Button
                 type="submit"
@@ -881,7 +883,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                 className="font-mono text-xs uppercase tracking-wider rounded-none bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 <Save className="mr-1.5 size-3.5" />
-                {saving ? "Menyimpan..." : "Simpan Estimasi"}
+                {saving ? t("linkBudget.saving") : t("linkBudget.saveEstimate")}
               </Button>
             </div>
           </form>

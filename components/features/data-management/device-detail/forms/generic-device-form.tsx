@@ -13,6 +13,7 @@ import { useSession } from "@/components/session-context";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useTranslate } from "@/lib/use-locale";
 import {
   type DefaultInfoSectionProps,
   DefaultInfoSection,
@@ -21,7 +22,7 @@ import {
   DefaultLocationSection,
   DefaultTagsSection,
   type SplitterProfileOption,
-  DEVICE_TECHNICAL_COPY,
+  getDeviceTechnicalCopy,
   valueOf,
   Field,
   SplitterRatioField,
@@ -51,13 +52,9 @@ export type GenericDeviceFormProps = DefaultInfoSectionProps & {
 const NO_MGMT_IP_TYPES = new Set(["ODC", "ODP", "OTB", "CABLE", "JC", "HH", "MH"]);
 
 export function GenericDeviceForm(props: GenericDeviceFormProps) {
+  const { t } = useTranslate();
   const deviceTypeKey = valueOf(props.form.device_type_key, "DEVICE").toUpperCase();
-  const technicalCopy = DEVICE_TECHNICAL_COPY[deviceTypeKey] || {
-    title: `Technical ${deviceTypeKey}`,
-    totalPortsLabel: "Total Ports",
-    usedPortsLabel: "Used Ports",
-    splitterLabel: "Splitter Ratio",
-  };
+  const technicalCopy = getDeviceTechnicalCopy(deviceTypeKey, t);
   const showManagementIp = !NO_MGMT_IP_TYPES.has(deviceTypeKey);
   const isRack = deviceTypeKey === "RACK";
 
@@ -105,8 +102,8 @@ export function GenericDeviceForm(props: GenericDeviceFormProps) {
     if (!props.form.device_name) identitasMissing.push("Device Name");
     if (!props.form.region_id) identitasMissing.push("Region");
     if (deviceTypeKey === "ODP") {
-      if (!props.form.odp_type) identitasMissing.push("Tipe ODP");
-      if (!props.form.installation_type) identitasMissing.push("Jenis Instalasi");
+      if (!props.form.odp_type) identitasMissing.push(t("createForm.odpType"));
+      if (!props.form.installation_type) identitasMissing.push(t("createForm.installationType"));
     }
     if (identitasMissing.length > 0) missing.identitas = identitasMissing;
     return missing;
@@ -134,9 +131,9 @@ export function GenericDeviceForm(props: GenericDeviceFormProps) {
           value={props.form.capacity_core || "__none__"}
           onValueChange={(value) => props.onChange((prev) => ({ ...prev, capacity_core: value === "__none__" ? "" : value }))}
           disabled={!props.editing}
-          searchPlaceholder="Cari kapasitas core..."
+          searchPlaceholder={t("createForm.searchCoreCapacity")}
           options={[
-            { value: "__none__", label: "Pilih kapasitas core" },
+            { value: "__none__", label: t("createForm.selectCoreCapacity") },
             ...filteredGenericCoreCapacities.map((item) => ({
               value: String(item.core_capacity_value),
               label: `${item.core_capacity_value} Core${item.label ? ` — ${item.label}` : ""}`,
@@ -194,13 +191,13 @@ export function GenericDeviceForm(props: GenericDeviceFormProps) {
       <CardHeader className="px-3 py-2">
         <CardTitle className="text-sm flex items-center gap-1.5">
           <Server className="size-4 text-muted-foreground" />
-          Penempatan Rack (Rack Mounting)
+          {t("deviceDetail.rack.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
         {props.editing ? (
           <ComboboxField
-            label="Pilih Rack"
+            label={t("deviceDetail.rack.selectRack")}
             value={props.form.rack_device_id || "__none__"}
             onValueChange={(value) =>
               props.onChange((prev) => ({
@@ -209,7 +206,7 @@ export function GenericDeviceForm(props: GenericDeviceFormProps) {
               }))
             }
             options={[
-              { value: "__none__", label: "Tidak terpasang di Rack" },
+              { value: "__none__", label: t("deviceDetail.rack.notMounted") },
               ...popRacks.map((rack) => ({
                 value: rack.id,
                 label: rack.device_name,
@@ -222,7 +219,7 @@ export function GenericDeviceForm(props: GenericDeviceFormProps) {
             value={
               popRacks.find((r) => r.id === props.form.rack_device_id)?.device_name ||
               props.form.rack_device_id ||
-              "Tidak terpasang di Rack"
+              t("deviceDetail.rack.notMounted")
             }
             loading={loadingRacks}
             compact
@@ -230,7 +227,7 @@ export function GenericDeviceForm(props: GenericDeviceFormProps) {
         )}
 
         <Field
-          label="Posisi Mulai U"
+          label={t("deviceDetail.rack.startUnit")}
           type="number"
           value={props.form.rack_unit_position}
           onChange={(value) => props.onChange((prev) => ({ ...prev, rack_unit_position: value }))}
@@ -239,7 +236,7 @@ export function GenericDeviceForm(props: GenericDeviceFormProps) {
         />
 
         <SelectField
-          label="Tinggi Perangkat (U)"
+          label={t("deviceDetail.rack.height")}
           value={props.form.u_height || "1"}
           options={["1", "2", "3", "4", "6"]}
           onValueChange={(value) => props.onChange((prev) => ({ ...prev, u_height: value }))}
@@ -306,16 +303,16 @@ export function GenericDeviceForm(props: GenericDeviceFormProps) {
       <div className="flex items-center gap-2 mb-4 overflow-x-auto">
         <TabsList>
           <TabsTrigger value="identitas" className="relative text-xs sm:text-sm">
-            Identitas & Relasi
+            {t("deviceForm.tabs.identity")}
           </TabsTrigger>
           <TabsTrigger value="teknis" className="relative text-xs sm:text-sm">
-            Teknis & Kapasitas
+            {t("deviceForm.tabs.technical")}
           </TabsTrigger>
           <TabsTrigger value="lokasi" className="relative text-xs sm:text-sm">
-            Lokasi
+            {t("deviceForm.tabs.location")}
           </TabsTrigger>
           <TabsTrigger value="operasional" className="relative text-xs sm:text-sm">
-            Tags
+            {t("deviceForm.tabs.tags")}
           </TabsTrigger>
         </TabsList>
       </div>

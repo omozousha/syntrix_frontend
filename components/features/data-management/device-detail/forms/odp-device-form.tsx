@@ -1,10 +1,6 @@
 import React from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslate } from "@/lib/use-locale";
 import {
   type DefaultInfoSectionProps,
   DefaultInfoSection,
@@ -12,7 +8,7 @@ import {
   type OdpTypeOption,
   type InstallationTypeOption,
   type OdpFieldValidationPayload,
-  DEVICE_TECHNICAL_COPY,
+  getDeviceTechnicalCopy,
   valueOf,
   DisplayField,
   Field,
@@ -38,7 +34,8 @@ export type OdpDeviceFormProps = DefaultInfoSectionProps & {
  * Restores consistency across the passive inventory detail modules.
  */
 export function OdpDeviceForm(props: OdpDeviceFormProps) {
-  const technicalCopy = DEVICE_TECHNICAL_COPY.ODP;
+  const { t } = useTranslate();
+  const technicalCopy = getDeviceTechnicalCopy("ODP", t);
   const selectedSplitterProfile =
     props.splitterProfiles.find((item) => item.ratio_label === props.form.splitter_ratio) || null;
   const selectedSplitterOutputPort = Number(selectedSplitterProfile?.output_port_count || 0);
@@ -63,21 +60,21 @@ export function OdpDeviceForm(props: OdpDeviceFormProps) {
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
           <DisplayField
-            label="Nama ODP Baru"
+            label={t("deviceDetail.odp.newOdpName")}
             value={valueOf(props.latestFieldValidation?.new_device_name, "-")}
             compact
           />
 
           <ComboboxField
-            label="Tipe ODP"
+            label={t("createForm.odpType")}
             value={props.form.odp_type || "__none__"}
             onValueChange={(value) =>
               props.onChange((prev) => ({ ...prev, odp_type: value === "__none__" ? "" : value }))
             }
             disabled={!props.editing}
-            searchPlaceholder="Cari tipe ODP..."
+            searchPlaceholder={t("createForm.searchOdpType")}
             options={[
-              { value: "__none__", label: "Pilih tipe ODP" },
+              { value: "__none__", label: t("createForm.selectOdpType") },
               ...props.odpTypes.map((item) => ({
                 value: item.odp_type_name,
                 label: [item.odp_type_name, item.odp_type_code].filter(Boolean).join(" - "),
@@ -86,7 +83,7 @@ export function OdpDeviceForm(props: OdpDeviceFormProps) {
           />
 
           <ComboboxField
-            label="Jenis Instalasi"
+            label={t("createForm.installationType")}
             value={props.form.installation_type || "__none__"}
             onValueChange={(value) =>
               props.onChange((prev) => ({
@@ -95,9 +92,9 @@ export function OdpDeviceForm(props: OdpDeviceFormProps) {
               }))
             }
             disabled={!props.editing}
-            searchPlaceholder="Cari jenis instalasi..."
+            searchPlaceholder={t("createForm.searchInstallationType")}
             options={[
-              { value: "__none__", label: "Pilih jenis instalasi" },
+              { value: "__none__", label: t("createForm.selectInstallationType") },
               ...props.installationTypes.map((item) => ({
                 value: item.installation_type_name,
                 label: [item.installation_type_name, item.installation_type_code].filter(Boolean).join(" - "),
@@ -115,9 +112,9 @@ export function OdpDeviceForm(props: OdpDeviceFormProps) {
                 props.onChange((prev) => ({ ...prev, total_ports: value === "__none__" ? "" : value }))
               }
               disabled={!props.editing}
-              searchPlaceholder="Cari total port..."
+              searchPlaceholder={t("createForm.searchTotalPorts")}
               options={[
-                { value: "__none__", label: "Pilih total port" },
+                { value: "__none__", label: t("createForm.selectTotalPorts") },
                 ...splitterPortPresetOptions.map((port) => ({
                   value: String(port),
                   label: `${port} port`,

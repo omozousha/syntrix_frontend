@@ -4,12 +4,14 @@ import {
   toDeviceOptions,
 } from "../../sections/device-topology-helpers";
 import { ComboboxField } from "../../sections/device-technical-helpers";
+import { useTranslate } from "@/lib/use-locale";
 
 export function GenericTopologySection(props: TopologySectionProps) {
+  const { t } = useTranslate();
   const lookup = props.topologyLookup || {};
 
   return (
-    <TopologyCard title="Relasi Topologi">
+    <TopologyCard title={t("topo.titleGeneric")}>
       <ComboboxField
         label="Uplink Device"
         value={props.form.uplink_device_id || "__none__"}
@@ -17,8 +19,8 @@ export function GenericTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, uplink_device_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari uplink device..."
-        options={toDeviceOptions(lookup.devices || [], "Pilih uplink device")}
+        searchPlaceholder={t("topo.searchUplinkDevice")}
+        options={toDeviceOptions(lookup.devices || [], t("topo.selectUplinkDevice"), t)}
       />
       <ComboboxField
         label="From Cable"
@@ -27,8 +29,8 @@ export function GenericTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, from_cable_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari cable masuk..."
-        options={toDeviceOptions(lookup.devices || [], "Pilih from cable")}
+        searchPlaceholder={t("topo.searchFromCable")}
+        options={toDeviceOptions(lookup.devices || [], t("topo.selectFromCable"), t)}
       />
       <ComboboxField
         label="To Cable"
@@ -37,8 +39,8 @@ export function GenericTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, to_cable_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari cable keluar..."
-        options={toDeviceOptions(lookup.devices || [], "Pilih to cable")}
+        searchPlaceholder={t("topo.searchToCable")}
+        options={toDeviceOptions(lookup.devices || [], t("topo.selectToCable"), t)}
       />
     </TopologyCard>
   );

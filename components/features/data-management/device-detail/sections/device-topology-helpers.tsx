@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
+import type { TFn } from "@/lib/use-locale";
 
 // ── Shared Types ──────────────────────────────────────────────────────────
 
@@ -79,20 +79,21 @@ export function emptyTopologyLookup(): TopologyLookupData {
 
 export function toDeviceOptions(
   devices: DeviceLookupOption[],
-  placeholderLabel = "Pilih device",
+  placeholderLabel: string,
+  t: TFn,
 ): Array<{ value: string; label: string }> {
   return [
     { value: "__none__", label: placeholderLabel },
     ...devices.map((device) => ({
       value: device.id,
-      label: [device.device_name, device.device_id].filter(Boolean).join(" - ") || "Device tidak tersedia",
+      label: [device.device_name, device.device_id].filter(Boolean).join(" - ") || t("topo.deviceUnavailable"),
     })),
   ];
 }
 
 export function toPortOptions(
   ports: PortLookupOption[],
-  placeholderLabel = "Pilih port",
+  placeholderLabel: string,
 ): Array<{ value: string; label: string }> {
   return [
     { value: "__none__", label: placeholderLabel },
@@ -105,20 +106,22 @@ export function toPortOptions(
 
 export function toRouteOptions(
   routes: RouteLookupOption[],
-  placeholderLabel = "Pilih route",
+  placeholderLabel: string,
+  t: TFn,
 ): Array<{ value: string; label: string }> {
   return [
     { value: "__none__", label: placeholderLabel },
     ...routes.map((route) => ({
       value: route.id,
-      label: [route.route_name, route.route_code].filter(Boolean).join(" | ") || "Route tidak tersedia",
+      label: [route.route_name, route.route_code].filter(Boolean).join(" | ") || t("topo.routeUnavailable"),
     })),
   ];
 }
 
 export function toCustomerOptions(
   customers: CustomerLookupOption[],
-  placeholderLabel = "Pilih customer",
+  placeholderLabel: string,
+  t: TFn,
 ): Array<{ value: string; label: string }> {
   return [
     { value: "__none__", label: placeholderLabel },
@@ -126,7 +129,7 @@ export function toCustomerOptions(
       value: customer.id,
       label: [customer.customer_name, customer.customer_number ? `CID ${customer.customer_number}` : customer.customer_id]
         .filter(Boolean)
-        .join(" - ") || "Customer tidak tersedia",
+        .join(" - ") || t("topo.customerUnavailable"),
     })),
   ];
 }

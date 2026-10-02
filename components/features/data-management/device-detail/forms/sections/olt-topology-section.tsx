@@ -4,12 +4,14 @@ import {
   toDeviceOptions,
 } from "../../sections/device-topology-helpers";
 import { ComboboxField } from "../../sections/device-technical-helpers";
+import { useTranslate } from "@/lib/use-locale";
 
 export function OltTopologySection(props: TopologySectionProps) {
+  const { t } = useTranslate();
   const lookup = props.topologyLookup || {};
 
   return (
-    <TopologyCard title="Relasi Topologi OLT">
+    <TopologyCard title={t("topo.titleOlt")}>
       <ComboboxField
         label="Uplink Switch"
         value={props.form.uplink_switch_id || "__none__"}
@@ -17,8 +19,8 @@ export function OltTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, uplink_switch_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari switch uplink..."
-        options={toDeviceOptions(lookup.devices || [], "Pilih uplink switch")}
+        searchPlaceholder={t("topo.searchUplinkSwitch")}
+        options={toDeviceOptions(lookup.devices || [], t("topo.selectUplinkSwitch"), t)}
       />
       <ComboboxField
         label="Uplink Router"
@@ -27,8 +29,8 @@ export function OltTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, uplink_router_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari router uplink..."
-        options={toDeviceOptions(lookup.devices || [], "Pilih uplink router")}
+        searchPlaceholder={t("topo.searchUplinkRouter")}
+        options={toDeviceOptions(lookup.devices || [], t("topo.selectUplinkRouter"), t)}
       />
     </TopologyCard>
   );

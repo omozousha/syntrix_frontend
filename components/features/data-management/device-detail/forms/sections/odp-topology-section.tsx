@@ -8,8 +8,10 @@ import {
   Field,
   ComboboxField,
 } from "../../sections/device-technical-helpers";
+import { useTranslate } from "@/lib/use-locale";
 
 export function OdpTopologySection(props: TopologySectionProps) {
+  const { t } = useTranslate();
   const lookup = props.topologyLookup || {};
   const allDevices = lookup.devices || [];
 
@@ -21,7 +23,8 @@ export function OdpTopologySection(props: TopologySectionProps) {
 
   const odcOptions = toDeviceOptions(
     allDevices.filter((d) => d.device_type_key === "ODC"),
-    "Pilih ODC sumber",
+    t("topo.selectOdcSource"),
+    t,
   );
 
   const distributionCableOptions = toDeviceOptions(
@@ -31,11 +34,12 @@ export function OdpTopologySection(props: TopologySectionProps) {
         (!d.route_type || d.route_type === "DISTRIBUTION") &&
         (selectedOdcRegion === null || d.region_id === selectedOdcRegion),
     ),
-    "Pilih cable distribusi",
+    t("topo.selectDistributionCable"),
+    t,
   );
 
   return (
-    <TopologyCard title="Relasi Topologi ODP">
+    <TopologyCard title={t("topo.titleOdp")}>
       <ComboboxField
         label="Source ODC"
         value={props.form.source_odc_id || "__none__"}
@@ -43,7 +47,7 @@ export function OdpTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, source_odc_id: value === "__none__" ? "" : value, source_odc_port_id: "" }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari ODC sumber..."
+        searchPlaceholder={t("topo.searchOdcSource")}
         options={odcOptions}
       />
       <ComboboxField
@@ -53,9 +57,9 @@ export function OdpTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, source_odc_port_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari port ODC..."
+        searchPlaceholder={t("topo.searchOdcPort")}
         options={[
-          { value: "__none__", label: "Pilih port ODC" },
+          { value: "__none__", label: t("topo.selectOdcPort") },
           ...(lookup.ports || []).map((port) => ({
             value: port.id,
             label: port.port_label || `Port ${port.port_index || "?"}`,
@@ -69,7 +73,7 @@ export function OdpTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, feeder_cable_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari cable distribusi..."
+        searchPlaceholder={t("topo.searchDistributionCable")}
         options={distributionCableOptions}
       />
       <Field
@@ -95,8 +99,8 @@ export function OdpTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, odp_customer_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari customer..."
-        options={toCustomerOptions(lookup.customers || [], "Pilih customer")}
+        searchPlaceholder={t("topo.searchCustomer")}
+        options={toCustomerOptions(lookup.customers || [], t("topo.selectCustomer"), t)}
       />
     </TopologyCard>
   );

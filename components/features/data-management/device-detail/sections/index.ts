@@ -23,6 +23,7 @@ export {
   type CityOption,
   DEVICE_STATUS_OPTIONS,
   DEVICE_TECHNICAL_COPY,
+  getDeviceTechnicalCopy,
   valueOf,
   validateCoordinateFormat,
   SplitterRatioField,

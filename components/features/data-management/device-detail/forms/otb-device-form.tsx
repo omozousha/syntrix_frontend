@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useTranslate } from "@/lib/use-locale";
 
 import {
   type DefaultInfoSectionProps,
@@ -11,7 +12,7 @@ import {
   DefaultLocationSection,
   DefaultTagsSection,
   type SplitterProfileOption,
-  DEVICE_TECHNICAL_COPY,
+  getDeviceTechnicalCopy,
   Field,
   ComboboxField,
   SplitterRatioField,
@@ -48,7 +49,8 @@ export type OtbDeviceFormProps = DefaultInfoSectionProps & {
 };
 
 export function OtbDeviceForm(props: OtbDeviceFormProps) {
-  const technicalCopy = DEVICE_TECHNICAL_COPY.OTB;
+  const { t } = useTranslate();
+  const technicalCopy = getDeviceTechnicalCopy("OTB", t);
 
   const [activeTab, setActiveTab] = useState("identitas");
   function getMissingDeviceFields() {
@@ -86,9 +88,9 @@ export function OtbDeviceForm(props: OtbDeviceFormProps) {
           value={props.form.capacity_core || "__none__"}
           onValueChange={(value) => props.onChange((prev) => ({ ...prev, capacity_core: value === "__none__" ? "" : value }))}
           disabled={!props.editing}
-          searchPlaceholder="Cari kapasitas core..."
+          searchPlaceholder={t("createForm.searchCoreCapacity")}
           options={[
-            { value: "__none__", label: "Pilih kapasitas core" },
+            { value: "__none__", label: t("createForm.selectCoreCapacity") },
             ...filteredOtbCoreCapacities.map((item) => ({
               value: String(item.core_capacity_value),
               label: `${item.core_capacity_value} Core${item.label ? ` — ${item.label}` : ""}`,
@@ -105,7 +107,7 @@ export function OtbDeviceForm(props: OtbDeviceFormProps) {
         />
         {showOtbCoreWarning ? (
           <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
-            &#9888; Used core ({props.form.used_core}) melebihi kapasitas core ({props.form.capacity_core}).
+            &#9888; {t("deviceDetail.otb.coreExceeded", { used: props.form.used_core, cap: props.form.capacity_core })}
           </p>
         ) : null}
         <Field
@@ -126,22 +128,27 @@ export function OtbDeviceForm(props: OtbDeviceFormProps) {
         />
         {showOtbPortWarning ? (
           <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
-            &#9888; {technicalCopy.usedPortsLabel} ({props.form.used_ports}) melebihi {technicalCopy.totalPortsLabel} ({props.form.total_ports}).
+            &#9888; {t("deviceDetail.otb.portExceeded", {
+              usedLabel: technicalCopy.usedPortsLabel || "Used Ports",
+              used: props.form.used_ports,
+              totalLabel: technicalCopy.totalPortsLabel || "Total Ports",
+              total: props.form.total_ports,
+            })}
           </p>
         ) : null}
         <ComboboxField
-          label="Tipe Konektor"
+          label={t("createForm.connectorType")}
           value={props.form.connector_type || "__none__"}
           onValueChange={(value) => props.onChange((prev) => ({ ...prev, connector_type: value === "__none__" ? "" : value }))}
           disabled={!props.editing}
-          searchPlaceholder="Cari tipe konektor..."
+          searchPlaceholder={t("createForm.searchConnectorType")}
           options={[
-            { value: "__none__", label: "Pilih tipe konektor" },
+            { value: "__none__", label: t("createForm.selectConnectorType") },
             ...CONNECTOR_TYPE_OPTIONS,
           ]}
         />
         <Field
-          label="Jumlah Slot Tray"
+          label={t("createForm.traySlots")}
           type="number"
           value={props.form.tray_slot_count}
           onChange={(value) => props.onChange((prev) => ({ ...prev, tray_slot_count: value }))}
@@ -202,7 +209,7 @@ export function OtbDeviceForm(props: OtbDeviceFormProps) {
       <div className="flex items-center gap-2 mb-4 overflow-x-auto">
         <TabsList>
           <TabsTrigger value="identitas" className="relative text-xs sm:text-sm">
-            Identitas & Relasi
+            {t("deviceForm.tabs.identity")}
             {missingTabFields.identitas?.length > 0 ? (
               <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
                 {missingTabFields.identitas.length}
@@ -210,7 +217,7 @@ export function OtbDeviceForm(props: OtbDeviceFormProps) {
             ) : null}
           </TabsTrigger>
           <TabsTrigger value="teknis" className="relative text-xs sm:text-sm">
-            Teknis & Kapasitas
+            {t("deviceForm.tabs.technical")}
             {missingTabFields.teknis?.length > 0 ? (
               <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
                 {missingTabFields.teknis.length}
@@ -218,7 +225,7 @@ export function OtbDeviceForm(props: OtbDeviceFormProps) {
             ) : null}
           </TabsTrigger>
           <TabsTrigger value="lokasi" className="relative text-xs sm:text-sm">
-            Lokasi
+            {t("deviceForm.tabs.location")}
             {missingTabFields.lokasi?.length > 0 ? (
               <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
                 {missingTabFields.lokasi.length}
@@ -226,7 +233,7 @@ export function OtbDeviceForm(props: OtbDeviceFormProps) {
             ) : null}
           </TabsTrigger>
           <TabsTrigger value="tags" className="relative text-xs sm:text-sm">
-            Tags
+            {t("deviceForm.tabs.tags")}
             {missingTabFields.tags?.length > 0 ? (
               <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
                 {missingTabFields.tags.length}

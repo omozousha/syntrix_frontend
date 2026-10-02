@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useTranslate } from "@/lib/use-locale";
 
 import {
   type DefaultInfoSectionProps,
@@ -11,7 +12,7 @@ import {
   DefaultLocationSection,
   DefaultTagsSection,
   type SplitterProfileOption,
-  DEVICE_TECHNICAL_COPY,
+  getDeviceTechnicalCopy,
   Field,
   ComboboxField,
   SplitterRatioField,
@@ -31,7 +32,8 @@ export type CableDeviceFormProps = DefaultInfoSectionProps & {
 };
 
 export function CableDeviceForm(props: CableDeviceFormProps) {
-  const technicalCopy = DEVICE_TECHNICAL_COPY.CABLE;
+  const { t } = useTranslate();
+  const technicalCopy = getDeviceTechnicalCopy("CABLE", t);
 
   // Filter core capacities based on selected route type
   const routeType = props.form.route_type || "";
@@ -62,7 +64,7 @@ export function CableDeviceForm(props: CableDeviceFormProps) {
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
         <ComboboxField
-          label="Tipe Kabel"
+          label={t("createForm.cableType")}
           value={props.form.cable_type || "__none__"}
           onValueChange={(value) => {
             const nextCode = value === "__none__" ? "" : value;
@@ -74,9 +76,9 @@ export function CableDeviceForm(props: CableDeviceFormProps) {
             }));
           }}
           disabled={!props.editing}
-          searchPlaceholder="Cari tipe kabel..."
+          searchPlaceholder={t("createForm.searchCableType")}
           options={[
-            { value: "__none__", label: "Pilih tipe kabel" },
+            { value: "__none__", label: t("createForm.selectCableType") },
             ...(props.cableTypes || []).map((t) => ({
               value: t.cable_type_code,
               label: t.cable_type_name,
@@ -84,13 +86,13 @@ export function CableDeviceForm(props: CableDeviceFormProps) {
           ]}
         />
         <ComboboxField
-          label="Kategori Kabel"
+          label={t("createForm.cableCategory")}
           value={props.form.route_type || "__none__"}
           onValueChange={(value) => props.onChange((prev) => ({ ...prev, route_type: value === "__none__" ? "" : value }))}
           disabled={!props.editing}
-          searchPlaceholder="Cari kategori kabel..."
+          searchPlaceholder={t("createForm.searchCableCategory")}
           options={[
-            { value: "__none__", label: "Pilih kategori kabel" },
+            { value: "__none__", label: t("createForm.selectCableCategory") },
             ...(props.routeTypes || []).map((rt) => ({
               value: rt.route_type_code || rt.route_type_name,
               label: rt.route_type_code ? `${rt.route_type_name} (${rt.route_type_code})` : rt.route_type_name,
@@ -102,9 +104,9 @@ export function CableDeviceForm(props: CableDeviceFormProps) {
           value={props.form.capacity_core || "__none__"}
           onValueChange={(value) => props.onChange((prev) => ({ ...prev, capacity_core: value === "__none__" ? "" : value }))}
           disabled={!props.editing}
-          searchPlaceholder="Cari kapasitas core..."
+          searchPlaceholder={t("createForm.searchCoreCapacity")}
           options={[
-            { value: "__none__", label: "Pilih kapasitas core" },
+            { value: "__none__", label: t("createForm.selectCoreCapacity") },
             ...filteredCoreCapacities.map((item) => ({
               value: String(item.core_capacity_value),
               label: `${item.core_capacity_value} Core${item.label ? ` ${String.fromCharCode(8212)} ${item.label}` : ""}`,
@@ -136,7 +138,7 @@ export function CableDeviceForm(props: CableDeviceFormProps) {
           compact
         />
         <Field
-          label="Panjang Kabel (m)"
+          label={t("deviceDetail.cable.cableLength")}
           type="number"
           value={props.form.cable_length_m}
           onChange={(value) => props.onChange((prev) => ({ ...prev, cable_length_m: value }))}
@@ -192,7 +194,7 @@ export function CableDeviceForm(props: CableDeviceFormProps) {
       <div className="flex items-center gap-2 mb-4 overflow-x-auto">
         <TabsList>
           <TabsTrigger value="identitas" className="relative text-xs sm:text-sm">
-            Identitas & Relasi
+            {t("deviceForm.tabs.identity")}
             {missingTabFields.identitas?.length > 0 ? (
               <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
                 {missingTabFields.identitas.length}
@@ -200,7 +202,7 @@ export function CableDeviceForm(props: CableDeviceFormProps) {
             ) : null}
           </TabsTrigger>
           <TabsTrigger value="teknis" className="relative text-xs sm:text-sm">
-            Teknis & Kapasitas
+            {t("deviceForm.tabs.technical")}
             {missingTabFields.teknis?.length > 0 ? (
               <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
                 {missingTabFields.teknis.length}
@@ -208,7 +210,7 @@ export function CableDeviceForm(props: CableDeviceFormProps) {
             ) : null}
           </TabsTrigger>
           <TabsTrigger value="lokasi" className="relative text-xs sm:text-sm">
-            Lokasi
+            {t("deviceForm.tabs.location")}
             {missingTabFields.lokasi?.length > 0 ? (
               <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
                 {missingTabFields.lokasi.length}
@@ -216,7 +218,7 @@ export function CableDeviceForm(props: CableDeviceFormProps) {
             ) : null}
           </TabsTrigger>
           <TabsTrigger value="tags" className="relative text-xs sm:text-sm">
-            Tags
+            {t("deviceForm.tabs.tags")}
             {missingTabFields.tags?.length > 0 ? (
               <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
                 {missingTabFields.tags.length}

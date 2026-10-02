@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Navigation, MapPin, Copy, Check, Compass } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useTranslate } from "@/lib/use-locale";
 
 type DeviceBentoLocationTileProps = {
   latitude?: number | string | null;
@@ -24,6 +25,7 @@ export function DeviceBentoLocationTile({
   provinceName,
   onOpenMapModal,
 }: DeviceBentoLocationTileProps) {
+  const { t } = useTranslate();
   const [copied, setCopied] = useState(false);
 
   const numLat = Number(latitude);
@@ -46,16 +48,16 @@ export function DeviceBentoLocationTile({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
             <Compass className="size-4 text-sky-500" />
-            <span>Lokasi &amp; Geotagging</span>
+            <span>{t("deviceDetail.location.title")}</span>
           </div>
           <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">WGS84</span>
         </div>
 
         {/* Address / Regional description */}
         <div className="space-y-1.5">
-          <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Alamat / Titik Pasang</p>
+          <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.location.addressLabel")}</p>
           <p className="text-sm font-medium text-foreground leading-relaxed">
-            {address || (popName ? `Wilayah POP ${popName}` : "Alamat fisik belum didaftarkan.")}
+            {address || (popName ? t("deviceDetail.location.popRegion", { name: popName }) : t("deviceDetail.location.noAddress"))}
           </p>
           {(cityName || provinceName) ? (
             <p className="text-xs text-muted-foreground">
@@ -68,7 +70,7 @@ export function DeviceBentoLocationTile({
         <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Koordinat GPS</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.location.gpsCoordinates")}</p>
               <p className="font-mono tabular-nums text-sm font-semibold text-foreground mt-0.5">
                 {coordString}
               </p>
@@ -80,7 +82,7 @@ export function DeviceBentoLocationTile({
                 size="icon"
                 className="size-7 rounded-lg hover:bg-muted"
                 onClick={copyCoordinates}
-                title="Salin Koordinat"
+                title={t("deviceDetail.location.copyCoordinates")}
               >
                 {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5 text-muted-foreground" />}
               </Button>
@@ -100,7 +102,7 @@ export function DeviceBentoLocationTile({
                   className="gap-2"
                 >
                   <MapPin className="size-3.5 text-primary" />
-                  <span>Titik Google Maps</span>
+                  <span>{t("deviceDetail.location.googleMaps")}</span>
                 </a>
               </Button>
               <Button asChild variant="outline" className="h-10 rounded-xl border-border/60 bg-muted/20 text-xs font-mono font-medium hover:border-sky-500/50 hover:bg-sky-500/5 active:scale-[0.98]">
@@ -111,13 +113,13 @@ export function DeviceBentoLocationTile({
                   className="gap-2"
                 >
                   <Navigation className="size-3.5 text-sky-500" />
-                  <span>Titik Waze</span>
+                  <span>{t("deviceDetail.location.waze")}</span>
                 </a>
               </Button>
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 p-2.5 text-center text-xs text-muted-foreground">
-              Koordinat GPS belum diatur pada aset ini.
+              {t("deviceDetail.location.gpsNotSet")}
             </div>
           )}
         </div>

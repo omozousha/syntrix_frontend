@@ -7,8 +7,10 @@ import {
   Field,
   ComboboxField,
 } from "../../sections/device-technical-helpers";
+import { useTranslate } from "@/lib/use-locale";
 
 export function OdcTopologySection(props: TopologySectionProps) {
+  const { t } = useTranslate();
   const lookup = props.topologyLookup || {};
   const allDevices = lookup.devices || [];
 
@@ -17,16 +19,18 @@ export function OdcTopologySection(props: TopologySectionProps) {
   // - Upstream Cable = CABLE type devices (feeder cable)
   const upstreamDeviceOptions = toDeviceOptions(
     allDevices.filter((d) => d.device_type_key === "OTB"),
-    "Pilih upstream device (OTB)",
+    t("topo.selectUpstreamOtb"),
+    t,
   );
 
   const upstreamCableOptions = toDeviceOptions(
     allDevices.filter((d) => d.device_type_key === "CABLE" && (!d.route_type || d.route_type === "FEEDER")),
-    "Pilih upstream cable",
+    t("topo.selectUpstreamCable"),
+    t,
   );
 
   return (
-    <TopologyCard title="Incoming Cable (Upstream)">
+    <TopologyCard title={t("topo.titleIncoming")}>
       <ComboboxField
         label="Upstream Device (OTB)"
         value={props.form.upstream_device_id || "__none__"}
@@ -34,7 +38,7 @@ export function OdcTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, upstream_device_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari OTB upstream..."
+        searchPlaceholder={t("topo.searchOtbUpstream")}
         options={upstreamDeviceOptions}
       />
       <ComboboxField
@@ -44,7 +48,7 @@ export function OdcTopologySection(props: TopologySectionProps) {
           props.onChange((prev) => ({ ...prev, upstream_cable_id: value === "__none__" ? "" : value }))
         }
         disabled={!props.editing}
-        searchPlaceholder="Cari feeder cable..."
+        searchPlaceholder={t("topo.searchFeederCable")}
         options={upstreamCableOptions}
       />
       <Field

@@ -5,6 +5,7 @@ import { Layers, Cpu, Network, UserCheck, Copy, Check, GitCommit } from "lucide-
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useTranslate } from "@/lib/use-locale";
 
 type DeviceBentoCapacityTileProps = {
   totalPorts?: number | string | null;
@@ -60,6 +61,7 @@ export function DeviceBentoCapacityTile({
   feederPortCount,
   operationalStatus,
 }: DeviceBentoCapacityTileProps) {
+  const { t } = useTranslate();
   const [copiedIp, setCopiedIp] = useState(false);
   const dtk = (deviceTypeKey || "DEVICE").toUpperCase();
 
@@ -89,7 +91,7 @@ export function DeviceBentoCapacityTile({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
               <Network className="size-4 text-sky-500" />
-              <span>Kapasitas Sambungan Splicing</span>
+              <span>{t("deviceDetail.capacity.jcSplicingCapacity")}</span>
             </div>
             <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">JC SPECS</span>
           </div>
@@ -97,7 +99,7 @@ export function DeviceBentoCapacityTile({
           {/* Splicing Core Capacity Meter */}
           <div className="rounded-xl border border-border/50 bg-muted/20 p-3 space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Core Splicing</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.coreSplicing")}</span>
               <span className="font-mono tabular-nums text-xs font-semibold text-foreground">
                 <span className="text-sky-500">{uCores}</span> / {totCores} core ({coreUtilPercent}%)
               </span>
@@ -106,29 +108,29 @@ export function DeviceBentoCapacityTile({
               <div className="h-full rounded-full bg-sky-500 transition-all duration-500" style={{ width: `${coreUtilPercent}%` }} />
             </div>
             <div className="flex items-center justify-between font-mono text-[9px] text-muted-foreground pt-0.5">
-              <span>{idleCores} Tersedia</span>
-              <span>{uCores} Tersambung</span>
+              <span>{t("deviceDetail.capacity.available", { count: idleCores })}</span>
+              <span>{t("deviceDetail.capacity.connected", { count: uCores })}</span>
             </div>
           </div>
 
           {/* JC Specs Grid */}
           <div className="mt-5 grid grid-cols-2 gap-2 border-t border-border/40 pt-4 text-xs">
             <div className="space-y-0.5">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Tipe Closure</p>
-              <p className="truncate font-semibold text-foreground" title={closureTypeName || "Closure Box"}>
-                {closureTypeName || "Closure Box"}
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.closureType")}</p>
+              <p className="truncate font-semibold text-foreground" title={closureTypeName || t("deviceDetail.capacity.closureBoxDefault")}>
+                {closureTypeName || t("deviceDetail.capacity.closureBoxDefault")}
               </p>
             </div>
             <div className="space-y-0.5">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Jumlah Tray</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.trayCount")}</p>
               <p className="truncate font-mono tabular-nums font-semibold text-foreground">
-                {trayCount ? `${trayCount} Tray` : "-"}
+                {trayCount ? `${trayCount} ${t("deviceDetail.capacity.tray")}` : "-"}
               </p>
             </div>
             <div className="space-y-0.5">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Lingkungan Instalasi</p>
-              <p className="truncate font-semibold text-foreground" title={installationType || "Tiang / Aerial"}>
-                {installationType || "Tiang / Aerial"}
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.installationEnv")}</p>
+              <p className="truncate font-semibold text-foreground" title={installationType || t("deviceDetail.capacity.aerialDefault")}>
+                {installationType || t("deviceDetail.capacity.aerialDefault")}
               </p>
             </div>
             <div className="space-y-0.5">
@@ -153,7 +155,7 @@ export function DeviceBentoCapacityTile({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
               <GitCommit className="size-4 text-violet-500" />
-              <span>Bentangan Kabel Fiber</span>
+              <span>{t("deviceDetail.capacity.fiberCableSpan")}</span>
             </div>
             <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">CABLE SPECS</span>
           </div>
@@ -161,7 +163,7 @@ export function DeviceBentoCapacityTile({
           {/* Core Capacity Meter */}
           <div className="rounded-xl border border-border/50 bg-muted/20 p-3 space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Core Fiber</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.coreFiber")}</span>
               <span className="font-mono tabular-nums text-xs font-semibold text-foreground">
                 <span className="text-violet-500">{uCores}</span> / {totCores} core ({coreUtilPercent}%)
               </span>
@@ -170,27 +172,27 @@ export function DeviceBentoCapacityTile({
               <div className="h-full rounded-full bg-violet-500 transition-all duration-500" style={{ width: `${coreUtilPercent}%` }} />
             </div>
             <div className="flex items-center justify-between font-mono text-[9px] text-muted-foreground pt-0.5">
-              <span>{idleCores} Idle</span>
-              <span>{uCores} Terpakai</span>
+              <span>{t("deviceDetail.capacity.idle", { count: idleCores })}</span>
+              <span>{t("deviceDetail.capacity.used", { count: uCores })}</span>
             </div>
           </div>
 
           {/* Cable Specs Grid */}
           <div className="mt-5 grid grid-cols-2 gap-2 border-t border-border/40 pt-4 text-xs">
             <div className="space-y-0.5">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Panjang Bentangan</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.spanLength")}</p>
               <p className="truncate font-mono tabular-nums font-semibold text-foreground">
-                {cableLengthM ? `${cableLengthM} meter` : "-"}
+                {cableLengthM ? `${cableLengthM} ${t("deviceDetail.capacity.meter")}` : "-"}
               </p>
             </div>
             <div className="space-y-0.5">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Tipe Kabel</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.cableType")}</p>
               <p className="truncate font-semibold text-foreground" title={cableType || "-"}>
                 {cableType || "-"}
               </p>
             </div>
             <div className="space-y-0.5">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Kategori Rute</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.routeCategory")}</p>
               <p className="truncate font-semibold text-foreground" title={routeType || "-"}>
                 {routeType || "-"}
               </p>
@@ -220,7 +222,7 @@ export function DeviceBentoCapacityTile({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
               <Cpu className="size-4 text-amber-500" />
-              <span>Perangkat Aktif Headend</span>
+              <span>{t("deviceDetail.capacity.headendActiveDevice")}</span>
             </div>
             <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">OLT SPECS</span>
           </div>
@@ -252,7 +254,7 @@ export function DeviceBentoCapacityTile({
                     size="icon"
                     className="size-4 rounded-md p-0"
                     onClick={() => handleCopyIp(managementIp)}
-                    title="Salin IP"
+                    title={t("deviceDetail.capacity.copyIp")}
                   >
                     {copiedIp ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3 text-muted-foreground" />}
                   </Button>
@@ -293,7 +295,7 @@ export function DeviceBentoCapacityTile({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
               <Layers className="size-4 text-emerald-500" />
-              <span>Terminasi Core Optik OTB</span>
+              <span>{t("deviceDetail.capacity.otbCoreTermination")}</span>
             </div>
             <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">OTB SPECS</span>
           </div>
@@ -301,7 +303,7 @@ export function DeviceBentoCapacityTile({
           {/* Core Termination Meter */}
           <div className="rounded-xl border border-border/50 bg-muted/20 p-3 space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Core Terminasi</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.coreTermination")}</span>
               <span className="font-mono tabular-nums text-xs font-semibold text-foreground">
                 <span className="text-emerald-500">{uCores}</span> / {totCores} core ({coreUtilPercent}%)
               </span>
@@ -310,23 +312,23 @@ export function DeviceBentoCapacityTile({
               <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${coreUtilPercent}%` }} />
             </div>
             <div className="flex items-center justify-between font-mono text-[9px] text-muted-foreground pt-0.5">
-              <span>{idleCores} Idle</span>
-              <span>{uCores} Terpakai</span>
+              <span>{t("deviceDetail.capacity.idle", { count: idleCores })}</span>
+              <span>{t("deviceDetail.capacity.used", { count: uCores })}</span>
             </div>
           </div>
 
           {/* OTB Specs Grid */}
           <div className="mt-5 grid grid-cols-2 gap-2 border-t border-border/40 pt-4 text-xs">
             <div className="space-y-0.5">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Tipe Adaptor</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.adapterType")}</p>
               <Badge variant="outline" className="font-mono text-[10px] uppercase">
                 {odpType || "SC/UPC"}
               </Badge>
             </div>
             <div className="space-y-0.5">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Ukuran Rak</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.rackSize")}</p>
               <p className="truncate font-semibold text-foreground">
-                {uHeight ? `${uHeight}U Rack` : "1U Rack"}
+                {uHeight ? `${uHeight}${t("deviceDetail.capacity.unitSuffix")}` : `1${t("deviceDetail.capacity.unitSuffix")}`}
               </p>
             </div>
             <div className="space-y-0.5">
@@ -357,15 +359,15 @@ export function DeviceBentoCapacityTile({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
               <UserCheck className="size-4 text-sky-500" />
-              <span>Terminal Pelanggan ONT</span>
+              <span>{t("deviceDetail.capacity.ontCustomerTerminal")}</span>
             </div>
             <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">ONT SPECS</span>
           </div>
 
           {/* Customer Reference Banner */}
           <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3 space-y-1">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-sky-600 dark:text-sky-400 font-semibold">Pelanggan Terhubung</p>
-            <p className="font-bold text-sm text-foreground truncate">{customerName || "Belum Terhubung Pelanggan"}</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-sky-600 dark:text-sky-400 font-semibold">{t("deviceDetail.capacity.connectedCustomer")}</p>
+            <p className="font-bold text-sm text-foreground truncate">{customerName || t("deviceDetail.capacity.noCustomerConnected")}</p>
             <p className="font-mono text-[10px] text-muted-foreground tabular-nums">CID: {customerNumber || "-"}</p>
           </div>
 
@@ -378,7 +380,7 @@ export function DeviceBentoCapacityTile({
               </p>
             </div>
             <div className="space-y-0.5">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Status CPE</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.cpeStatus")}</p>
               <Badge variant="outline" className="font-mono text-[10px] uppercase border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
                 {operationalStatus || "Active"}
               </Badge>
@@ -411,7 +413,7 @@ export function DeviceBentoCapacityTile({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
             <Layers className="size-4 text-emerald-500" />
-            <span>Kapasitas &amp; Spesifikasi Aset</span>
+            <span>{t("deviceDetail.capacity.capacityAndSpecs")}</span>
           </div>
           <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
             {dtk === "ODP" ? "ODP SPECS" : dtk === "ODC" ? "ODC SPECS" : "SPECS"}
@@ -423,7 +425,7 @@ export function DeviceBentoCapacityTile({
           {/* Port Capacity Meter */}
           <div className="rounded-xl border border-border/50 bg-muted/20 p-3 space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Port Status</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.portStatus")}</span>
               <span className="font-mono tabular-nums text-xs font-semibold text-foreground">
                 <span className="text-emerald-500">{uPorts}</span> / {totPorts} port ({portUtilPercent}%)
               </span>
@@ -436,8 +438,8 @@ export function DeviceBentoCapacityTile({
               />
             </div>
             <div className="flex items-center justify-between font-mono text-[9px] text-muted-foreground pt-0.5">
-              <span>{idlePorts} Idle</span>
-              <span>{uPorts} Terpakai</span>
+              <span>{t("deviceDetail.capacity.idle", { count: idlePorts })}</span>
+              <span>{t("deviceDetail.capacity.used", { count: uPorts })}</span>
             </div>
           </div>
 
@@ -445,7 +447,7 @@ export function DeviceBentoCapacityTile({
           {totCores > 0 ? (
             <div className="rounded-xl border border-border/50 bg-muted/20 p-3 space-y-1.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Core Fiber</span>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.coreFiber")}</span>
                 <span className="font-mono tabular-nums text-xs font-semibold text-foreground">
                   <span className="text-sky-500">{uCores}</span> / {totCores} core ({coreUtilPercent}%)
                 </span>
@@ -483,10 +485,10 @@ export function DeviceBentoCapacityTile({
 
           <div className="space-y-0.5">
             <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-              {splitterRatio ? "Splitter / Ratio" : "Mounting"}
+              {splitterRatio ? t("deviceDetail.capacity.splitterRatio") : t("deviceDetail.capacity.mounting")}
             </p>
-            <p className="truncate font-mono tabular-nums font-semibold text-foreground" title={splitterRatio ? `Rasio ${splitterRatio}` : installationType || "Tiang / Wall"}>
-              {splitterRatio ? `Rasio ${splitterRatio}` : installationType || "Tiang / Wall"}
+            <p className="truncate font-mono tabular-nums font-semibold text-foreground" title={splitterRatio ? `${t("deviceDetail.capacity.ratio")} ${splitterRatio}` : installationType || t("deviceDetail.capacity.poleWallDefault")}>
+              {splitterRatio ? `${t("deviceDetail.capacity.ratio")} ${splitterRatio}` : installationType || t("deviceDetail.capacity.poleWallDefault")}
             </p>
           </div>
 

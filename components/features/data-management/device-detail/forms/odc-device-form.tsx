@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslate } from "@/lib/use-locale";
 
 import {
   type DefaultInfoSectionProps,
   DefaultInfoSection,
   type SplitterProfileOption,
-  DEVICE_TECHNICAL_COPY,
+  getDeviceTechnicalCopy,
   Field,
   ComboboxField,
   SplitterRatioField,
@@ -37,7 +38,8 @@ export type OdcDeviceFormProps = DefaultInfoSectionProps & {
 };
 
 export function OdcDeviceForm(props: OdcDeviceFormProps) {
-  const technicalCopy = DEVICE_TECHNICAL_COPY.ODC;
+  const { t } = useTranslate();
+  const technicalCopy = getDeviceTechnicalCopy("ODC", t);
 
   // Validation warnings
   const filteredOdcCoreCapacities = (props.deviceCoreCapacities || []).filter((item) => {
@@ -67,9 +69,9 @@ export function OdcDeviceForm(props: OdcDeviceFormProps) {
             value={props.form.capacity_core || "__none__"}
             onValueChange={(value) => props.onChange((prev) => ({ ...prev, capacity_core: value === "__none__" ? "" : value }))}
             disabled={!props.editing}
-            searchPlaceholder="Cari kapasitas core..."
+            searchPlaceholder={t("createForm.searchCoreCapacity")}
             options={[
-              { value: "__none__", label: "Pilih kapasitas core" },
+              { value: "__none__", label: t("createForm.selectCoreCapacity") },
               ...filteredOdcCoreCapacities.map((item) => ({
                 value: String(item.core_capacity_value),
                 label: `${item.core_capacity_value} Core${item.label ? ` — ${item.label}` : ""}`,
@@ -86,7 +88,7 @@ export function OdcDeviceForm(props: OdcDeviceFormProps) {
           />
           {showOdcCoreWarning ? (
             <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
-              &#9888; Used core ({props.form.used_core}) melebihi kapasitas core ({props.form.capacity_core}).
+              &#9888; {t("deviceDetail.odc.coreExceeded", { used: props.form.used_core, cap: props.form.capacity_core })}
             </p>
           ) : null}
           <Field
@@ -107,7 +109,12 @@ export function OdcDeviceForm(props: OdcDeviceFormProps) {
           />
           {showOdcPortWarning ? (
             <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
-              &#9888; {technicalCopy.usedPortsLabel} ({props.form.used_ports}) melebihi {technicalCopy.totalPortsLabel} ({props.form.total_ports}).
+              &#9888; {t("deviceDetail.odc.portExceeded", {
+                usedLabel: technicalCopy.usedPortsLabel || "Used Ports",
+                used: props.form.used_ports,
+                totalLabel: technicalCopy.totalPortsLabel || "Total Ports",
+                total: props.form.total_ports,
+              })}
             </p>
           ) : null}
           <SplitterRatioField

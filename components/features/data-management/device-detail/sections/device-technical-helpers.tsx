@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 // ── Shared Types ──────────────────────────────────────────────────────────
 
@@ -249,6 +250,35 @@ export type CityOption = {
 
 export const DEVICE_STATUS_OPTIONS = ["draft", "installed", "active", "inactive", "maintenance", "retired"];
 
+export function getDeviceTechnicalCopy(deviceTypeKey: string, t: TFn) {
+  const base = DEVICE_TECHNICAL_COPY[deviceTypeKey] ?? {
+    title: `Technical ${deviceTypeKey}`,
+    totalPortsLabel: t("tech.defaultTotalPorts"),
+    usedPortsLabel: t("tech.defaultUsedPorts"),
+    splitterLabel: t("tech.defaultSplitter"),
+  };
+  if (deviceTypeKey === "JC") {
+    return { ...base, title: t("tech.jcTitle") };
+  }
+  if (deviceTypeKey === "ODP") {
+    return {
+      ...base,
+      totalPortsLabel: t("tech.odpTotalPorts"),
+      usedPortsLabel: t("tech.odpUsedPorts"),
+      splitterLabel: t("tech.odpSplitter"),
+    };
+  }
+  if (deviceTypeKey === "ODC") {
+    return {
+      ...base,
+      totalPortsLabel: t("tech.odcTotalPorts"),
+      usedPortsLabel: t("tech.odcUsedPorts"),
+      splitterLabel: t("tech.odcSplitter"),
+    };
+  }
+  return base;
+}
+
 export const DEVICE_TECHNICAL_COPY: Record<string, {
   title: string;
   coreCapacityLabel?: string;
@@ -321,7 +351,7 @@ export function valueOf(value: unknown, fallback = "") {
   return text || fallback;
 }
 
-export function validateCoordinateFormat(value: string, kind: "longitude" | "latitude") {
+export function validateCoordinateFormat(value: string, kind: "longitude" | "latitude", t: TFn) {
   const text = value.trim();
   if (!text) return { state: "idle" as const, message: "" };
 
@@ -329,14 +359,14 @@ export function validateCoordinateFormat(value: string, kind: "longitude" | "lat
     const valid = /^-?\d{3}\.\d{6,}$/.test(text);
     return {
       state: valid ? ("valid" as const) : ("invalid" as const),
-      message: valid ? "Format valid" : "Format longitude: 3 digit depan dan minimal 6 desimal",
+      message: valid ? t("tech.formatValid") : t("tech.lngRule"),
     };
   }
 
   const valid = /^-\d{1,2}\.\d{6,}$/.test(text);
   return {
     state: valid ? ("valid" as const) : ("invalid" as const),
-    message: valid ? "Format valid" : "Format latitude wajib minus dan minimal 6 desimal",
+    message: valid ? t("tech.formatValid") : t("tech.latRule"),
   };
 }
 
@@ -357,6 +387,7 @@ export function SplitterRatioField({
   splitterProfiles: SplitterProfileOption[];
   onValueChange: (value: string) => void;
 }) {
+  const { t } = useTranslate();
   const filteredSplitterProfiles = splitterProfiles.filter((profile) => {
     const allowedKeys = profile.allowed_device_type_keys || [];
     if (!allowedKeys.length) return false;
@@ -372,7 +403,7 @@ export function SplitterRatioField({
         </Badge>
       </div>
       <p className="text-xs text-muted-foreground">
-        Pilihan splitter mengisi rekomendasi kapasitas port. Review kembali sebelum menyimpan perubahan.
+        {t("tech.splitterHint")}
       </p>
       <Combobox
         value={value}
@@ -380,13 +411,13 @@ export function SplitterRatioField({
         disabled={!editing}
         triggerClassName="h-8 text-xs"
         options={[
-          { value: "__none__", label: "Pilih splitter ratio" },
+          { value: "__none__", label: t("createForm.selectSplitter") },
           ...filteredSplitterProfiles.map((item) => ({
             value: item.ratio_label,
             label: item.output_port_count ? `${item.ratio_label} (${item.output_port_count} port)` : item.ratio_label,
           })),
         ]}
-        searchPlaceholder="Cari splitter ratio..."
+        searchPlaceholder={t("createForm.searchSplitter")}
       />
     </div>
   );
@@ -524,7 +555,8 @@ export function CoordinateField({
   compact?: boolean;
   kind: "longitude" | "latitude";
 }) {
-  const validation = validateCoordinateFormat(value, kind);
+  const { t } = useTranslate();
+  const validation = validateCoordinateFormat(value, kind, t);
   const placeholder = kind === "latitude" ? "-6.200000" : "106.816666";
 
   return (
@@ -534,14 +566,14 @@ export function CoordinateField({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button type="button" variant="ghost" size="icon-xs" className="text-muted-foreground" aria-label={`Info ${label}`}>
+              <Button type="button" variant="ghost" size="icon-xs" className="text-muted-foreground" aria-label={t("createForm.fieldInfo", { label })}>
                 <CircleHelp className="size-3.5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={6}>
               {kind === "latitude"
-                ? "Format: -x.xxxxxx (contoh: -6.200000). Wajib minus di depan, minimal 6 digit desimal."
-                : "Format: xxx.xxxxxx (contoh: 106.816666). Tiga digit di depan, minimal 6 digit desimal."}
+                ? t("fieldTip.latitudeFormat")
+                : t("fieldTip.longitudeFormat")}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

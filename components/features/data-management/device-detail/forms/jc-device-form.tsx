@@ -2,11 +2,12 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Network, ArrowRight } from "lucide-react";
+import { useTranslate } from "@/lib/use-locale";
 import {
   type DefaultInfoSectionProps,
   DefaultInfoSection,
   type SplitterProfileOption,
-  DEVICE_TECHNICAL_COPY,
+  getDeviceTechnicalCopy,
   Field,
   ComboboxField,
 } from "../sections/index";
@@ -27,11 +28,8 @@ export type JcDeviceFormProps = DefaultInfoSectionProps & {
 };
 
 export function JcDeviceForm(props: JcDeviceFormProps) {
-  const technicalCopy = DEVICE_TECHNICAL_COPY.JC || {
-    title: "Informasi Joint Closure",
-    coreCapacityLabel: "Capacity Core",
-    usedCoreLabel: "Used Core",
-  };
+  const { t } = useTranslate();
+  const technicalCopy = getDeviceTechnicalCopy("JC", t);
 
   const lookup = props.topologyLookup || emptyTopologyLookup();
   const closureTypes = props.closureTypes || [];
@@ -78,7 +76,7 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
           <ComboboxField
-            label="Tipe Joint Closure"
+            label={t("deviceForm.jc.type")}
             value={props.form.closure_type_id || "__none__"}
             onValueChange={(value) => {
               const nextId = value === "__none__" ? "" : value;
@@ -90,9 +88,9 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
               }));
             }}
             disabled={!props.editing}
-            searchPlaceholder="Cari tipe closure..."
+            searchPlaceholder={t("deviceForm.jc.searchType")}
             options={[
-              { value: "__none__", label: "Pilih tipe closure" },
+              { value: "__none__", label: t("deviceForm.jc.selectType") },
               ...closureTypes.map((c) => ({
                 value: c.id,
                 label: [c.closure_type_name, c.closure_type_code].filter(Boolean).join(" — "),
@@ -101,10 +99,10 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
           />
           {selectedClosureType ? (
             <p className="col-span-full text-xs text-muted-foreground">
-              Kapasitas: <span className="font-medium text-foreground">{selectedClosureType.max_core_capacity ?? "—"} core</span>
-              {" · "}Splice: <span className="font-medium text-foreground">{selectedClosureType.max_splice_capacity ?? "—"}</span>
-              {" · "}Pass-through: <span className="font-medium text-foreground">{selectedClosureType.supports_pass_through ? "Ya" : "Tidak"}</span>
-              {" · "}Branching: <span className="font-medium text-foreground">{selectedClosureType.supports_branching ? "Ya" : "Tidak"}</span>
+              {t("deviceForm.jc.capacity")}: <span className="font-medium text-foreground">{selectedClosureType.max_core_capacity ?? "—"} core</span>
+              {" · "}{t("deviceForm.jc.splice")}: <span className="font-medium text-foreground">{selectedClosureType.max_splice_capacity ?? "—"}</span>
+              {" · "}{t("deviceForm.jc.passThrough")}: <span className="font-medium text-foreground">{selectedClosureType.supports_pass_through ? t("deviceForm.yes") : t("deviceForm.no")}</span>
+              {" · "}{t("deviceForm.jc.branching")}: <span className="font-medium text-foreground">{selectedClosureType.supports_branching ? t("deviceForm.yes") : t("deviceForm.no")}</span>
             </p>
           ) : null}
           <ComboboxField
@@ -112,9 +110,9 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
             value={props.form.capacity_core || "__none__"}
             onValueChange={(value) => props.onChange((prev) => ({ ...prev, capacity_core: value === "__none__" ? "" : value }))}
             disabled={!props.editing}
-            searchPlaceholder="Cari kapasitas core..."
+            searchPlaceholder={t("createForm.searchCoreCapacity")}
             options={[
-              { value: "__none__", label: "Pilih kapasitas core" },
+              { value: "__none__", label: t("createForm.selectCoreCapacity") },
               ...filteredJcCoreCapacities.map((item) => ({
                 value: String(item.core_capacity_value),
                 label: `${item.core_capacity_value} Core${item.label ? ` — ${item.label}` : ""}`,
@@ -131,7 +129,7 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
           />
           {showJcCoreWarning ? (
             <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
-              &#9888; Used core ({props.form.used_core}) melebihi kapasitas core ({props.form.capacity_core}).
+              &#9888; {t("deviceForm.jc.coreExceeded", { used: props.form.used_core, cap: props.form.capacity_core })}
             </p>
           ) : null}
         </CardContent>
@@ -149,40 +147,40 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
         <CardHeader className="px-3 py-2">
           <CardTitle className="text-sm flex items-center gap-1.5">
             <Network className="size-4 text-primary" />
-            Splicing Matrix
+            {t("deviceForm.jc.splicingMatrix")}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-3 pt-0">
           {!hasSplicing ? (
             <div className="text-xs text-muted-foreground italic text-center p-4 border border-dashed rounded-lg">
-              Tentukan segment kabel masuk (From Cable) dan kabel keluar (To Cable) serta rentang core pada Relasi Joint Closure untuk menampilkan matriks splicing.
+              {t("deviceForm.jc.splicingHint")}
             </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
               <div className="grid grid-cols-3 bg-muted/40 p-2 text-xs font-semibold text-muted-foreground border-b">
-                <div>{fromCableName} (Core)</div>
-                <div className="text-center">Sambungan (Splice)</div>
-                <div className="text-right">{toCableName} (Core)</div>
+                <div>{fromCableName} ({t("deviceForm.jc.core")})</div>
+                <div className="text-center">{t("deviceForm.jc.splicing")}</div>
+                <div className="text-right">{toCableName} ({t("deviceForm.jc.core")})</div>
               </div>
               <div className="max-h-48 overflow-y-auto divide-y">
                 {spliceRows.map((coreNum) => (
                   <div key={coreNum} className="grid grid-cols-3 p-2 text-xs items-center hover:bg-muted/10 transition">
                     <div className="font-medium flex items-center gap-1.5">
                       <span className="inline-block size-2 rounded-full bg-emerald-500" />
-                      Core {coreNum}
+                      {t("deviceForm.jc.coreNumber", { core: String(coreNum) })}
                     </div>
                     <div className="flex justify-center text-muted-foreground">
                       <ArrowRight className="size-3 text-primary animate-pulse" />
                     </div>
                     <div className="text-right font-medium flex items-center gap-1.5 justify-end">
-                      Core {coreNum}
+                      {t("deviceForm.jc.coreNumber", { core: String(coreNum) })}
                       <span className="inline-block size-2 rounded-full bg-blue-500" />
                     </div>
                   </div>
                 ))}
               </div>
               <div className="bg-muted/20 p-2 text-[10px] text-muted-foreground border-t">
-                Total core tersambung: <span className="font-semibold text-foreground">{spliceRows.length} core</span>
+                {t("deviceForm.jc.totalSpliced", { count: String(spliceRows.length) })}
               </div>
             </div>
           )}

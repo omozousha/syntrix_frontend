@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { normalizeDeviceName } from "@/lib/name-normalization";
 import { RELATION_LABEL_FALLBACK } from "@/lib/relation-labels";
 import { mapValidationStatus } from "@/lib/validation-status";
+import { useTranslate } from "@/lib/use-locale";
 import {
   type DeviceForm,
   type EditableForm,
@@ -83,10 +84,11 @@ function DeviceIdentitySection({
   editing,
   effectiveValidationStatus,
 }: DefaultInfoSectionProps) {
+  const { t } = useTranslate();
   return (
     <Card>
       <CardHeader className="px-3 py-2">
-        <CardTitle className="text-sm">Informasi Umum</CardTitle>
+        <CardTitle className="text-sm">{t("deviceDetail.infoTitle")}</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
         <Field label="Device ID" value={form.device_id} disabled compact />
@@ -144,6 +146,7 @@ function DeviceRelationSection({
   brands,
   assetModels,
 }: DefaultInfoSectionProps) {
+  const { t } = useTranslate();
   const filteredProjectOptions = projectOptions
     .filter((project) => !form.region_id || !project.region_id || project.region_id === form.region_id)
     .filter((project) => !form.pop_id || !project.pop_id || project.pop_id === form.pop_id);
@@ -151,7 +154,7 @@ function DeviceRelationSection({
   return (
     <Card>
       <CardHeader className="px-3 py-2">
-        <CardTitle className="text-sm">Relasi & Vendor</CardTitle>
+        <CardTitle className="text-sm">{t("deviceDetail.relationTitle")}</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
         <DisplayField label="Region" value={relationLabels.region || "-"} loading={relationLoading} compact />
@@ -160,9 +163,9 @@ function DeviceRelationSection({
             label="POP"
             value={form.pop_id || "__none__"}
             onValueChange={(value) => onChange((prev) => ({ ...prev, pop_id: value === "__none__" ? "" : value }))}
-            searchPlaceholder="Cari POP..."
+            searchPlaceholder={t("createForm.searchPop")}
             options={[
-              { value: "__none__", label: "Tidak ada POP" },
+              { value: "__none__", label: t("deviceDetail.relation.noPop") },
               ...popOptions.map((pop) => ({
                 value: pop.id,
                 label: [pop.pop_name, pop.pop_code].filter(Boolean).join(" - ") || RELATION_LABEL_FALLBACK.missing,
@@ -177,9 +180,9 @@ function DeviceRelationSection({
             label="Project Reference"
             value={form.project_id || "__none__"}
             onValueChange={(value) => onChange((prev) => ({ ...prev, project_id: value === "__none__" ? "" : value }))}
-            searchPlaceholder="Cari project..."
+            searchPlaceholder={t("createForm.searchProject")}
             options={[
-              { value: "__none__", label: "Tidak ada project" },
+              { value: "__none__", label: t("deviceDetail.relation.noProject") },
               ...filteredProjectOptions.map((project) => ({
                 value: project.id,
                 label: [project.project_name, project.project_code || project.project_id].filter(Boolean).join(" | ") || RELATION_LABEL_FALLBACK.missing,
@@ -194,9 +197,9 @@ function DeviceRelationSection({
             label="Tenant"
             value={form.tenant_id || "__none__"}
             onValueChange={(value) => onChange((prev) => ({ ...prev, tenant_id: value === "__none__" ? "" : value }))}
-            searchPlaceholder="Cari tenant..."
+            searchPlaceholder={t("createForm.searchTenant")}
             options={[
-              { value: "__none__", label: "Tidak ada tenant" },
+              { value: "__none__", label: t("deviceDetail.relation.noTenant") },
               ...tenants.map((tenant) => ({
                 value: tenant.id,
                 label: tenant.tenant_code ? `${tenant.tenant_name} (${tenant.tenant_code})` : tenant.tenant_name,
@@ -214,9 +217,9 @@ function DeviceRelationSection({
               const nextVal = value === "__none__" ? "" : value;
               onChange((prev) => ({ ...prev, manufacturer_id: nextVal, brand_id: "", model_id: "" }));
             }}
-            searchPlaceholder="Cari manufacturer..."
+            searchPlaceholder={t("createForm.searchManufacturer")}
             options={[
-              { value: "__none__", label: "Tidak ada manufacturer" },
+              { value: "__none__", label: t("deviceDetail.relation.noManufacturer") },
               ...manufacturers.map((m) => ({ value: m.id, label: m.manufacturer_name })),
             ]}
           />
@@ -232,9 +235,9 @@ function DeviceRelationSection({
               const nextVal = value === "__none__" ? "" : value;
               onChange((prev) => ({ ...prev, brand_id: nextVal, model_id: "" }));
             }}
-            searchPlaceholder="Cari brand..."
+            searchPlaceholder={t("createForm.searchBrand")}
             options={[
-              { value: "__none__", label: "Tidak ada brand" },
+              { value: "__none__", label: t("deviceDetail.relation.noBrand") },
               ...brands
                 .filter((b) => !form.manufacturer_id || b.manufacturer_id === form.manufacturer_id)
                 .map((b) => ({ value: b.id, label: b.brand_name })),
@@ -249,9 +252,9 @@ function DeviceRelationSection({
             label="Model"
             value={form.model_id || "__none__"}
             onValueChange={(value) => onChange((prev) => ({ ...prev, model_id: value === "__none__" ? "" : value }))}
-            searchPlaceholder="Cari model..."
+            searchPlaceholder={t("createForm.searchModel")}
             options={[
-              { value: "__none__", label: "Tidak ada model" },
+              { value: "__none__", label: t("deviceDetail.relation.noModel") },
               ...assetModels
                 .filter((m) => !form.brand_id || m.brand_id === form.brand_id)
                 .map((m) => ({ value: m.id, label: m.model_name })),
@@ -283,8 +286,9 @@ function DeviceLocationSection({
   provinces = [],
   cities = [],
 }: DefaultInfoSectionProps) {
+  const { t } = useTranslate();
   const provinceOptions = [
-    { value: "__none__", label: "Pilih provinsi" },
+    { value: "__none__", label: t("createForm.selectProvince") },
     ...provinces.map((item) => ({
       value: item.id,
       label: item.province_name,
@@ -292,7 +296,7 @@ function DeviceLocationSection({
   ];
 
   const cityOptions = [
-    { value: "__none__", label: "Pilih kota/kabupaten" },
+    { value: "__none__", label: t("createForm.selectCity") },
     ...cities
       .filter((item) => !form.province_id || item.province_id === form.province_id)
       .map((item) => ({
@@ -304,7 +308,7 @@ function DeviceLocationSection({
   return (
     <Card>
       <CardHeader className="px-3 py-2">
-        <CardTitle className="text-sm">Lokasi</CardTitle>
+        <CardTitle className="text-sm">{t("deviceDetail.locationTitle")}</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
         <Field className="md:col-span-2 xl:col-span-3" label="Address" value={form.address} onChange={(value) => onChange((prev) => ({ ...prev, address: value }))} disabled={!editing} compact />
@@ -323,7 +327,7 @@ function DeviceLocationSection({
                 city_id: "",
               }));
             }}
-            searchPlaceholder="Cari provinsi..."
+            searchPlaceholder={t("createForm.searchProvince")}
             options={provinceOptions}
           />
         ) : (
@@ -341,7 +345,7 @@ function DeviceLocationSection({
               onChange((prev) => ({ ...prev, city_id: value }));
             }}
             disabled={!form.province_id}
-            searchPlaceholder="Cari kota/kabupaten..."
+            searchPlaceholder={t("createForm.searchCity")}
             options={cityOptions}
           />
         ) : (
@@ -357,13 +361,14 @@ function DeviceLocationSection({
 // ── Tags & Notes Section ───────────────────────────────────────────────────
 
 function DeviceTagsSection({ form, onChange, editing }: Pick<DefaultInfoSectionProps, "form" | "onChange" | "editing">) {
+  const { t } = useTranslate();
   return (
     <Card>
       <CardHeader className="px-3 py-2">
-        <CardTitle className="text-sm">Catatan &amp; Tags</CardTitle>
+        <CardTitle className="text-sm">{t("deviceDetail.tagsNotesTitle")}</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2">
-        <Field label="Catatan Perangkat" value={form.notes || ""} onChange={(value) => onChange((prev) => ({ ...prev, notes: value }))} disabled={!editing} compact />
+        <Field label={t("deviceDetail.notesLabel")} value={form.notes || ""} onChange={(value) => onChange((prev) => ({ ...prev, notes: value }))} disabled={!editing} compact />
         <Field label="Tags (CSV)" value={form.tags} onChange={(value) => onChange((prev) => ({ ...prev, tags: value }))} disabled={!editing} compact />
       </CardContent>
     </Card>

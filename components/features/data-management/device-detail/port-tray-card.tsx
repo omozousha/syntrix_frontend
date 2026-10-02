@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 import {
   type DevicePort,
   type PortConnection,
@@ -30,6 +31,7 @@ export function PortTrayCard({
   disabled?: boolean;
   className?: string;
 }) {
+  const { t } = useTranslate();
   const status = port.status || "idle";
   const isIdle = status === "idle";
   const isConnected = !!connection;
@@ -42,21 +44,21 @@ export function PortTrayCard({
   const splitterRoleLabel = port.splitter_role ? ` (${port.splitter_role})` : "";
 
   const tooltipLines = [
-    `Port ${port.port_label || `#${port.port_index}`}`,
-    `Status: ${getPortStatusLabel(status)}`,
-    `Fiber #${fiberCoreNum}: ${fiber.name}`,
+    t("portTray.portLabel", { label: port.port_label || `#${port.port_index}` }),
+    `${t("portTray.status")}: ${getPortStatusLabel(status)}`,
+    `${t("portTray.fiber")} #${fiberCoreNum}: ${fiber.name}`,
   ];
   if (hasSplitter) {
-    tooltipLines.push(`Splitter: ${port.splitter_ratio || "Splitter"}${splitterRoleLabel}`);
+    tooltipLines.push(`${t("portTray.splitter")}: ${port.splitter_ratio || t("portTray.splitterLabel")}${splitterRoleLabel}`);
   }
   if (isConnected && connection) {
-    tooltipLines.push(`Koneksi: ${getConnectionLabel(connection)}`);
+    tooltipLines.push(`${t("portTray.connection")}: ${getConnectionLabel(connection, t)}`);
   }
   if (port.notes) {
-    tooltipLines.push(`Catatan: ${port.notes}`);
+    tooltipLines.push(`${t("portTray.notes")}: ${port.notes}`);
   }
   if (isIdle && !disabled) {
-    tooltipLines.push("Klik untuk assign");
+    tooltipLines.push(t("portTray.clickToAssign"));
   }
 
   return (

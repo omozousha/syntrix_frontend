@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { mapValidationStatus } from "@/lib/validation-status";
+import { useTranslate } from "@/lib/use-locale";
 
 type DeviceBentoHeroTileProps = {
   deviceName: string;
@@ -44,6 +45,7 @@ export function DeviceBentoHeroTile({
   notes,
   tags,
 }: DeviceBentoHeroTileProps) {
+  const { t } = useTranslate();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   function copyText(text: string, key: string) {
@@ -110,7 +112,7 @@ export function DeviceBentoHeroTile({
           <div className="flex items-center gap-2">
             {updatedAt ? (
               <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
-                Update: {formatDate(updatedAt)}
+                {t("deviceDetail.hero.updated")} {formatDate(updatedAt)}
               </span>
             ) : null}
             <Badge variant="outline" className={`rounded-full font-mono text-[10px] uppercase tracking-wider ${valUi.className}`}>
@@ -122,9 +124,9 @@ export function DeviceBentoHeroTile({
 
         {/* Title / Name */}
         <div className="space-y-1">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Device Name</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t("deviceDetail.hero.deviceName")}</p>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground break-words">
-            {deviceName || "Unnamed Device"}
+            {deviceName || t("deviceDetail.hero.unnamed")}
           </h1>
         </div>
 
@@ -140,7 +142,7 @@ export function DeviceBentoHeroTile({
                 size="icon"
                 className="size-5 rounded-md hover:bg-muted"
                 onClick={() => copyText(inventoryId, "inv")}
-                title="Salin Inventory ID"
+                title={t("deviceDetail.hero.copyInventoryId")}
               >
                 {copiedKey === "inv" ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3 text-muted-foreground" />}
               </Button>
@@ -157,7 +159,7 @@ export function DeviceBentoHeroTile({
                 size="icon"
                 className="size-5 rounded-md hover:bg-muted"
                 onClick={() => copyText(deviceCode, "code")}
-                title="Salin Device Code"
+                title={t("deviceDetail.hero.copyDeviceCode")}
               >
                 {copiedKey === "code" ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3 text-muted-foreground" />}
               </Button>
@@ -172,7 +174,7 @@ export function DeviceBentoHeroTile({
                 size="icon"
                 className="size-5 rounded-md hover:bg-muted"
                 onClick={() => copyText(deviceId, "id")}
-                title="Salin Device ID"
+                title={t("deviceDetail.hero.copyDeviceId")}
               >
                 {copiedKey === "id" ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3 text-muted-foreground" />}
               </Button>
@@ -180,7 +182,7 @@ export function DeviceBentoHeroTile({
           ) : null}
 
           <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/20 px-2.5 py-1 text-xs">
-            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Pasang:</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.hero.installDate")}</span>
             <span className="font-mono tabular-nums font-medium text-foreground">
               {installationDate ? formatDate(installationDate) : "-"}
             </span>
@@ -190,7 +192,7 @@ export function DeviceBentoHeroTile({
         {/* Device Notes if present */}
         {notes ? (
           <div className="rounded-xl border border-border/40 bg-muted/15 p-2.5 text-xs text-muted-foreground">
-            <span className="font-mono text-[9px] uppercase tracking-widest text-foreground font-semibold mr-1.5">Catatan:</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-foreground font-semibold mr-1.5">{t("deviceDetail.hero.notes")}</span>
             <span className="italic">{notes}</span>
           </div>
         ) : null}
