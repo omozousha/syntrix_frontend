@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { API_BASE_URL, apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 import { getRegionLabel } from "@/lib/relation-labels";
 
 type AsBuiltDocumentRow = {
@@ -67,23 +68,28 @@ type DeviceLookupItem = {
   device_type_key?: string | null;
 };
 
-const STATUS_OPTIONS = [
-  { value: "__all__", label: "Semua Status" },
-  { value: "draft", label: "Draft" },
-  { value: "published", label: "Published" },
-  { value: "superseded", label: "Superseded" },
-  { value: "archived", label: "Archived" },
-];
+function statusOptions(t: TFn) {
+  return [
+    { value: "__all__", label: t("asBuiltDocs.allStatus") },
+    { value: "draft", label: "Draft" },
+    { value: "published", label: "Published" },
+    { value: "superseded", label: "Superseded" },
+    { value: "archived", label: "Archived" },
+  ];
+}
 
-const FORMAT_OPTIONS = [
-  { value: "__all__", label: "Semua Format" },
-  { value: "svg", label: "SVG" },
-  { value: "png", label: "PNG" },
-  { value: "pdf", label: "PDF" },
-  { value: "json", label: "JSON" },
-];
+function formatOptions(t: TFn) {
+  return [
+    { value: "__all__", label: t("asBuiltDocs.allFormats") },
+    { value: "svg", label: "SVG" },
+    { value: "png", label: "PNG" },
+    { value: "pdf", label: "PDF" },
+    { value: "json", label: "JSON" },
+  ];
+}
 
 export default function AsBuiltDocumentsPage() {
+  const { t, locale } = useTranslate();
   const searchParams = useSearchParams();
   const { token, me } = useSession();
   const requestedRegionId = searchParams.get("region_id") || "__all__";
@@ -158,15 +164,15 @@ export default function AsBuiltDocumentsPage() {
         if (cancelled) return;
         setProjectOptions((projects.data || []).map((item) => ({
           value: item.id,
-          label: `${item.project_name || "Project tidak tersedia"}`,
+          label: `${item.project_name || t("asBuiltDocs.projectUnavailable")}`,
         })));
         setRouteOptions((routes.data || []).map((item) => ({
           value: item.id,
-          label: `${item.route_name || item.route_id || "Route tidak tersedia"}`,
+          label: `${item.route_name || item.route_id || t("asBuiltDocs.routeUnavailable")}`,
         })));
         setDeviceOptions((devices.data || []).map((item) => ({
           value: item.id,
-          label: `${item.device_name || item.device_id || "Device tidak tersedia"} (${item.device_type_key || "-"})`,
+          label: `${item.device_name || item.device_id || t("asBuiltDocs.deviceUnavailable")} (${item.device_type_key || "-"})`,
         })));
       } catch {
         if (!cancelled) {
@@ -208,7 +214,7 @@ export default function AsBuiltDocumentsPage() {
         if (cancelled) return;
         setRows([]);
         setTotal(0);
-        setError((err as Error).message || "Gagal memuat daftar as-built documents.");
+        setError((err as Error).message || t("asBuiltDocs.loadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -227,14 +233,14 @@ export default function AsBuiltDocumentsPage() {
   }, [regions]);
   const regionOptions = useMemo(() => {
     if (isRegionScoped) {
-      return [{ value: scopedRegionId, label: regionNameMap.get(scopedRegionId) || "Region scope" }];
+      return [{ value: scopedRegionId, label: regionNameMap.get(scopedRegionId) || t("asBuiltDocs.selectRegion") }];
     }
-    return [{ value: "__all__", label: "Semua Region" }, ...regions.map((item) => ({ value: item.id, label: `${item.region_name} (${item.region_id})` }))];
-  }, [isRegionScoped, regionNameMap, regions, scopedRegionId]);
-  const projectFilterOptions = useMemo(() => withSelectedFallback(projectOptions, projectId, "Project"), [projectOptions, projectId]);
-  const routeFilterOptions = useMemo(() => withSelectedFallback(routeOptions, routeId, "Route"), [routeOptions, routeId]);
-  const deviceFilterOptions = useMemo(() => withSelectedFallback(deviceOptions, startDeviceId, "Device"), [deviceOptions, startDeviceId]);
-  const endDeviceFilterOptions = useMemo(() => withSelectedFallback(deviceOptions, endDeviceId, "Device"), [deviceOptions, endDeviceId]);
+    return [{ value: "__all__", label: t("asBuiltDocs.allRegions") }, ...regions.map((item) => ({ value: item.id, label: `${item.region_name} (${item.region_id})` }))];
+  }, [isRegionScoped, regionNameMap, regions, scopedRegionId, t]);
+  const projectFilterOptions = useMemo(() => withSelectedFallback(projectOptions, projectId, "Project", t), [projectOptions, projectId, t]);
+  const routeFilterOptions = useMemo(() => withSelectedFallback(routeOptions, routeId, "Route", t), [routeOptions, routeId, t]);
+  const deviceFilterOptions = useMemo(() => withSelectedFallback(deviceOptions, startDeviceId, "Device", t), [deviceOptions, startDeviceId, t]);
+  const endDeviceFilterOptions = useMemo(() => withSelectedFallback(deviceOptions, endDeviceId, "Device", t), [deviceOptions, endDeviceId, t]);
   const asBuiltWorkspaceHref = useMemo(() => {
     const params = new URLSearchParams();
     if (effectiveRegionId !== "__all__") params.set("region_id", effectiveRegionId);
@@ -259,25 +265,29 @@ export default function AsBuiltDocumentsPage() {
 
   async function handleDownload(row: AsBuiltDocumentRow) {
     if (!row.attachment_id) return;
-    const response = await fetch(`${API_BASE_URL}/attachments/${row.attachment_id}/download`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`Download gagal (${response.status})`);
+    try {
+      const response = await fetch(`${API_BASE_URL}/attachments/${row.attachment_id}/download`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(t("asBuiltDocs.downloadFailed", { status: response.status }));
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      const ext = (row.primary_format || "bin").toLowerCase();
+      anchor.href = url;
+      anchor.download = `${(row.document_id || row.id || "as-built").trim()}.${ext}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setActionError((err as Error).message);
     }
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    const ext = (row.primary_format || "bin").toLowerCase();
-    anchor.href = url;
-    anchor.download = `${(row.document_id || row.id || "as-built").trim()}.${ext}`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
   }
 
   function handleResetFilters() {
@@ -314,10 +324,13 @@ export default function AsBuiltDocumentsPage() {
       });
 
       setActionTarget(null);
-      setActionSuccess(`Status dokumen ${actionTarget.row.document_id || actionTarget.row.id} diubah ke ${actionTarget.nextStatus}.`);
+      setActionSuccess(t("asBuiltDocs.statusChanged", {
+        id: actionTarget.row.document_id || actionTarget.row.id,
+        status: actionTarget.nextStatus,
+      }));
       setRefreshNonce((prev) => prev + 1);
     } catch (err) {
-      setActionError((err as Error).message || "Gagal mengubah status dokumen.");
+      setActionError((err as Error).message || t("asBuiltDocs.statusChangeFailed"));
     } finally {
       setUpdatingStatus(false);
     }
@@ -345,12 +358,12 @@ export default function AsBuiltDocumentsPage() {
           }}
         >
           <Download className="mr-1 size-4" />
-          Download
+          {t("evidenceCheck.download")}
         </Button>
         <Button asChild type="button" size="sm" variant="outline" className={compact ? "w-full" : undefined}>
           <Link href={buildRegenerateHref(row)}>
             <RefreshCcw className="mr-1 size-4" />
-            Regenerate
+            {t("asBuiltDocs.action.regenerate")}
           </Link>
         </Button>
         {canShowAction(row.status, "published") ? (
@@ -361,7 +374,7 @@ export default function AsBuiltDocumentsPage() {
             className={compact ? "w-full" : undefined}
             onClick={() => setActionTarget({ row, nextStatus: "published" })}
           >
-            Publish
+            {t("asBuiltDocs.action.publish")}
           </Button>
         ) : null}
         {canShowAction(row.status, "superseded") ? (
@@ -372,7 +385,7 @@ export default function AsBuiltDocumentsPage() {
             className={compact ? "w-full" : undefined}
             onClick={() => setActionTarget({ row, nextStatus: "superseded" })}
           >
-            Supersede
+            {t("asBuiltDocs.action.supersede")}
           </Button>
         ) : null}
         {canShowAction(row.status, "archived") ? (
@@ -383,7 +396,7 @@ export default function AsBuiltDocumentsPage() {
             className={compact ? "w-full" : undefined}
             onClick={() => setActionTarget({ row, nextStatus: "archived" })}
           >
-            Archive
+            {t("asBuiltDocs.action.archive")}
           </Button>
         ) : null}
       </div>
@@ -394,46 +407,45 @@ export default function AsBuiltDocumentsPage() {
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 pr-3">
         <section className="space-y-1">
-          <h2 className="text-2xl font-semibold tracking-tight">As-Built Documents</h2>
-          <p className="text-sm text-muted-foreground">Output export dari topology approved. Buat dokumen dari As-Built Workspace, lalu simpan revision di sini.</p>
+          <h2 className="text-2xl font-semibold tracking-tight">{t("sidebar.asBuiltDocuments")}</h2>
+          <p className="text-sm text-muted-foreground">{t("asBuiltDocs.description")}</p>
         </section>
 
         <Card>
           <CardContent className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
-              <p className="text-sm font-semibold">Generate From Topology</p>
+              <p className="text-sm font-semibold">{t("asBuiltDocs.generateTitle")}</p>
               <p className="text-xs text-muted-foreground">
-                Gunakan trace context untuk membuat snapshot As-Built. Input dan edit relasi tetap dilakukan di Topology Workspace.
+                {t("asBuiltDocs.generateDesc")}
               </p>
             </div>
             <Button asChild type="button" className="w-full lg:w-auto">
-              <Link href={asBuiltWorkspaceHref}>Open As-Built Workspace</Link>
+              <Link href={asBuiltWorkspaceHref}>{t("asBuiltDocs.openWorkspace")}</Link>
             </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="px-4 py-3">
-            <p className="text-sm font-semibold">Snapshot Policy</p>
+            <p className="text-sm font-semibold">{t("asBuiltDocs.snapshotTitle")}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Dokumen yang sudah tersimpan adalah snapshot attachment dan metadata pada saat generate. Perubahan topology berikutnya tidak mengubah file lama;
-              gunakan Regenerate untuk membuat revision baru dari context yang sama.
+              {t("asBuiltDocs.snapshotDesc")}
             </p>
           </CardContent>
         </Card>
 
         {isRegionScoped ? (
           <div className="rounded-md border bg-muted/20 px-3 py-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Regional Scope</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("asBuiltDocs.regionalScope")}</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Dokumen As-Built dibatasi ke region {regionNameMap.get(scopedRegionId) || "yang terhubung ke akun ini"}.
+              {t("asBuiltDocs.regionScopeDesc", { region: regionNameMap.get(scopedRegionId) || t("asBuiltDocs.regionFallback") })}
             </p>
           </div>
         ) : null}
 
         <Card>
           <CardHeader className="px-4 py-3">
-            <CardTitle className="text-base">Filters</CardTitle>
+            <CardTitle className="text-base">{t("asBuiltDocs.filters")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 px-4 pb-4 pt-0">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-5">
@@ -443,7 +455,7 @@ export default function AsBuiltDocumentsPage() {
                 setQ(event.target.value);
                 setPage(1);
               }}
-              placeholder="Cari title/document id..."
+              placeholder={t("asBuiltDocs.searchPlaceholder")}
             />
             <Combobox
               value={regionId}
@@ -452,8 +464,8 @@ export default function AsBuiltDocumentsPage() {
                 setPage(1);
               }}
               options={regionOptions}
-              placeholder="Pilih region"
-              searchPlaceholder="Cari region..."
+              placeholder={t("asBuiltDocs.selectRegion")}
+              searchPlaceholder={t("asBuiltDocs.searchRegion")}
               disabled={isRegionScoped}
             />
             <Combobox
@@ -462,9 +474,9 @@ export default function AsBuiltDocumentsPage() {
                 setStatus(value || "__all__");
                 setPage(1);
               }}
-              options={STATUS_OPTIONS}
-              placeholder="Pilih status"
-              searchPlaceholder="Cari status..."
+              options={statusOptions(t)}
+              placeholder={t("asBuiltDocs.selectStatus")}
+              searchPlaceholder={t("asBuiltDocs.searchStatus")}
             />
             <Combobox
               value={format}
@@ -472,13 +484,13 @@ export default function AsBuiltDocumentsPage() {
                 setFormat(value || "__all__");
                 setPage(1);
               }}
-              options={FORMAT_OPTIONS}
-              placeholder="Pilih format"
-              searchPlaceholder="Cari format..."
+              options={formatOptions(t)}
+              placeholder={t("asBuiltDocs.selectFormat")}
+              searchPlaceholder={t("asBuiltDocs.searchFormat")}
             />
             <Button type="button" variant="outline" onClick={handleResetFilters}>
               <RefreshCcw className="mr-1 size-4" />
-              Reset
+              {t("common.reset")}
             </Button>
             </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
@@ -488,9 +500,9 @@ export default function AsBuiltDocumentsPage() {
                   setProjectId(value || "");
                   setPage(1);
                 }}
-                options={[{ value: "", label: "Semua Project" }, ...projectFilterOptions]}
-                placeholder="Pilih project"
-                searchPlaceholder="Cari project..."
+                options={[{ value: "", label: t("asBuiltDocs.allProjects") }, ...projectFilterOptions]}
+                placeholder={t("asBuiltDocs.selectProject")}
+                searchPlaceholder={t("asBuiltDocs.searchProject")}
               />
               <Combobox
                 value={routeId}
@@ -498,9 +510,9 @@ export default function AsBuiltDocumentsPage() {
                   setRouteId(value || "");
                   setPage(1);
                 }}
-                options={[{ value: "", label: "Semua Route" }, ...routeFilterOptions]}
-                placeholder="Pilih route"
-                searchPlaceholder="Cari route..."
+                options={[{ value: "", label: t("asBuiltDocs.allRoutes") }, ...routeFilterOptions]}
+                placeholder={t("asBuiltDocs.selectRoute")}
+                searchPlaceholder={t("asBuiltDocs.searchRoute")}
               />
               <Combobox
                 value={startDeviceId}
@@ -508,9 +520,9 @@ export default function AsBuiltDocumentsPage() {
                   setStartDeviceId(value || "");
                   setPage(1);
                 }}
-                options={[{ value: "", label: "Semua Start Device" }, ...deviceFilterOptions]}
-                placeholder="Pilih start device"
-                searchPlaceholder="Cari start device..."
+                options={[{ value: "", label: t("asBuiltDocs.allStartDevice") }, ...deviceFilterOptions]}
+                placeholder={t("asBuiltDocs.selectStartDevice")}
+                searchPlaceholder={t("asBuiltDocs.searchStartDevice")}
               />
               <Combobox
                 value={endDeviceId}
@@ -518,9 +530,9 @@ export default function AsBuiltDocumentsPage() {
                   setEndDeviceId(value || "");
                   setPage(1);
                 }}
-                options={[{ value: "", label: "Semua End Device" }, ...endDeviceFilterOptions]}
-                placeholder="Pilih end device"
-                searchPlaceholder="Cari end device..."
+                options={[{ value: "", label: t("asBuiltDocs.allEndDevice") }, ...endDeviceFilterOptions]}
+                placeholder={t("asBuiltDocs.selectEndDevice")}
+                searchPlaceholder={t("asBuiltDocs.searchEndDevice")}
               />
             </div>
           </CardContent>
@@ -529,14 +541,14 @@ export default function AsBuiltDocumentsPage() {
         <Card>
           <CardHeader className="px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle className="text-base">Documents ({total.toLocaleString("id-ID")})</CardTitle>
+              <CardTitle className="text-base">{t("asBuiltDocs.documentsCount", { count: total.toLocaleString(locale === "en" ? "en-US" : "id-ID") })}</CardTitle>
               <p className="text-xs text-muted-foreground">
-                Page {page} / {totalPages}
+                {t("asBuiltDocs.pageOf", { page, total: totalPages })}
               </p>
             </div>
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4 pt-0">
-            {loading ? <AppLoading label="Memuat daftar as-built documents..." /> : null}
+            {loading ? <AppLoading label={t("asBuiltDocs.loading")} /> : null}
             {!loading && error ? <AppLoading label={error} variant="error" /> : null}
             {!loading && actionSuccess ? <p className="text-sm text-emerald-600">{actionSuccess}</p> : null}
             {!loading && actionError ? <p className="text-sm text-destructive">{actionError}</p> : null}
@@ -547,23 +559,23 @@ export default function AsBuiltDocumentsPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{row.title || "-"}</p>
-                        <p className="truncate text-xs text-muted-foreground">{row.document_id || "Document ID tidak tersedia"}</p>
+                        <p className="truncate text-xs text-muted-foreground">{row.document_id || t("asBuiltDocs.docIdUnavailable")}</p>
                       </div>
                       <Badge variant={row.status === "published" ? "secondary" : "outline"}>{(row.status || "-").toUpperCase()}</Badge>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                      <DocumentMobileField label="Region" value={getRegionLabel({ fallback: row.region_id ? regionNameMap.get(row.region_id) || row.region_id : "", optional: true })} />
-                      <DocumentMobileField label="Revision" value={row.revision_code || "-"} />
-                      <DocumentMobileField label="Format" value={(row.primary_format || "-").toUpperCase()} />
-                      <DocumentMobileField label="Generated" value={formatDateTime(row.generated_at || row.created_at)} />
-                      <DocumentMobileField label="Prepared" value={row.prepared_by_name || "-"} className="col-span-2" />
+                      <DocumentMobileField label={t("asBuiltDocs.colRegion")} value={getRegionLabel({ fallback: row.region_id ? regionNameMap.get(row.region_id) || row.region_id : "", optional: true })} />
+                      <DocumentMobileField label={t("asBuiltDocs.colRevision")} value={row.revision_code || "-"} />
+                      <DocumentMobileField label={t("asBuiltDocs.colFormat")} value={(row.primary_format || "-").toUpperCase()} />
+                      <DocumentMobileField label={t("asBuiltDocs.colGenerated")} value={formatDateTime(row.generated_at || row.created_at, locale)} />
+                      <DocumentMobileField label={t("asBuiltDocs.colPrepared")} value={row.prepared_by_name || "-"} className="col-span-2" />
                     </div>
                     <div className="mt-3">{renderDocumentActions(row, true)}</div>
                   </div>
                 ))}
                 {!rows.length ? (
                   <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-                    Belum ada dokumen yang tersimpan.
+                    {t("asBuiltDocs.empty")}
                   </div>
                 ) : null}
               </div>
@@ -574,14 +586,14 @@ export default function AsBuiltDocumentsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Document</TableHead>
-                    <TableHead>Region</TableHead>
-                    <TableHead>Revision</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Format</TableHead>
-                    <TableHead>Generated</TableHead>
-                    <TableHead>Prepared</TableHead>
-                    <TableHead className="w-[320px]">Action</TableHead>
+                    <TableHead>{t("asBuiltDocs.colDocument")}</TableHead>
+                    <TableHead>{t("asBuiltDocs.colRegion")}</TableHead>
+                    <TableHead>{t("asBuiltDocs.colRevision")}</TableHead>
+                    <TableHead>{t("asBuiltDocs.colStatus")}</TableHead>
+                    <TableHead>{t("asBuiltDocs.colFormat")}</TableHead>
+                    <TableHead>{t("asBuiltDocs.colGenerated")}</TableHead>
+                    <TableHead>{t("asBuiltDocs.colPrepared")}</TableHead>
+                    <TableHead className="w-[320px]">{t("asBuiltDocs.colAction")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -590,7 +602,7 @@ export default function AsBuiltDocumentsPage() {
                       <TableCell>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium">{row.title || "-"}</p>
-                          <p className="truncate text-xs text-muted-foreground">{row.document_id || "Document ID tidak tersedia"}</p>
+                          <p className="truncate text-xs text-muted-foreground">{row.document_id || t("asBuiltDocs.docIdUnavailable")}</p>
                         </div>
                       </TableCell>
                       <TableCell>{getRegionLabel({ fallback: row.region_id ? regionNameMap.get(row.region_id) || row.region_id : "", optional: true })}</TableCell>
@@ -601,7 +613,7 @@ export default function AsBuiltDocumentsPage() {
                       <TableCell>
                         <Badge variant="outline">{(row.primary_format || "-").toUpperCase()}</Badge>
                       </TableCell>
-                      <TableCell>{formatDateTime(row.generated_at || row.created_at)}</TableCell>
+                      <TableCell>{formatDateTime(row.generated_at || row.created_at, locale)}</TableCell>
                       <TableCell>{row.prepared_by_name || "-"}</TableCell>
                       <TableCell>
                         {renderDocumentActions(row)}
@@ -611,7 +623,7 @@ export default function AsBuiltDocumentsPage() {
                   {!rows.length ? (
                     <TableRow>
                       <TableCell colSpan={8} className="py-6 text-center text-sm text-muted-foreground">
-                        Belum ada dokumen yang tersimpan.
+                        {t("asBuiltDocs.empty")}
                       </TableCell>
                     </TableRow>
                   ) : null}
@@ -628,7 +640,7 @@ export default function AsBuiltDocumentsPage() {
                 disabled={page <= 1 || loading}
                 onClick={() => setPage((prev) => Math.max(1, prev - 1))}
               >
-                Prev
+                {t("dataList.prev")}
               </Button>
               <Button
                 type="button"
@@ -637,7 +649,7 @@ export default function AsBuiltDocumentsPage() {
                 disabled={page >= totalPages || loading}
                 onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
               >
-                Next
+                {t("dataList.next")}
               </Button>
             </div>
           </CardContent>
@@ -646,17 +658,20 @@ export default function AsBuiltDocumentsPage() {
       <AlertDialog open={Boolean(actionTarget)} onOpenChange={(nextOpen) => (nextOpen ? undefined : setActionTarget(null))}>
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Konfirmasi Ubah Status</AlertDialogTitle>
+            <AlertDialogTitle>{t("asBuiltDocs.confirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
               {actionTarget
-                ? `Dokumen ${actionTarget.row.document_id || actionTarget.row.id} akan diubah ke status ${actionTarget.nextStatus}.`
-                : "Pilih aksi status dokumen."}
+                ? t("asBuiltDocs.confirmDesc", {
+                    id: actionTarget.row.document_id || actionTarget.row.id,
+                    status: actionTarget.nextStatus,
+                  })
+                : t("asBuiltDocs.confirmFallback")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={updatingStatus}>Batal</AlertDialogCancel>
+            <AlertDialogCancel disabled={updatingStatus}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction disabled={updatingStatus} onClick={() => void handleStatusActionConfirm()}>
-              {updatingStatus ? "Memproses..." : "Lanjutkan"}
+              {updatingStatus ? t("dataList.processing") : t("dataList.continue")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -665,11 +680,11 @@ export default function AsBuiltDocumentsPage() {
   );
 }
 
-function formatDateTime(value?: string | null) {
+function formatDateTime(value?: string | null, locale = "id") {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
@@ -684,7 +699,7 @@ function DocumentMobileField({ label, value, className = "" }: { label: string; 
   );
 }
 
-function withSelectedFallback(options: Array<{ value: string; label: string }>, value: string, label: string) {
+function withSelectedFallback(options: Array<{ value: string; label: string }>, value: string, label: string, t: TFn) {
   if (!value.trim() || options.some((option) => option.value === value)) return options;
-  return [{ value, label: `${label} terpilih (${value.slice(0, 8)})` }, ...options];
+  return [{ value, label: t("asBuiltDocs.selectedLabel", { label, value: value.slice(0, 8) }) }, ...options];
 }
