@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/components/session-context";
 import { useReferenceData } from "@/hooks/use-reference-data";
 import { API_BASE_URL, apiFetch } from "@/lib/api";
+import { useTranslate } from "@/lib/use-locale";
 import { formatRoleLabel } from "@/lib/domain-formatters";
 import { getRegionLabel, RELATION_LABEL_FALLBACK } from "@/lib/relation-labels";
 
@@ -22,6 +23,7 @@ const AVATAR_CACHE_PREFIX = "syntrix_avatar_cache";
 
 export default function ProfilePage() {
   const { me, token } = useSession();
+  const { t } = useTranslate();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -156,7 +158,7 @@ export default function ProfilePage() {
     try {
       const fullName = `${firstName} ${lastName}`.trim();
       if (!fullName) {
-        throw new Error("Nama depan / belakang tidak boleh kosong.");
+        throw new Error(t("profile.error.nameEmpty"));
       }
 
       const payload: { full_name: string; avatar_attachment_id?: string | null } = {
@@ -165,10 +167,10 @@ export default function ProfilePage() {
 
       if (selectedFile) {
         if (!selectedFile.type.startsWith("image/")) {
-          throw new Error("File avatar harus berupa gambar.");
+          throw new Error(t("profile.error.avatarImage"));
         }
         if (selectedFile.size > MAX_AVATAR_SIZE_BYTES) {
-          throw new Error("Ukuran avatar maksimal 5MB.");
+          throw new Error(t("profile.error.avatarSize"));
         }
 
         const formData = new FormData();
@@ -185,7 +187,7 @@ export default function ProfilePage() {
         });
         payload.avatar_attachment_id = uploadRes.data.id;
 
-        const localDataUrl = await fileToDataUrl(selectedFile);
+        const localDataUrl = await fileToDataUrl(selectedFile, t("profile.error.avatarRead"));
         cacheAvatarDataUrl(me.app_user.id, localDataUrl);
         setAvatarUrl(localDataUrl);
       }
@@ -198,12 +200,12 @@ export default function ProfilePage() {
         retryCount: 0,
       });
 
-      setMessage("Profile berhasil diperbarui. Halaman akan dimuat ulang.");
+      setMessage(t("profile.success.profileUpdated"));
       setSelectedFile(null);
       setAvatarPreviewUrl("");
       window.location.reload();
     } catch (err) {
-      setError((err as Error).message || "Gagal menyimpan profile.");
+      setError((err as Error).message || t("profile.error.saveProfile"));
     } finally {
       setSavingProfile(false);
     }
@@ -222,11 +224,11 @@ export default function ProfilePage() {
         retryCount: 0,
       });
       clearCachedAvatarDataUrl(me.app_user.id);
-      setMessage("Avatar berhasil dihapus. Halaman akan dimuat ulang.");
+      setMessage(t("profile.success.avatarRemoved"));
       setAvatarPreviewUrl("");
       window.location.reload();
     } catch (err) {
-      setError((err as Error).message || "Gagal menghapus avatar.");
+      setError((err as Error).message || t("profile.error.removeAvatar"));
     } finally {
       setSavingProfile(false);
     }
@@ -238,10 +240,10 @@ export default function ProfilePage() {
     setSavingPassword(true);
     try {
       if (newPassword.length < 8) {
-        throw new Error("Password baru minimal 8 karakter.");
+        throw new Error(t("profile.error.passwordMin"));
       }
       if (newPassword !== confirmPassword) {
-        throw new Error("Konfirmasi password tidak sama.");
+        throw new Error(t("profile.error.passwordMismatch"));
       }
 
       await apiFetch("/auth/change-password", {
@@ -252,11 +254,11 @@ export default function ProfilePage() {
         retryCount: 0,
       });
 
-      setMessage("Password berhasil diganti.");
+      setMessage(t("profile.success.passwordChanged"));
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      setError((err as Error).message || "Gagal mengganti password.");
+      setError((err as Error).message || t("profile.error.changePassword"));
     } finally {
       setSavingPassword(false);
     }
@@ -275,9 +277,9 @@ export default function ProfilePage() {
         timeoutMs: 20_000,
         retryCount: 0,
       });
-      setMessage("Email reset password berhasil dikirim.");
+      setMessage(t("profile.success.resetEmail"));
     } catch (err) {
-      setError((err as Error).message || "Gagal mengirim email reset.");
+      setError((err as Error).message || t("profile.error.resetEmail"));
     } finally {
       setSendingReset(false);
     }
@@ -289,7 +291,7 @@ export default function ProfilePage() {
   if (avatarLoading) {
     return (
       <div className="h-full min-h-0 w-full pr-3">
-        <AppLoading label="Sedang memuat data profile..." />
+        <AppLoading label={t("profile.loading")} />
       </div>
     );
   }
@@ -301,12 +303,12 @@ export default function ProfilePage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.18em]">
-              Account & Security
+              {t("profile.badge")}
             </Badge>
           </div>
-          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Profile Settings</h2>
+          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{t("profile.title")}</h2>
           <p className="text-xs text-muted-foreground sm:text-sm">
-            Atur identitas akun, avatar, keamanan, dan informasi scope wilayah kamu.
+            {t("profile.description")}
           </p>
         </div>
       </div>
@@ -321,7 +323,7 @@ export default function ProfilePage() {
               className="group relative shrink-0 active:scale-[0.97] transition-transform duration-200"
               onClick={() => fileInputRef.current?.click()}
               disabled={busy}
-              aria-label="Ubah avatar"
+              aria-label={t("profile.changeAvatar")}
             >
               <Avatar className="size-24 sm:size-28 border-4 border-background shadow-md transition-colors group-hover:border-primary/40 ring-2 ring-border/60">
                 {displayedAvatarUrl ? <AvatarImage src={displayedAvatarUrl} alt={me.app_user.full_name} className="object-cover" /> : null}
@@ -357,28 +359,28 @@ export default function ProfilePage() {
           <CardContent className="p-4 sm:p-6 space-y-4 flex-1 flex flex-col justify-between">
             <div className="space-y-3 text-xs">
               <p className="text-muted-foreground text-center">
-                Klik pada foto avatar di atas untuk mengunggah atau memperbarui foto profil kamu.
+                {t("profile.avatarHint")}
               </p>
 
               {selectedFile ? (
                 <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-center">
                   <Badge variant="secondary" className="font-mono text-[10px] tabular-nums rounded-md mb-1">
-                    File Terpilih
+                    {t("profile.fileSelected")}
                   </Badge>
                   <p className="font-mono text-xs font-medium text-foreground truncate">{selectedFile.name}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Klik "Simpan Profile" untuk menerapkan.</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{t("profile.fileApplyHint")}</p>
                 </div>
               ) : null}
 
               <div className="rounded-xl border border-border/50 bg-muted/10 p-3 space-y-2">
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-mono uppercase tracking-wider text-muted-foreground">Default Region</span>
+                  <span className="font-mono uppercase tracking-wider text-muted-foreground">{t("profile.defaultRegion")}</span>
                   <span className="font-medium text-foreground truncate max-w-[150px]">{defaultRegionLabel}</span>
                 </div>
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-mono uppercase tracking-wider text-muted-foreground">Scope Access</span>
+                  <span className="font-mono uppercase tracking-wider text-muted-foreground">{t("profile.scopeAccess")}</span>
                   <span className="font-mono tabular-nums font-semibold text-foreground">
-                    {me.app_user.user_region_scopes?.length || 0} Wilayah
+                    {t("profile.regionCount", { count: me.app_user.user_region_scopes?.length || 0 })}
                   </span>
                 </div>
               </div>
@@ -392,7 +394,7 @@ export default function ProfilePage() {
                 disabled={busy}
                 className="w-full h-9 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-medium transition-all active:scale-[0.98]"
               >
-                Hapus Foto Profil
+                {t("profile.removePhoto")}
               </Button>
             ) : null}
           </CardContent>
@@ -404,10 +406,10 @@ export default function ProfilePage() {
             <Tabs defaultValue="profile" className="space-y-4">
               <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-muted/40 p-1">
                 <TabsTrigger value="profile" className="h-9 rounded-lg font-medium text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-2xs">
-                  Informasi & Identitas
+                  {t("profile.tabInfo")}
                 </TabsTrigger>
                 <TabsTrigger value="security" className="h-9 rounded-lg font-medium text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-2xs">
-                  Keamanan & Password
+                  {t("profile.tabSecurity")}
                 </TabsTrigger>
               </TabsList>
 
@@ -415,7 +417,7 @@ export default function ProfilePage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="first_name" className="font-mono text-xs text-muted-foreground">Nama Depan</Label>
+                      <Label htmlFor="first_name" className="font-mono text-xs text-muted-foreground">{t("profile.firstName")}</Label>
                       <Input
                         id="first_name"
                         value={firstName}
@@ -425,7 +427,7 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="last_name" className="font-mono text-xs text-muted-foreground">Nama Belakang</Label>
+                      <Label htmlFor="last_name" className="font-mono text-xs text-muted-foreground">{t("profile.lastName")}</Label>
                       <Input
                         id="last_name"
                         value={lastName}
@@ -444,7 +446,7 @@ export default function ProfilePage() {
                       className="h-9 rounded-xl px-5 text-xs font-medium transition-all active:scale-[0.98]"
                     >
                       {savingProfile ? <ButtonLoader className="mr-2" /> : null}
-                      Simpan Profile
+                      {t("profile.save")}
                     </Button>
                   </div>
                 </div>
@@ -452,32 +454,32 @@ export default function ProfilePage() {
                 {/* Detail Scope & Informasi Sistem - Utilizes 3 columns on larger screens */}
                 <Card className="rounded-xl border-border/60 bg-background/50 shadow-2xs glass-inset">
                   <CardHeader className="p-4 pb-2">
-                    <CardTitle className="text-sm font-semibold tracking-tight">Scope & Meta Sistem</CardTitle>
-                    <CardDescription className="text-xs">Data identifikasi akses regional dan otorisasi dari admin sistem.</CardDescription>
+                    <CardTitle className="text-sm font-semibold tracking-tight">{t("profile.scopeMetaTitle")}</CardTitle>
+                    <CardDescription className="text-xs">{t("profile.scopeMetaDescription")}</CardDescription>
                   </CardHeader>
                   <CardContent className="p-4 pt-1 space-y-3">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       <div className="space-y-1">
-                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Alamat Email</Label>
+                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{t("profile.email")}</Label>
                         <Input value={me.app_user.email} disabled className="font-mono text-xs bg-muted/30 rounded-xl truncate" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Nama Role</Label>
+                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{t("profile.roleName")}</Label>
                         <Input value={me.app_user.role_name} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
                       </div>
                       <div className="space-y-1 sm:col-span-2 xl:col-span-1">
-                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">User Code</Label>
+                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{t("profile.userCode")}</Label>
                         <Input value={(me.app_user as { user_code?: string }).user_code || "-"} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="space-y-1">
-                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Default Region</Label>
+                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{t("profile.defaultRegion")}</Label>
                         <Input value={defaultRegionLabel} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Jumlah Scope Region</Label>
+                        <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{t("profile.scopeRegionCount")}</Label>
                         <Input value={String(me.app_user.user_region_scopes?.length || 0)} disabled className="font-mono text-xs tabular-nums bg-muted/30 rounded-xl" />
                       </div>
                     </div>
@@ -488,27 +490,27 @@ export default function ProfilePage() {
               <TabsContent value="security" className="space-y-4 pt-2 outline-none">
                 <Card className="rounded-xl border-border/60 bg-background/50 shadow-2xs glass-inset">
                   <CardHeader className="p-4 pb-2">
-                    <CardTitle className="text-sm font-semibold tracking-tight">Perbarui Password</CardTitle>
+                    <CardTitle className="text-sm font-semibold tracking-tight">{t("profile.updatePassword")}</CardTitle>
                     <CardDescription className="text-xs">
-                      Kombinasi password aman minimal 8 karakter.
+                      {t("profile.passwordHint")}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-4 pt-1 space-y-3">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <Label htmlFor="new_password" className="font-mono text-xs text-muted-foreground">Password Baru</Label>
+                        <Label htmlFor="new_password" className="font-mono text-xs text-muted-foreground">{t("profile.newPassword")}</Label>
                         <Input
                           id="new_password"
                           type="password"
                           value={newPassword}
                           onChange={(event) => setNewPassword(event.target.value)}
-                          placeholder="Minimal 8 karakter"
+                          placeholder={t("profile.passwordPlaceholder")}
                           disabled={busy}
                           className="rounded-xl border-border/60"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="confirm_password" className="font-mono text-xs text-muted-foreground">Konfirmasi Password Baru</Label>
+                        <Label htmlFor="confirm_password" className="font-mono text-xs text-muted-foreground">{t("profile.confirmPassword")}</Label>
                         <Input
                           id="confirm_password"
                           type="password"
@@ -527,7 +529,7 @@ export default function ProfilePage() {
                         className="h-9 rounded-xl px-5 text-xs font-medium transition-all active:scale-[0.98]"
                       >
                         {savingPassword ? <ButtonLoader className="mr-2" /> : null}
-                        Simpan Password Baru
+                        {t("profile.savePassword")}
                       </Button>
                     </div>
                   </CardContent>
@@ -535,14 +537,14 @@ export default function ProfilePage() {
 
                 <Card className="rounded-xl border-border/60 bg-background/50 shadow-2xs glass-inset">
                   <CardHeader className="p-4 pb-2">
-                    <CardTitle className="text-sm font-semibold tracking-tight">Kirim Link Pemulihan Password</CardTitle>
+                    <CardTitle className="text-sm font-semibold tracking-tight">{t("profile.resetLinkTitle")}</CardTitle>
                     <CardDescription className="text-xs">
-                      Kirim pesan konfirmasi reset password ke email terdaftar kamu.
+                      {t("profile.resetLinkDescription")}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-4 pt-1 space-y-3">
                     <div className="space-y-1.5">
-                      <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Email Pemulihan</Label>
+                      <Label className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{t("profile.recoveryEmail")}</Label>
                       <Input value={me.app_user.email} disabled className="font-mono text-xs bg-muted/30 rounded-xl" />
                     </div>
                     <div className="flex justify-end pt-1">
@@ -554,7 +556,7 @@ export default function ProfilePage() {
                         className="h-9 rounded-xl border-border/60 text-xs font-medium transition-all active:scale-[0.98]"
                       >
                         {sendingReset ? <ButtonLoader className="mr-2" /> : null}
-                        Kirim Link Reset Password
+                        {t("profile.sendResetLink")}
                       </Button>
                     </div>
                   </CardContent>
@@ -618,11 +620,11 @@ function clearCachedAvatarDataUrl(userId: string) {
   window.localStorage.removeItem(getAvatarCacheKey(userId));
 }
 
-function fileToDataUrl(file: File) {
+function fileToDataUrl(file: File, errorMessage: string) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("Gagal membaca file avatar."));
+    reader.onerror = () => reject(new Error(errorMessage));
     reader.readAsDataURL(file);
   });
 }
