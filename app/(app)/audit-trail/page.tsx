@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSession } from "@/components/session-context";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import {
   ACTION_LABELS,
@@ -51,6 +52,7 @@ let _userMapCacheAt = 0;
 const USER_MAP_TTL_MS = 5 * 60 * 1000;
 
 export default function AuditTrailPage() {
+  const { t, locale } = useTranslate();
   const searchParams = useSearchParams();
   const { token, me } = useSession();
   const [rows, setRows] = useState<AuditLogItem[]>([]);
@@ -83,7 +85,7 @@ export default function AuditTrailPage() {
     if (me.role !== "admin") {
       setRows([]);
       setLoading(false);
-      setError("Halaman ini hanya untuk admin.");
+      setError(t("audit.adminOnly"));
       return;
     }
     let cancelled = false;
@@ -122,7 +124,7 @@ export default function AuditTrailPage() {
           setPageInput(String(page));
         }
       } catch (err) {
-        if (!cancelled) setError((err as Error).message || "Gagal memuat audit trail.");
+        if (!cancelled) setError((err as Error).message || t("audit.loadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -207,7 +209,7 @@ export default function AuditTrailPage() {
     downloadCsv(
       `syntrix-audit-trail-page-${page}.csv`,
       rows.map((item) => ({
-        waktu: formatDateTime(item.created_at),
+        waktu: formatDateTime(item.created_at, locale),
         action: formatAction(item.action_name),
         entity: formatEntityName(item),
         actor: formatActorName(item.actor_user_id, userMap),
@@ -226,12 +228,12 @@ export default function AuditTrailPage() {
           <CardHeader className="border-b bg-muted/20">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <CardTitle>Activity Log</CardTitle>
-                <CardDescription>Jejak aktivitas sistem, approval, dan perubahan asset.</CardDescription>
+                <CardTitle>{t("audit.title")}</CardTitle>
+                <CardDescription>{t("audit.description")}</CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline">Admin Only</Badge>
-                <Badge variant="secondary">{total} log</Badge>
+                <Badge variant="secondary">{t("audit.logCount", { total })}</Badge>
               </div>
             </div>
           </CardHeader>
@@ -241,11 +243,11 @@ export default function AuditTrailPage() {
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <Filter className="size-4 text-muted-foreground" />
-                  Filter Audit
-                  {activeFilterCount ? <Badge variant="secondary">{activeFilterCount} aktif</Badge> : null}
+                  {t("audit.filterTitle")}
+                  {activeFilterCount ? <Badge variant="secondary">{t("audit.activeCount", { count: activeFilterCount })}</Badge> : null}
                 </div>
                 <Button type="button" variant="ghost" size="sm" onClick={resetFilters} disabled={loading || !activeFilterCount}>
-                  Reset
+                  {t("audit.reset")}
                 </Button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
@@ -257,7 +259,7 @@ export default function AuditTrailPage() {
                     onKeyDown={(event) => {
                       if (event.key === "Enter") applyFilters();
                     }}
-                    placeholder="Cari action/entity/id..."
+                    placeholder={t("audit.searchPlaceholder")}
                     className="pl-8"
                   />
                 </div>
@@ -267,9 +269,9 @@ export default function AuditTrailPage() {
                   onKeyDown={(event) => {
                     if (event.key === "Enter") applyFilters();
                   }}
-                  placeholder="Request ID, contoh VRQ-0001"
+                  placeholder={t("audit.requestIdPlaceholder")}
                 />
-                <AuditDateRangePicker value={dateRangeInput} onChange={setDateRangeInput} />
+                <AuditDateRangePicker value={dateRangeInput} onChange={setDateRangeInput} t={t} locale={locale} />
                 <Combobox
                   value={actionFilter}
                   onValueChange={(value) => {
@@ -287,16 +289,16 @@ export default function AuditTrailPage() {
                     }}
                   >
                     <SelectTrigger className="w-full min-w-[8.5rem]">
-                      <SelectValue placeholder="20 / halaman" />
+                      <SelectValue placeholder={t("audit.perPage", { count: limit })} />
                     </SelectTrigger>
                     <SelectContent align="start" className="min-w-[8.5rem]">
-                      <SelectItem value="10">10 / halaman</SelectItem>
-                      <SelectItem value="20">20 / halaman</SelectItem>
-                      <SelectItem value="50">50 / halaman</SelectItem>
+                      <SelectItem value="10">{t("audit.perPage", { count: 10 })}</SelectItem>
+                      <SelectItem value="20">{t("audit.perPage", { count: 20 })}</SelectItem>
+                      <SelectItem value="50">{t("audit.perPage", { count: 50 })}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button type="button" onClick={applyFilters} className="whitespace-nowrap">
-                    Terapkan
+                    {t("audit.apply")}
                   </Button>
                 </div>
               </div>
@@ -304,16 +306,16 @@ export default function AuditTrailPage() {
             </div>
             {(entityTypeFilter || entityIdFilter || requestIdFilter.trim() || dateRangeFilter?.from) ? (
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>Preset filter:</span>
+                <span>{t("audit.presetFilter")}</span>
                 {entityTypeFilter ? <Badge variant="outline">entity: {entityTypeFilter}</Badge> : null}
                 {entityIdFilter ? <Badge variant="outline">id: {entityIdFilter}</Badge> : null}
                 {requestIdFilter.trim() ? <Badge variant="outline">request: {requestIdFilter.trim()}</Badge> : null}
-                {dateRangeFilter?.from ? <Badge variant="outline">tanggal: {formatDateRangeLabel(dateRangeFilter)}</Badge> : null}
+                {dateRangeFilter?.from ? <Badge variant="outline">{t("audit.badgeDate")}: {formatDateRangeLabel(dateRangeFilter, locale)}</Badge> : null}
               </div>
             ) : null}
 
             {loading ? (
-              <AppLoading label="Sedang memuat audit trail..." />
+              <AppLoading label={t("audit.loading")} />
             ) : error ? (
               <AppLoading label={error} variant="error" />
             ) : (
@@ -321,6 +323,8 @@ export default function AuditTrailPage() {
                 rows={rows}
                 userMap={userMap}
                 expandedIds={expandedIds}
+                t={t}
+                locale={locale}
                 onToggleExpanded={(id) => {
                   setExpandedIds((current) => {
                     const next = new Set(current);
@@ -335,11 +339,17 @@ export default function AuditTrailPage() {
             <div className="flex flex-col gap-3 text-sm text-muted-foreground lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-[11px] tabular-nums">
-                  {rows.length ? `Menampilkan ${(page - 1) * limit + 1}–${Math.min(page * limit, total)} dari ${total}` : `Total data: ${total}`}
+                  {rows.length
+                    ? t("audit.showingEntries", {
+                        start: (page - 1) * limit + 1,
+                        end: Math.min(page * limit, total),
+                        total,
+                      })
+                    : t("audit.totalData", { total })}
                 </span>
                 <Button type="button" variant="outline" size="sm" onClick={exportVisibleCsv} disabled={!rows.length || loading}>
                   <Download className="mr-2 size-4" />
-                  Export CSV
+                  {t("audit.exportCsv")}
                 </Button>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -402,11 +412,11 @@ export default function AuditTrailPage() {
   );
 }
 
-function formatDateTime(value?: string | null) {
+function formatDateTime(value?: string | null, locale = "id") {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
@@ -416,17 +426,21 @@ function AuditTrailTable({
   rows,
   userMap,
   expandedIds,
+  t,
+  locale,
   onToggleExpanded,
 }: {
   rows: AuditLogItem[];
   userMap: Record<string, string>;
   expandedIds: Set<string>;
+  t: TFn;
+  locale?: string;
   onToggleExpanded: (id: string) => void;
 }) {
   if (!rows.length) {
     return (
       <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-        Tidak ada audit log yang cocok dengan filter saat ini.
+        {t("audit.empty")}
       </div>
     );
   }
@@ -450,7 +464,7 @@ function AuditTrailTable({
                   </Badge>
                   <p className="break-words text-sm font-medium">{formatEntityName(item)}</p>
                   <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] tabular-nums text-muted-foreground">
-                    <span>{formatDateTime(item.created_at)}</span>
+                    <span>{formatDateTime(item.created_at, locale)}</span>
                     {requestId ? <span>{requestId}</span> : null}
                   </div>
                 </div>
@@ -459,7 +473,14 @@ function AuditTrailTable({
                   variant="ghost"
                   size="icon-sm"
                   onClick={() => onToggleExpanded(item.id)}
-                  aria-label={expanded ? `Tutup detail ${formatAction(item.action_name)}` : `Buka detail ${formatAction(item.action_name)} (${formatDateTime(item.created_at)})`}
+                  aria-label={
+                    expanded
+                      ? t("audit.closeDetailAria", { action: formatAction(item.action_name) })
+                      : t("audit.openDetailAria", {
+                          action: formatAction(item.action_name),
+                          date: formatDateTime(item.created_at, locale),
+                        })
+                  }
                   className="shrink-0"
                 >
                   <ChevronDown className={`size-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
@@ -490,12 +511,12 @@ function AuditTrailTable({
           <TableHeader className="bg-muted/30 border-b border-border/60">
             <TableRow>
               <TableHead className="w-10" />
-              <TableHead className="w-[160px]">Waktu</TableHead>
-              <TableHead>Aksi</TableHead>
-              <TableHead>Entity</TableHead>
-              <TableHead className="w-[180px]">Actor</TableHead>
-              <TableHead className="w-[140px]">IP Address</TableHead>
-              <TableHead className="w-[110px]">Detail</TableHead>
+              <TableHead className="w-[160px]">{t("audit.colTime")}</TableHead>
+              <TableHead>{t("audit.colAction")}</TableHead>
+              <TableHead>{t("audit.colEntity")}</TableHead>
+              <TableHead className="w-[180px]">{t("audit.colActor")}</TableHead>
+              <TableHead className="w-[140px]">{t("audit.colIp")}</TableHead>
+              <TableHead className="w-[110px]">{t("audit.colDetail")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -514,12 +535,19 @@ function AuditTrailTable({
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => onToggleExpanded(item.id)}
-                        aria-label={expanded ? `Tutup detail ${formatAction(item.action_name)}` : `Buka detail ${formatAction(item.action_name)} (${formatDateTime(item.created_at)})`}
+                        aria-label={
+                          expanded
+                            ? t("audit.closeDetailAria", { action: formatAction(item.action_name) })
+                            : t("audit.openDetailAria", {
+                                action: formatAction(item.action_name),
+                                date: formatDateTime(item.created_at, locale),
+                              })
+                        }
                       >
                         <ChevronDown className={`size-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
                       </Button>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap font-mono text-[10px] tabular-nums text-muted-foreground">{formatDateTime(item.created_at)}</TableCell>
+                    <TableCell className="whitespace-nowrap font-mono text-[10px] tabular-nums text-muted-foreground">{formatDateTime(item.created_at, locale)}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
                         <Badge variant="outline" className="max-w-full whitespace-normal text-left font-mono text-[9px] uppercase tracking-[0.12em]">
@@ -538,7 +566,7 @@ function AuditTrailTable({
                     <TableCell className="whitespace-nowrap font-mono tabular-nums text-xs">{item.ip_address || "-"}</TableCell>
                     <TableCell>
                       <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => onToggleExpanded(item.id)}>
-                        {expanded ? "Tutup" : "Lihat"}
+                        {expanded ? t("audit.close") : t("audit.view")}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -576,7 +604,17 @@ function AuditMiniField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function AuditDateRangePicker({ value, onChange }: { value?: DateRange; onChange: (value: DateRange | undefined) => void }) {
+function AuditDateRangePicker({
+  value,
+  onChange,
+  t,
+  locale,
+}: {
+  value?: DateRange;
+  onChange: (value: DateRange | undefined) => void;
+  t: TFn;
+  locale?: string;
+}) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -584,10 +622,10 @@ function AuditDateRangePicker({ value, onChange }: { value?: DateRange; onChange
           type="button"
           variant="outline"
           className={`min-w-0 justify-start px-2 text-left font-normal ${value?.from ? "" : "text-muted-foreground"}`}
-          aria-label="Rentang tanggal audit"
+          aria-label={t("audit.dateRangeAria")}
         >
           <CalendarDays className="size-4" />
-          <span className="truncate">{value?.from ? formatDateRangeLabel(value) : "Pilih rentang tanggal"}</span>
+          <span className="truncate">{value?.from ? formatDateRangeLabel(value, locale) : t("audit.dateRangePlaceholder")}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-0">
@@ -690,14 +728,14 @@ function toIsoDateBoundary(value: Date | undefined, endOfDay: boolean) {
   return date.toISOString();
 }
 
-function formatDateRangeLabel(value: DateRange) {
-  if (!value.from) return "Pilih rentang tanggal";
-  if (!value.to) return formatDateOnly(value.from);
-  return `${formatDateOnly(value.from)} - ${formatDateOnly(value.to)}`;
+function formatDateRangeLabel(value: DateRange, locale = "id") {
+  if (!value.from) return "-";
+  if (!value.to) return formatDateOnly(value.from, locale);
+  return `${formatDateOnly(value.from, locale)} - ${formatDateOnly(value.to, locale)}`;
 }
 
-function formatDateOnly(value: Date) {
-  return new Intl.DateTimeFormat("id-ID", {
+function formatDateOnly(value: Date, locale = "id") {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "id-ID", {
     day: "2-digit",
     month: "short",
     year: "numeric",
