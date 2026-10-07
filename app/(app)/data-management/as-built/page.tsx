@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiFetch } from "@/lib/api";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type TopologyTraceResponse = {
   data: {
@@ -103,6 +104,7 @@ type AsBuiltDocumentListItem = {
 };
 
 export default function AsBuiltWorkspacePage() {
+  const { t, locale } = useTranslate();
   const searchParams = useSearchParams();
   const { token, me } = useSession();
   const startDeviceId = searchParams.get("start_device_id") || "";
@@ -170,7 +172,7 @@ export default function AsBuiltWorkspacePage() {
         setTraceResult(payload.data);
       } catch (err) {
         if (cancelled) return;
-        setError((err as Error).message || "Gagal memuat trace untuk as-built.");
+        setError((err as Error).message || t("asBuilt.loadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -194,7 +196,7 @@ export default function AsBuiltWorkspacePage() {
     return `/data-management/topology${query ? `?${query}` : ""}`;
   }, [endDeviceId, maxDepth, projectId, regionId, routeId, startDeviceId]);
 
-  const generatedAtLabel = useMemo(() => formatDateTime(generatedAt), [generatedAt]);
+  const generatedAtLabel = useMemo(() => formatDateTime(generatedAt, locale), [generatedAt, locale]);
   const startNode = useMemo(() => {
     if (!traceResult || !startDeviceId.trim()) return null;
     return (
@@ -292,7 +294,7 @@ export default function AsBuiltWorkspacePage() {
   async function handlePublishRevision() {
     if (!traceResult || !startDeviceId.trim()) return;
     if (!canExportAsBuilt) {
-      setPublishError("Trace belum menemukan approved path. Jalankan trace topology yang valid sebelum publish As-Built.");
+      setPublishError(t("asBuilt.publishNoPath"));
       return;
     }
     setPublishing(true);
@@ -322,9 +324,9 @@ export default function AsBuiltWorkspacePage() {
           tags: ["as-built", `revision-${revisionCode || "v1"}`],
         }),
       });
-      setPublishMessage(`As-Built Revision ${revisionCode || "v1"} berhasil dipublish.`);
+      setPublishMessage(t("asBuilt.publishSuccess", { revision: revisionCode || "v1" }));
     } catch (err) {
-      setPublishError((err as Error).message || "Gagal publish revision.");
+      setPublishError((err as Error).message || t("asBuilt.publishFailed"));
     } finally {
       setPublishing(false);
     }
@@ -337,7 +339,7 @@ export default function AsBuiltWorkspacePage() {
   }) {
     if (!traceResult || !startDeviceId.trim()) return;
     if (!canExportAsBuilt) {
-      setSaveError("Dokumen belum bisa disimpan karena trace tidak menemukan approved path.");
+      setSaveError(t("asBuilt.saveNoPath"));
       return;
     }
 
@@ -403,9 +405,9 @@ export default function AsBuiltWorkspacePage() {
         },
       });
 
-      setSaveMessage(`Dokumen tersimpan (${response.data.document_id || response.data.id}).`);
+      setSaveMessage(t("asBuilt.saveSuccess", { id: response.data.document_id || response.data.id }));
     } catch (err) {
-      setSaveError((err as Error).message || "Dokumen gagal disimpan ke backend.");
+      setSaveError((err as Error).message || t("asBuilt.saveFailed"));
     }
   }
 
@@ -581,9 +583,7 @@ export default function AsBuiltWorkspacePage() {
         <section className="no-print space-y-1">
           <h2 className="text-2xl font-semibold tracking-tight">As-Built Workspace</h2>
           <p className="text-sm text-muted-foreground">
-            {isPersonalDeviceMode
-              ? "Mode personal device aktif. Dokumen as-built dibuat dari hasil trace device terpilih."
-              : "Buka halaman ini dari Device Trace agar konteks perangkat terisi otomatis."}
+            {isPersonalDeviceMode ? t("asBuilt.personalModeDesc") : t("asBuilt.openFromTraceDesc")}
           </p>
         </section>
 
@@ -597,13 +597,13 @@ export default function AsBuiltWorkspacePage() {
                 <InfoTile label="Start Device" value={startDeviceLabel} />
                 <InfoTile label="Device Type" value={startNode?.device_type_key || "-"} />
                 <InfoTile label="Region" value={resolvedRegionId || regionId || "all"} />
-                <InfoTile label="Path Found" value={traceResult?.trace.found ? "Yes" : traceResult ? "No" : "-"} />
+                <InfoTile label="Path Found" value={traceResult?.trace.found ? t("asBuilt.yes") : traceResult ? t("asBuilt.no") : "-"} />
                 <InfoTile label="Hop Count" value={traceResult ? String(traceResult.trace.hop_count) : "-"} />
               </div>
             ) : (
               <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-                Start device belum ada. Gunakan menu konteks di list device: <span className="font-medium text-foreground">Trace Device</span>,
-                lalu lanjut ke As-Built dari hasil trace.
+                {t("asBuilt.noStartDevicePrefix")} <span className="font-medium text-foreground">Trace Device</span>
+                {t("asBuilt.noStartDeviceSuffix")}
               </div>
             )}
           </CardContent>
@@ -622,7 +622,7 @@ export default function AsBuiltWorkspacePage() {
               </div>
               {!isPersonalDeviceMode ? (
                 <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-                  Pilih start/end device di Topology Workspace untuk menghasilkan path As-Built dari konteks project atau route ini.
+                  {t("asBuilt.pickDeviceHint")}
                 </div>
               ) : null}
             </CardContent>
@@ -630,7 +630,7 @@ export default function AsBuiltWorkspacePage() {
         ) : null}
 
         {traceResult && hasProjectRouteContext ? (
-          <AsBuiltRelevantTopologySummary summary={relevantTopologySummary} />
+          <AsBuiltRelevantTopologySummary summary={relevantTopologySummary} t={t} />
         ) : null}
 
         {!isPersonalDeviceMode ? (
@@ -640,14 +640,14 @@ export default function AsBuiltWorkspacePage() {
             </CardHeader>
             <CardContent className="space-y-2 px-4 pb-4 pt-0">
               <p className="text-sm text-muted-foreground">
-                Workspace as-built membutuhkan start device. Gunakan Topology Workspace untuk memilih path dari device, project, atau route context.
+                {t("asBuilt.deviceCentricDesc")}
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <Button asChild type="button" variant="outline" size="sm">
-                  <Link href={topologyHref}>Open Topology Workspace</Link>
+                  <Link href={topologyHref}>{t("asBuilt.openTopologyWorkspace")}</Link>
                 </Button>
                 <Button asChild type="button" variant="outline" size="sm">
-                  <Link href="/data-management">Open Data Management</Link>
+                  <Link href="/data-management">{t("asBuilt.openDataManagement")}</Link>
                 </Button>
               </div>
             </CardContent>
@@ -675,21 +675,21 @@ export default function AsBuiltWorkspacePage() {
           </CardHeader>
           <CardContent className="space-y-2 px-4 pb-4 pt-0">
             <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-              Suggested revision: <span className="font-semibold text-foreground">{revisionCode || "-"}</span>
+              {t("asBuilt.suggestedRevision")} <span className="font-semibold text-foreground">{revisionCode || "-"}</span>
             </div>
             {loadingRevisionContext ? (
-              <p className="text-sm text-muted-foreground">Memuat riwayat dokumen...</p>
+              <p className="text-sm text-muted-foreground">{t("asBuilt.loadingHistory")}</p>
             ) : !revisionContext.length ? (
-              <p className="text-sm text-muted-foreground">Belum ada riwayat as-built untuk start device ini.</p>
+              <p className="text-sm text-muted-foreground">{t("asBuilt.noHistory")}</p>
             ) : (
               <div className="space-y-1.5">
                 {revisionContext.slice(0, 5).map((doc) => (
                   <div key={doc.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-background px-3 py-2 text-xs">
-                    <span className="font-medium">{doc.title || doc.document_id || "Dokumen tidak tersedia"}</span>
+                    <span className="font-medium">{doc.title || doc.document_id || t("asBuilt.docUnavailable")}</span>
                     <div className="flex items-center gap-1">
                       <Badge variant="outline">{doc.revision_code || "-"}</Badge>
                       <Badge variant="secondary">{doc.status || "-"}</Badge>
-                      <Badge variant="outline">{doc.generated_at ? formatDateTimeString(doc.generated_at) : "-"}</Badge>
+                      <Badge variant="outline">{doc.generated_at ? formatDateTimeString(doc.generated_at, locale) : "-"}</Badge>
                     </div>
                   </div>
                 ))}
@@ -704,7 +704,7 @@ export default function AsBuiltWorkspacePage() {
               <CardTitle className="text-base">Trace Context</CardTitle>
               <div className="no-print flex items-center gap-2">
                 <Button asChild type="button" variant="outline" size="sm">
-                  <Link href={asBuiltDocumentsHref}>Open Documents</Link>
+                  <Link href={asBuiltDocumentsHref}>{t("asBuilt.openDocuments")}</Link>
                 </Button>
                 <Button
                   type="button"
@@ -714,7 +714,7 @@ export default function AsBuiltWorkspacePage() {
                   onClick={() => void handleExportSvg()}
                 >
                   <Download className="mr-1 size-4" />
-                  {exportingSvg ? "Exporting..." : "Export SVG"}
+                  {exportingSvg ? t("asBuilt.exporting") : "Export SVG"}
                 </Button>
                 <Button
                   type="button"
@@ -724,7 +724,7 @@ export default function AsBuiltWorkspacePage() {
                   onClick={() => void handleExportPng()}
                 >
                   <Download className="mr-1 size-4" />
-                  {exportingPng ? "Exporting..." : "Export PNG"}
+                  {exportingPng ? t("asBuilt.exporting") : "Export PNG"}
                 </Button>
                 <Button
                   type="button"
@@ -734,7 +734,7 @@ export default function AsBuiltWorkspacePage() {
                   onClick={() => void handleExportPdf()}
                 >
                   <Download className="mr-1 size-4" />
-                  {exportingPdf ? "Exporting..." : "Export PDF"}
+                  {exportingPdf ? t("asBuilt.exporting") : "Export PDF"}
                 </Button>
                 <Button
                   type="button"
@@ -744,7 +744,7 @@ export default function AsBuiltWorkspacePage() {
                   onClick={() => void handleExportJson()}
                 >
                   <Download className="mr-1 size-4" />
-                  {exportingJson ? "Exporting..." : "Export JSON"}
+                  {exportingJson ? t("asBuilt.exporting") : "Export JSON"}
                 </Button>
                 <Button
                   type="button"
@@ -754,11 +754,11 @@ export default function AsBuiltWorkspacePage() {
                   onClick={handleExportCsv}
                 >
                   <Download className="mr-1 size-4" />
-                  {exportingCsv ? "Exporting..." : "Export CSV"}
+                  {exportingCsv ? t("asBuilt.exporting") : "Export CSV"}
                 </Button>
                 <Button type="button" variant="secondary" size="sm" onClick={() => window.print()}>
                   <Printer className="mr-1 size-4" />
-                  Print
+                  {t("asBuilt.print")}
                 </Button>
                 <Button
                   type="button"
@@ -767,10 +767,10 @@ export default function AsBuiltWorkspacePage() {
                   disabled={!canExportAsBuilt || publishing}
                   onClick={() => void handlePublishRevision()}
                 >
-                  {publishing ? "Publishing..." : `Publish Revision ${revisionCode || "v1"}`}
+                  {publishing ? t("asBuilt.publishing") : t("asBuilt.publishRevision", { revision: revisionCode || "v1" })}
                 </Button>
                 <Button asChild variant="outline" size="sm">
-                  <Link href={topologyHref}>Back to Trace</Link>
+                  <Link href={topologyHref}>{t("asBuilt.backToTrace")}</Link>
                 </Button>
               </div>
             </div>
@@ -790,14 +790,14 @@ export default function AsBuiltWorkspacePage() {
             </div>
             {traceResult && !canExportAsBuilt ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                Trace belum menemukan approved path. Export, save, dan publish As-Built dikunci sampai topology trace valid.
+                {t("asBuilt.pathLockedWarning")}
               </div>
             ) : null}
 
             {!startDeviceId.trim() ? (
-              <AppLoading label="Belum ada start device. Buka dari list device lalu jalankan Trace Device agar konteks terbawa otomatis." />
+              <AppLoading label={t("asBuilt.noStartDeviceLoading")} />
             ) : null}
-            {loading ? <AppLoading label="Menyiapkan data trace untuk as-built..." /> : null}
+            {loading ? <AppLoading label={t("asBuilt.preparingTrace")} /> : null}
             {!loading && error ? <AppLoading label={error} variant="error" /> : null}
             {publishMessage ? <p className="text-sm text-emerald-600">{publishMessage}</p> : null}
             {publishError ? <p className="text-sm text-destructive">{publishError}</p> : null}
@@ -807,7 +807,7 @@ export default function AsBuiltWorkspacePage() {
             {!loading && !error && traceResult ? (
               <div className="space-y-3 rounded-md border bg-muted/30 px-3 py-2">
                 <TopologyTracePanel data={traceResult} schematicTitle="As-Built Diagram (Lite)" />
-                <AsBuiltCorePathSummary data={traceResult} nodeLabelMap={traceNodeLabelMap} />
+                <AsBuiltCorePathSummary data={traceResult} nodeLabelMap={traceNodeLabelMap} t={t} />
               </div>
             ) : null}
           </CardContent>
@@ -840,17 +840,17 @@ export default function AsBuiltWorkspacePage() {
   );
 }
 
-function formatDateTime(value: Date) {
-  return new Intl.DateTimeFormat("id-ID", {
+function formatDateTime(value: Date, locale = "id") {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(value);
 }
 
-function formatDateTimeString(value: string) {
+function formatDateTimeString(value: string, locale = "id") {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
@@ -927,7 +927,7 @@ function buildRelevantTopologySummary(data: TopologyTraceResponse["data"] | null
   };
 }
 
-function AsBuiltRelevantTopologySummary({ summary }: { summary: RelevantTopologySummary }) {
+function AsBuiltRelevantTopologySummary({ summary, t }: { summary: RelevantTopologySummary; t: TFn }) {
   return (
     <Card>
       <CardHeader className="px-4 py-3">
@@ -935,10 +935,10 @@ function AsBuiltRelevantTopologySummary({ summary }: { summary: RelevantTopology
       </CardHeader>
       <CardContent className="space-y-3 px-4 pb-4 pt-0">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <InfoTile label="Relevant Devices" value={String(summary.deviceTotal)} />
-          <InfoTile label="Relevant Connections" value={String(summary.connectionEntries.length)} />
-          <InfoTile label="Relevant Routes" value={String(summary.routeEntries.length)} />
-          <InfoTile label="Relevant Cables" value={String(summary.cableEntries.length)} />
+          <InfoTile label={t("asBuilt.relevantDevices")} value={String(summary.deviceTotal)} />
+          <InfoTile label={t("asBuilt.relevantConnections")} value={String(summary.connectionEntries.length)} />
+          <InfoTile label={t("asBuilt.relevantRoutes")} value={String(summary.routeEntries.length)} />
+          <InfoTile label={t("asBuilt.relevantCables")} value={String(summary.cableEntries.length)} />
         </div>
 
         {summary.deviceTypeEntries.length ? (
@@ -953,7 +953,7 @@ function AsBuiltRelevantTopologySummary({ summary }: { summary: RelevantTopology
 
         {!summary.connectionEntries.length ? (
           <p className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-            Belum ada connection relevan pada context ini. Pilih start/end device di Topology Workspace untuk membentuk path approved.
+            {t("asBuilt.noRelevantConnection")}
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-2 xl:grid-cols-2">
@@ -975,7 +975,7 @@ function AsBuiltRelevantTopologySummary({ summary }: { summary: RelevantTopology
 
         {summary.connectionEntries.length > 6 ? (
           <p className="text-xs text-muted-foreground">
-            Menampilkan 6 dari {summary.connectionEntries.length} connection relevan. Export JSON menyimpan seluruh graph trace.
+            {t("asBuilt.showingRelevant", { count: summary.connectionEntries.length })}
           </p>
         ) : null}
       </CardContent>
@@ -986,9 +986,11 @@ function AsBuiltRelevantTopologySummary({ summary }: { summary: RelevantTopology
 function AsBuiltCorePathSummary({
   data,
   nodeLabelMap,
+  t,
 }: {
   data: TopologyTraceResponse["data"];
   nodeLabelMap: Map<string, string>;
+  t: TFn;
 }) {
   const edges = data.graph.edges || [];
   const edgesWithCore = edges.filter((edge) => edge.core_start != null || edge.core_end != null || edge.fiber_cores?.total);
@@ -1007,10 +1009,10 @@ function AsBuiltCorePathSummary({
         <div>
           <p className="text-sm font-semibold">Core Path & Splice Summary</p>
           <p className="text-xs text-muted-foreground">
-            Read-only path dari topology approved untuk referensi As-Built. Edit relasi tetap dilakukan di Topology Workspace.
+            {t("asBuilt.corePathDesc")}
           </p>
         </div>
-        <Badge variant="outline">{edgesWithCore.length} core segment</Badge>
+        <Badge variant="outline">{t("asBuilt.coreSegments", { count: edgesWithCore.length })}</Badge>
       </div>
 
       {colorEntries.length ? (
@@ -1026,7 +1028,7 @@ function AsBuiltCorePathSummary({
 
       {!edgesWithCore.length ? (
         <p className="mt-3 rounded-md border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-          Belum ada core range atau color distribution pada trace ini.
+          {t("asBuilt.noCoreRange")}
         </p>
       ) : (
         <div className="mt-3 grid grid-cols-1 gap-2 xl:grid-cols-2">
