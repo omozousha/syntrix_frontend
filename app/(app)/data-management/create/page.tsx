@@ -58,6 +58,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
 import { deviceTypeKeyToSlug } from "@/lib/data-management-config";
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
+import { useTranslate, type Locale, type TFn } from "@/lib/use-locale";
 
 type PopOption = {
   id: string;
@@ -206,6 +207,7 @@ export default function CreateDataManagementPage() {
   const router = useRouter();
   const params = useSearchParams();
   const { token, me } = useSession();
+  const { t, locale } = useTranslate();
 
   const kind = (params.get("kind") || "device").toLowerCase();
   const selectedType = (params.get("type") || "OLT").toUpperCase();
@@ -803,10 +805,10 @@ export default function CreateDataManagementPage() {
 
   const openApprovalNotice = (entityLabel: string, requestId: string, redirectTo: string) => {
     const suffix = requestId ? ` (${requestId})` : "";
-    const description = `${entityLabel} berhasil dikirim ke approval superadmin${suffix}. Data belum masuk asset utama sampai superadmin approve.`;
+    const description = t("createPage.approvalDescription", { entity: entityLabel, suffix });
     setSuccessMessage(description);
     setApprovalNotice({
-      title: "Request approval terkirim",
+      title: t("createPage.approvalSent"),
       description,
       redirectTo,
     });
@@ -847,12 +849,12 @@ export default function CreateDataManagementPage() {
     }
     const invalidSize = list.find((file) => file.size > MAX_IMAGE_FILE_SIZE_BYTES);
     if (invalidSize) {
-      setErrorMessage(`File "${invalidSize.name}" melebihi batas 5MB.`);
+      setErrorMessage(t("createPage.fileSizeExceeded", { name: invalidSize.name }));
       return;
     }
     const invalidType = list.find((file) => !file.type.startsWith("image/"));
     if (invalidType) {
-      setErrorMessage(`File "${invalidType.name}" bukan format gambar.`);
+      setErrorMessage(t("createPage.fileNotImage", { name: invalidType.name }));
       return;
     }
     setErrorMessage("");
@@ -885,11 +887,11 @@ export default function CreateDataManagementPage() {
     // Lokasi field format checks
     const lokasiMissing: string[] = [];
     if (!isCableDevice) {
-      if (form.latitude && !validateCoordinateFormat(form.latitude, "latitude").valid) {
-        lokasiMissing.push("Latitude (format salah)");
+      if (form.latitude && !validateCoordinateFormat(form.latitude, "latitude", t).valid) {
+        lokasiMissing.push(t("createPage.latFormatWrong"));
       }
-      if (form.longitude && !validateCoordinateFormat(form.longitude, "longitude").valid) {
-        lokasiMissing.push("Longitude (format salah)");
+      if (form.longitude && !validateCoordinateFormat(form.longitude, "longitude", t).valid) {
+        lokasiMissing.push(t("createPage.lngFormatWrong"));
       }
     }
     if (lokasiMissing.length > 0) missing.lokasi = lokasiMissing;
@@ -905,19 +907,19 @@ export default function CreateDataManagementPage() {
     setSuccessMessage("");
     try {
       if (!isProject && !isCableDevice) {
-        const latitudeValidation = validateCoordinateFormat(form.latitude, "latitude");
+        const latitudeValidation = validateCoordinateFormat(form.latitude, "latitude", t);
         if (!latitudeValidation.valid) {
-          throw new Error(`Latitude tidak valid: ${latitudeValidation.message}`);
+          throw new Error(latitudeValidation.message);
         }
-        const longitudeValidation = validateCoordinateFormat(form.longitude, "longitude");
+        const longitudeValidation = validateCoordinateFormat(form.longitude, "longitude", t);
         if (!longitudeValidation.valid) {
-          throw new Error(`Longitude tidak valid: ${longitudeValidation.message}`);
+          throw new Error(longitudeValidation.message);
         }
       }
       if (isCustomer) {
-        const cidValidation = validateCid(form.customer_number);
+        const cidValidation = validateCid(t)(form.customer_number);
         if (!cidValidation.valid) {
-          throw new Error(`CID tidak valid: ${cidValidation.message}`);
+          throw new Error(cidValidation.message);
         }
       }
 
@@ -925,7 +927,7 @@ export default function CreateDataManagementPage() {
 
       if (isPop) {
         if (!form.pop_name || !form.pop_code || !form.region_id) {
-          throw new Error("POP Name, POP Code, dan Region wajib diisi.");
+          throw new Error(t("createPage.popRequiredFields"));
         }
 
         const payload: Record<string, unknown> = {
@@ -941,7 +943,7 @@ export default function CreateDataManagementPage() {
           tanggal_pop_aktif: nullIfEmpty(form.tanggal_pop_aktif),
           tags: csvToTags(form.tags),
           support_doc: {},
-          custom_fields: buildCustomFieldsPayload(customDefinitions, customValues),
+          custom_fields: buildCustomFieldsPayload(customDefinitions, customValues, t),
           image_attachment_id: null,
           image_attachments: [],
           status_pop: form.status_pop,
@@ -1015,14 +1017,14 @@ export default function CreateDataManagementPage() {
           return;
         }
 
-        setSuccessMessage("POP berhasil dibuat.");
+        setSuccessMessage(t("createPage.popSuccess"));
         router.push(buildListTarget("/data-management/list/pop", form.region_id));
         return;
       }
 
       if (isProject) {
         if (!form.project_name || !form.region_id) {
-          throw new Error("Project Name dan Region wajib diisi.");
+          throw new Error(t("createPage.projectRequiredFields"));
         }
 
         const payload: Record<string, unknown> = {
@@ -1102,7 +1104,7 @@ export default function CreateDataManagementPage() {
           return;
         }
 
-        setSuccessMessage("Project berhasil dibuat.");
+        setSuccessMessage(t("createPage.projectSuccess"));
         router.push(buildListTarget("/data-management/list/projects", form.region_id));
         return;
       }
@@ -1110,7 +1112,7 @@ export default function CreateDataManagementPage() {
       if (isCustomer) {
         const missingCustomerFields = getMissingCustomerRequiredFields(form);
         if (missingCustomerFields.length) {
-          throw new Error(`Field wajib belum lengkap: ${formatFieldList(missingCustomerFields)}.`);
+          throw new Error(t("createPage.customerRequiredFields", { fields: formatFieldList(missingCustomerFields, locale) }));
         }
 
         const payload: Record<string, unknown> = {
@@ -1141,10 +1143,10 @@ export default function CreateDataManagementPage() {
         });
 
         setCreateResponseDialog({
-          title: "Customer Berhasil Dibuat",
-          description: "Data customer sudah tersimpan dan siap digunakan untuk relasi layanan.",
+          title: t("createPage.customerCreatedTitle"),
+          description: t("createPage.customerCreatedDesc"),
           variant: "success",
-          actionLabel: "Lihat Customer",
+          actionLabel: t("createPage.viewCustomer"),
           redirectTo: buildListTarget("/data-management/list/customer", form.region_id),
         });
         return;
@@ -1153,15 +1155,15 @@ export default function CreateDataManagementPage() {
       if (!form.device_name || !form.region_id || !form.device_type_key) {
         throw new Error(
           form.device_type_key === "ODP"
-            ? "Nama ODP, Device Type, dan Region wajib diisi."
-            : "Device Name, Device Type, dan Region wajib diisi.",
+            ? t("createPage.odpRequiredFields")
+            : t("createPage.deviceRequiredFields"),
         );
       }
       if (!form.pop_id) {
-        throw new Error("POP wajib dipilih.");
+        throw new Error(t("createPage.popRequired"));
       }
       if (form.device_type_key === "ODP" && (!form.odp_type || !form.installation_type)) {
-        throw new Error("Tipe ODP dan Jenis Instalasi wajib dipilih.");
+        throw new Error(t("createPage.odpTypeInstallRequired"));
       }
 
       const payload: Record<string, unknown> = {
@@ -1187,7 +1189,7 @@ export default function CreateDataManagementPage() {
           longitude: numberOrNull(form.longitude),
           latitude: numberOrNull(form.latitude),
         }),
-        custom_fields: buildCustomFieldsPayload(customDefinitions, customValues),
+        custom_fields: buildCustomFieldsPayload(customDefinitions, customValues, t),
         image_attachment_id: null,
         image_attachments: [],
       };
@@ -1289,14 +1291,14 @@ export default function CreateDataManagementPage() {
       }
 
       setCreateResponseDialog({
-        title: isOntDevice ? "ONT Berhasil Dibuat" : "Device Berhasil Dibuat",
+        title: isOntDevice ? t("createPage.ontCreatedTitle") : t("createPage.deviceCreatedTitle"),
         description: isOntDevice
           ? form.customer_id
-            ? "Data ONT sudah tersimpan dengan relasi customer dan data lokasi hasil auto-fill."
-            : "Data ONT sudah tersimpan. Customer reference dapat dilengkapi dari detail ONT bila diperlukan."
-          : "Data device sudah tersimpan dan siap digunakan.",
+            ? t("createPage.ontCreatedWithCustomer")
+            : t("createPage.ontCreatedWithoutCustomer")
+          : t("createPage.deviceCreatedDesc"),
         variant: "success",
-        actionLabel: isOntDevice ? "Lihat ONT" : "Lihat Device",
+        actionLabel: isOntDevice ? t("createPage.viewOnt") : t("createPage.viewDevice"),
         redirectTo: buildListTarget(`/data-management/list/${deviceTypeKeyToSlug(form.device_type_key)}`, form.region_id),
       });
     } catch (err) {
@@ -1309,10 +1311,11 @@ export default function CreateDataManagementPage() {
           isCustomer,
           isOntDevice,
           deviceTypeKey: form.device_type_key,
+          t,
         }),
         description: message,
         variant: "destructive",
-        actionLabel: "Perbaiki Form",
+        actionLabel: t("createPage.fixForm"),
       });
       submitLockRef.current = false;
     } finally {
@@ -1334,10 +1337,10 @@ export default function CreateDataManagementPage() {
       {isDevice ? (
         <Card>
           <CardContent className="space-y-3 pt-4">
-            <div className={`${sectionLabelClass}`}>Lokasi & Project</div>
+            <div className={`${sectionLabelClass}`}>{t("createPage.locationProject")}</div>
             <div className={formGridClass}>
               <div className="space-y-1.5">
-                <FieldLabel label="Region" tooltip={isFixedRegionRole ? "Region terkunci mengikuti scope akun." : "Region wajib dipilih."} required />
+                <FieldLabel label="Region" tooltip={isFixedRegionRole ? t("createPage.regionLockedTooltip") : t("createPage.regionRequiredTooltip")} required />
                 {isFixedRegionRole ? (
                   <Input value={selectedRegionLabel} disabled />
                 ) : (
@@ -1353,25 +1356,25 @@ export default function CreateDataManagementPage() {
                       }));
                     }}
                     options={toOptions([
-                      { value: "__none__", label: "Pilih region" },
+                      { value: "__none__", label: t("createPage.pickRegion") },
                       ...regions.map((region) => ({
                         value: region.id,
                         label: region.region_name,
                       })),
                     ])}
-                    placeholder="Pilih region"
-                    searchPlaceholder="Cari region..."
+                    placeholder={t("createPage.pickRegion")}
+                    searchPlaceholder={t("createPage.searchRegion")}
                   />
                 )}
               </div>
 
               <div className="space-y-1.5">
-                <FieldLabel label="Project Reference" tooltip="Hubungkan device ke project pengadaan/instalasi." required />
+                <FieldLabel label="Project Reference" tooltip={t("createPage.projectTooltip")} required />
                 <Combobox
                   value={form.project_id || "__none__"}
                   onValueChange={(value) => setForm((p) => ({ ...p, project_id: value === "__none__" ? "" : value }))}
                   options={toOptions([
-                    { value: "__none__", label: form.region_id ? "Pilih Project" : "Pilih region terlebih dahulu" },
+                    { value: "__none__", label: form.region_id ? t("createPage.pickProject") : t("createPage.pickRegionFirst") },
                     ...projects
                       .filter((project) => !form.region_id || !project.region_id || project.region_id === form.region_id)
                       .map((project) => ({
@@ -1379,14 +1382,14 @@ export default function CreateDataManagementPage() {
                         label: [project.project_name, project.project_code].filter(Boolean).join(" | "),
                       })),
                   ])}
-                  placeholder={form.region_id ? "Pilih project" : "Pilih region terlebih dahulu"}
-                  searchPlaceholder="Cari project..."
+                  placeholder={form.region_id ? t("createPage.pickProject") : t("createPage.pickRegionFirst")}
+                  searchPlaceholder={t("createPage.searchProject")}
                   disabled={!form.region_id}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <FieldLabel label="POP" tooltip="POP adalah lokasi fisik perangkat. Pilih region dan project terlebih dahulu." required />
+                <FieldLabel label="POP" tooltip={t("createPage.popTooltip")} required />
                 <Combobox
                   value={form.pop_id || "__none__"}
                   onValueChange={(value) => {
@@ -1407,14 +1410,14 @@ export default function CreateDataManagementPage() {
                           longitude: selectedPop.longitude != null ? String(selectedPop.longitude) : p.longitude,
                           latitude: selectedPop.latitude != null ? String(selectedPop.latitude) : p.latitude,
                         }));
-                        setAutoFillNotice("Lokasi otomatis terisi dari data POP.");
+                        setAutoFillNotice(t("createPage.locationAutoFilledFromPop"));
                         return;
                       }
                     }
                     setForm((p) => ({ ...p, pop_id: newPopId, customer_id: "" }));
                   }}
                   options={toOptions([
-                    { value: "__none__", label: form.region_id ? "Pilih POP" : "Pilih region terlebih dahulu" },
+                    { value: "__none__", label: form.region_id ? t("createPage.pickPop") : t("createPage.pickRegionFirst") },
                     ...pops
                       .filter((pop) => !form.region_id || pop.region_id === form.region_id)
                       .map((pop) => ({
@@ -1422,17 +1425,17 @@ export default function CreateDataManagementPage() {
                         label: `${pop.pop_name} (${pop.pop_code})`,
                       })),
                   ])}
-                  placeholder={form.region_id ? "Pilih POP" : "Pilih region terlebih dahulu"}
-                  searchPlaceholder="Cari POP..."
+                  placeholder={form.region_id ? t("createPage.pickPop") : t("createPage.pickRegionFirst")}
+                  searchPlaceholder={t("createPage.searchPop")}
                   disabled={!form.region_id}
                 />
               </div>
 
               <Field
-                label="Nama Perangkat Baru (opsional)"
+                label={t("createPage.newDeviceAliasLabel")}
                 value={form.device_name_alias}
                 onChange={(v) => setForm((p) => ({ ...p, device_name_alias: v }))}
-                placeholder="Alias atau nama alternatif"
+                placeholder={t("createPage.aliasPlaceholder")}
               />
             </div>
           </CardContent>
@@ -1443,7 +1446,7 @@ export default function CreateDataManagementPage() {
         <Alert className="border-blue-200 bg-blue-50/70 py-2 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-100">
           <AlertTitle className="flex items-center gap-2 text-xs">
             <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal">Auto-fill</Badge>
-            Review data otomatis
+            {t("createPage.autoFillReviewTitle")}
           </AlertTitle>
           <AlertDescription className="text-xs">{autoFillNotice}</AlertDescription>
         </Alert>
@@ -1452,10 +1455,10 @@ export default function CreateDataManagementPage() {
       <Card>
         <CreateFormCardHeader flags={{ isPop, isProject, isCustomer }} />
         <CardContent className="space-y-5">
-          {!loaded ? <AppLoading label="Sedang memuat data region dan POP..." /> : null}
+          {!loaded ? <AppLoading label={t("createPage.loadingRegionPop")} /> : null}
           {isDevice ? (
             <div className="space-y-1.5">
-              <FieldLabel label="Device Type" tooltip="Tipe perangkat dikunci sesuai pilihan tombol Add Device." />
+              <FieldLabel label="Device Type" tooltip={t("createPage.deviceTypeLockedTooltip")} />
               <div className="flex h-10 items-center rounded-md border bg-muted/30 px-3 text-sm font-medium">
                 {form.device_type_key}
               </div>
@@ -1467,7 +1470,7 @@ export default function CreateDataManagementPage() {
               <div className="flex items-center gap-2 mb-4 overflow-x-auto">
                 <TabsList>
                   <TabsTrigger value="identitas" className="relative text-xs sm:text-sm">
-                    Identitas & Relasi
+                    {t("createPage.tabIdentityRelation")}
                     {missingTabFields.identitas?.length > 0 ? (
                       <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
                         {missingTabFields.identitas.length}
@@ -1475,7 +1478,7 @@ export default function CreateDataManagementPage() {
                     ) : null}
                   </TabsTrigger>
                   <TabsTrigger value="teknis" className="relative text-xs sm:text-sm">
-                    Teknis & Kapasitas
+                    {t("createPage.tabTechnicalCapacity")}
                     {missingTabFields.teknis?.length > 0 ? (
                       <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
                         {missingTabFields.teknis.length}
@@ -1483,7 +1486,7 @@ export default function CreateDataManagementPage() {
                     ) : null}
                   </TabsTrigger>
                   <TabsTrigger value="lokasi" className="relative text-xs sm:text-sm">
-                    Lokasi
+                    {t("createPage.tabLocation")}
                     {missingTabFields.lokasi?.length > 0 ? (
                       <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
                         {missingTabFields.lokasi.length}
@@ -1491,7 +1494,7 @@ export default function CreateDataManagementPage() {
                     ) : null}
                   </TabsTrigger>
                   <TabsTrigger value="operasional" className="relative text-xs sm:text-sm">
-                    Operasional & Lampiran
+                    {t("createPage.tabOperationalAttachment")}
                     {missingTabFields.operasional?.length > 0 ? (
                       <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[9px]">
                         {missingTabFields.operasional.length}
@@ -1505,7 +1508,7 @@ export default function CreateDataManagementPage() {
               <TabsContent value="identitas" className="mt-0">
                 <div className={formGridClass}>
                   <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-                    Identitas & Relasi
+                    {t("createPage.tabIdentityRelation")}
                   </div>
                   <CreateFormSelection
                     deviceTypeKey={form.device_type_key}
@@ -1535,20 +1538,20 @@ export default function CreateDataManagementPage() {
                   />
                   {isOntDevice ? (
                     <div className="space-y-1.5 col-span-full md:col-span-2 xl:col-span-3">
-                      <FieldLabel label="Customer Reference (opsional)" tooltip="Customer yang tampil hanya customer dengan POP yang sama dengan POP ONT." />
+                      <FieldLabel label="Customer Reference (opsional)" tooltip={t("createPage.customerRefTooltip")} />
                       <p className="text-xs text-muted-foreground">
-                        Memilih customer akan mengisi otomatis lokasi ONT dari data customer terkait. Field tetap bisa dikoreksi sebelum disimpan.
+                        {t("createPage.customerAutoFillNote")}
                       </p>
                       <Combobox
                         value={form.customer_id || "__none__"}
                         onValueChange={(value) => {
                           if (value === "__none__") {
                             setForm((p) => ({ ...p, customer_id: "" }));
-                            setAutoFillNotice("Customer reference dilepas. Data lokasi yang sudah terisi tidak dihapus otomatis, silakan review kembali sebelum menyimpan.");
+                            setAutoFillNotice(t("createPage.customerRefNotice"));
                             return;
                           }
                           const selectedCustomer = customers.find((customer) => customer.id === value) || null;
-                          const selectedLabel = selectedCustomer?.customer_name || selectedCustomer?.customer_number || "customer terpilih";
+                          const selectedLabel = selectedCustomer?.customer_name || selectedCustomer?.customer_number || t("createPage.selectedCustomerFallback");
                           setForm((p) => ({
                             ...p,
                             customer_id: value,
@@ -1565,10 +1568,10 @@ export default function CreateDataManagementPage() {
                             installation_date: selectedCustomer?.installation_date || p.installation_date,
                             status: mapCustomerStatusToDeviceStatus(selectedCustomer?.status) || p.status,
                           }));
-                          setAutoFillNotice(`Data lokasi, tanggal instalasi, dan status ONT diisi otomatis dari ${selectedLabel}.`);
+                          setAutoFillNotice(t("createPage.customerAutoFilledNotice", { label: selectedLabel }));
                         }}
                         options={toOptions([
-                          { value: "__none__", label: form.pop_id ? "Tanpa customer" : "Pilih POP terlebih dahulu" },
+                          { value: "__none__", label: form.pop_id ? t("createPage.noCustomer") : t("createPage.pickPopFirst") },
                           ...customers
                             .filter((customer) => customer.pop_id === form.pop_id)
                             .map((customer) => ({
@@ -1576,12 +1579,12 @@ export default function CreateDataManagementPage() {
                               label: [
                                 customer.customer_name,
                                 customer.customer_number ? `CID ${customer.customer_number}` : customer.customer_id,
-                              ].filter(Boolean).join(" - ") || "Customer tidak tersedia",
+                              ].filter(Boolean).join(" - ") || t("createPage.customerUnavailable"),
                             })),
                         ])}
-                        placeholder={form.pop_id ? "Pilih customer" : "Pilih POP terlebih dahulu"}
-                        searchPlaceholder="Cari customer..."
-                        emptyText={form.pop_id ? "Tidak ada customer pada POP ini." : "Pilih POP terlebih dahulu."}
+                        placeholder={form.pop_id ? t("createPage.pickCustomer") : t("createPage.pickPopFirst")}
+                        searchPlaceholder={t("createPage.searchCustomer")}
+                        emptyText={form.pop_id ? t("createPage.noCustomerInPop") : t("createPage.pickPopFirst")}
                         disabled={!form.pop_id || loadingCustomers}
                       />
                       {autoFillNotice ? (
@@ -1590,7 +1593,7 @@ export default function CreateDataManagementPage() {
                             <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal">
                               Auto-fill
                             </Badge>
-                            Review data otomatis
+                            {t("createPage.autoFillReviewTitle")}
                           </AlertTitle>
                           <AlertDescription className="text-xs">{autoFillNotice}</AlertDescription>
                         </Alert>
@@ -1599,7 +1602,7 @@ export default function CreateDataManagementPage() {
                   ) : null}
 
                   <div className="space-y-1.5">
-                    <FieldLabel label="Region" tooltip={isFixedRegionRole ? "Region terkunci mengikuti scope akun." : "Region wajib dipilih."} required />
+                    <FieldLabel label="Region" tooltip={isFixedRegionRole ? t("createPage.regionLockedTooltip") : t("createPage.regionRequiredTooltip")} required />
                     {isFixedRegionRole ? (
                       <Input value={selectedRegionLabel} disabled />
                     ) : (
@@ -1607,14 +1610,14 @@ export default function CreateDataManagementPage() {
                         value={form.region_id || "__none__"}
                         onValueChange={(v) => setForm((p) => ({ ...p, region_id: v === "__none__" ? "" : v }))}
                         options={toOptions([
-                          { value: "__none__", label: "Pilih region" },
+                          { value: "__none__", label: t("createPage.pickRegion") },
                           ...regions.map((region) => ({
                             value: region.id,
                             label: region.region_name,
                           })),
                         ])}
-                        placeholder="Pilih region"
-                        searchPlaceholder="Cari region..."
+                        placeholder={t("createPage.pickRegion")}
+                        searchPlaceholder={t("createPage.searchRegion")}
                       />
                     )}
                   </div>
@@ -1625,16 +1628,16 @@ export default function CreateDataManagementPage() {
               <TabsContent value="teknis" className="mt-0">
                 <div className={formGridClass}>
                   <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-                    Teknis & Kapasitas
+                    {t("createPage.tabTechnicalCapacity")}
                   </div>
                   {showCoreFields ? (
                     <div className="space-y-1.5">
-                      <FieldLabel label="Capacity Core" tooltip={form.device_type_key === "CABLE" ? "Pilih kapasitas core kabel dari master data." : "Pilih kapasitas core perangkat dari master data."} required />
+                      <FieldLabel label="Capacity Core" tooltip={form.device_type_key === "CABLE" ? t("createPage.cableCoreTooltip") : t("createPage.deviceCoreTooltip")} required />
                       <Combobox
                         value={form.capacity_core || "__none__"}
                         onValueChange={(v) => setForm((p) => ({ ...p, capacity_core: v === "__none__" ? "" : v }))}
                         options={[
-                          { value: "__none__", label: "Pilih kapasitas core" },
+                          { value: "__none__", label: t("createPage.pickCoreCapacity") },
                           ...(form.device_type_key === "CABLE" ? coreCapacities : deviceCoreCapacities)
                             .filter((cc) => {
                               if (form.device_type_key === "CABLE") {
@@ -1651,15 +1654,15 @@ export default function CreateDataManagementPage() {
                               label: `${cc.core_capacity_value} Core${(cc as any).label ? ` — ${(cc as any).label}` : ""}`,
                             })),
                         ]}
-                        placeholder="Pilih kapasitas core"
-                        searchPlaceholder="Cari kapasitas core..."
+                        placeholder={t("createPage.pickCoreCapacity")}
+                        searchPlaceholder={t("createPage.searchCoreCapacity")}
                       />
                     </div>
                   ) : null}
 
                   {showPortFields ? (
                     <Field
-                      label={form.device_type_key === "ODP" ? "Kapasitas ODP" : form.device_type_key === "ODC" ? "Total Port Cabinet" : "Total Ports"}
+                      label={form.device_type_key === "ODP" ? t("createPage.odpCapacity") : form.device_type_key === "ODC" ? t("createPage.odcTotalPorts") : t("createPage.totalPorts")}
                       type="number"
                       value={form.total_ports}
                       onChange={(v) => setForm((p) => ({ ...p, total_ports: v }))}
@@ -1667,9 +1670,9 @@ export default function CreateDataManagementPage() {
                   ) : null}
                   {showSplitterField ? (
                     <>
-                      <FieldLabel label={form.device_type_key === "ODP" ? "Kapasitas Splitter" : "Splitter Profile"} tooltip="Pilih rasio splitter dari master data." />
+                      <FieldLabel label={form.device_type_key === "ODP" ? t("createPage.odpSplitterCapacity") : t("createPage.splitterProfile")} tooltip={t("createPage.splitterTooltip")} />
                       {autoFillNotice ? (
-                        <p className="text-xs text-muted-foreground">Pilihan splitter akan mengisi rekomendasi kapasitas port.</p>
+                        <p className="text-xs text-muted-foreground">{t("createPage.splitterRecommendation")}</p>
                       ) : null}
                       <Combobox
                         value={form.splitter_ratio || "__none__"}
@@ -1685,7 +1688,7 @@ export default function CreateDataManagementPage() {
                           }));
                         }}
                         options={toOptions([
-                          { value: "__none__", label: "Pilih splitter ratio" },
+                          { value: "__none__", label: t("createPage.pickSplitterRatio") },
                           ...splitterProfiles
                             .filter((sp) => (sp.allowed_device_type_keys || []).includes(form.device_type_key))
                             .map((item) => ({
@@ -1693,8 +1696,8 @@ export default function CreateDataManagementPage() {
                               label: item.output_port_count ? `${item.ratio_label} (${item.output_port_count} port)` : item.ratio_label,
                             })),
                         ])}
-                        placeholder="Pilih splitter ratio"
-                        searchPlaceholder="Cari splitter ratio..."
+                        placeholder={t("createPage.pickSplitterRatio")}
+                        searchPlaceholder={t("createPage.searchSplitter")}
                       />
                     </>
                   ) : null}
@@ -1720,7 +1723,7 @@ export default function CreateDataManagementPage() {
                 {!isCableDevice ? (
                   <div className={formGridClass}>
                     <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-                      Lokasi
+                      {t("createPage.tabLocation")}
                     </div>
                     <CreateLocationFields
                       values={{
@@ -1743,10 +1746,10 @@ export default function CreateDataManagementPage() {
                 ) : (
                   <div className={formGridClass}>
                     <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-                      Lokasi
+                      {t("createPage.tabLocation")}
                     </div>
                     <p className="text-xs text-muted-foreground col-span-full">
-                      Kabel tidak memiliki data lokasi spesifik. Informasi posisi kabel tercakup pada data rute dan koordinat rute di tab Teknis.
+                      {t("createPage.cableNoLocationDesc")}
                     </p>
                   </div>
                 )}
@@ -1756,7 +1759,7 @@ export default function CreateDataManagementPage() {
               <TabsContent value="operasional" className="mt-0 space-y-5">
                 <div className={formGridClass}>
                   <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-                    Operasional
+                    {t("createPage.operationalSection")}
                   </div>
                   <CreateOperationalFields
                     flags={{ isPop: false, isProject: false, isCustomer: false, isDevice: true }}
@@ -1776,10 +1779,10 @@ export default function CreateDataManagementPage() {
 
                 {showDeviceImageField ? (
                   <div className="space-y-1.5">
-                    <div className={sectionLabelClass}>Lampiran Gambar</div>
+                    <div className={sectionLabelClass}>{t("createPage.imageAttachmentsSection")}</div>
                     <ImageAttachmentField
                       label="Image Attachments"
-                      tooltip="Upload maksimal 10 foto perangkat (masing-masing max 5MB). Gambar pertama jadi primary image."
+                      tooltip={t("createPage.imageAttachmentTooltip")}
                       files={imageFiles}
                       previewUrls={imagePreviewUrls}
                       onChange={handleImageFilesChange}
@@ -1795,23 +1798,24 @@ export default function CreateDataManagementPage() {
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <p className="text-sm font-medium">Custom Fields</p>
-                        <p className="text-xs text-muted-foreground">Khusus untuk data Device yang sedang dibuat.</p>
+                        <p className="text-xs text-muted-foreground">{t("createPage.customFieldsSpecificDevice")}</p>
                       </div>
                       <Button type="button" variant="outline" size="sm" onClick={() => setCustomDialogOpen(true)}>
                         Add Custom Field
                       </Button>
                     </div>
                     {customDefinitions.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Belum ada custom field untuk konteks ini.</p>
+                      <p className="text-xs text-muted-foreground">{t("createPage.noCustomFieldForContext")}</p>
                     ) : (
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         {customDefinitions.map((field) => (
                           <div key={field.id} className={field.layout_span === 12 ? "sm:col-span-2 space-y-1.5" : "space-y-1.5"}>
-                            <FieldLabel label={field.field_label} tooltip={field.help_text || "Custom field untuk data ini."} />
+                            <FieldLabel label={field.field_label} tooltip={field.help_text || t("createPage.customFieldForData")} />
                             {renderCustomFieldInput({
                               field,
                               value: customValues[field.field_key] || "",
                               onChange: (value) => setCustomValues((prev) => ({ ...prev, [field.field_key]: value })),
+                              t,
                             })}
                             {field.help_text ? <p className="text-xs text-muted-foreground">{field.help_text}</p> : null}
                           </div>
@@ -1873,7 +1877,7 @@ export default function CreateDataManagementPage() {
                   />
               ) : null}
               <div className="space-y-1.5">
-                <FieldLabel label="Region" tooltip={isFixedRegionRole ? "Region terkunci mengikuti scope akun." : "Region wajib dipilih."} />
+                <FieldLabel label="Region" tooltip={isFixedRegionRole ? t("createPage.regionLockedTooltip") : t("createPage.regionRequiredTooltip")} />
                 {isFixedRegionRole ? (
                   <Input value={selectedRegionLabel} disabled />
                 ) : (
@@ -1881,19 +1885,19 @@ export default function CreateDataManagementPage() {
                     value={form.region_id || "__none__"}
                     onValueChange={(v) => setForm((p) => ({ ...p, region_id: v === "__none__" ? "" : v }))}
                     options={toOptions([
-                      { value: "__none__", label: "Pilih region" },
+                      { value: "__none__", label: t("createPage.pickRegion") },
                       ...regions.map((region) => ({
                         value: region.id,
                         label: region.region_name,
                       })),
                     ])}
-                    placeholder="Pilih region"
-                    searchPlaceholder="Cari region..."
+                    placeholder={t("createPage.pickRegion")}
+                    searchPlaceholder={t("createPage.searchRegion")}
                   />
                 )}
               </div>
               <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-                Validasi & Operasional
+                {t("createPage.validationOperationalSection")}
               </div>
               <CreateOperationalFields
                 flags={{ isPop, isProject, isCustomer, isDevice }}
@@ -2038,16 +2042,17 @@ export default function CreateDataManagementPage() {
               </div>
 
               {customDefinitions.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Belum ada custom field untuk konteks ini.</p>
+                <p className="text-xs text-muted-foreground">{t("createPage.noCustomFieldForContext")}</p>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {customDefinitions.map((field) => (
                     <div key={field.id} className={field.layout_span === 12 ? "sm:col-span-2 space-y-1.5" : "space-y-1.5"}>
-                      <FieldLabel label={field.field_label} tooltip={field.help_text || "Custom field untuk data ini."} />
+                      <FieldLabel label={field.field_label} tooltip={field.help_text || t("createPage.customFieldForData")} />
                       {renderCustomFieldInput({
                         field,
                         value: customValues[field.field_key] || "",
                         onChange: (value) => setCustomValues((prev) => ({ ...prev, [field.field_key]: value })),
+                        t,
                       })}
                       {field.help_text ? <p className="text-xs text-muted-foreground">{field.help_text}</p> : null}
                     </div>
@@ -2060,7 +2065,7 @@ export default function CreateDataManagementPage() {
           {!isDevice ? (
             <div className="flex justify-end">
               <Button onClick={() => void submit()} disabled={saving || Boolean(approvalNotice)}>
-                {saving ? "Menyimpan..." : isPop ? "Simpan POP" : isProject ? "Simpan Project" : "Simpan Customer"}
+                {saving ? t("createPage.saving") : isPop ? t("createPage.savePop") : isProject ? t("createPage.saveProject") : t("createPage.saveCustomer")}
               </Button>
             </div>
           ) : null}
@@ -2079,7 +2084,7 @@ export default function CreateDataManagementPage() {
             if (totalMissing > 0) {
               const firstMissingTab = Object.entries(missing).find(([, fields]) => fields.length > 0);
               if (firstMissingTab) setActiveTab(firstMissingTab[0]);
-              setErrorMessage(`Ada ${totalMissing} field wajib yang belum diisi. Lengkapi field yang ditandai di setiap tab.`);
+              setErrorMessage(t("createPage.validationIncomplete", { count: totalMissing }));
               return;
             }
             void submit();
@@ -2110,19 +2115,19 @@ export default function CreateDataManagementPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Add Custom Field</AlertDialogTitle>
             <AlertDialogDescription>
-              Tambahkan field kustom untuk form ini (span/title/jenis field).
+              {t("createPage.customFieldDialogDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field
-              label="Title"
+              label={t("createPage.customFieldTitleLabel")}
               value={customDraft.field_label}
               onChange={(v) => setCustomDraft((p) => ({ ...p, field_label: v }))}
-              placeholder="Contoh: Rack Label"
+              placeholder={t("createPage.customFieldTitlePlaceholder")}
             />
             <Field
-              label="Field Key"
+              label={t("createPage.customFieldKeyLabel")}
               value={customDraft.field_key}
               onChange={(v) => setCustomDraft((p) => ({ ...p, field_key: slugifyFieldKey(v) }))}
               placeholder="rack_label"
@@ -2138,7 +2143,7 @@ export default function CreateDataManagementPage() {
                     label: type,
                   })),
                 )}
-                searchPlaceholder="Cari tipe field..."
+                searchPlaceholder={t("createPage.searchFieldType")}
               />
             </div>
             <div className="space-y-1.5">
@@ -2150,7 +2155,7 @@ export default function CreateDataManagementPage() {
                   { value: "6", label: "Half (6)" },
                   { value: "12", label: "Full (12)" },
                 ])}
-                searchPlaceholder="Cari layout span..."
+                searchPlaceholder={t("createPage.searchLayoutSpan")}
               />
             </div>
             <div className="space-y-1.5">
@@ -2162,30 +2167,30 @@ export default function CreateDataManagementPage() {
                   { value: "false", label: "No" },
                   { value: "true", label: "Yes" },
                 ])}
-                searchPlaceholder="Cari opsi..."
+                searchPlaceholder={t("createPage.searchOption")}
               />
             </div>
             <Field
               label="Options (CSV)"
               value={customDraft.options_csv}
               onChange={(v) => setCustomDraft((p) => ({ ...p, options_csv: v }))}
-              placeholder="Untuk select/multiselect"
+              placeholder={t("createPage.optionsCsvPlaceholder")}
             />
             <Field
               label="Help Text"
               value={customDraft.help_text}
               onChange={(v) => setCustomDraft((p) => ({ ...p, help_text: v }))}
-              placeholder="Petunjuk singkat"
+              placeholder={t("createPage.helpTextPlaceholder")}
             />
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(event) => {
                 event.preventDefault();
                 try {
-                  const built = buildDraftCustomField(customDraft, isPop ? "pop" : "device");
+                  const built = buildDraftCustomField(customDraft, isPop ? "pop" : "device", t);
                   setCustomDefinitions((prev) => [...prev, built]);
                   setCustomDialogOpen(false);
                   setCustomDraft({
@@ -2261,18 +2266,20 @@ function numberOrNull(value: string) {
   return Number.isFinite(number) ? number : null;
 }
 
-function validateCid(value: string) {
-  const text = String(value || "").trim();
-  if (!text) {
-    return { valid: true, state: "idle" as const, message: "" };
-  }
-  if (!/^\d+$/.test(text)) {
-    return { valid: false, state: "invalid" as const, message: "CID hanya boleh berisi angka." };
-  }
-  if (text.length !== 8) {
-    return { valid: false, state: "invalid" as const, message: "CID wajib tepat 8 digit." };
-  }
-  return { valid: true, state: "valid" as const, message: "CID valid." };
+function validateCid(t: TFn) {
+  return (value: string) => {
+    const text = String(value || "").trim();
+    if (!text) {
+      return { valid: true, state: "idle" as const, message: "" };
+    }
+    if (!/^\d+$/.test(text)) {
+      return { valid: false, state: "invalid" as const, message: t("createPage.cidDigitsOnly") };
+    }
+    if (text.length !== 8) {
+      return { valid: false, state: "invalid" as const, message: t("createPage.cidExact8") };
+    }
+    return { valid: true, state: "valid" as const, message: t("createPage.cidValid") };
+  };
 }
 
 function getCreateErrorTitle({
@@ -2281,19 +2288,21 @@ function getCreateErrorTitle({
   isCustomer,
   isOntDevice,
   deviceTypeKey,
+  t,
 }: {
   isPop: boolean;
   isProject: boolean;
   isCustomer: boolean;
   isOntDevice: boolean;
   deviceTypeKey: string;
+  t: TFn;
 }) {
-  if (isPop) return "Create POP Gagal";
-  if (isProject) return "Create Project Gagal";
-  if (isCustomer) return "Create Customer Gagal";
-  if (isOntDevice) return "Create ONT Gagal";
-  if (deviceTypeKey === "ODP") return "Create ODP Gagal";
-  return "Create Device Gagal";
+  if (isPop) return t("createPage.failPop");
+  if (isProject) return t("createPage.failProject");
+  if (isCustomer) return t("createPage.failCustomer");
+  if (isOntDevice) return t("createPage.failOnt");
+  if (deviceTypeKey === "ODP") return t("createPage.failOdp");
+  return t("createPage.failDevice");
 }
 
 function getMissingCustomerRequiredFields(form: Record<string, string>) {
@@ -2315,28 +2324,29 @@ function getMissingCustomerRequiredFields(form: Record<string, string>) {
     .map(([, label]) => label);
 }
 
-function formatFieldList(fields: string[]) {
+function formatFieldList(fields: string[], locale: Locale) {
+  const and = locale === "en" ? "and" : "dan";
   if (fields.length <= 1) return fields[0] || "";
-  if (fields.length === 2) return `${fields[0]} dan ${fields[1]}`;
-  return `${fields.slice(0, -1).join(", ")}, dan ${fields[fields.length - 1]}`;
+  if (fields.length === 2) return `${fields[0]} ${and} ${fields[1]}`;
+  return `${fields.slice(0, -1).join(", ")}, ${and} ${fields[fields.length - 1]}`;
 }
 
 function getApprovalRequestId(value?: ApprovalResponse | null) {
   return value?.approval_request?.request_id || value?.approval_request?.id || "";
 }
 
-function validateCoordinateFormat(value: string, kind: "longitude" | "latitude") {
+function validateCoordinateFormat(value: string, kind: "longitude" | "latitude", t: TFn) {
   const text = String(value || "").trim();
   if (!text) {
     return { valid: true, state: "idle" as const, message: "" };
   }
 
   if (text.includes(",")) {
-    return { valid: false, state: "invalid" as const, message: "Gunakan titik (.) sebagai pemisah desimal, bukan koma (,)." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.coordDecimalPeriod") };
   }
 
   if (!text.includes(".")) {
-    return { valid: false, state: "invalid" as const, message: "Format harus menggunakan titik (.) desimal." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.coordMustPeriod") };
   }
 
   const allowedPattern = kind === "latitude" ? /^[-0-9.]+$/ : /^[0-9.]+$/;
@@ -2346,71 +2356,76 @@ function validateCoordinateFormat(value: string, kind: "longitude" | "latitude")
       return {
         valid: false,
         state: "invalid" as const,
-        message: `Ada karakter tidak valid: ${invalidChars.join(" ")}. Gunakan hanya angka dan titik${kind === "latitude" ? ", plus minus (-) di depan" : ""}.`,
+        message: t("createPage.coordInvalidChars", {
+          chars: invalidChars.join(" "),
+          sign: kind === "latitude" ? t("createPage.plusMinusPrefix") : "",
+        }),
       };
     }
     if (/\s/.test(text)) {
-      return { valid: false, state: "invalid" as const, message: "Koordinat tidak boleh mengandung spasi." };
+      return { valid: false, state: "invalid" as const, message: t("createPage.coordNoSpace") };
     }
     return {
       valid: false,
       state: "invalid" as const,
-      message: `Koordinat hanya boleh berisi angka, titik${kind === "latitude" ? ", dan minus (-) di depan" : ""}.`,
+      message: t("createPage.coordAllowedCharsOnly", {
+        sign: kind === "latitude" ? t("createPage.andMinusPrefix") : "",
+      }),
     };
   }
 
   if (kind === "latitude") {
     if (!text.startsWith("-")) {
-      return { valid: false, state: "invalid" as const, message: "Latitude harus diawali tanda minus (-)." };
+      return { valid: false, state: "invalid" as const, message: t("createPage.latMustMinus") };
     }
 
     if (!/^-?\d+\.\d+$/.test(text)) {
-      return { valid: false, state: "invalid" as const, message: "Latitude hanya boleh berisi angka, minus, dan titik desimal." };
+      return { valid: false, state: "invalid" as const, message: t("createPage.latAllowedChars") };
     }
 
     const parts = text.slice(1).split(".");
     if (parts.length !== 2) {
-      return { valid: false, state: "invalid" as const, message: "Latitude harus memiliki satu titik desimal." };
+      return { valid: false, state: "invalid" as const, message: t("createPage.latSinglePeriod") };
     }
 
     const [whole, decimal] = parts;
     if (whole.length !== 1) {
-      return { valid: false, state: "invalid" as const, message: "Digit sebelum titik untuk latitude harus tepat 1 angka." };
+      return { valid: false, state: "invalid" as const, message: t("createPage.latPrefixDigits") };
     }
     if (decimal.length < 6) {
-      return { valid: false, state: "invalid" as const, message: "Digit setelah titik untuk latitude minimal 6 angka." };
+      return { valid: false, state: "invalid" as const, message: t("createPage.latSuffixDigits") };
     }
     return {
       valid: true,
       state: "valid" as const,
-      message: "Format benar.",
+      message: t("createPage.formatCorrect"),
     };
   }
 
   if (text.startsWith("-")) {
-    return { valid: false, state: "invalid" as const, message: "Longitude tidak boleh diawali minus (-)." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.lngNoMinus") };
   }
   if (!/^\d+\.\d+$/.test(text)) {
-    return { valid: false, state: "invalid" as const, message: "Longitude hanya boleh berisi angka dan titik desimal." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.lngAllowedChars") };
   }
 
   const parts = text.split(".");
   if (parts.length !== 2) {
-    return { valid: false, state: "invalid" as const, message: "Longitude harus memiliki satu titik desimal." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.lngSinglePeriod") };
   }
 
   const [whole, decimal] = parts;
   if (whole.length !== 3) {
-    return { valid: false, state: "invalid" as const, message: "Digit sebelum titik untuk longitude harus tepat 3 angka." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.lngPrefixDigits") };
   }
   if (decimal.length < 6) {
-    return { valid: false, state: "invalid" as const, message: "Digit setelah titik untuk longitude minimal 6 angka." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.lngSuffixDigits") };
   }
 
   return {
     valid: true,
     state: "valid" as const,
-    message: "Format benar.",
+    message: t("createPage.formatCorrect"),
   };
 }
 
@@ -2464,11 +2479,12 @@ function buildDraftCustomField(
     options_csv: string;
   },
   entityType: "pop" | "device",
+  t: TFn,
 ): CustomFieldDefinition {
   const fieldLabel = draft.field_label.trim();
   const fieldKey = slugifyFieldKey(draft.field_key || fieldLabel);
-  if (!fieldLabel) throw new Error("Title custom field wajib diisi.");
-  if (!fieldKey) throw new Error("Field key custom field tidak valid.");
+  if (!fieldLabel) throw new Error(t("createPage.customFieldLabelRequired"));
+  if (!fieldKey) throw new Error(t("createPage.customFieldKeyInvalid"));
 
   return {
     id: `local-${entityType}-${fieldKey}-${Date.now()}`,
@@ -2492,20 +2508,20 @@ function buildDraftCustomField(
   };
 }
 
-function buildCustomFieldsPayload(definitions: CustomFieldDefinition[], values: Record<string, string>) {
+function buildCustomFieldsPayload(definitions: CustomFieldDefinition[], values: Record<string, string>, t: TFn) {
   const result: Record<string, unknown> = {};
   for (const field of definitions) {
     const raw = values[field.field_key];
     if (raw == null || raw === "") {
       if (field.is_required) {
-        throw new Error(`Custom field "${field.field_label}" wajib diisi.`);
+        throw new Error(t("createPage.customFieldRequired", { label: field.field_label }));
       }
       continue;
     }
 
     if (field.field_type === "number") {
       const number = Number(raw);
-      if (!Number.isFinite(number)) throw new Error(`Custom field "${field.field_label}" harus berupa angka.`);
+      if (!Number.isFinite(number)) throw new Error(t("createPage.customFieldNumberRequired", { label: field.field_label }));
       result[field.field_key] = number;
       continue;
     }
@@ -2527,7 +2543,7 @@ function buildCustomFieldsPayload(definitions: CustomFieldDefinition[], values: 
       try {
         result[field.field_key] = JSON.parse(raw);
       } catch {
-        throw new Error(`Custom field "${field.field_label}" harus JSON valid.`);
+        throw new Error(t("createPage.customFieldJsonRequired", { label: field.field_label }));
       }
       continue;
     }
@@ -2553,10 +2569,12 @@ function renderCustomFieldInput({
   field,
   value,
   onChange,
+  t,
 }: {
   field: CustomFieldDefinition;
   value: string;
   onChange: (nextValue: string) => void;
+  t: TFn;
 }) {
   if (field.field_type === "textarea" || field.field_type === "json") {
     return (
@@ -2577,7 +2595,7 @@ function renderCustomFieldInput({
           { value: "true", label: "True" },
           { value: "false", label: "False" },
         ])}
-        searchPlaceholder="Cari opsi..."
+        searchPlaceholder={t("createPage.searchOption")}
       />
     );
   }
@@ -2589,11 +2607,11 @@ function renderCustomFieldInput({
         value={value || "__none__"}
         onValueChange={(next) => onChange(next === "__none__" ? "" : next)}
         options={toOptions([
-          { value: "__none__", label: "Pilih" },
+          { value: "__none__", label: t("createPage.select") },
           ...options.map((option) => ({ value: option, label: option })),
         ])}
-        placeholder="Pilih nilai"
-        searchPlaceholder="Cari nilai..."
+        placeholder={t("createPage.pickValue")}
+        searchPlaceholder={t("createPage.searchValue")}
       />
     );
   }
@@ -2604,7 +2622,11 @@ function renderCustomFieldInput({
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder={options.length ? `Gunakan koma. Opsi: ${options.join(", ")}` : "Pisahkan dengan koma"}
+        placeholder={
+          options.length
+            ? t("createPage.separateWithCommaOptions", { options: options.join(", ") })
+            : t("createPage.separateWithComma")
+        }
       />
     );
   }
