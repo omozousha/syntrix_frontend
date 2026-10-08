@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type TopologyQualityResponse = {
   data: {
@@ -192,6 +193,7 @@ type DeviceTopologySummaryResponse = {
 export default function TopologyWorkspacePage() {
   const searchParams = useSearchParams();
   const { token, me } = useSession();
+  const { t } = useTranslate();
   const scopedRegionIds = useMemo(
     () =>
       me.role === "user_all_region" || me.role === "user_region"
@@ -339,6 +341,7 @@ export default function TopologyWorkspacePage() {
         coreStart: linkCoreStart,
         coreEnd: linkCoreEnd,
         fiberCount: linkFiberCount,
+        t,
       }),
     [
       linkCableDeviceId,
@@ -352,6 +355,7 @@ export default function TopologyWorkspacePage() {
       linkToPortId,
       selectedFromPort,
       selectedToPort,
+      t,
     ],
   );
   const hasConnectionBlockingIssues = connectionValidation.some((item) => item.kind === "error");
@@ -404,7 +408,7 @@ export default function TopologyWorkspacePage() {
         setQuality(payload.data);
       } catch (err) {
         if (cancelled) return;
-        setError((err as Error).message || "Gagal memuat topology quality.");
+        setError((err as Error).message || t("topology.loadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -429,13 +433,13 @@ export default function TopologyWorkspacePage() {
         });
         const options = (payload.data || []).map((item) => ({
           value: item.id,
-          label: `${item.device_name || item.device_id || "Device tidak tersedia"} (${item.device_type_key || "-"})`,
+          label: `${item.device_name || item.device_id || t("topology.deviceUnavailable")} (${item.device_type_key || "-"})`,
         }));
         const cables = (payload.data || [])
           .filter((item) => String(item.device_type_key || "").toUpperCase() === "CABLE")
           .map((item) => ({
             value: item.id,
-            label: `${item.device_name || item.device_id || "Cable device tidak tersedia"} (CABLE)`,
+            label: `${item.device_name || item.device_id || t("topology.cableDeviceUnavailable")} (CABLE)`,
           }));
         setTraceDeviceMap(nextMap);
         setTraceDeviceOptions(options);
@@ -465,7 +469,7 @@ export default function TopologyWorkspacePage() {
         if (cancelled) return;
         const options = (payload.data || []).map((item) => ({
           value: item.id,
-          label: `${item.route_name || item.route_id || "Route tidak tersedia"}`,
+          label: `${item.route_name || item.route_id || t("topology.routeUnavailable")}`,
         }));
         setRouteOptions(options);
       } catch {
@@ -483,9 +487,9 @@ export default function TopologyWorkspacePage() {
       const options = regions
         .filter((region) => !isScopedRegionRole || scopedRegionIds.includes(region.id))
         .map((region) => ({ value: region.id, label: `${region.region_name} (${region.region_id})` }));
-      return isScopedRegionRole ? options : [{ value: "all", label: "Semua Region" }, ...options];
+      return isScopedRegionRole ? options : [{ value: "all", label: t("asBuiltDocs.allRegions") }, ...options];
     },
-    [isScopedRegionRole, regions, scopedRegionIds],
+    [isScopedRegionRole, regions, scopedRegionIds, t],
   );
   const selectedRegionLabel = regionOptions.find((option) => option.value === regionId)?.label || "-";
   const asBuiltHref = useMemo(() => {
@@ -519,7 +523,7 @@ export default function TopologyWorkspacePage() {
       const payload = await apiFetch<TopologyTraceResponse>(`/topology/trace?${params.toString()}`, { token });
       setTraceResult(payload);
     } catch (err) {
-      setTraceError((err as Error).message || "Gagal menjalankan trace topology.");
+      setTraceError((err as Error).message || t("topology.traceFailed"));
     } finally {
       setTracing(false);
     }
@@ -701,7 +705,7 @@ export default function TopologyWorkspacePage() {
   async function handleProvision(dryRun: boolean) {
     if (!deviceId.trim()) return;
     if (!canMutateTopology) {
-      setProvisionError("Role ini hanya bisa membaca topology. Provisioning dilakukan oleh Admin Region atau Superadmin.");
+      setProvisionError(t("topology.readOnlyProvision"));
       return;
     }
     setProvisioning(true);
@@ -718,7 +722,7 @@ export default function TopologyWorkspacePage() {
       });
       setProvisionResult(payload);
     } catch (err) {
-      setProvisionError((err as Error).message || "Gagal menjalankan provisioning.");
+      setProvisionError((err as Error).message || t("topology.provisionFailed"));
     } finally {
       setProvisioning(false);
     }
@@ -740,13 +744,13 @@ export default function TopologyWorkspacePage() {
       const rows = await loadExistingConnections(linkFromDeviceId);
       setExistingConnections(rows);
     } catch (err) {
-      setLinkError((prev) => prev || (err as Error).message || "Connection tersimpan, tetapi daftar connection gagal dimuat ulang.");
+      setLinkError((prev) => prev || (err as Error).message || t("topology.connectionSavedReloadFailed"));
     }
   }
 
   async function handleSaveConnection() {
     if (!canMutateTopology) {
-      setLinkError("Role ini hanya bisa membaca topology. Mutasi connection dilakukan oleh Admin Region atau Superadmin.");
+      setLinkError(t("topology.readOnlyMutation"));
       return;
     }
     const blockingIssue = connectionValidation.find((item) => item.kind === "error");
@@ -755,24 +759,24 @@ export default function TopologyWorkspacePage() {
       return;
     }
     if (!linkFromDeviceId.trim() || !linkToDeviceId.trim()) {
-      setLinkError("From device dan To device wajib diisi.");
+      setLinkError(t("topology.deviceRequired"));
       return;
     }
     if (linkFromDeviceId.trim() === linkToDeviceId.trim()) {
-      setLinkError("From device dan To device tidak boleh sama.");
+      setLinkError(t("topology.deviceSame"));
       return;
     }
     if (!linkFromPortId.trim() || !linkToPortId.trim()) {
-      setLinkError("From port dan To port wajib diisi.");
+      setLinkError(t("topology.portRequired"));
       return;
     }
     if (linkFromPortId.trim() === linkToPortId.trim()) {
-      setLinkError("From port dan To port tidak boleh sama.");
+      setLinkError(t("topology.portSame"));
       return;
     }
 
     if (!linkSelectedRegionId) {
-      setLinkError("Region tidak ditemukan. Pilih region dulu agar link bisa dibuat.");
+      setLinkError(t("topology.regionMissing"));
       return;
     }
 
@@ -801,13 +805,13 @@ export default function TopologyWorkspacePage() {
         token,
         body: JSON.stringify(payload),
       });
-      setLinkMessage(result.message || getConnectionSuccessMessage(Boolean(editingConnectionId), isApprovalMutationRole));
+      setLinkMessage(result.message || getConnectionSuccessMessage(Boolean(editingConnectionId), isApprovalMutationRole, t));
       setTraceStartDeviceId(linkFromDeviceId.trim());
       setDeviceId(linkFromDeviceId.trim());
       setEditingConnectionId("");
       await refreshExistingConnectionList();
     } catch (err) {
-      setLinkError((err as Error).message || "Gagal menyimpan connection.");
+      setLinkError((err as Error).message || t("topology.saveFailed"));
     } finally {
       setCreatingLink(false);
     }
@@ -843,11 +847,11 @@ export default function TopologyWorkspacePage() {
 
   async function handleArchiveConnection(connection: ExistingPortConnection) {
     if (!canMutateTopology) {
-      setLinkError("Role ini hanya bisa membaca topology. Archive/delete connection dilakukan oleh Admin Region atau Superadmin.");
+      setLinkError(t("topology.readOnlyArchive"));
       return;
     }
     const label = connection.labels?.title || connection.connection_id || connection.id;
-    if (!window.confirm(`Archive/delete connection ${label}?`)) return;
+    if (!window.confirm(t("topology.archiveConfirm", { label }))) return;
     setCreatingLink(true);
     setLinkError("");
     setLinkMessage("");
@@ -856,11 +860,11 @@ export default function TopologyWorkspacePage() {
         method: "DELETE",
         token,
       });
-      setLinkMessage(result.message || (isApprovalMutationRole ? "Connection archive/delete request dikirim ke approval Superadmin." : "Connection archive/delete berhasil diproses."));
+      setLinkMessage(result.message || (isApprovalMutationRole ? t("topology.archiveApprovalSent") : t("topology.archiveSuccess")));
       if (editingConnectionId === connection.id) setEditingConnectionId("");
       await refreshExistingConnectionList();
     } catch (err) {
-      setLinkError((err as Error).message || "Gagal archive/delete connection.");
+      setLinkError((err as Error).message || t("topology.archiveFailed"));
     } finally {
       setCreatingLink(false);
     }
@@ -873,19 +877,19 @@ export default function TopologyWorkspacePage() {
           <h2 className="text-2xl font-semibold tracking-tight">Device Trace Workspace</h2>
           <p className="text-sm text-muted-foreground">
             {isPersonalDeviceMode
-              ? "Mode personal device: hasil trace langsung ditampilkan berdasarkan device yang dipilih dari list."
-              : "Halaman ini diprioritaskan untuk trace dari list/detail device."}
+              ? t("topology.personalModeDesc")
+              : t("topology.fromDeviceListDesc")}
           </p>
         </section>
 
         {!isPersonalDeviceMode ? (
           <Card>
             <CardHeader className="px-4 py-3">
-              <CardTitle className="text-base">Mulai dari Device</CardTitle>
+              <CardTitle className="text-base">{t("topology.startFromDevice")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 px-4 pb-4 pt-0">
               <p className="text-sm text-muted-foreground">
-                Untuk alur operasional, buka trace langsung dari list/detail device agar konteks region dan rantai koneksi otomatis terisi.
+                {t("topology.autoFillTrace")}
               </p>
               <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">
                 <Combobox
@@ -895,8 +899,8 @@ export default function TopologyWorkspacePage() {
                     setDeviceId(nextValue || "");
                   }}
                   options={traceDeviceOptions}
-                  placeholder={loadingTraceDeviceOptions ? "Memuat device..." : "Pilih start device"}
-                  searchPlaceholder="Cari device..."
+                  placeholder={loadingTraceDeviceOptions ? t("topology.loadingDevice") : t("topology.pickStartDevice")}
+                  searchPlaceholder={t("topology.searchDevice")}
                 />
                 <Button type="button" onClick={() => void handleTrace()} disabled={tracing || !traceStartDeviceId.trim()}>
                   Trace Device
@@ -913,11 +917,11 @@ export default function TopologyWorkspacePage() {
             </CardHeader>
             <CardContent className="space-y-2 px-4 pb-4 pt-0">
               <p className="text-sm text-muted-foreground">
-                Halaman ini dioptimalkan untuk dibuka dari list/detail device. Pilih start device di atas lalu jalankan trace.
+                {t("topology.optimizedTrace")}
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <Button asChild type="button" variant="outline" size="sm">
-                  <Link href="/data-management">Open Data Management</Link>
+                  <Link href="/data-management">{t("asBuilt.openDataManagement")}</Link>
                 </Button>
               </div>
             </CardContent>
@@ -946,7 +950,7 @@ export default function TopologyWorkspacePage() {
           </CardHeader>
           <CardContent className="px-4 pb-4 pt-0">
             {loading ? (
-              <AppLoading label="Memuat topology quality..." />
+              <AppLoading label={t("topology.loadingQuality")} />
             ) : error ? (
               <AppLoading label={error} variant="error" />
             ) : (
@@ -978,18 +982,18 @@ export default function TopologyWorkspacePage() {
                     setTraceStartDeviceId(nextValue || "");
                     setDeviceId(nextValue || "");
                   }}
-                  options={withSelectedOptionFallback(traceDeviceOptions, traceStartDeviceId, "Start device")}
-                  placeholder={loadingTraceDeviceOptions ? "Memuat device..." : "Start Device"}
-                  searchPlaceholder="Cari start device..."
+                  options={withSelectedOptionFallback(traceDeviceOptions, traceStartDeviceId, "Start device", t)}
+                  placeholder={loadingTraceDeviceOptions ? t("topology.loadingDevice") : "Start Device"}
+                  searchPlaceholder={t("topology.searchStartDevice")}
                 />
               </div>
               <div className="lg:col-span-4">
                 <Combobox
                   value={traceEndDeviceId}
                   onValueChange={(nextValue) => setTraceEndDeviceId(nextValue || "")}
-                  options={[{ value: "", label: "Tanpa end device" }, ...withSelectedOptionFallback(traceDeviceOptions, traceEndDeviceId, "End device")]}
-                  placeholder={loadingTraceDeviceOptions ? "Memuat device..." : "End Device (opsional)"}
-                  searchPlaceholder="Cari end device..."
+                  options={[{ value: "", label: t("topology.withoutEndDevice") }, ...withSelectedOptionFallback(traceDeviceOptions, traceEndDeviceId, "End device", t)]}
+                  placeholder={loadingTraceDeviceOptions ? t("topology.loadingDevice") : t("topology.endDeviceOptional")}
+                  searchPlaceholder={t("topology.searchEndDevice")}
                 />
               </div>
               <div className="lg:col-span-2">
@@ -1005,7 +1009,7 @@ export default function TopologyWorkspacePage() {
                     { value: "downstream", label: "Downstream" },
                   ]}
                   placeholder="Direction"
-                  searchPlaceholder="Cari direction..."
+                  searchPlaceholder={t("topology.searchDirection")}
                 />
               </div>
             </div>
@@ -1061,10 +1065,8 @@ export default function TopologyWorkspacePage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4 pt-0">
-            <p className="text-sm text-muted-foreground">
-              Buat relasi port-to-port dari device terpilih ke device tujuan. Perubahan tetap divalidasi backend dan mengikuti approval policy sesuai role.
-            </p>
-            <TopologyRoleNotice role={topologyRole} />
+            <p className="text-sm text-muted-foreground">{t("topology.connectionWizardDesc")}</p>
+            <TopologyRoleNotice role={topologyRole} t={t} />
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
               <Combobox
                 value={linkFromDeviceId}
@@ -1074,8 +1076,8 @@ export default function TopologyWorkspacePage() {
                   setTraceStartDeviceId(value);
                 }}
                 options={linkFromDeviceOptions}
-                placeholder={loadingTraceDeviceOptions ? "Memuat device..." : "From Device"}
-                searchPlaceholder="Cari from device..."
+                placeholder={loadingTraceDeviceOptions ? t("topology.loadingDevice") : "From Device"}
+                searchPlaceholder={t("topology.searchFromDevice")}
               />
               <Combobox
                 value={linkToDeviceId}
@@ -1085,8 +1087,8 @@ export default function TopologyWorkspacePage() {
                   setTraceEndDeviceId(value);
                 }}
                 options={linkToDeviceOptions}
-                placeholder={loadingTraceDeviceOptions ? "Memuat device..." : "To Device"}
-                searchPlaceholder="Cari to device..."
+                placeholder={loadingTraceDeviceOptions ? t("topology.loadingDevice") : "To Device"}
+                searchPlaceholder={t("topology.searchToDevice")}
               />
             </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
@@ -1094,15 +1096,15 @@ export default function TopologyWorkspacePage() {
                 value={linkFromPortId}
                 onValueChange={(nextValue) => setLinkFromPortId(nextValue || "")}
                 options={fromPortOptions}
-                placeholder={loadingFromPorts ? "Memuat from ports..." : "From Port"}
-                searchPlaceholder="Cari from port..."
+                placeholder={loadingFromPorts ? t("topology.loadingFromPorts") : "From Port"}
+                searchPlaceholder={t("topology.searchFromPort")}
               />
               <Combobox
                 value={linkToPortId}
                 onValueChange={(nextValue) => setLinkToPortId(nextValue || "")}
                 options={toPortOptions}
-                placeholder={loadingToPorts ? "Memuat to ports..." : "To Port"}
-                searchPlaceholder="Cari to port..."
+                placeholder={loadingToPorts ? t("topology.loadingToPorts") : "To Port"}
+                searchPlaceholder={t("topology.searchToPort")}
               />
             </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
@@ -1117,7 +1119,7 @@ export default function TopologyWorkspacePage() {
                   { value: "other", label: "other" },
                 ]}
                 placeholder="Connection type"
-                searchPlaceholder="Cari connection type..."
+                searchPlaceholder={t("topology.searchConnectionType")}
               />
               <Combobox
                 value={linkStatus}
@@ -1129,21 +1131,21 @@ export default function TopologyWorkspacePage() {
                   { value: "cutover", label: "cutover" },
                 ]}
                 placeholder="Status"
-                searchPlaceholder="Cari status..."
+                searchPlaceholder={t("topology.searchStatus")}
               />
               <Combobox
                 value={linkRouteId}
                 onValueChange={(nextValue) => setLinkRouteId(nextValue || "__none__")}
-                options={[{ value: "__none__", label: "Tanpa Route" }, ...routeOptions]}
-                placeholder="Route (opsional)"
-                searchPlaceholder="Cari route..."
+                options={[{ value: "__none__", label: t("topology.withoutRoute") }, ...routeOptions]}
+                placeholder={t("topology.routeOptional")}
+                searchPlaceholder={t("topology.searchRoute")}
               />
               <Combobox
                 value={linkCableDeviceId}
                 onValueChange={(nextValue) => setLinkCableDeviceId(nextValue || "__none__")}
-                options={[{ value: "__none__", label: "Tanpa Cable Device" }, ...cableOptions]}
-                placeholder="Cable Device (opsional)"
-                searchPlaceholder="Cari cable..."
+                options={[{ value: "__none__", label: t("topology.withoutCableDevice") }, ...cableOptions]}
+                placeholder={t("topology.cableDeviceOptional")}
+                searchPlaceholder={t("topology.searchCable")}
               />
             </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-12">
@@ -1157,7 +1159,7 @@ export default function TopologyWorkspacePage() {
                 <Input value={linkFiberCount} onChange={(event) => setLinkFiberCount(event.target.value)} placeholder="Fiber count" />
               </div>
               <div className="md:col-span-4">
-                <Input value={linkNotes} onChange={(event) => setLinkNotes(event.target.value)} placeholder="Catatan link (opsional)" />
+                <Input value={linkNotes} onChange={(event) => setLinkNotes(event.target.value)} placeholder={t("topology.notesOptional")} />
               </div>
               <div className="md:col-span-2">
                 <Button
@@ -1198,6 +1200,7 @@ export default function TopologyWorkspacePage() {
               fiberCount={linkFiberCount}
               regionId={linkSelectedRegionId}
               validation={connectionValidation}
+              t={t}
             />
             <ExistingConnectionsPanel
               connections={existingConnections}
@@ -1207,6 +1210,7 @@ export default function TopologyWorkspacePage() {
               canMutate={canMutateTopology}
               onEdit={handleEditConnection}
               onArchive={(connection) => void handleArchiveConnection(connection)}
+              t={t}
             />
             <TopologyRelationOverview
               fromDevice={selectedFromDevice}
@@ -1219,14 +1223,16 @@ export default function TopologyWorkspacePage() {
               cableCores={cableCoreRows}
               cableCoreStatusCounts={cableCoreStatusCounts}
               cableCoreWarningTotal={cableCoreWarningTotal}
+              t={t}
             />
             <DeviceTypeOccupancyPanel
               fromDevice={selectedFromDevice}
               toDevice={selectedToDevice}
               fromPorts={fromPortRows}
               toPorts={toPortRows}
+              t={t}
             />
-            <SpliceMatrixPanel connections={existingConnections} cableCores={cableCoreRows} selectedCableLabel={selectedCableLabel} />
+            <SpliceMatrixPanel connections={existingConnections} cableCores={cableCoreRows} selectedCableLabel={selectedCableLabel} t={t} />
             {linkError ? <p className="text-sm text-destructive">{linkError}</p> : null}
             {linkMessage ? <p className="text-sm text-emerald-600">{linkMessage}</p> : null}
           </CardContent>
@@ -1264,9 +1270,9 @@ export default function TopologyWorkspacePage() {
                   </div>
                 </div>
                 {loadingFromPorts ? (
-                  <p className="text-sm text-muted-foreground">Memuat port...</p>
+                  <p className="text-sm text-muted-foreground">{t("topology.loadingPorts")}</p>
                 ) : !fromPortRows.length ? (
-                  <p className="text-sm text-muted-foreground">Belum ada port pada device ini.</p>
+                  <p className="text-sm text-muted-foreground">{t("topology.noPortsYet")}</p>
                 ) : (
                   <PortOccupancyGrid title="From Device" ports={fromPortRows} selectedPortId={linkFromPortId} />
                 )}
@@ -1280,7 +1286,7 @@ export default function TopologyWorkspacePage() {
                 <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cable Core Matrix</p>
-                    <p className="truncate text-xs text-muted-foreground">{selectedCableLabel || "Pilih cable device untuk matrix core."}</p>
+                    <p className="truncate text-xs text-muted-foreground">{selectedCableLabel || t("topology.pickCableForMatrix")}</p>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     <StatusCountBadge label="Available" value={cableCoreStatusCounts.available || 0} />
@@ -1290,13 +1296,13 @@ export default function TopologyWorkspacePage() {
                   </div>
                 </div>
                 {linkCableDeviceId === "__none__" ? (
-                  <p className="text-sm text-muted-foreground">Pilih cable device untuk melihat core occupancy.</p>
+                  <p className="text-sm text-muted-foreground">{t("topology.pickCableForOccupancy")}</p>
                 ) : loadingCableCores ? (
-                  <p className="text-sm text-muted-foreground">Memuat cores...</p>
+                  <p className="text-sm text-muted-foreground">{t("topology.loadingCores")}</p>
                 ) : !cableCoreRows.length ? (
-                  <p className="text-sm text-muted-foreground">Belum ada core pada cable ini.</p>
+                  <p className="text-sm text-muted-foreground">{t("topology.noCoresYet")}</p>
                 ) : (
-                  <CableCoreMatrix cores={cableCoreRows} />
+                  <CableCoreMatrix cores={cableCoreRows} t={t} />
                 )}
               </div>
             </div>
@@ -1310,15 +1316,15 @@ export default function TopologyWorkspacePage() {
             <CardTitle className="text-base">Device Port Provisioning (MVP)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4 pt-0">
-            <TopologyRoleNotice role={topologyRole} compact />
+            <TopologyRoleNotice role={topologyRole} compact t={t} />
             <div className="grid grid-cols-1 gap-2 md:grid-cols-12">
               <div className="md:col-span-5">
                 <Combobox
                   value={deviceId}
                   onValueChange={(nextValue) => setDeviceId(nextValue || "")}
-                  options={withSelectedOptionFallback(traceDeviceOptions, deviceId, "Device")}
-                  placeholder={loadingTraceDeviceOptions ? "Memuat device..." : "Pilih device"}
-                  searchPlaceholder="Cari device..."
+                  options={withSelectedOptionFallback(traceDeviceOptions, deviceId, "Device", t)}
+                  placeholder={loadingTraceDeviceOptions ? t("topology.loadingDevice") : t("topology.pickDevice")}
+                  searchPlaceholder={t("topology.searchDevice")}
                 />
               </div>
               <div className="md:col-span-3">
@@ -1387,30 +1393,30 @@ function getConnectionActionLabel({
   return approval ? "Submit Create Request" : "Create Connection";
 }
 
-function getConnectionSuccessMessage(editing: boolean, approval: boolean) {
+function getConnectionSuccessMessage(editing: boolean, approval: boolean, t: TFn) {
   if (approval) {
     return editing
-      ? "Connection update request dikirim ke approval Superadmin."
-      : "Connection create request dikirim ke approval Superadmin.";
+      ? t("topology.updateApprovalSent")
+      : t("topology.createApprovalSent");
   }
-  return editing ? "Connection update berhasil diproses." : "Connection create berhasil diproses.";
+  return editing ? t("topology.updateSuccess") : t("topology.createSuccess");
 }
 
-function TopologyRoleNotice({ role, compact = false }: { role: string; compact?: boolean }) {
+function TopologyRoleNotice({ role, compact = false, t }: { role: string; compact?: boolean; t: TFn }) {
   const copy =
     role === "superadmin"
       ? {
           title: "Superadmin action",
-          description: "Perubahan topology diterapkan langsung ke inventory final.",
+          description: t("topology.superadminDirect"),
         }
       : role === "adminregion"
         ? {
             title: "Admin Region request",
-            description: "Create, update, dan archive topology dikirim ke approval Superadmin.",
+            description: t("topology.adminApproval"),
           }
         : {
             title: "Read-only access",
-            description: "Role ini hanya bisa melihat trace, connection, dan summary topology.",
+            description: t("topology.readOnlySummary"),
           };
 
   return (
@@ -1567,6 +1573,7 @@ function ConnectionPreview({
   fiberCount,
   regionId,
   validation,
+  t,
 }: {
   fromDevice: DeviceLookupItem | null;
   toDevice: DeviceLookupItem | null;
@@ -1581,6 +1588,7 @@ function ConnectionPreview({
   fiberCount: string;
   regionId: string;
   validation: Array<{ kind: "error" | "warning"; message: string }>;
+  t: TFn;
 }) {
   const errors = validation.filter((item) => item.kind === "error");
   const warnings = validation.filter((item) => item.kind === "warning");
@@ -1590,10 +1598,10 @@ function ConnectionPreview({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold">Connection Preview</p>
-          <p className="text-xs text-muted-foreground">Review relasi port-to-port sebelum masuk topology inventory.</p>
+          <p className="text-xs text-muted-foreground">{t("topology.previewDesc")}</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <Badge variant={errors.length ? "destructive" : "secondary"}>{errors.length ? "Perlu diperbaiki" : "Siap dibuat"}</Badge>
+          <Badge variant={errors.length ? "destructive" : "secondary"}>{errors.length ? t("topology.needsFix") : t("topology.readyToCreate")}</Badge>
           {warnings.length ? <Badge variant="outline">{warnings.length} warning</Badge> : null}
         </div>
       </div>
@@ -1615,13 +1623,13 @@ function ConnectionPreview({
         />
         <PreviewCell
           label="Cable & Core"
-          value={cableLabel || "Tanpa cable device"}
+          value={cableLabel || t("topology.withoutCable")}
           detail={`Core ${coreStart || "-"}-${coreEnd || "-"} | Fiber ${fiberCount || "-"}`}
         />
         <PreviewCell
           label="Route"
-          value={routeLabel || "Tanpa route"}
-          detail="Route opsional untuk konteks jalur"
+          value={routeLabel || t("topology.withoutRouteValue")}
+          detail={t("topology.routeOptionalContext")}
         />
       </div>
       {validation.length ? (
@@ -1708,7 +1716,7 @@ function PortOccupancyGrid({
   );
 }
 
-function CableCoreMatrix({ cores }: { cores: FiberCoreItem[] }) {
+function CableCoreMatrix({ cores, t }: { cores: FiberCoreItem[]; t: TFn }) {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -1740,7 +1748,7 @@ function CableCoreMatrix({ cores }: { cores: FiberCoreItem[] }) {
         })}
       </div>
       {cores.length > 96 ? (
-        <p className="text-xs text-muted-foreground">Menampilkan 96 dari {cores.length} core. Filter tube/detail akan dilanjutkan di Core Management.</p>
+        <p className="text-xs text-muted-foreground">{t("topology.showing", { shown: 96, total: cores.length, label: "core" })}</p>
       ) : null}
     </div>
   );
@@ -1757,6 +1765,7 @@ function TopologyRelationOverview({
   cableCores,
   cableCoreStatusCounts,
   cableCoreWarningTotal,
+  t,
 }: {
   fromDevice: DeviceLookupItem | null;
   toDevice: DeviceLookupItem | null;
@@ -1768,6 +1777,7 @@ function TopologyRelationOverview({
   cableCores: FiberCoreItem[];
   cableCoreStatusCounts: Record<string, number>;
   cableCoreWarningTotal: number;
+  t: TFn;
 }) {
   const assignmentRows = [...fromPorts, ...toPorts].filter((port) => port.customer_id || port.customer_name || port.customer_number || port.ont_device_id);
 
@@ -1776,7 +1786,7 @@ function TopologyRelationOverview({
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-semibold">Topology Relation Overview</p>
-          <p className="text-xs text-muted-foreground">Ringkasan device, port, core, route, dan customer/ONT assignment dari context connection saat ini.</p>
+          <p className="text-xs text-muted-foreground">{t("topology.relationOverview")}</p>
         </div>
         <Badge variant="outline">{connections.length} connection</Badge>
       </div>
@@ -1812,21 +1822,21 @@ function TopologyRelationOverview({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-xs font-medium">{port.port_label || `Port ${port.port_index || "-"}`}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">{customerAssignmentLabel(port)}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">{customerAssignmentLabel(port, t)}</p>
                   </div>
                   <Badge variant="outline" className="shrink-0 text-[10px]">
                     {port.status || "idle"}
                   </Badge>
                 </div>
-                <p className="mt-1 truncate text-[11px] text-muted-foreground">ONT: {port.ont_device_id ? "Assigned" : "-"}</p>
+                <p className="mt-1 truncate text-[11px] text-muted-foreground">ONT: {port.ont_device_id ? t("topology.networkAssigned") : "-"}</p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-sm text-muted-foreground">Belum ada assignment customer/ONT pada endpoint yang dipilih.</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t("topology.noAssignmentYet")}</p>
         )}
         {assignmentRows.length > 9 ? (
-          <p className="mt-2 text-xs text-muted-foreground">Menampilkan 9 dari {assignmentRows.length} assignment.</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t("topology.showing", { shown: 9, total: assignmentRows.length, label: "assignment" })}</p>
         ) : null}
       </div>
     </div>
@@ -1838,11 +1848,13 @@ function DeviceTypeOccupancyPanel({
   toDevice,
   fromPorts,
   toPorts,
+  t,
 }: {
   fromDevice: DeviceLookupItem | null;
   toDevice: DeviceLookupItem | null;
   fromPorts: DevicePortItem[];
   toPorts: DevicePortItem[];
+  t: TFn;
 }) {
   const entries = [
     { role: "From", device: fromDevice, ports: fromPorts },
@@ -1854,7 +1866,7 @@ function DeviceTypeOccupancyPanel({
     <div className="rounded-lg border bg-background p-3">
       <div className="mb-3 flex flex-col gap-1">
         <p className="text-sm font-semibold">ODP / ODC / OLT Occupancy</p>
-        <p className="text-xs text-muted-foreground">Occupancy dibaca dari endpoint device yang sedang dipilih di Connection Wizard.</p>
+        <p className="text-xs text-muted-foreground">{t("topology.occupancyFromEndpoint")}</p>
       </div>
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
         {targetTypes.map((deviceType) => {
@@ -1877,7 +1889,7 @@ function DeviceTypeOccupancyPanel({
                   ))}
                 </div>
               ) : (
-                <p className="mt-2 text-xs text-muted-foreground">Belum ada {deviceType} pada endpoint yang dipilih.</p>
+                <p className="mt-2 text-xs text-muted-foreground">{t("topology.noDeviceTypeYet", { type: deviceType })}</p>
               )}
             </div>
           );
@@ -1891,10 +1903,12 @@ function SpliceMatrixPanel({
   connections,
   cableCores,
   selectedCableLabel,
+  t,
 }: {
   connections: ExistingPortConnection[];
   cableCores: FiberCoreItem[];
   selectedCableLabel: string;
+  t: TFn;
 }) {
   const mappedConnections = connections.filter((connection) => connection.core_start != null || connection.core_end != null);
   const coreByNumber = new Map(cableCores.map((core) => [core.core_no, core]));
@@ -1904,7 +1918,7 @@ function SpliceMatrixPanel({
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-semibold">Splice Matrix</p>
-          <p className="text-xs text-muted-foreground">Read-only matrix dari core range connection ke endpoint port/splitter.</p>
+          <p className="text-xs text-muted-foreground">{t("topology.spliceMatrixDesc")}</p>
         </div>
         <Badge variant={mappedConnections.length ? "secondary" : "outline"}>{mappedConnections.length} mapped connection</Badge>
       </div>
@@ -1917,15 +1931,16 @@ function SpliceMatrixPanel({
               connection={connection}
               coreByNumber={coreByNumber}
               selectedCableLabel={selectedCableLabel}
+              t={t}
             />
           ))}
           {mappedConnections.length > 8 ? (
-            <p className="text-xs text-muted-foreground">Menampilkan 8 dari {mappedConnections.length} mapped connection.</p>
+            <p className="text-xs text-muted-foreground">{t("topology.showing", { shown: 8, total: mappedConnections.length, label: "mapped connection" })}</p>
           ) : null}
         </div>
       ) : (
         <p className="rounded-md border border-dashed bg-muted/10 px-3 py-2 text-sm text-muted-foreground">
-          Belum ada connection dengan core range. Pilih cable dan isi core start/end saat membuat connection untuk menampilkan matrix.
+          {t("topology.noCoreRangeConnections")}
         </p>
       )}
     </div>
@@ -1936,10 +1951,12 @@ function SpliceMatrixConnectionRow({
   connection,
   coreByNumber,
   selectedCableLabel,
+  t,
 }: {
   connection: ExistingPortConnection;
   coreByNumber: Map<number | null | undefined, FiberCoreItem>;
   selectedCableLabel: string;
+  t: TFn;
 }) {
   const coreStart = connection.core_start ?? connection.core_end ?? null;
   const coreEnd = connection.core_end ?? connection.core_start ?? null;
@@ -1978,7 +1995,7 @@ function SpliceMatrixConnectionRow({
               );
             })
           ) : (
-            <p className="col-span-2 text-xs text-muted-foreground sm:col-span-4">Core range belum lengkap.</p>
+            <p className="col-span-2 text-xs text-muted-foreground sm:col-span-4">{t("topology.coreRangeIncomplete")}</p>
           )}
         </div>
         <SpliceEndpointBox title="Output / To" primary={toLabel} secondary={formatPortLabel(connection.to_port || null)} />
@@ -2106,6 +2123,7 @@ function ExistingConnectionsPanel({
   canMutate,
   onEdit,
   onArchive,
+  t,
 }: {
   connections: ExistingPortConnection[];
   loading: boolean;
@@ -2114,21 +2132,22 @@ function ExistingConnectionsPanel({
   canMutate: boolean;
   onEdit: (connection: ExistingPortConnection) => void;
   onArchive: (connection: ExistingPortConnection) => void;
+  t: TFn;
 }) {
   return (
     <div className="rounded-lg border bg-background p-3">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold">Existing Connections</p>
-          <p className="text-xs text-muted-foreground">Connection aktif dari device awal bisa diedit atau dibatalkan dari sini.</p>
+          <p className="text-xs text-muted-foreground">{t("topology.existingConnectionsDesc")}</p>
         </div>
         <Badge variant={connections.length ? "secondary" : "outline"}>{connections.length} connection</Badge>
       </div>
       {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat connection...</p>
+        <p className="text-sm text-muted-foreground">{t("topology.loadingConnections")}</p>
       ) : connections.length === 0 ? (
         <p className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-          Belum ada connection untuk device awal ini.
+          {t("topology.noConnectionsYet")}
         </p>
       ) : (
         <div className="space-y-2">
@@ -2175,7 +2194,7 @@ function ExistingConnectionsPanel({
             );
           })}
           {connections.length > 10 ? (
-            <p className="text-xs text-muted-foreground">Menampilkan 10 dari {connections.length} connection.</p>
+            <p className="text-xs text-muted-foreground">{t("topology.showing", { shown: 10, total: connections.length, label: "connection" })}</p>
           ) : null}
         </div>
       )}
@@ -2250,9 +2269,9 @@ function hasPortAssignment(port: DevicePortItem) {
   return Boolean(assignedCustomerId || assignedOntDeviceId || port.customer_name || port.customer_number);
 }
 
-function customerAssignmentLabel(port: DevicePortItem) {
+function customerAssignmentLabel(port: DevicePortItem, t: TFn) {
   const { customer_id: assignedCustomerId } = port;
-  return port.customer_name || port.customer_number || (assignedCustomerId ? "Customer assigned" : "Customer belum ada");
+  return port.customer_name || port.customer_number || (assignedCustomerId ? t("topology.customerAssigned") : t("topology.customerMissing"));
 }
 
 function countByStatus<T extends { status?: string | null }>(items: T[]) {
@@ -2371,6 +2390,7 @@ function buildConnectionValidation({
   coreStart,
   coreEnd,
   fiberCount,
+  t,
 }: {
   fromDeviceId: string;
   toDeviceId: string;
@@ -2383,6 +2403,7 @@ function buildConnectionValidation({
   coreStart: string;
   coreEnd: string;
   fiberCount: string;
+  t: TFn;
 }) {
   const issues: Array<{ kind: "error" | "warning"; message: string }> = [];
   const hasCoreStart = coreStart.trim() !== "";
@@ -2391,40 +2412,40 @@ function buildConnectionValidation({
   const parsedCoreEnd = Number(coreEnd);
   const parsedFiberCount = Number(fiberCount);
 
-  if (!fromDeviceId.trim()) issues.push({ kind: "error", message: "From device wajib dipilih." });
-  if (!toDeviceId.trim()) issues.push({ kind: "error", message: "To device wajib dipilih." });
+  if (!fromDeviceId.trim()) issues.push({ kind: "error", message: t("topology.validationFromDeviceRequired") });
+  if (!toDeviceId.trim()) issues.push({ kind: "error", message: t("topology.validationToDeviceRequired") });
   if (fromDeviceId.trim() && toDeviceId.trim() && fromDeviceId.trim() === toDeviceId.trim()) {
-    issues.push({ kind: "error", message: "From device dan To device tidak boleh sama." });
+    issues.push({ kind: "error", message: t("topology.deviceSame") });
   }
-  if (!fromPortId.trim()) issues.push({ kind: "error", message: "From port wajib dipilih." });
-  if (!toPortId.trim()) issues.push({ kind: "error", message: "To port wajib dipilih." });
+  if (!fromPortId.trim()) issues.push({ kind: "error", message: t("topology.validationFromPortRequired") });
+  if (!toPortId.trim()) issues.push({ kind: "error", message: t("topology.validationToPortRequired") });
   if (fromPortId.trim() && toPortId.trim() && fromPortId.trim() === toPortId.trim()) {
-    issues.push({ kind: "error", message: "From port dan To port tidak boleh sama." });
+    issues.push({ kind: "error", message: t("topology.portSame") });
   }
-  if (!regionId) issues.push({ kind: "error", message: "Region tidak ditemukan. Pilih region atau device dengan region yang jelas." });
+  if (!regionId) issues.push({ kind: "error", message: t("topology.validationRegionMissing") });
   if (hasCoreStart !== hasCoreEnd) {
-    issues.push({ kind: "error", message: "Core start dan Core end harus diisi berpasangan." });
+    issues.push({ kind: "error", message: t("topology.validationCorePair") });
   }
   if ((hasCoreStart || hasCoreEnd) && cableDeviceId === "__none__") {
-    issues.push({ kind: "error", message: "Core range membutuhkan Cable Device." });
+    issues.push({ kind: "error", message: t("topology.validationCoreRequiresCable") });
   }
   if (hasCoreStart && (!Number.isInteger(parsedCoreStart) || parsedCoreStart <= 0)) {
-    issues.push({ kind: "error", message: "Core start harus angka bulat positif." });
+    issues.push({ kind: "error", message: t("topology.validationCoreStartPositive") });
   }
   if (hasCoreEnd && (!Number.isInteger(parsedCoreEnd) || parsedCoreEnd <= 0)) {
-    issues.push({ kind: "error", message: "Core end harus angka bulat positif." });
+    issues.push({ kind: "error", message: t("topology.validationCoreEndPositive") });
   }
   if (hasCoreStart && hasCoreEnd && Number.isFinite(parsedCoreStart) && Number.isFinite(parsedCoreEnd) && parsedCoreStart > parsedCoreEnd) {
-    issues.push({ kind: "error", message: "Core start tidak boleh lebih besar dari Core end." });
+    issues.push({ kind: "error", message: t("topology.validationCoreStartLteEnd") });
   }
   if (fiberCount.trim() && (!Number.isInteger(parsedFiberCount) || parsedFiberCount <= 0)) {
-    issues.push({ kind: "error", message: "Fiber count harus angka bulat positif." });
+    issues.push({ kind: "error", message: t("topology.validationFiberCountPositive") });
   }
   if (fromPort && !["idle", "reserved"].includes(String(fromPort.status || "idle").toLowerCase())) {
-    issues.push({ kind: "warning", message: `From port saat ini berstatus ${fromPort.status}. Backend tetap akan memvalidasi policy koneksi.` });
+    issues.push({ kind: "warning", message: t("topology.validationFromPortStatus", { status: fromPort.status || "idle" }) });
   }
   if (toPort && !["idle", "reserved"].includes(String(toPort.status || "idle").toLowerCase())) {
-    issues.push({ kind: "warning", message: `To port saat ini berstatus ${toPort.status}. Backend tetap akan memvalidasi policy koneksi.` });
+    issues.push({ kind: "warning", message: t("topology.validationToPortStatus", { status: toPort.status || "idle" }) });
   }
 
   return issues;
@@ -2440,9 +2461,9 @@ function formatPortLabel(port: DevicePortItem | null) {
   return `${port.port_label || `Port ${port.port_index || "-"}`} (${port.status || "idle"})`;
 }
 
-function withSelectedOptionFallback(options: Array<{ value: string; label: string }>, value: string, label: string) {
+function withSelectedOptionFallback(options: Array<{ value: string; label: string }>, value: string, label: string, t: TFn) {
   if (!value.trim() || options.some((option) => option.value === value)) return options;
-  return [{ value, label: `${label} terpilih (${shortId(value)})` }, ...options];
+  return [{ value, label: t("topology.selectedFallback", { label, shortId: shortId(value) }) }, ...options];
 }
 
 function shortId(value: string) {
