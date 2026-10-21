@@ -23,7 +23,7 @@ type OdpFieldValidationPayload = {
   total_ports?: number | null;
 };
 
-type OdpValidationPortSnapshot = {
+export type OdpValidationPortSnapshot = {
   id?: string | null;
   port_index?: number | null;
   port_label?: string | null;

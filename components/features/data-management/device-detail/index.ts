@@ -39,6 +39,7 @@ export {
   OdpFieldValidationSummary,
   OdpInspectionSummary,
   OdpPortSnapshotSummary,
+  type OdpValidationPortSnapshot,
   OdpValidationWorkflowTimeline,
   formatOdpInspectionSummary,
 } from "@/components/features/data-management/device-detail/odp-validation-history-sections";

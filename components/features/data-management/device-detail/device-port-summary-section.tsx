@@ -78,7 +78,7 @@ export function DevicePortSummarySection({
   readiness,
   loading,
 }: DevicePortSummarySectionProps) {
-  const { t, locale } = useTranslate();
+  const { t } = useTranslate();
   const [selectedPort, setSelectedPort] = useState<DevicePort | null>(null);
   const statusCounts = useMemo(
     () => ports.reduce<Record<string, number>>((acc, port) => {
@@ -128,7 +128,7 @@ export function DevicePortSummarySection({
               readiness={readiness}
             />
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {ports.slice(0, 12).map((port) => (
+              {ports.map((port) => (
                 <Button
                   key={port.id}
                   type="button"
@@ -153,9 +153,6 @@ export function DevicePortSummarySection({
                 </Button>
               ))}
             </div>
-            {ports.length > 12 ? (
-              <p className="text-xs text-muted-foreground">{t("portSummary.paginated", { shown: 12, total: ports.length })}</p>
-            ) : null}
           </>
         ) : (
           <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">

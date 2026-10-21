@@ -12,6 +12,7 @@ import { RequestComparison, RequestComparisonSkeleton } from "@/components/featu
 import { RequestList } from "@/components/features/requests/request-list";
 import { RequestStatusBadge } from "@/components/features/requests/request-status-badge";
 import { RequestTypeBadge } from "@/components/features/requests/request-type-badge";
+import { OdpPortSnapshotSummary, type OdpValidationPortSnapshot } from "@/components/features/data-management/device-detail";
 import { OperationalState } from "@/components/operational-ui";
 import { ResponseDialog } from "@/components/response-dialog";
 import { useSession } from "@/components/session-context";
@@ -2335,13 +2336,16 @@ function PortSummaryCard({ ports, t }: { ports: Array<Record<string, unknown>>; 
     <div className="rounded-md border p-2.5">
       <p className="mb-1.5 text-sm font-medium">{t("validation.portSummaryCard")}</p>
       {ports.length ? (
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
-          {renderPortStats(ports, t).map((stat) => (
-            <div key={stat.label} className="rounded-md border bg-muted/20 px-2 py-1.5">
-              <p className="text-[11px] uppercase text-muted-foreground">{stat.label}</p>
-              <p className="text-base font-semibold">{stat.value}</p>
-            </div>
-          ))}
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+            {renderPortStats(ports, t).map((stat) => (
+              <div key={stat.label} className="rounded-md border bg-muted/20 px-2 py-1.5">
+                <p className="text-[11px] uppercase text-muted-foreground">{stat.label}</p>
+                <p className="text-base font-semibold">{stat.value}</p>
+              </div>
+            ))}
+          </div>
+          <OdpPortSnapshotSummary ports={ports as unknown as OdpValidationPortSnapshot[]} />
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">{t("validation.portSummary.noChanges")}</p>

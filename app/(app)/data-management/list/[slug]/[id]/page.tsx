@@ -18,6 +18,7 @@ import {
   DeviceBentoValidationHistoryTile,
   DeviceFormSelection,
   DeviceGallerySection,
+  DevicePortSummarySection,
   GenericDeviceRawSection,
   OdcCoreChainSummarySection,
   OtbCoreChainSummarySection,
@@ -177,7 +178,7 @@ type DeviceTopologySummary = {
     has_fiber_core_inventory?: boolean;
     trace_endpoint?: string;
   };
-  odc_relations?: any;
+  odc_relations?: Record<string, unknown> | null;
 };
 type OdpCustomerOption = {
   id: string;
@@ -2389,7 +2390,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         if (isOdcDevice) {
           setLoadingOdcChainSummary(true);
           try {
-            const odcResult = await apiFetch<{ data: any }>(`/devices/${refreshed.data.id}/odc-chain-summary`, { token });
+            const odcResult = await apiFetch<{ data: Parameters<typeof OdcCoreChainSummarySection>[0]["chainSummary"] }>(`/devices/${refreshed.data.id}/odc-chain-summary`, { token });
             setOdcChainSummary(odcResult.data || null);
           } catch {} finally {
             setLoadingOdcChainSummary(false);
@@ -3148,8 +3149,8 @@ if (!category) {
                     />
                   </div>
 
-                  {/* TILE 3: Lokasi & Geotagging (7 Cols Desktop / 6 Tablet / 12 Mobile) */}
-                  <div className="sm:col-span-6 lg:col-span-7">
+                  {/* TILE 3: Lokasi & Geotagging (5 Cols Desktop / 6 Tablet / 12 Mobile) */}
+                  <div className="sm:col-span-6 lg:col-span-5">
                     <DeviceBentoLocationTile
                       latitude={item.latitude as number | string | null | undefined}
                       longitude={item.longitude as number | string | null | undefined}
@@ -3161,8 +3162,8 @@ if (!category) {
                     />
                   </div>
 
-                  {/* TILE 4: Kapasitas Dasar & Spesifikasi Aset (5 Cols Desktop / 6 Tablet / 12 Mobile) */}
-                  <div className="sm:col-span-6 lg:col-span-5">
+                  {/* TILE 4: Kapasitas Dasar & Spesifikasi Aset (7 Cols Desktop / 6 Tablet / 12 Mobile) */}
+                  <div className="sm:col-span-6 lg:col-span-7">
                     <DeviceBentoCapacityTile
                       totalPorts={item.total_ports as number | string | null | undefined}
                       usedPorts={item.used_ports as number | string | null | undefined}
@@ -3191,7 +3192,20 @@ if (!category) {
                     />
                   </div>
 
-                  {/* TILE 5: Galeri Foto Aset (12 Cols Full Width) */}
+                  {/* TILE 5: Inventaris Port (12 Cols Full Width) */}
+                  <div className="col-span-1 sm:col-span-12">
+                    <DevicePortSummarySection
+                      deviceTypeLabel={valueOf(item.device_type_key, "device")}
+                      ports={odpPorts}
+                      connections={devicePortConnections}
+                      coreSummary={deviceTopologySummary?.core_management?.summary}
+                      fiberSummary={deviceTopologySummary?.fiber_cores?.summary}
+                      readiness={deviceTopologySummary?.readiness}
+                      loading={loadingOdpPorts}
+                    />
+                  </div>
+
+                  {/* TILE 6: Galeri Foto Aset (12 Cols Full Width) */}
                   <div className="col-span-1 sm:col-span-12">
                     <DeviceBentoGalleryTile
                       deviceTypeLabel={valueOf(item.device_type_key, "device")}
@@ -3210,7 +3224,7 @@ if (!category) {
                     />
                   </div>
 
-                  {/* TILE 6: Riwayat Validasi Lapangan (12 Cols Full Width) */}
+                  {/* TILE 7: Riwayat Validasi Lapangan (12 Cols Full Width) */}
                   <div className="col-span-1 sm:col-span-12">
                     <DeviceBentoValidationHistoryTile
                       deviceTypeLabel={valueOf(item.device_type_key, "device")}
