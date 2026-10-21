@@ -500,12 +500,20 @@ export default function AccountManagementPage() {
     setErrorMessage("");
 
     try {
-      await apiFetch(`/users/${user.id}/resend-verification`, {
-        method: "POST",
-        token,
-      });
+      const res = await apiFetch<{ email_sent?: boolean; reason?: string | null }>(
+        `/users/${user.id}/resend-verification`,
+        {
+          method: "POST",
+          token,
+        },
+      );
       await refreshUsersAndRegions();
-      setMessage(`Email verifikasi untuk ${user.email} berhasil dikirim ulang.`);
+      if (res?.email_sent) {
+        setMessage(`Email verifikasi untuk ${user.email} berhasil dikirim ulang.`);
+      } else {
+        const detail = res?.reason ? ` Alasan: ${res.reason}` : "";
+        setErrorMessage(`Email verifikasi untuk ${user.email} belum terkirim.${detail}`);
+      }
     } catch (error) {
       setErrorMessage((error as Error).message);
     } finally {
