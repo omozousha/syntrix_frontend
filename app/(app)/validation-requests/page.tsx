@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useTranslate, type TFn } from "@/lib/use-locale";
-import { AlertTriangle, ArrowRight, Check, Clock, Inbox, Loader2, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Loader2, X } from "lucide-react";
 import { ApprovalActions } from "@/components/features/requests/approval-actions";
 import { EvidenceChecklistPreview } from "@/components/features/requests/evidence-checklist-preview";
 import { RequestActorLine } from "@/components/features/requests/request-actor-line";
@@ -12,7 +12,7 @@ import { RequestComparison, RequestComparisonSkeleton } from "@/components/featu
 import { RequestList } from "@/components/features/requests/request-list";
 import { RequestStatusBadge } from "@/components/features/requests/request-status-badge";
 import { RequestTypeBadge } from "@/components/features/requests/request-type-badge";
-import { OperationalKpiCard, OperationalState } from "@/components/operational-ui";
+import { OperationalState } from "@/components/operational-ui";
 import { ResponseDialog } from "@/components/response-dialog";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
@@ -838,11 +838,6 @@ export default function ValidationRequestsPage() {
 
         {!loading ? (
           <div className="grid min-w-0 gap-4 2xl:grid-cols-[380px_minmax(0,1fr)]">
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 2xl:col-span-2">
-              <OperationalKpiCard label={t("validation.kpi.queue")} value={items.length} caption={activeQueue === "adminregion" ? t("validation.kpi.queueAdminRegion") : t("validation.kpi.queueSuperadmin")} icon={Inbox} tone="blue" />
-              <OperationalKpiCard label={t("validation.kpi.validation")} value={queueSummary.validation} caption={t("validation.kpi.fieldValidation")} icon={ShieldCheck} tone="emerald" />
-              <OperationalKpiCard label={t("validation.kpi.assetChange")} value={queueSummary.assetChanges} caption={t("validation.kpi.createUpdateArchive")} icon={Clock} tone="amber" />
-            </div>
             <RequestList
               filteredCount={filteredItems.length}
               totalCount={items.length}
@@ -1258,20 +1253,8 @@ export default function ValidationRequestsPage() {
 
 function RequestPageSkeleton({ activeQueue }: { activeQueue: QueueType }) {
   const { t } = useTranslate();
-  const kpiLabels = [t("validation.skeleton.queueLabel"), t("validation.skeleton.validationLabel"), t("validation.skeleton.assetChangeLabel")];
   return (
     <div className="grid min-w-0 gap-4 2xl:grid-cols-[380px_minmax(0,1fr)]">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 2xl:col-span-2">
-        {kpiLabels.map((label) => (
-          <Card key={label}>
-            <CardContent className="p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-              <Skeleton className="mt-2 h-7 w-14" />
-              <Skeleton className="mt-2 h-3 w-28" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
       <RequestList
         filteredCount={0}
         totalCount={0}

@@ -106,7 +106,7 @@ export function RequestList({
             <span>{t("requestList.colRequest")}</span>
             <span className="ml-auto">{t("requestList.colType")}</span>
           </div>
-          <div className="max-h-[44vh] min-h-0 overflow-y-auto [scrollbar-gutter:stable] sm:max-h-[48vh] 2xl:max-h-[calc(100vh-320px)]">
+          <div className="max-h-[44vh] min-h-0 overflow-y-auto [scrollbar-gutter:stable] sm:max-h-[48vh] 2xl:max-h-[calc(100vh-240px)]">
           {children}
           </div>
         </div>
