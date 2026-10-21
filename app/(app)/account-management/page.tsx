@@ -500,18 +500,20 @@ export default function AccountManagementPage() {
     setErrorMessage("");
 
     try {
-      const res = await apiFetch<{ data?: { email_sent?: boolean; reason?: string | null } }>(
-        `/users/${user.id}/resend-verification`,
-        {
-          method: "POST",
-          token,
-        },
-      );
+      const res = await apiFetch<{
+        data?: { email_sent?: boolean; reason?: string | null; retry_after_seconds?: number };
+      }>(`/users/${user.id}/resend-verification`, {
+        method: "POST",
+        token,
+      });
       await refreshUsersAndRegions();
       // apiFetch resolves to the envelope { success, message, data }, not to data itself.
       const result = res?.data;
       if (result?.email_sent) {
         setMessage(`Email verifikasi untuk ${user.email} berhasil dikirim ulang.`);
+      } else if (result?.reason === "RESEND_COOLDOWN") {
+        const wait = result.retry_after_seconds ?? 0;
+        setErrorMessage(`Email verifikasi untuk ${user.email} baru saja dikirim. Tunggu ${wait} detik lagi sebelum kirim ulang.`);
       } else {
         const detail = result?.reason ? ` Alasan: ${result.reason}` : "";
         setErrorMessage(`Email verifikasi untuk ${user.email} belum terkirim.${detail}`);

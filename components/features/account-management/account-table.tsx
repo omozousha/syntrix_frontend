@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, Copy, MailCheck, MailWarning, Send } from "lucide-react";
-import { useState } from "react";
+import { Check, Clock, Copy, MailCheck, MailWarning, Send } from "lucide-react";
+import { useEffect, useState } from "react";
 import { OperationalState } from "@/components/operational-ui";
 import { SimpleTable } from "@/components/simple-table";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,20 @@ export type AccountUserRow = {
   is_active?: boolean | null;
   email_verified?: boolean | null;
   verification_status?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
+
+// ponytail: Firebase's per-address send guard is undocumented (~1 min observed,
+// 50s failed in production). 90s is a safe margin. Replace with a server-provided
+// value if Firebase publishes the real number.
+const RESEND_COOLDOWN_MS = 90_000;
+
+function cooldownEndsAt(user: AccountUserRow): number {
+  const raw = user.metadata?.verification_email_sent_at;
+  if (!raw) return 0;
+  const sentAt = new Date(String(raw)).getTime();
+  return Number.isNaN(sentAt) ? 0 : sentAt + RESEND_COOLDOWN_MS;
+}
 
 export function AccountTable({
   users,
@@ -45,6 +58,15 @@ export function AccountTable({
 }) {
   const { t } = useTranslate();
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  // One interval for the whole table instead of one per row.
+  const hasCooldown = users.some((item) => cooldownEndsAt(item) > now);
+  useEffect(() => {
+    if (!hasCooldown) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [hasCooldown]);
 
   function copyEmail(item: AccountUserRow) {
     if (!item.email) return;
@@ -75,7 +97,10 @@ export function AccountTable({
         t("accountTable.colStatus"),
         t("accountTable.colAction"),
       ]}
-      rows={users.map((item) => [
+      rows={users.map((item) => {
+        const remainingMs = cooldownEndsAt(item) - now;
+        const coolingDown = remainingMs > 0;
+        return [
         <div key={`${item.id}-name`}>
           <p className="font-medium text-foreground">{item.full_name || "-"}</p>
           <p className="font-mono text-[11px] tabular-nums text-muted-foreground">{item.user_code || "-"}</p>
@@ -118,10 +143,15 @@ export function AccountTable({
               variant="outline"
               className="h-7 gap-1 rounded-full px-2.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
               onClick={() => onResendVerification(item)}
-              disabled={!canManageUser(item) || resendLoadingId === item.id}
+              disabled={!canManageUser(item) || resendLoadingId === item.id || coolingDown}
+              title={coolingDown ? t("accountTable.resendCooldown", { seconds: Math.ceil(remainingMs / 1000) }) : undefined}
             >
-              <Send className="size-3" />
-              {resendLoadingId === item.id ? t("accountTable.sending") : t("accountTable.resend")}
+              {coolingDown ? <Clock className="size-3" /> : <Send className="size-3" />}
+              {resendLoadingId === item.id
+                ? t("accountTable.sending")
+                : coolingDown
+                  ? `${Math.ceil(remainingMs / 1000)}s`
+                  : t("accountTable.resend")}
             </Button>
           ) : null}
           <Button
@@ -143,7 +173,8 @@ export function AccountTable({
             {t("accountTable.delete")}
           </Button>
         </div>,
-      ])}
+        ];
+      })}
     />
   );
 }
