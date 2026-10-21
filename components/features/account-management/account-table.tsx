@@ -1,6 +1,7 @@
 "use client";
 
-import { MailCheck, MailWarning, Send } from "lucide-react";
+import { Check, Copy, MailCheck, MailWarning, Send } from "lucide-react";
+import { useState } from "react";
 import { OperationalState } from "@/components/operational-ui";
 import { SimpleTable } from "@/components/simple-table";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,15 @@ export function AccountTable({
   onResetFilter: () => void;
 }) {
   const { t } = useTranslate();
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  function copyEmail(item: AccountUserRow) {
+    if (!item.email) return;
+    navigator.clipboard.writeText(item.email);
+    setCopiedId(item.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  }
+
   if (!users.length) {
     return (
       <OperationalState
@@ -70,9 +80,21 @@ export function AccountTable({
           <p className="font-medium text-foreground">{item.full_name || "-"}</p>
           <p className="font-mono text-[11px] tabular-nums text-muted-foreground">{item.user_code || "-"}</p>
         </div>,
-        <span key={`${item.id}-email`} className="font-mono text-xs text-muted-foreground">
-          {item.email}
-        </span>,
+        <button
+          key={`${item.id}-email`}
+          type="button"
+          title={t("accountTable.copyEmail")}
+          onClick={() => copyEmail(item)}
+          disabled={!item.email}
+          className="group flex max-w-[220px] items-center gap-1.5 rounded-full px-1.5 py-1 -mx-1.5 text-left font-mono text-xs text-muted-foreground transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:hover:bg-transparent"
+        >
+          <span className="truncate">{item.email || "-"}</span>
+          {copiedId === item.id ? (
+            <Check className="size-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          ) : (
+            <Copy className="size-3 shrink-0 opacity-0 transition-opacity duration-300 group-hover:opacity-70" />
+          )}
+        </button>,
         <VerificationBadge key={`${item.id}-verified`} user={item} />,
         <Badge key={`${item.id}-role`} variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em]">
           {roleLabels[String(item.role_name || "")] || item.role_name}
