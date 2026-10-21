@@ -178,7 +178,19 @@ type DeviceTopologySummary = {
     has_fiber_core_inventory?: boolean;
     trace_endpoint?: string;
   };
-  odc_relations?: Record<string, unknown> | null;
+  odc_relations?: {
+    upstream?: Array<{
+      id?: string | null;
+      peer_device?: { id?: string | null; name?: string | null } | null;
+      peer_port?: { id?: string | null; name?: string | null } | null;
+      cable_device?: { id?: string | null; name?: string | null } | null;
+      core_start?: number | string | null;
+      core_end?: number | string | null;
+      fiber_count?: number | null;
+      [key: string]: unknown;
+    }>;
+    [key: string]: unknown;
+  } | null;
 };
 type OdpCustomerOption = {
   id: string;
@@ -1324,7 +1336,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           { token },
         );
         if (cancelled) return;
-        const summary = result.data || {};
+        const summary: DeviceTopologySummary = result.data || {};
         const sortedPorts = (summary.ports?.items || []).sort((a, b) => Number(a.port_index) - Number(b.port_index));
         setOdpPorts(sortedPorts);
         setDevicePortConnections(summary.connections?.items || []);
