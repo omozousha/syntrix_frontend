@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { ArrowLeft, CheckCircle2, ChevronDown, CircleHelp, Download, ImagePlus, Pencil, Save, X, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, CircleHelp, Download, ImagePlus, Pencil, Save, X, XCircle } from "lucide-react";
 import { AppLoading } from "@/components/app-loading-new";
 import { ResponseDialog } from "@/components/response-dialog";
 import {
@@ -43,7 +43,6 @@ import { getStoredPopVisibleDeviceTypes, isRackMountable } from "@/lib/pop-devic
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
@@ -574,7 +573,6 @@ export default function DataManagementDetailPage() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [odpInfoOpen, setOdpInfoOpen] = useState(false);
-  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [attachmentNames, setAttachmentNames] = useState<Record<string, string>>({});
   const [relationLabels, setRelationLabels] = useState<RelationLabels>({});
   const [relationLabelsLoading, setRelationLabelsLoading] = useState(false);
@@ -2428,29 +2426,48 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     setGalleryOpen(true);
   }
 
-  const isEmblaSelectingRef = useRef(false);
+  function handlePrevImage() {
+    setGalleryIndex((prev) => {
+      const total = galleryImageAttachments.length;
+      if (total <= 1) return 0;
+      const nextIndex = (prev - 1 + total) % total;
+      const att = galleryImageAttachments[nextIndex];
+      if (att) {
+        setRenamingAttachmentId(att.id);
+        setRenameDraft(attachmentNames[att.id] || att.name || "");
+      }
+      return nextIndex;
+    });
+  }
+
+  function handleNextImage() {
+    setGalleryIndex((prev) => {
+      const total = galleryImageAttachments.length;
+      if (total <= 1) return 0;
+      const nextIndex = (prev + 1) % total;
+      const att = galleryImageAttachments[nextIndex];
+      if (att) {
+        setRenamingAttachmentId(att.id);
+        setRenameDraft(attachmentNames[att.id] || att.name || "");
+      }
+      return nextIndex;
+    });
+  }
 
   useEffect(() => {
-    if (!carouselApi) return;
-    const onSelect = () => {
-      isEmblaSelectingRef.current = true;
-      setGalleryIndex(carouselApi.selectedScrollSnap());
-    };
-    onSelect();
-    carouselApi.on("select", onSelect);
-    return () => {
-      carouselApi.off("select", onSelect);
-    };
-  }, [carouselApi]);
-
-  useEffect(() => {
-    if (!galleryOpen || !carouselApi) return;
-    if (isEmblaSelectingRef.current) {
-      isEmblaSelectingRef.current = false;
-      return;
+    if (!galleryOpen || galleryImageAttachments.length <= 1) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePrevImage();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNextImage();
+      }
     }
-    carouselApi.scrollTo(galleryIndex, true);
-  }, [galleryOpen, carouselApi, galleryIndex]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [galleryOpen, galleryImageAttachments]);
 
   function handleNewImageFilesChange(files: FileList | null) {
     const list = Array.from(files || []);
@@ -3593,50 +3610,47 @@ if (!category) {
                 </Button>
               </div>
             </div>
-            <Carousel
-              setApi={setCarouselApi}
-              opts={{
-                startIndex: galleryIndex,
-                loop: galleryImageAttachments.length > 1,
-                duration: 20,
-              }}
-            >
-              <CarouselContent>
-                {galleryImageAttachments.map((attachment) => {
-                  const src = imagePreviewUrls[attachment.id];
-                  const fileName = attachment.name || "Attachment tidak tersedia";
-                  return (
-                    <CarouselItem key={attachment.id}>
-                      <div className="relative overflow-hidden rounded-lg border bg-muted/30">
-                        {src ? (
-                          <Image
-                            src={src}
-                            alt={fileName}
-                            width={1200}
-                            height={800}
-                            className="h-[56vh] w-full object-contain sm:h-[64vh] lg:h-[70vh]"
-                          />
-                        ) : (
-                          <div className="flex h-[56vh] items-center justify-center text-sm text-muted-foreground sm:h-[64vh] lg:h-[70vh]">
-                            Preview belum tersedia
-                          </div>
-                        )}
-                      </div>
-                    </CarouselItem>
-                  );
-                })}
-              </CarouselContent>
+            <div className="relative flex items-center justify-center overflow-hidden rounded-lg border bg-muted/30">
+              {galleryImageAttachments[galleryIndex] && imagePreviewUrls[galleryImageAttachments[galleryIndex].id] ? (
+                <Image
+                  key={galleryImageAttachments[galleryIndex].id}
+                  src={imagePreviewUrls[galleryImageAttachments[galleryIndex].id]}
+                  alt={galleryImageAttachments[galleryIndex].name || "Attachment tidak tersedia"}
+                  width={1200}
+                  height={800}
+                  priority
+                  className="h-[56vh] w-full object-contain sm:h-[64vh] lg:h-[70vh]"
+                />
+              ) : (
+                <div className="flex h-[56vh] items-center justify-center text-sm text-muted-foreground sm:h-[64vh] lg:h-[70vh]">
+                  Preview belum tersedia
+                </div>
+              )}
               {galleryImageAttachments.length > 1 ? (
                 <>
-                  <CarouselPrevious
-                    className="left-2 sm:left-3 top-1/2 z-20 -translate-y-1/2 size-9 sm:size-10 rounded-full border-border/80 bg-background/85 text-foreground shadow-md backdrop-blur-sm hover:bg-background hover:text-foreground [transition:none] active:[transform:none] select-none"
-                  />
-                  <CarouselNext
-                    className="right-2 sm:right-3 top-1/2 z-20 -translate-y-1/2 size-9 sm:size-10 rounded-full border-border/80 bg-background/85 text-foreground shadow-md backdrop-blur-sm hover:bg-background hover:text-foreground [transition:none] active:[transform:none] select-none"
-                  />
+                  <button
+                    type="button"
+                    onClick={handlePrevImage}
+                    aria-label="Previous slide"
+                    style={{ transition: "none", transform: "translateY(-50%)" }}
+                    className="absolute left-2.5 sm:left-3 top-1/2 z-20 flex size-9 sm:size-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-md backdrop-blur-sm cursor-pointer hover:bg-muted select-none active:translate-y-[-50%]"
+                  >
+                    <ArrowLeft className="size-4 sm:size-5" />
+                    <span className="sr-only">Previous slide</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNextImage}
+                    aria-label="Next slide"
+                    style={{ transition: "none", transform: "translateY(-50%)" }}
+                    className="absolute right-2.5 sm:right-3 top-1/2 z-20 flex size-9 sm:size-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-md backdrop-blur-sm cursor-pointer hover:bg-muted select-none active:translate-y-[-50%]"
+                  >
+                    <ArrowRight className="size-4 sm:size-5" />
+                    <span className="sr-only">Next slide</span>
+                  </button>
                 </>
               ) : null}
-            </Carousel>
+            </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs text-muted-foreground">
