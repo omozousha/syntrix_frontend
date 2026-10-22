@@ -10,9 +10,12 @@ import {
   Box,
   Boxes,
   Cable,
+  ChevronDown,
+  ChevronUp,
   CircleDot,
   Download,
   Eye,
+  Filter,
   HardDrive,
   Monitor,
   Network,
@@ -248,6 +251,28 @@ export default function DataManagementListPage() {
   const [success, setSuccess] = useState("");
   const [refreshSeed, setRefreshSeed] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isSelectingAllDataset, setIsSelectingAllDataset] = useState(false);
+  const [isFilterVisible, setIsFilterVisible] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const saved = localStorage.getItem("syntrix:device-list-filter-visible");
+      return saved !== null ? saved === "true" : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleFilterVisibility = useCallback(() => {
+    setIsFilterVisible((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("syntrix:device-list-filter-visible", String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
   const [renameTarget, setRenameTarget] = useState<GenericItem | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<GenericItem | null>(null);
@@ -390,6 +415,31 @@ export default function DataManagementListPage() {
     [popLabelById, relationMaps],
   );
   const filterGridClass = "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (search.trim()) count++;
+    if (supportsPopFilter && popQueryParam !== "__all") count++;
+    if (supportsProjectFilter && projectQueryParam !== "__all") count++;
+    if (validationStatusFilter !== "__all") count++;
+    if (category?.resource === "cities" && provinceFilter !== "__all") count++;
+    if (category?.resource === "topologyRelationRules" && directionFilter !== "__all") count++;
+    if (isSoftDeleteResource && archiveView !== "active") count++;
+    if (idsFilter.length > 0) count++;
+    return count;
+  }, [
+    search,
+    supportsPopFilter,
+    popQueryParam,
+    supportsProjectFilter,
+    projectQueryParam,
+    validationStatusFilter,
+    category?.resource,
+    provinceFilter,
+    directionFilter,
+    isSoftDeleteResource,
+    archiveView,
+    idsFilter.length,
+  ]);
   const applyPopFilter = useCallback(
     (nextValue: string) => {
       setSelectedIds(new Set());
@@ -825,13 +875,79 @@ export default function DataManagementListPage() {
     };
   }, [category, token]);
 
+  // Reset selection only when filter criteria change (preserve selection across pagination)
   useEffect(() => {
-    const visibleIds = new Set(rows.map((row) => row.id));
-    setSelectedIds((prev) => new Set(Array.from(prev).filter((id) => visibleIds.has(id))));
-  }, [rows]);
+    setSelectedIds(new Set());
+  }, [slug, search, provinceFilter, directionFilter, validationStatusFilter, popQueryParam, projectQueryParam, archiveView]);
 
   const allCurrentRowsSelected = rows.length > 0 && rows.every((row) => selectedIds.has(row.id));
   const someCurrentRowsSelected = rows.some((row) => selectedIds.has(row.id));
+  const allDatasetSelected = total > 0 && selectedIds.size >= total;
+
+  const handleToggleSelectCurrentPage = useCallback(() => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allCurrentRowsSelected) {
+        rows.forEach((row) => next.delete(row.id));
+      } else {
+        rows.forEach((row) => next.add(row.id));
+      }
+      return next;
+    });
+  }, [allCurrentRowsSelected, rows]);
+
+  const handleSelectAllDataset = useCallback(async () => {
+    if (!category) return;
+    setIsSelectingAllDataset(true);
+    try {
+      const basePath = buildCategoryApiPath(category, {
+        page: 1,
+        limit: Math.min(Math.max(total, 1), 500),
+        q: search,
+        regionScopeId: effectiveRegionScopeId,
+        popId: supportsPopFilter && popQueryParam !== "__all" && popQueryParam !== "__null__" ? popQueryParam : undefined,
+        projectId: supportsProjectFilter && projectQueryParam !== "__all" ? projectQueryParam : undefined,
+        validationStatus: validationStatusFilter,
+      });
+      let finalPath =
+        category.resource === "cities" && provinceFilter !== "__all"
+          ? `${basePath}&province_id=${encodeURIComponent(provinceFilter)}`
+          : category.resource === "topologyRelationRules" && directionFilter !== "__all"
+          ? `${basePath}&direction=${encodeURIComponent(directionFilter)}`
+          : basePath;
+      if (isSoftDeleteResource && archiveView !== "active") {
+        finalPath = `${finalPath}&include_deleted=true`;
+      }
+      const res = await apiFetch<PaginatedResponse<GenericItem>>(finalPath, { token });
+      let fetchedRows = res.data || [];
+      if (isSoftDeleteResource && archiveView === "archived") {
+        fetchedRows = fetchedRows.filter((item) => isArchived(item));
+      }
+      const allIds = new Set<string>();
+      fetchedRows.forEach((item) => allIds.add(String(item.id)));
+      setSelectedIds(allIds);
+    } catch (err) {
+      setError((err as Error).message || t("dataList.loadFailed"));
+    } finally {
+      setIsSelectingAllDataset(false);
+    }
+  }, [
+    archiveView,
+    category,
+    directionFilter,
+    effectiveRegionScopeId,
+    isSoftDeleteResource,
+    popQueryParam,
+    projectQueryParam,
+    provinceFilter,
+    search,
+    supportsPopFilter,
+    supportsProjectFilter,
+    t,
+    token,
+    total,
+    validationStatusFilter,
+  ]);
 
   const selectAllHeader = useMemo(
     () => (
@@ -843,21 +959,14 @@ export default function DataManagementListPage() {
             if (!node) return;
             node.indeterminate = !allCurrentRowsSelected && someCurrentRowsSelected;
           }}
-          onChange={(event) => {
-            const checked = event.target.checked;
-            setSelectedIds((prev) => {
-              const next = new Set(prev);
-              if (checked) rows.forEach((row) => next.add(row.id));
-              else rows.forEach((row) => next.delete(row.id));
-              return next;
-            });
-          }}
+          onChange={handleToggleSelectCurrentPage}
           aria-label="Select all rows"
+          title={allCurrentRowsSelected ? "Batalkan pilihan halaman ini" : "Pilih semua di halaman ini"}
           className="size-4 cursor-pointer rounded border-input bg-background text-primary"
         />
       </div>
     ),
-    [allCurrentRowsSelected, someCurrentRowsSelected, rows],
+    [allCurrentRowsSelected, someCurrentRowsSelected, handleToggleSelectCurrentPage],
   );
 
   const [headers, defaultColumnVisibility] = useMemo(() => {
@@ -1382,16 +1491,14 @@ export default function DataManagementListPage() {
     if (!category || selectedIds.size === 0) return;
     if ((action === "activate" || action === "deactivate") && !supportsIsActiveResource(category.resource)) return;
     if (action === "restore" && !isSoftDeleteResource) return;
-    const selectedRows = rows.filter((row) => selectedIds.has(row.id));
-    if (!selectedRows.length) return;
-    setBulkActionRequest({ action, count: selectedRows.length });
+    setBulkActionRequest({ action, count: selectedIds.size });
   }
 
   async function runBulkActionConfirmed() {
     if (!category || !bulkActionRequest) return;
     const action = bulkActionRequest.action;
-    const selectedRows = rows.filter((row) => selectedIds.has(row.id));
-    if (!selectedRows.length) {
+    const idsToProcess = Array.from(selectedIds);
+    if (!idsToProcess.length) {
       setBulkActionRequest(null);
       return;
     }
@@ -1400,20 +1507,20 @@ export default function DataManagementListPage() {
     setError("");
     try {
       await Promise.all(
-        selectedRows.map((row) => {
+        idsToProcess.map((id) => {
           if (action === "delete") {
-            return apiFetch(`/${category.resource}/${row.id}`, {
+            return apiFetch(`/${category.resource}/${id}`, {
               method: "DELETE",
               token,
             });
           }
           if (action === "restore") {
-            return apiFetch(`/${category.resource}/${row.id}/restore`, {
+            return apiFetch(`/${category.resource}/${id}/restore`, {
               method: "POST",
               token,
             });
           }
-          return apiFetch(`/${category.resource}/${row.id}`, {
+          return apiFetch(`/${category.resource}/${id}`, {
             method: "PATCH",
             token,
             body: JSON.stringify({
@@ -1476,11 +1583,11 @@ export default function DataManagementListPage() {
 
   function handleBulkDownloadQr() {
     if (!category || category.resource !== "devices") return;
-    if (!selectedRows.length) {
+    if (selectedIds.size === 0) {
       setError(t("dataList.selectAtLeastOneDeviceQr"));
       return;
     }
-    setDownloadQrRequest({ type: "selected", count: selectedRows.length });
+    setDownloadQrRequest({ type: "selected", count: selectedIds.size });
   }
 
   function handleDownloadFilteredQr() {
@@ -1502,7 +1609,18 @@ export default function DataManagementListPage() {
     try {
       let count = 0;
       if (request.type === "selected") {
-        count = await buildQrPdf(selectedRows);
+        if (selectedIds.size === selectedRows.length) {
+          count = await buildQrPdf(selectedRows);
+        } else {
+          const path = buildCategoryApiPath(category, {
+            page: 1,
+            limit: Math.min(Math.max(selectedIds.size, 1), 500),
+            ids: Array.from(selectedIds),
+          });
+          const result = await apiFetch<PaginatedResponse<GenericItem>>(path, { token });
+          const fetchedDevices = result.data || [];
+          count = await buildQrPdf(fetchedDevices.length ? fetchedDevices : selectedRows);
+        }
       } else {
         const path = buildCategoryApiPath(category, {
           page: 1,
@@ -1656,21 +1774,51 @@ export default function DataManagementListPage() {
 
         <Card className="rounded-[calc(2rem-0.5rem)] border border-border/60 bg-card shadow-xs glass-inset">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-mono text-[9px] uppercase tracking-[0.2em] rounded-full px-2.5 py-0.5 font-medium border border-border/60 bg-muted/60 text-muted-foreground">
-                {t("dataList.inventoryBadge")}
-              </span>
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.2em] rounded-full px-2.5 py-0.5 font-medium border border-border/60 bg-muted/60 text-muted-foreground">
+                    {t("dataList.inventoryBadge")}
+                  </span>
+                </div>
+                <CardTitle className="text-xl font-bold tracking-tight">{t("dataList.dataTitle", { label: category.label })}</CardTitle>
+                <CardDescription className="text-xs">
+                  {t("dataList.cardDesc", { total: total.toLocaleString(locale === "en" ? "en-US" : "id-ID") })}
+                  {supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel ? t("dataList.popFilterLabel", { label: selectedPopLabel }) : ""}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleFilterVisibility}
+                  aria-expanded={isFilterVisible}
+                  className="h-8 rounded-full border-border/60 font-mono text-[10px] uppercase tracking-[0.08em] gap-1.5 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                >
+                  <Filter className="size-3.5" />
+                  <span>{isFilterVisible ? t("deviceList.filter.toggleHide") : t("deviceList.filter.toggleShow")}</span>
+                  {activeFilterCount > 0 ? (
+                    <span className="inline-flex items-center justify-center rounded-full bg-primary/10 px-1.5 py-0.2 text-[9px] font-semibold tabular-nums text-primary">
+                      {activeFilterCount}
+                    </span>
+                  ) : null}
+                  {isFilterVisible ? <ChevronUp className="size-3 text-muted-foreground" /> : <ChevronDown className="size-3 text-muted-foreground" />}
+                </Button>
+              </div>
             </div>
-            <CardTitle className="text-xl font-bold tracking-tight">{t("dataList.dataTitle", { label: category.label })}</CardTitle>
-            <CardDescription className="text-xs">
-              {t("dataList.cardDesc", { total: total.toLocaleString(locale === "en" ? "en-US" : "id-ID") })}
-              {supportsPopFilter && popQueryParam !== "__all" && selectedPopLabel ? t("dataList.popFilterLabel", { label: selectedPopLabel }) : ""}
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <DataBulkActions
               selectedCount={selectedIds.size}
-              selectedDownloadCount={selectedRows.length}
+              totalCount={total}
+              currentPageCount={rows.length}
+              allCurrentPageSelected={allCurrentRowsSelected}
+              allDatasetSelected={allDatasetSelected}
+              isSelectingAllDataset={isSelectingAllDataset}
+              onSelectCurrentPage={handleToggleSelectCurrentPage}
+              onSelectAllDataset={handleSelectAllDataset}
+              selectedDownloadCount={selectedIds.size}
               supportsQrBulkDownload={supportsQrBulkDownload}
               downloadingQr={downloadingQr}
               actionLoading={actionLoading}
@@ -1686,59 +1834,67 @@ export default function DataManagementListPage() {
               onClearSelection={() => setSelectedIds(new Set())}
               onFilterBySelection={applySelectionFilter}
             />
-            <DataListFilterBar
-              filterGridClass={filterGridClass}
-              categoryResource={category.resource}
-              searchInput={searchInput}
-              provinceFilter={provinceFilter}
-              provinceOptions={Object.entries(relationMaps.provinces)
-                .sort((a, b) => a[1].localeCompare(b[1], "id"))
-                .map(([id, name]) => ({ id, label: name }))}
-              directionFilter={directionFilter}
-              validationStatusFilter={validationStatusFilter}
-              supportsValidationFilter={category.resource === "devices"}
-              supportsPopFilter={supportsPopFilter}
-              popFilterValue={popQueryParam}
-              popFilterLoading={popFilterLoading}
-              popFilterOptions={popFilterOptions}
-              supportsProjectFilter={supportsProjectFilter}
-              projectFilterValue={projectQueryParam}
-              projectFilterLoading={projectFilterLoading}
-              projectFilterOptions={projectFilterOptions}
-              hasRegionScope={Boolean(effectiveRegionScopeId)}
-              isSoftDeleteResource={isSoftDeleteResource}
-              archiveView={archiveView}
-              limit={limit}
-              onSearchInputChange={setSearchInput}
-              onProvinceFilterChange={(value) => {
-                setProvinceFilter(value);
-                setPage(1);
-                setSearch("");
-                setSearchInput("");
-              }}
-              onDirectionFilterChange={(value) => {
-                setDirectionFilter(value);
-                setPage(1);
-                setSearch("");
-                setSearchInput("");
-              }}
-              onValidationStatusFilterChange={(value) => {
-                setValidationStatusFilter(value);
-                setPage(1);
-              }}
-              onPopFilterChange={applyPopFilter}
-              onProjectFilterChange={applyProjectFilter}
-              onArchiveViewChange={(value) => {
-                setArchiveView(value);
-                setSelectedIds(new Set());
-                setPage(1);
-              }}
-              onLimitChange={(value) => {
-                setPage(1);
-                setLimit(value);
-              }}
-              onResetFilters={resetListFilters}
-            />
+            <div
+              className={`grid transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                isFilterVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <DataListFilterBar
+                  filterGridClass={filterGridClass}
+                  categoryResource={category.resource}
+                  searchInput={searchInput}
+                  provinceFilter={provinceFilter}
+                  provinceOptions={Object.entries(relationMaps.provinces)
+                    .sort((a, b) => a[1].localeCompare(b[1], "id"))
+                    .map(([id, name]) => ({ id, label: name }))}
+                  directionFilter={directionFilter}
+                  validationStatusFilter={validationStatusFilter}
+                  supportsValidationFilter={category.resource === "devices"}
+                  supportsPopFilter={supportsPopFilter}
+                  popFilterValue={popQueryParam}
+                  popFilterLoading={popFilterLoading}
+                  popFilterOptions={popFilterOptions}
+                  supportsProjectFilter={supportsProjectFilter}
+                  projectFilterValue={projectQueryParam}
+                  projectFilterLoading={projectFilterLoading}
+                  projectFilterOptions={projectFilterOptions}
+                  hasRegionScope={Boolean(effectiveRegionScopeId)}
+                  isSoftDeleteResource={isSoftDeleteResource}
+                  archiveView={archiveView}
+                  limit={limit}
+                  onSearchInputChange={setSearchInput}
+                  onProvinceFilterChange={(value) => {
+                    setProvinceFilter(value);
+                    setPage(1);
+                    setSearch("");
+                    setSearchInput("");
+                  }}
+                  onDirectionFilterChange={(value) => {
+                    setDirectionFilter(value);
+                    setPage(1);
+                    setSearch("");
+                    setSearchInput("");
+                  }}
+                  onValidationStatusFilterChange={(value) => {
+                    setValidationStatusFilter(value);
+                    setPage(1);
+                  }}
+                  onPopFilterChange={applyPopFilter}
+                  onProjectFilterChange={applyProjectFilter}
+                  onArchiveViewChange={(value) => {
+                    setArchiveView(value);
+                    setSelectedIds(new Set());
+                    setPage(1);
+                  }}
+                  onLimitChange={(value) => {
+                    setPage(1);
+                    setLimit(value);
+                  }}
+                  onResetFilters={resetListFilters}
+                />
+              </div>
+            </div>
 
             {success ? (
               <div className="flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
@@ -1860,6 +2016,8 @@ export default function DataManagementListPage() {
                   supportsPopFilter={supportsPopFilter}
                   canTraceTopology={isOdpCategory && canTraceTopology}
                   selectedIds={selectedIds}
+                  allCurrentPageSelected={allCurrentRowsSelected}
+                  onSelectAllPage={handleToggleSelectCurrentPage}
                   getPrimaryName={(row) => buildDeviceListDisplay(row, listDisplayLookups).primaryName}
                   getPrimaryCode={(row) => buildDeviceListDisplay(row, listDisplayLookups).primaryCode}
                   getStatus={(row) => pick(row, ["status", "status_pop", "is_active"])}

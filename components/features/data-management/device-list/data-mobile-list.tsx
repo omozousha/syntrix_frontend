@@ -29,6 +29,8 @@ export function DataMobileList({
   onOpenDetail,
   onOpenTrace,
   onToggleSelection,
+  allCurrentPageSelected,
+  onSelectAllPage,
 }: {
   rows: GenericItem[];
   showValidationBadge: boolean;
@@ -44,11 +46,34 @@ export function DataMobileList({
   onOpenDetail: (row: GenericItem) => void;
   onOpenTrace: (row: GenericItem) => void;
   onToggleSelection: (row: GenericItem) => void;
+  allCurrentPageSelected?: boolean;
+  onSelectAllPage?: () => void;
 }) {
   const { t } = useTranslate();
 
   return (
     <div className="space-y-2 md:hidden">
+      {rows.length > 0 && onSelectAllPage ? (
+        <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/40 px-3 py-2 text-xs glass-inset">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={Boolean(allCurrentPageSelected)}
+              onChange={onSelectAllPage}
+              className="size-4 cursor-pointer rounded border-input bg-background text-primary"
+            />
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] font-medium text-foreground">
+              {allCurrentPageSelected
+                ? t("deviceList.bulk.clearPage")
+                : t("deviceList.bulk.selectAllPage", { count: String(rows.length) })}
+            </span>
+          </label>
+          <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+            {selectedIds.size} {t("deviceList.bulk.selected")}
+          </span>
+        </div>
+      ) : null}
+
       {rows.map((row) => {
         const validation = getValidationBadge(row);
         const primaryName = getPrimaryName(row);
@@ -89,19 +114,33 @@ export function DataMobileList({
               <span className="font-mono text-[10px] tabular-nums">{getUpdatedAt(row)}</span>
             </div>
             {supportsPopFilter ? (
-              <p className="mt-1 truncate text-xs text-muted-foreground">{t("deviceList.mobile.pop")} <span className="font-mono text-[10px]">{getPopLabel(row)}</span></p>
+              <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                {t("deviceList.mobile.pop")} <span className="text-foreground">{getPopLabel(row) || "-"}</span>
+              </p>
             ) : null}
-            <div className={`mt-3 grid gap-2 ${canTraceTopology ? "grid-cols-2" : "grid-cols-1"}`}>
-              <Button type="button" variant="outline" size="sm" onClick={() => onOpenDetail(row)} className="rounded-full font-mono text-[10px] uppercase tracking-[0.12em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
-                <Eye className="mr-1.5 size-3.5" />
-                {t("deviceList.mobile.detail")}
-              </Button>
+            <div className="mt-3 flex items-center justify-end gap-2 border-t border-border/40 pt-2">
               {canTraceTopology ? (
-                <Button type="button" variant="outline" size="sm" onClick={() => onOpenTrace(row)} className="rounded-full font-mono text-[10px] uppercase tracking-[0.12em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
-                  <Waypoints className="mr-1.5 size-3.5" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onOpenTrace(row)}
+                  className="h-7 rounded-full font-mono text-[9px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                >
+                  <Waypoints className="mr-1 size-3" />
                   {t("deviceList.mobile.trace")}
                 </Button>
               ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenDetail(row)}
+                className="h-7 rounded-full font-mono text-[9px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+              >
+                <Eye className="mr-1 size-3" />
+                {t("deviceList.mobile.detail")}
+              </Button>
             </div>
           </div>
         );
