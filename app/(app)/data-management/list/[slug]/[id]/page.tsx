@@ -3547,7 +3547,10 @@ if (!category) {
         ) : null}
       </div>
       <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}>
-        <DialogContent className="!w-[min(96vw,1200px)] !max-w-[min(96vw,1200px)] p-3 sm:p-4 rounded-2xl border-border/60 glass-inset">
+        <DialogContent
+          showCloseButton={false}
+          className="!w-[min(96vw,1200px)] !max-w-[min(96vw,1200px)] p-3 sm:p-4 rounded-2xl border-border/60 glass-inset"
+        >
           <DialogTitle className="sr-only">Preview Gambar Attachment</DialogTitle>
           <DialogDescription className="sr-only">
             Dialog untuk melihat, navigasi, dan mengelola nama file image attachment.
@@ -3569,8 +3572,15 @@ if (!category) {
                     Download
                   </Button>
                 ) : null}
-                <Button type="button" variant="outline" size="icon" onClick={() => setGalleryOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setGalleryOpen(false)}
+                  aria-label="Tutup"
+                >
                   <X className="size-4" />
+                  <span className="sr-only">Tutup</span>
                 </Button>
               </div>
             </div>
