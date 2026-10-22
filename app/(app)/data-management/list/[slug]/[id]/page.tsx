@@ -3627,13 +3627,13 @@ if (!category) {
                 </div>
               )}
               {galleryImageAttachments.length > 1 ? (
-                <>
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-between p-2.5 sm:p-3 z-20">
                   <button
                     type="button"
                     onClick={handlePrevImage}
                     aria-label="Previous slide"
-                    style={{ transition: "none", transform: "translateY(-50%)" }}
-                    className="absolute left-2.5 sm:left-3 top-1/2 z-20 flex size-9 sm:size-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-md backdrop-blur-sm cursor-pointer hover:bg-muted select-none active:translate-y-[-50%]"
+                    style={{ transform: "none", transition: "none" }}
+                    className="no-press pointer-events-auto flex size-9 sm:size-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-md backdrop-blur-sm cursor-pointer hover:bg-muted select-none"
                   >
                     <ArrowLeft className="size-4 sm:size-5" />
                     <span className="sr-only">Previous slide</span>
@@ -3642,13 +3642,13 @@ if (!category) {
                     type="button"
                     onClick={handleNextImage}
                     aria-label="Next slide"
-                    style={{ transition: "none", transform: "translateY(-50%)" }}
-                    className="absolute right-2.5 sm:right-3 top-1/2 z-20 flex size-9 sm:size-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-md backdrop-blur-sm cursor-pointer hover:bg-muted select-none active:translate-y-[-50%]"
+                    style={{ transform: "none", transition: "none" }}
+                    className="no-press pointer-events-auto flex size-9 sm:size-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-md backdrop-blur-sm cursor-pointer hover:bg-muted select-none"
                   >
                     <ArrowRight className="size-4 sm:size-5" />
                     <span className="sr-only">Next slide</span>
                   </button>
-                </>
+                </div>
               ) : null}
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

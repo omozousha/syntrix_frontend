@@ -227,12 +227,12 @@
     background: color-mix(in oklch, var(--primary) 22%, transparent);
     color: var(--foreground);
   }
-  :where(a, button, [role="button"], input, select, textarea) {
+  :where(a, button, [role="button"], input, select, textarea):not(.no-press) {
     transition-duration: 180ms;
     transition-property: background-color, border-color, box-shadow, color, opacity, transform;
     transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-  :where(button, [role="button"]):active:not(:disabled) {
+  :where(button, [role="button"]):not(.no-press):active:not(:disabled) {
     transform: translateY(1px) scale(0.99);
   }
   @media (prefers-reduced-motion: reduce) {
@@ -248,6 +248,10 @@
 }
 
 @layer utilities {
+  .no-press {
+    transform: none !important;
+    transition: none !important;
+  }
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
