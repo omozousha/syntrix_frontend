@@ -2428,9 +2428,14 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     setGalleryOpen(true);
   }
 
+  const isEmblaSelectingRef = useRef(false);
+
   useEffect(() => {
     if (!carouselApi) return;
-    const onSelect = () => setGalleryIndex(carouselApi.selectedScrollSnap());
+    const onSelect = () => {
+      isEmblaSelectingRef.current = true;
+      setGalleryIndex(carouselApi.selectedScrollSnap());
+    };
     onSelect();
     carouselApi.on("select", onSelect);
     return () => {
@@ -2440,6 +2445,10 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
 
   useEffect(() => {
     if (!galleryOpen || !carouselApi) return;
+    if (isEmblaSelectingRef.current) {
+      isEmblaSelectingRef.current = false;
+      return;
+    }
     carouselApi.scrollTo(galleryIndex, true);
   }, [galleryOpen, carouselApi, galleryIndex]);
 
@@ -3584,7 +3593,14 @@ if (!category) {
                 </Button>
               </div>
             </div>
-            <Carousel setApi={setCarouselApi} opts={{ startIndex: galleryIndex, loop: galleryImageAttachments.length > 1 }}>
+            <Carousel
+              setApi={setCarouselApi}
+              opts={{
+                startIndex: galleryIndex,
+                loop: galleryImageAttachments.length > 1,
+                duration: 20,
+              }}
+            >
               <CarouselContent>
                 {galleryImageAttachments.map((attachment) => {
                   const src = imagePreviewUrls[attachment.id];
@@ -3612,8 +3628,12 @@ if (!category) {
               </CarouselContent>
               {galleryImageAttachments.length > 1 ? (
                 <>
-                  <CarouselPrevious className="left-2 top-1/2 z-20 -translate-y-1/2" />
-                  <CarouselNext className="right-2 top-1/2 z-20 -translate-y-1/2" />
+                  <CarouselPrevious
+                    className="left-2 sm:left-3 top-1/2 z-20 -translate-y-1/2 size-9 sm:size-10 rounded-full border-border/80 bg-background/85 text-foreground shadow-md backdrop-blur-sm hover:bg-background hover:text-foreground [transition:none] active:[transform:none] select-none"
+                  />
+                  <CarouselNext
+                    className="right-2 sm:right-3 top-1/2 z-20 -translate-y-1/2 size-9 sm:size-10 rounded-full border-border/80 bg-background/85 text-foreground shadow-md backdrop-blur-sm hover:bg-background hover:text-foreground [transition:none] active:[transform:none] select-none"
+                  />
                 </>
               ) : null}
             </Carousel>
