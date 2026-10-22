@@ -235,6 +235,24 @@ export function DataBulkActions({
           </Button>
         </div>
       ) : null}
+
+      {/* All dataset selected confirmation banner */}
+      {allDatasetSelected && totalCount > currentPageCount ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-foreground glass-inset">
+          <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+            ✓ {t("deviceList.bulk.allDataSelected", { count: String(totalCount) })}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClearSelection}
+            className="h-6 rounded-full px-2 font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground hover:bg-emerald-500/10 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+          >
+            {t("deviceList.bulk.clear")}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

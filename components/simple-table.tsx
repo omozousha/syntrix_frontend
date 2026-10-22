@@ -152,22 +152,26 @@ export function SimpleTable({
                   const sorted = sorting?.columnId === columnId ? (sorting.desc ? "desc" : "asc") : false;
                     return (
                       <TableHead key={columnId} className="h-10 px-4 text-[10px] font-mono uppercase tracking-[0.12em] font-medium text-muted-foreground">
-                        <button
-                          type="button"
-                          className={`inline-flex items-center gap-1 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/45 ${canSort ? "hover:text-foreground" : "cursor-default"}`}
-                          onClick={canSort ? () => toggleSort(columnIndex) : undefined}
-                        >
-                          <span className="whitespace-nowrap">{headers[columnIndex]}</span>
-                          {canSort ? (
-                            sorted === "asc" ? (
+                        {canSort ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/45 hover:text-foreground"
+                            onClick={() => toggleSort(columnIndex)}
+                          >
+                            <span className="whitespace-nowrap">{headers[columnIndex]}</span>
+                            {sorted === "asc" ? (
                               <ChevronUp className="size-3.5" />
                             ) : sorted === "desc" ? (
                               <ChevronDown className="size-3.5" />
                             ) : (
                               <ChevronsUpDown className="size-3.5 opacity-60" />
-                            )
-                          ) : null}
-                        </button>
+                            )}
+                          </button>
+                        ) : (
+                          <div className="inline-flex items-center gap-1">
+                            <span className="whitespace-nowrap">{headers[columnIndex]}</span>
+                          </div>
+                        )}
                       </TableHead>
                     );
                   })}

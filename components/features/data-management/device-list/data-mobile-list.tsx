@@ -31,6 +31,10 @@ export function DataMobileList({
   onToggleSelection,
   allCurrentPageSelected,
   onSelectAllPage,
+  totalCount,
+  allDatasetSelected,
+  isSelectingAllDataset,
+  onSelectAllDataset,
 }: {
   rows: GenericItem[];
   showValidationBadge: boolean;
@@ -48,29 +52,53 @@ export function DataMobileList({
   onToggleSelection: (row: GenericItem) => void;
   allCurrentPageSelected?: boolean;
   onSelectAllPage?: () => void;
+  totalCount?: number;
+  allDatasetSelected?: boolean;
+  isSelectingAllDataset?: boolean;
+  onSelectAllDataset?: () => void;
 }) {
   const { t } = useTranslate();
 
   return (
     <div className="space-y-2 md:hidden">
       {rows.length > 0 && onSelectAllPage ? (
-        <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/40 px-3 py-2 text-xs glass-inset">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={Boolean(allCurrentPageSelected)}
-              onChange={onSelectAllPage}
-              className="size-4 cursor-pointer rounded border-input bg-background text-primary"
-            />
-            <span className="font-mono text-[10px] uppercase tracking-[0.08em] font-medium text-foreground">
-              {allCurrentPageSelected
-                ? t("deviceList.bulk.clearPage")
-                : t("deviceList.bulk.selectAllPage", { count: String(rows.length) })}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/40 px-3 py-2 text-xs glass-inset">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={Boolean(allDatasetSelected || allCurrentPageSelected)}
+                onChange={onSelectAllPage}
+                className="size-4 cursor-pointer rounded border-input bg-background text-primary"
+              />
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] font-medium text-foreground">
+                {allDatasetSelected
+                  ? t("deviceList.bulk.clear")
+                  : allCurrentPageSelected
+                  ? t("deviceList.bulk.clearPage")
+                  : t("deviceList.bulk.selectAllPage", { count: String(rows.length) })}
+              </span>
+            </label>
+            <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+              {selectedIds.size} {t("deviceList.bulk.selected")}
             </span>
-          </label>
-          <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
-            {selectedIds.size} {t("deviceList.bulk.selected")}
-          </span>
+          </div>
+
+          {allCurrentPageSelected && totalCount && totalCount > rows.length && !allDatasetSelected && onSelectAllDataset ? (
+            <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs glass-inset">
+              <span className="font-mono text-[9px] text-muted-foreground">
+                {t("deviceList.bulk.allPageSelectedQuestion") || "Pilih semua data?"}
+              </span>
+              <button
+                type="button"
+                onClick={onSelectAllDataset}
+                disabled={isSelectingAllDataset}
+                className="font-mono text-[9px] uppercase tracking-[0.08em] text-primary font-medium hover:underline disabled:opacity-50"
+              >
+                {isSelectingAllDataset ? t("deviceList.bulk.selectingAll") : t("deviceList.bulk.selectAllMatching", { count: String(totalCount) })}
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

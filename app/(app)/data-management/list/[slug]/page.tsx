@@ -10,6 +10,7 @@ import {
   Box,
   Boxes,
   Cable,
+  CheckSquare,
   ChevronDown,
   ChevronUp,
   CircleDot,
@@ -17,6 +18,7 @@ import {
   Eye,
   Filter,
   HardDrive,
+  Loader2,
   Monitor,
   Network,
   Pencil,
@@ -24,6 +26,7 @@ import {
   RotateCcw,
   Router as RouterIcon,
   Server,
+  Sparkles,
   Split,
   Trash2,
   Users,
@@ -62,6 +65,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { ContextMenuItem, ContextMenuLabel, ContextMenuSeparator } from "@/components/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -253,12 +263,12 @@ export default function DataManagementListPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isSelectingAllDataset, setIsSelectingAllDataset] = useState(false);
   const [isFilterVisible, setIsFilterVisible] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
+    if (typeof window === "undefined") return false;
     try {
-      const saved = localStorage.getItem("syntrix:device-list-filter-visible");
-      return saved !== null ? saved === "true" : true;
+      const saved = localStorage.getItem("syntrix:device-list-filter-open");
+      return saved === "true";
     } catch {
-      return true;
+      return false;
     }
   });
 
@@ -266,7 +276,7 @@ export default function DataManagementListPage() {
     setIsFilterVisible((prev) => {
       const next = !prev;
       try {
-        localStorage.setItem("syntrix:device-list-filter-visible", String(next));
+        localStorage.setItem("syntrix:device-list-filter-open", String(next));
       } catch {
         // ignore
       }
@@ -897,34 +907,52 @@ export default function DataManagementListPage() {
   }, [allCurrentRowsSelected, rows]);
 
   const handleSelectAllDataset = useCallback(async () => {
-    if (!category) return;
+    if (!category || total <= 0) return;
     setIsSelectingAllDataset(true);
+    setError("");
     try {
-      const basePath = buildCategoryApiPath(category, {
-        page: 1,
-        limit: Math.min(Math.max(total, 1), 500),
-        q: search,
-        regionScopeId: effectiveRegionScopeId,
-        popId: supportsPopFilter && popQueryParam !== "__all" && popQueryParam !== "__null__" ? popQueryParam : undefined,
-        projectId: supportsProjectFilter && projectQueryParam !== "__all" ? projectQueryParam : undefined,
-        validationStatus: validationStatusFilter,
-      });
-      let finalPath =
-        category.resource === "cities" && provinceFilter !== "__all"
-          ? `${basePath}&province_id=${encodeURIComponent(provinceFilter)}`
-          : category.resource === "topologyRelationRules" && directionFilter !== "__all"
-          ? `${basePath}&direction=${encodeURIComponent(directionFilter)}`
-          : basePath;
-      if (isSoftDeleteResource && archiveView !== "active") {
-        finalPath = `${finalPath}&include_deleted=true`;
+      const PAGE_CHUNK_SIZE = 500;
+      const totalPages = Math.max(1, Math.ceil(total / PAGE_CHUNK_SIZE));
+      const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+      const fetchPage = async (pageNumber: number) => {
+        const basePath = buildCategoryApiPath(category, {
+          page: pageNumber,
+          limit: PAGE_CHUNK_SIZE,
+          q: search,
+          regionScopeId: effectiveRegionScopeId,
+          popId: supportsPopFilter && popQueryParam !== "__all" && popQueryParam !== "__null__" ? popQueryParam : undefined,
+          projectId: supportsProjectFilter && projectQueryParam !== "__all" ? projectQueryParam : undefined,
+          validationStatus: validationStatusFilter,
+        });
+        let finalPath =
+          category.resource === "cities" && provinceFilter !== "__all"
+            ? `${basePath}&province_id=${encodeURIComponent(provinceFilter)}`
+            : category.resource === "topologyRelationRules" && directionFilter !== "__all"
+            ? `${basePath}&direction=${encodeURIComponent(directionFilter)}`
+            : basePath;
+        if (isSoftDeleteResource && archiveView !== "active") {
+          finalPath = `${finalPath}&include_deleted=true`;
+        }
+        return apiFetch<PaginatedResponse<GenericItem>>(finalPath, { token });
+      };
+
+      const allFetchedRows: GenericItem[] = [];
+      const BATCH_CONCURRENCY = 4;
+      for (let i = 0; i < pageNumbers.length; i += BATCH_CONCURRENCY) {
+        const batch = pageNumbers.slice(i, i + BATCH_CONCURRENCY);
+        const batchResults = await Promise.all(batch.map((p) => fetchPage(p)));
+        batchResults.forEach((res) => {
+          if (res.data) allFetchedRows.push(...res.data);
+        });
       }
-      const res = await apiFetch<PaginatedResponse<GenericItem>>(finalPath, { token });
-      let fetchedRows = res.data || [];
+
+      let filteredRows = allFetchedRows;
       if (isSoftDeleteResource && archiveView === "archived") {
-        fetchedRows = fetchedRows.filter((item) => isArchived(item));
+        filteredRows = filteredRows.filter((item) => isArchived(item));
       }
       const allIds = new Set<string>();
-      fetchedRows.forEach((item) => allIds.add(String(item.id)));
+      filteredRows.forEach((item) => allIds.add(String(item.id)));
       setSelectedIds(allIds);
     } catch (err) {
       setError((err as Error).message || t("dataList.loadFailed"));
@@ -951,22 +979,88 @@ export default function DataManagementListPage() {
 
   const selectAllHeader = useMemo(
     () => (
-      <div className="flex items-center justify-center" onClick={(event) => event.stopPropagation()}>
+      <div className="flex items-center gap-1 justify-center" onClick={(event) => event.stopPropagation()}>
         <input
           type="checkbox"
-          checked={allCurrentRowsSelected}
+          checked={allDatasetSelected || allCurrentRowsSelected}
           ref={(node) => {
             if (!node) return;
-            node.indeterminate = !allCurrentRowsSelected && someCurrentRowsSelected;
+            node.indeterminate =
+              (!allCurrentRowsSelected && someCurrentRowsSelected) ||
+              (allCurrentRowsSelected && !allDatasetSelected && total > rows.length);
           }}
-          onChange={handleToggleSelectCurrentPage}
-          aria-label="Select all rows"
-          title={allCurrentRowsSelected ? "Batalkan pilihan halaman ini" : "Pilih semua di halaman ini"}
+          onChange={allDatasetSelected ? () => setSelectedIds(new Set()) : handleToggleSelectCurrentPage}
+          aria-label={t("deviceList.bulk.selectAll")}
+          title={
+            allDatasetSelected
+              ? t("deviceList.bulk.clear")
+              : allCurrentRowsSelected
+              ? t("deviceList.bulk.clearPage")
+              : t("deviceList.bulk.selectAllPage", { count: String(rows.length) })
+          }
           className="size-4 cursor-pointer rounded border-input bg-background text-primary"
         />
+        {total > rows.length ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="size-4 inline-flex items-center justify-center rounded hover:bg-muted/80 text-muted-foreground hover:text-foreground outline-none transition-colors"
+                title={t("deviceList.bulk.selectAll")}
+              >
+                <ChevronDown className="size-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem onClick={handleToggleSelectCurrentPage}>
+                <CheckSquare className="mr-2 size-3.5" />
+                <span>
+                  {allCurrentRowsSelected
+                    ? t("deviceList.bulk.clearPage")
+                    : t("deviceList.bulk.selectAllPage", { count: String(rows.length) })}
+                </span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => void handleSelectAllDataset()}
+                disabled={isSelectingAllDataset || allDatasetSelected}
+              >
+                {isSelectingAllDataset ? (
+                  <Loader2 className="mr-2 size-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 size-3.5 text-primary" />
+                )}
+                <span>
+                  {allDatasetSelected
+                    ? t("deviceList.bulk.allDataSelected", { count: String(total) })
+                    : t("deviceList.bulk.selectAllData", { count: String(total) })}
+                </span>
+              </DropdownMenuItem>
+              {selectedIds.size > 0 ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setSelectedIds(new Set())}>
+                    <X className="mr-2 size-3.5" />
+                    <span>{t("deviceList.bulk.clear")}</span>
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </div>
     ),
-    [allCurrentRowsSelected, someCurrentRowsSelected, handleToggleSelectCurrentPage],
+    [
+      allCurrentRowsSelected,
+      allDatasetSelected,
+      handleSelectAllDataset,
+      handleToggleSelectCurrentPage,
+      isSelectingAllDataset,
+      rows.length,
+      selectedIds.size,
+      someCurrentRowsSelected,
+      t,
+      total,
+    ],
   );
 
   const [headers, defaultColumnVisibility] = useMemo(() => {
@@ -1506,29 +1600,33 @@ export default function DataManagementListPage() {
     setActionLoading(true);
     setError("");
     try {
-      await Promise.all(
-        idsToProcess.map((id) => {
-          if (action === "delete") {
+      const CHUNK_SIZE = 20;
+      for (let i = 0; i < idsToProcess.length; i += CHUNK_SIZE) {
+        const chunk = idsToProcess.slice(i, i + CHUNK_SIZE);
+        await Promise.all(
+          chunk.map((id) => {
+            if (action === "delete") {
+              return apiFetch(`/${category.resource}/${id}`, {
+                method: "DELETE",
+                token,
+              });
+            }
+            if (action === "restore") {
+              return apiFetch(`/${category.resource}/${id}/restore`, {
+                method: "POST",
+                token,
+              });
+            }
             return apiFetch(`/${category.resource}/${id}`, {
-              method: "DELETE",
+              method: "PATCH",
               token,
+              body: JSON.stringify({
+                is_active: action === "activate",
+              }),
             });
-          }
-          if (action === "restore") {
-            return apiFetch(`/${category.resource}/${id}/restore`, {
-              method: "POST",
-              token,
-            });
-          }
-          return apiFetch(`/${category.resource}/${id}`, {
-            method: "PATCH",
-            token,
-            body: JSON.stringify({
-              is_active: action === "activate",
-            }),
-          });
-        }),
-      );
+          }),
+        );
+      }
       setSelectedIds(new Set());
       setBulkActionRequest(null);
       setRefreshSeed((prev) => prev + 1);
@@ -1612,14 +1710,21 @@ export default function DataManagementListPage() {
         if (selectedIds.size === selectedRows.length) {
           count = await buildQrPdf(selectedRows);
         } else {
-          const path = buildCategoryApiPath(category, {
-            page: 1,
-            limit: Math.min(Math.max(selectedIds.size, 1), 500),
-            ids: Array.from(selectedIds),
-          });
-          const result = await apiFetch<PaginatedResponse<GenericItem>>(path, { token });
-          const fetchedDevices = result.data || [];
-          count = await buildQrPdf(fetchedDevices.length ? fetchedDevices : selectedRows);
+          const allSelectedArr = Array.from(selectedIds);
+          const ID_CHUNK = 250;
+          const chunkPromises = [];
+          for (let i = 0; i < allSelectedArr.length; i += ID_CHUNK) {
+            const chunkIds = allSelectedArr.slice(i, i + ID_CHUNK);
+            const path = buildCategoryApiPath(category, {
+              page: 1,
+              limit: chunkIds.length,
+              ids: chunkIds,
+            });
+            chunkPromises.push(apiFetch<PaginatedResponse<GenericItem>>(path, { token }));
+          }
+          const chunkResults = await Promise.all(chunkPromises);
+          const allFetchedDevices = chunkResults.flatMap((res) => res.data || []);
+          count = await buildQrPdf(allFetchedDevices.length ? allFetchedDevices : selectedRows);
         }
       } else {
         const path = buildCategoryApiPath(category, {
@@ -1809,31 +1914,6 @@ export default function DataManagementListPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <DataBulkActions
-              selectedCount={selectedIds.size}
-              totalCount={total}
-              currentPageCount={rows.length}
-              allCurrentPageSelected={allCurrentRowsSelected}
-              allDatasetSelected={allDatasetSelected}
-              isSelectingAllDataset={isSelectingAllDataset}
-              onSelectCurrentPage={handleToggleSelectCurrentPage}
-              onSelectAllDataset={handleSelectAllDataset}
-              selectedDownloadCount={selectedIds.size}
-              supportsQrBulkDownload={supportsQrBulkDownload}
-              downloadingQr={downloadingQr}
-              actionLoading={actionLoading}
-              canWrite={canWrite}
-              canRestoreSelected={isSoftDeleteResource && rows.some((row) => selectedIds.has(row.id) && isArchived(row))}
-              canBulkToggleStatus={canBulkToggleStatus}
-              isSoftDeleteResource={isSoftDeleteResource}
-              onDownloadQr={() => void handleBulkDownloadQr()}
-              onRestore={() => requestBulkAction("restore")}
-              onActivate={() => requestBulkAction("activate")}
-              onDeactivate={() => requestBulkAction("deactivate")}
-              onDelete={() => requestBulkAction("delete")}
-              onClearSelection={() => setSelectedIds(new Set())}
-              onFilterBySelection={applySelectionFilter}
-            />
             <div
               className={`grid transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                 isFilterVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"
@@ -1895,6 +1975,32 @@ export default function DataManagementListPage() {
                 />
               </div>
             </div>
+
+            <DataBulkActions
+              selectedCount={selectedIds.size}
+              totalCount={total}
+              currentPageCount={rows.length}
+              allCurrentPageSelected={allCurrentRowsSelected}
+              allDatasetSelected={allDatasetSelected}
+              isSelectingAllDataset={isSelectingAllDataset}
+              onSelectCurrentPage={handleToggleSelectCurrentPage}
+              onSelectAllDataset={handleSelectAllDataset}
+              selectedDownloadCount={selectedIds.size}
+              supportsQrBulkDownload={supportsQrBulkDownload}
+              downloadingQr={downloadingQr}
+              actionLoading={actionLoading}
+              canWrite={canWrite}
+              canRestoreSelected={isSoftDeleteResource && rows.some((row) => selectedIds.has(row.id) && isArchived(row))}
+              canBulkToggleStatus={canBulkToggleStatus}
+              isSoftDeleteResource={isSoftDeleteResource}
+              onDownloadQr={() => void handleBulkDownloadQr()}
+              onRestore={() => requestBulkAction("restore")}
+              onActivate={() => requestBulkAction("activate")}
+              onDeactivate={() => requestBulkAction("deactivate")}
+              onDelete={() => requestBulkAction("delete")}
+              onClearSelection={() => setSelectedIds(new Set())}
+              onFilterBySelection={applySelectionFilter}
+            />
 
             {success ? (
               <div className="flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
@@ -2018,6 +2124,10 @@ export default function DataManagementListPage() {
                   selectedIds={selectedIds}
                   allCurrentPageSelected={allCurrentRowsSelected}
                   onSelectAllPage={handleToggleSelectCurrentPage}
+                  totalCount={total}
+                  allDatasetSelected={allDatasetSelected}
+                  isSelectingAllDataset={isSelectingAllDataset}
+                  onSelectAllDataset={handleSelectAllDataset}
                   getPrimaryName={(row) => buildDeviceListDisplay(row, listDisplayLookups).primaryName}
                   getPrimaryCode={(row) => buildDeviceListDisplay(row, listDisplayLookups).primaryCode}
                   getStatus={(row) => pick(row, ["status", "status_pop", "is_active"])}
