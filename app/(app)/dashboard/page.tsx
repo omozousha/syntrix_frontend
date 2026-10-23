@@ -7,9 +7,9 @@ import { DashboardActivityFeed, type DashboardActivityItem } from "@/components/
 import { DashboardBarChartCard, DashboardDonutChartCard, type DashboardChartDatum } from "@/components/dashboard/dashboard-chart-card";
 import { DashboardMetricCard } from "@/components/dashboard/dashboard-metric-card";
 import { DashboardMiniMap, type MapMarker } from "@/components/dashboard/dashboard-mini-map";
+import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { DashboardTrendLine, type TrendDatum } from "@/components/dashboard/dashboard-trend-line";
 import { DashboardWorkQueue, type DashboardQueueItem } from "@/components/dashboard/dashboard-work-queue";
-import { AppLoading } from "@/components/app-loading-new";
 import { useSession } from "@/components/session-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -210,7 +210,7 @@ export default function DashboardPage() {
   if (loading && !data.summary) {
     return (
       <div className="h-full min-h-0 w-full pr-3">
-        <AppLoading label={t("dashboard.loading")} />
+        <DashboardSkeleton role={role} />
       </div>
     );
   }

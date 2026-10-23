@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, UserPlus } from "lucide-react";
-import { AppLoading } from "@/components/app-loading-new";
 import { AccountFilterBar, AccountSummaryCards, AccountTable, CreateAccountSheet, EditAccountSheet } from "@/components/features/account-management";
+import { AccountManagementSkeleton } from "@/components/features/account-management/account-management-skeleton";
 import { ResponseDialog } from "@/components/response-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -266,7 +266,7 @@ export default function AccountManagementPage() {
     return (
       <ScrollArea className="h-full min-h-0 w-full">
         <div className="px-3 pb-3 md:px-4 md:pb-4">
-          <AppLoading label="Sedang memuat data akun dan region..." />
+          <AccountManagementSkeleton />
         </div>
       </ScrollArea>
     );

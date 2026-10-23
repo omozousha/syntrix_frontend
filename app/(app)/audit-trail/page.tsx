@@ -11,6 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Combobox } from "@/components/ui/combobox";
+import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -315,7 +316,13 @@ export default function AuditTrailPage() {
             ) : null}
 
             {loading ? (
-              <AppLoading label={t("audit.loading")} />
+              <DataTableSkeleton
+                columnCount={5}
+                columnWidths={["w-36", "w-20", "w-44", "w-28", "w-16"]}
+                rowCount={8}
+                showCheckbox={false}
+                ariaLabel={t("audit.loading")}
+              />
             ) : error ? (
               <AppLoading label={error} variant="error" />
             ) : (

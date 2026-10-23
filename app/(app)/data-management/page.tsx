@@ -9,7 +9,9 @@ import {
   AssetSummaryStrip,
   DataQualityPanel,
   FocusedRegionCard,
+  FocusedRegionSkeleton,
   RegionCardGrid,
+  RegionCardGridSkeleton,
 } from "@/components/features/data-management/asset-overview";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
@@ -675,7 +677,20 @@ export default function DataManagementPage() {
           </div>
         </div>
 
-        {loading ? <AssetSummaryLoading /> : null}
+        {loading ? (
+          <div className="space-y-4">
+            <div className="inline-grid w-fit grid-cols-2 rounded-full border border-border/50 bg-muted/20 p-1">
+              <div className="h-7 w-28 rounded-full bg-muted/40 animate-pulse" />
+              <div className="h-7 w-24 rounded-full bg-muted/20 animate-pulse" />
+            </div>
+            {!isValidator ? <AssetSummaryLoading /> : null}
+            {isSuperadmin ? (
+              <RegionCardGridSkeleton count={8} />
+            ) : (
+              <FocusedRegionSkeleton />
+            )}
+          </div>
+        ) : null}
         {!loading && error ? <AppLoading label={error.message || t("assetOverview.loadFailed")} variant="error" /> : null}
 
         {!loading && !error ? (

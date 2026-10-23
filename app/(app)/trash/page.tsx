@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Archive, RotateCcw, Search, ShieldAlert, Trash2, X } from "lucide-react";
-import { AppLoading } from "@/components/app-loading-new";
 import { ResponseDialog } from "@/components/response-dialog";
 import { SimpleTable } from "@/components/simple-table";
+import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -524,7 +524,13 @@ export default function TrashPage() {
 
         <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-xs glass-inset space-y-4">
           {loading ? (
-            <AppLoading label={t("trash.loading")} />
+            <DataTableSkeleton
+              columnCount={5}
+              columnWidths={["w-48", "w-24", "w-36", "w-32", "w-36"]}
+              rowCount={6}
+              showCheckbox={true}
+              ariaLabel={t("trash.loading")}
+            />
           ) : error ? (
             <Alert variant="destructive" className="rounded-xl">
               <ShieldAlert className="size-4" />

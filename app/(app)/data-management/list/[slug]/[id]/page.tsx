@@ -10,6 +10,7 @@ import { AppLoading } from "@/components/app-loading-new";
 import { ResponseDialog } from "@/components/response-dialog";
 import {
   DeviceDetailHeader,
+  DeviceDetailSkeleton,
   DeviceBentoHeroTile,
   DeviceBentoQrTile,
   DeviceBentoLocationTile,
@@ -3080,7 +3081,7 @@ if (!category) {
           }
         />
 
-        {loading ? <DeviceDetailLoadingSkeleton categoryLabel={category.label} /> : null}
+        {loading ? <DeviceDetailSkeleton categoryLabel={category.label} /> : null}
         {!loading && error ? <p className="text-sm text-destructive">{error}</p> : null}
         {!loading && message ? <p className="text-sm text-emerald-600">{message}</p> : null}
 
@@ -3736,55 +3737,6 @@ if (!category) {
         />
       )}
     </ScrollArea>
-  );
-}
-
-function DeviceDetailLoadingSkeleton({ categoryLabel }: { categoryLabel: string }) {
-  const identityFields = ["Device Name", "Inventory ID", "Type", "Region", "POP", "Installation Date"];
-
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-32 rounded-md" />
-              <Skeleton className="h-4 w-48 rounded-md" />
-            </div>
-            <Skeleton className="h-8 w-24 rounded-full" />
-          </div>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
-          {identityFields.map((field) => (
-            <div key={field} className="min-h-[6.5rem] rounded-lg border bg-background p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{field}</p>
-              <Skeleton className="mt-4 h-5 w-3/4 rounded-md" />
-              <Skeleton className="mt-2 h-4 w-1/2 rounded-md" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-40 rounded-md" />
-              <Skeleton className="h-4 w-56 rounded-md" />
-            </div>
-            <Skeleton className="h-8 w-20 rounded-md" />
-          </div>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={`${categoryLabel}-${index}`} className="space-y-1.5">
-              <Skeleton className="h-4 w-24 rounded-md" />
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </div>
   );
 }
 

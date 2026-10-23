@@ -45,7 +45,7 @@ import { DataMobileList } from "@/components/features/data-management/device-lis
 import { DataTableView } from "@/components/features/data-management/device-list/data-table-view";
 import { OdpListSummaryStrip } from "@/components/features/data-management/device-list/odp-list-summary-strip";
 import { OdpPopDistributionPanel } from "@/components/features/data-management/device-list/odp-pop-distribution-panel";
-import { OdpListSkeleton } from "@/components/features/data-management/device-list/odp-list-skeleton";
+import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
 import { useOdpSummary } from "@/lib/hooks/useOdpSummary";
 import { MasterDataQuickEditSheet } from "@/components/features/data-management/master-data-quick-edit-sheet";
 import { MasterDataUsageCheckDialog, MasterDataDeleteConfirmDialog } from "@/components/features/data-management/master-data-delete-dialog";
@@ -75,7 +75,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslate, type TFn } from "@/lib/use-locale";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -2053,46 +2052,14 @@ export default function DataManagementListPage() {
               </div>
             ) : null}
 
-            {isOdpCategory && (odpSummaryLoading || loading) ? (
-              <OdpListSkeleton />
-            ) : loading ? (
-              <div aria-label={t("dataList.loadingAria")} className="space-y-3">
-                <div className="hidden md:block rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-xs dark:bg-white/[0.02]">
-                  <div className="rounded-[calc(2rem-0.5rem)] border border-border/60 bg-card shadow-xs glass-inset">
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-4 border-b border-border/40 px-4 py-3">
-                        <Skeleton className="size-4 rounded-sm" />
-                        <Skeleton className="h-3.5 w-28 rounded" />
-                        <Skeleton className="h-3.5 w-32 rounded" />
-                        <Skeleton className="h-3.5 w-24 rounded" />
-                        <Skeleton className="h-3.5 w-20 rounded" />
-                        <Skeleton className="h-3.5 w-32 rounded" />
-                      </div>
-                      {Array.from({ length: 6 }).map((_, index) => (
-                        <div key={index} className="flex items-center gap-4 border-b border-border/40 px-4 py-3 last:border-b-0">
-                          <Skeleton className="size-4 rounded-sm" />
-                          <Skeleton className="h-3.5 w-28 rounded" />
-                          <Skeleton className="h-3.5 w-32 rounded" />
-                          <Skeleton className="h-3.5 w-24 rounded" />
-                          <Skeleton className="h-3.5 w-20 rounded" />
-                          <Skeleton className="h-3.5 w-32 rounded" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2 md:hidden">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="rounded-xl border border-border/60 bg-card p-3 shadow-2xs glass-inset">
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-40 rounded" />
-                        <Skeleton className="h-3 w-24 rounded" />
-                        <Skeleton className="h-3 w-32 rounded" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {loading ? (
+              <DataTableSkeleton
+                columnCount={Math.max(4, headers.length - 1)}
+                rowCount={8}
+                showCheckbox={true}
+                showMobileCards={true}
+                ariaLabel={t("dataList.loadingAria")}
+              />
             ) : error ? (
               <DataEmptyState
                 title={t("dataList.errorTitle")}

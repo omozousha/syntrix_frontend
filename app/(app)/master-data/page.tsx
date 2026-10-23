@@ -7,6 +7,7 @@ import { BookMarked, Boxes, Building2, MapPinned, Network } from "lucide-react";
 import { AddDataMenu } from "@/components/add-data-menu";
 import { AppLoading } from "@/components/app-loading-new";
 import { QrLabelSettingsPanel } from "@/components/features/master-data/qr-label-settings-panel";
+import { MasterDataSkeleton } from "@/components/features/master-data/master-data-skeleton";
 import { MasterDataReferenceSections, type FailedCatalog, type MasterDataSectionConfig } from "@/components/features/master-data/master-data-reference-sections";
 import { MasterDataStatBar } from "@/components/features/master-data/master-data-stat-bar";
 import { useSession } from "@/components/session-context";
@@ -156,7 +157,7 @@ export default function MasterDataPage() {
           failedCount={failedCatalogs.length}
         />
 
-        {loading ? <AppLoading label={t("masterData.loading")} /> : null}
+        {loading ? <MasterDataSkeleton /> : null}
         {!loading && error ? <AppLoading label={error || t("masterData.loadFailed")} variant="error" /> : null}
 
         {!loading && !error ? (

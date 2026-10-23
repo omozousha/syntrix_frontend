@@ -4,12 +4,12 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
-import { AppLoading } from "@/components/app-loading-new";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
+import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
@@ -252,7 +252,15 @@ export default function OdpQualityPage() {
         </Card>
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {loading ? <AppLoading label={t("odpQuality.loading")} /> : null}
+        {loading ? (
+          <DataTableSkeleton
+            columnCount={5}
+            columnWidths={["w-36", "w-24", "w-40", "w-20", "w-28"]}
+            rowCount={6}
+            showCheckbox={false}
+            ariaLabel={t("odpQuality.loading")}
+          />
+        ) : null}
 
         {!loading ? (
           <Card>

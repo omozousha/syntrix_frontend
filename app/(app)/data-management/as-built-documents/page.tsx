@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
+import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -548,7 +549,15 @@ export default function AsBuiltDocumentsPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4 pt-0">
-            {loading ? <AppLoading label={t("asBuiltDocs.loading")} /> : null}
+            {loading ? (
+              <DataTableSkeleton
+                columnCount={7}
+                columnWidths={["w-52", "w-28", "w-16", "w-20", "w-16", "w-32", "w-24"]}
+                rowCount={6}
+                showCheckbox={false}
+                ariaLabel={t("asBuiltDocs.loading")}
+              />
+            ) : null}
             {!loading && error ? <AppLoading label={error} variant="error" /> : null}
             {!loading && actionSuccess ? <p className="text-sm text-emerald-600">{actionSuccess}</p> : null}
             {!loading && actionError ? <p className="text-sm text-destructive">{actionError}</p> : null}

@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
 import { useTranslate, type TFn } from "@/lib/use-locale";
@@ -950,7 +951,18 @@ export default function TopologyWorkspacePage() {
           </CardHeader>
           <CardContent className="px-4 pb-4 pt-0">
             {loading ? (
-              <AppLoading label={t("topology.loadingQuality")} />
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4" role="status" aria-label={t("topology.loadingQuality")}>
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <Card key={`metric-skel-${i}`}>
+                    <CardHeader className="px-3 py-2">
+                      <Skeleton className="h-4 w-28 rounded" />
+                    </CardHeader>
+                    <CardContent className="px-3 pb-3 pt-0">
+                      <Skeleton className="h-7 w-16 rounded-md" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ) : error ? (
               <AppLoading label={error} variant="error" />
             ) : (

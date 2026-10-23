@@ -47,13 +47,19 @@ export function DashboardMetricCard({
             </div>
           </div>
           <div className="mt-2 flex items-center gap-2">
-            {trend ? (
-              <span className={`inline-flex items-center gap-0.5 font-mono text-[10px] tabular-nums ${trendColor}`}>
-                <TrendIcon className="size-3" />
-                <span>{trend.label}</span>
-              </span>
-            ) : null}
-            {caption ? <p className="line-clamp-2 text-xs text-muted-foreground">{trend ? "· " : ""}{caption}</p> : null}
+            {loading ? (
+              <Skeleton className="h-3 w-3/4 rounded" />
+            ) : (
+              <>
+                {trend ? (
+                  <span className={`inline-flex items-center gap-0.5 font-mono text-[10px] tabular-nums ${trendColor}`}>
+                    <TrendIcon className="size-3" />
+                    <span>{trend.label}</span>
+                  </span>
+                ) : null}
+                {caption ? <p className="line-clamp-2 text-xs text-muted-foreground">{trend ? "· " : ""}{caption}</p> : null}
+              </>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -1,4 +1,5 @@
 export { DeviceDetailHeader } from "@/components/features/data-management/device-detail/device-detail-header";
+export { DeviceDetailSkeleton } from "@/components/features/data-management/device-detail/device-detail-skeleton";
 export {
   DeviceBentoHeroTile,
   DeviceBentoQrTile,
