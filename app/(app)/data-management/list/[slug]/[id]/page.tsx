@@ -6,7 +6,6 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, CircleHelp, Download, ImagePlus, Pencil, Save, X, XCircle } from "lucide-react";
-import { AppLoading } from "@/components/app-loading-new";
 import { ResponseDialog } from "@/components/response-dialog";
 import {
   DeviceDetailHeader,
@@ -3042,7 +3041,7 @@ if (!category) {
     return (
     <ScrollArea className="h-full min-h-0 w-full thin-scrollbar">
       <div className="space-y-5 pr-3">
-        <AppLoading label="Memuat detail..." />
+        <DeviceDetailSkeleton categoryLabel="" />
       </div>
     </ScrollArea>
     );

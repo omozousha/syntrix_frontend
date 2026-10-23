@@ -10,6 +10,7 @@ import { TopologyTracePanel } from "@/components/topology-trace-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiFetch } from "@/lib/api";
@@ -797,7 +798,32 @@ export default function AsBuiltWorkspacePage() {
             {!startDeviceId.trim() ? (
               <AppLoading label={t("asBuilt.noStartDeviceLoading")} />
             ) : null}
-            {loading ? <AppLoading label={t("asBuilt.preparingTrace")} /> : null}
+            {loading ? (
+              <div role="status" aria-label={t("asBuilt.preparingTrace")} className="space-y-2 rounded-md border bg-muted/30 px-3 py-2">
+                <span className="sr-only">{t("asBuilt.preparingTrace")}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-5 w-16 rounded-full" />
+                  ))}
+                </div>
+                <div className="rounded-md border p-2 space-y-2">
+                  <Skeleton className="h-3.5 w-32 rounded" />
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Skeleton className="h-8 w-24 rounded-md" />
+                        {i < 4 ? <Skeleton className="h-2 w-4 rounded" /> : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={`row-${i}`} className="h-9 w-full rounded-md" />
+                  ))}
+                </div>
+              </div>
+            ) : null}
             {!loading && error ? <AppLoading label={error} variant="error" /> : null}
             {publishMessage ? <p className="text-sm text-emerald-600">{publishMessage}</p> : null}
             {publishError ? <p className="text-sm text-destructive">{publishError}</p> : null}

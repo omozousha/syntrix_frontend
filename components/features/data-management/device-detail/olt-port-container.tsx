@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { AppLoading } from "@/components/app-loading-new";
+import { TrayPillSkeleton } from "@/components/features/data-management/device-detail/device-section-skeletons";
 import {
   type DevicePort,
   type PortConnection,
@@ -56,7 +56,7 @@ export function OltPortContainer({
     return (
       <div className="space-y-2 rounded-md border p-3">
         <p className="text-sm font-medium">Port OLT</p>
-        <AppLoading label={t("portContainer.loadingOlt")} />
+        <TrayPillSkeleton trays={3} pillsPerTray={10} ariaLabel={t("portContainer.loadingOlt")} />
       </div>
     );
   }

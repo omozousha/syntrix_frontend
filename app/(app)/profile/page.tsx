@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera } from "lucide-react";
-import { AppLoading, ButtonLoader } from "@/components/app-loading-new";
+import { ButtonLoader } from "@/components/app-loading-new";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/components/session-context";
 import { useReferenceData } from "@/hooks/use-reference-data";
@@ -288,14 +289,6 @@ export default function ProfilePage() {
   const busy = savingProfile || savingPassword || sendingReset;
   const displayedAvatarUrl = avatarPreviewUrl || avatarUrl;
 
-  if (avatarLoading) {
-    return (
-      <div className="h-full min-h-0 w-full pr-3">
-        <AppLoading label={t("profile.loading")} />
-      </div>
-    );
-  }
-
   return (
     <div className="w-full space-y-4">
       {/* Page Header */}
@@ -318,21 +311,25 @@ export default function ProfilePage() {
         {/* Left Side: Avatar & Summary Card (4 cols on lg+) */}
         <Card className="min-w-0 rounded-2xl border-border/60 shadow-xs glass-inset overflow-hidden lg:col-span-4 flex flex-col justify-between">
           <CardHeader className="p-4 sm:p-6 border-b border-border/40 bg-muted/20 text-center flex flex-col items-center">
-            <button
-              type="button"
-              className="group relative shrink-0 active:scale-[0.97] transition-transform duration-200"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={busy}
-              aria-label={t("profile.changeAvatar")}
-            >
-              <Avatar className="size-24 sm:size-28 border-4 border-background shadow-md transition-colors group-hover:border-primary/40 ring-2 ring-border/60">
-                {displayedAvatarUrl ? <AvatarImage src={displayedAvatarUrl} alt={me.app_user.full_name} className="object-cover" /> : null}
-                <AvatarFallback className="font-mono font-bold text-2xl bg-primary/10 text-primary">{initials}</AvatarFallback>
-              </Avatar>
-              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-white opacity-0 backdrop-blur-[2px] transition-all duration-300 group-hover:opacity-100">
-                <Camera className="size-6" />
-              </span>
-            </button>
+            {avatarLoading ? (
+              <Skeleton className="size-24 sm:size-28 rounded-full ring-2 ring-border/60" aria-hidden="true" />
+            ) : (
+              <button
+                type="button"
+                className="group relative shrink-0 active:scale-[0.97] transition-transform duration-200"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={busy}
+                aria-label={t("profile.changeAvatar")}
+              >
+                <Avatar className="size-24 sm:size-28 border-4 border-background shadow-md transition-colors group-hover:border-primary/40 ring-2 ring-border/60">
+                  {displayedAvatarUrl ? <AvatarImage src={displayedAvatarUrl} alt={me.app_user.full_name} className="object-cover" /> : null}
+                  <AvatarFallback className="font-mono font-bold text-2xl bg-primary/10 text-primary">{initials}</AvatarFallback>
+                </Avatar>
+                <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-white opacity-0 backdrop-blur-[2px] transition-all duration-300 group-hover:opacity-100">
+                  <Camera className="size-6" />
+                </span>
+              </button>
+            )}
             <input
               ref={fileInputRef}
               type="file"

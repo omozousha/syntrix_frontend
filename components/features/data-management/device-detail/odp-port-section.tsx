@@ -3,11 +3,11 @@
 import { useMemo } from "react";
 import { Trash2 } from "lucide-react";
 
-import { AppLoading } from "@/components/app-loading-new";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
+import { PortCardGridSkeleton } from "@/components/features/data-management/device-detail/device-section-skeletons";
 import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type DevicePort = {
@@ -138,7 +138,7 @@ export function OdpPortSection({
       </div>
 
       {loadingPorts ? (
-        <AppLoading label={t("odpPortSection.loading")} />
+        <PortCardGridSkeleton count={4} ariaLabel={t("odpPortSection.loading")} />
       ) : ports.length ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
           {ports.map((port) => {

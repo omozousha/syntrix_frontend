@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AppLoading } from "@/components/app-loading-new";
+import { HistoryCardStackSkeleton } from "@/components/features/data-management/device-detail/device-section-skeletons";
 import { mapValidationStatus } from "@/lib/validation-status";
 import { useTranslate } from "@/lib/use-locale";
 import { ValidationEvidenceAction } from "@/components/features/data-management/device-detail/validation-evidence-action";
@@ -76,7 +76,7 @@ export function DeviceValidationHistorySection({
       </CardHeader>
       <CardContent className="space-y-2 px-3 pb-3 pt-0">
         {loading ? (
-          <AppLoading label={t("validationHistory.loading")} />
+          <HistoryCardStackSkeleton count={2} ariaLabel={t("validationHistory.loading")} />
         ) : records.length ? (
           records.map((record) => (
             <GenericValidationHistoryCard

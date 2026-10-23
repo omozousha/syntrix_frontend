@@ -5,7 +5,6 @@ import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
 import { Eye, ImageUp, QrCode, RefreshCw, Save } from "lucide-react";
 
-import { AppLoading } from "@/components/app-loading-new";
 import { ResponseDialog } from "@/components/response-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import {
   buildQrLabelPngDataUrl,
@@ -301,7 +301,29 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
           </div>
           <div className="grid min-w-0 gap-6 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
           <div className="min-w-0 space-y-5">
-            {loading ? <AppLoading label={t("qrLabel.loading")} /> : null}
+            {loading ? (
+              <div role="status" aria-label={t("qrLabel.loading")} className="space-y-5">
+                <span className="sr-only">{t("qrLabel.loading")}</span>
+                <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/60 bg-muted/15 px-4 py-3 shadow-2xs glass-inset">
+                  <Skeleton className="size-2 rounded-full" />
+                  <Skeleton className="h-3 w-20 rounded" />
+                  <Skeleton className="h-3 w-40 rounded" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-40 rounded" />
+                  <Skeleton className="h-3 w-full max-w-md rounded" />
+                  <Skeleton className="h-3 w-2/3 rounded" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <Skeleton className="h-3 w-24 rounded" />
+                      <Skeleton className="h-9 w-full rounded-xl" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             {!loading ? (
               <>

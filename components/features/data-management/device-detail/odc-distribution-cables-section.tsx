@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Cable, RefreshCw } from "lucide-react";
-import { AppLoading } from "@/components/app-loading-new";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RowListSkeleton } from "@/components/features/data-management/device-detail/device-section-skeletons";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { useTranslate } from "@/lib/use-locale";
 
@@ -49,7 +49,22 @@ export function OdcDistributionCablesSection({
     void loadCables();
   }, [deviceId, token]);
 
-  if (loading) return <AppLoading label={t("cableSection.loading")} />;
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Cable className="size-4 text-muted-foreground" />
+            {t("cableSection.title")}
+          </CardTitle>
+          <RefreshCw className="size-3.5 animate-spin text-muted-foreground" />
+        </CardHeader>
+        <CardContent className="px-3 pb-3 pt-0">
+          <RowListSkeleton count={3} ariaLabel={t("cableSection.loading")} />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

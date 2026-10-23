@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, XCircle } from "lucide-react";
-import { AppLoading } from "@/components/app-loading-new";
+import { ChainCheckGridSkeleton } from "@/components/features/data-management/device-detail/device-section-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
@@ -117,7 +117,7 @@ export function OdpCoreChainSummarySection({
         </Badge>
       </div>
       {loading ? (
-        <AppLoading label={t("coreChain.loading")} />
+        <ChainCheckGridSkeleton checks={6} metrics={3} ariaLabel={t("coreChain.loading")} />
       ) : coreChainSummary ? (
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3">

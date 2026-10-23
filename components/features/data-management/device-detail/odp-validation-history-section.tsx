@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { AppLoading } from "@/components/app-loading-new";
+import { HistoryCardStackSkeleton } from "@/components/features/data-management/device-detail/device-section-skeletons";
 import { mapValidationStatus } from "@/lib/validation-status";
 import {
   OdpFieldValidationSummary,
@@ -137,7 +137,7 @@ export function OdpValidationHistorySection({
         <p className="text-xs text-muted-foreground">{t("odpValidation.recentRecords", { count: records.length })}</p>
       </div>
       {loading ? (
-        <AppLoading label={t("odpValidation.loading")} />
+        <HistoryCardStackSkeleton count={2} ariaLabel={t("odpValidation.loading")} />
       ) : records.length ? (
         <div className="space-y-2">
           {records.map((record, index) => (

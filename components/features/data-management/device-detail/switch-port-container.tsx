@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { AppLoading } from "@/components/app-loading-new";
+import { TrayPillSkeleton } from "@/components/features/data-management/device-detail/device-section-skeletons";
 import {
   type DevicePort,
   type PortConnection,
@@ -51,7 +51,7 @@ export function SwitchPortContainer({
     return (
       <div className="space-y-2 rounded-md border p-3">
         <p className="text-sm font-medium">Port Switch</p>
-        <AppLoading label={t("portContainer.loadingSwitch")} />
+        <TrayPillSkeleton trays={3} pillsPerTray={12} ariaLabel={t("portContainer.loadingSwitch")} />
       </div>
     );
   }

@@ -3010,6 +3010,7 @@ const id = {
 
   "topology.loadFailed": "Gagal memuat topology quality.",
   "topology.loadingQuality": "Memuat topology quality...",
+  "topology.loadingTrace": "Menjalankan trace topology...",
   "topology.traceFailed": "Gagal menjalankan trace topology.",
   "topology.provisionFailed": "Gagal menjalankan provisioning.",
   "topology.connectionSavedReloadFailed": "Connection tersimpan, tetapi daftar connection gagal dimuat ulang.",
@@ -6223,6 +6224,7 @@ const en: Messages = {
 
   "topology.loadFailed": "Failed to load topology quality.",
   "topology.loadingQuality": "Loading topology quality...",
+  "topology.loadingTrace": "Running topology trace...",
   "topology.traceFailed": "Failed to run topology trace.",
   "topology.provisionFailed": "Failed to run provisioning.",
   "topology.connectionSavedReloadFailed": "Connection saved, but failed to reload connection list.",

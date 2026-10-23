@@ -380,18 +380,67 @@ function matchesSeverityFilter(severity: SeverityFilter, filter: SeverityFilter)
 
 function QualityLoading() {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, index) => (
-        <Card key={index} className="rounded-2xl border-border/60 shadow-xs">
-          <CardHeader className="px-4 py-3">
-            <Skeleton className="h-3 w-32 rounded" />
-          </CardHeader>
-          <CardContent className="px-4 pb-4 pt-0 space-y-2">
-            <Skeleton className="h-7 w-14 rounded" />
-            <Skeleton className="h-3 w-48 rounded" />
-          </CardContent>
-        </Card>
-      ))}
+    <div className="space-y-4" role="status" aria-label="Memuat data kualitas...">
+      <span className="sr-only">Memuat data kualitas...</span>
+      {/* Health cards (4-up, mirrored from HealthCard) */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Card key={`health-skel-${index}`} className="rounded-2xl border-border/60 shadow-2xs">
+            <CardContent className="flex items-start gap-3.5 p-4">
+              <Skeleton className="size-8 rounded-xl" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Skeleton className="h-2.5 w-20 rounded" />
+                <Skeleton className="h-6 w-10 rounded" />
+                <Skeleton className="h-3 w-28 rounded" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {/* KPI cards (3-up, mirrored from KPI Card) */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Card key={`kpi-skel-${index}`} className="rounded-2xl border-border/60 shadow-2xs">
+            <CardHeader className="px-4 py-3">
+              <Skeleton className="h-3 w-32 rounded" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0 space-y-2">
+              <Skeleton className="h-7 w-14 rounded" />
+              <Skeleton className="h-3 w-48 rounded" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {/* Issue group cards (2-up, mirrored from IssueGroupCard) */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <Card key={`group-skel-${index}`} className="rounded-2xl border-border/60 shadow-2xs">
+            <CardHeader className="space-y-1.5 px-4 py-4 border-b border-border/50">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1.5">
+                  <Skeleton className="h-4 w-28 rounded" />
+                  <Skeleton className="h-3 w-44 rounded" />
+                </div>
+                <Skeleton className="h-5 w-8 rounded-md" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3 px-4 pb-4 pt-3">
+              {Array.from({ length: 3 }).map((_, issueIndex) => (
+                <div key={issueIndex} className="grid gap-3 rounded-xl border border-border/60 bg-muted/5 p-3.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-5 w-12 rounded-md" />
+                      <Skeleton className="h-3.5 w-32 rounded" />
+                    </div>
+                    <Skeleton className="h-3 w-full max-w-56 rounded" />
+                  </div>
+                  <Skeleton className="h-9 w-full sm:w-32 rounded-full" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

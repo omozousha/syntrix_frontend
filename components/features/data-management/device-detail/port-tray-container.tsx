@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { AppLoading } from "@/components/app-loading-new";
+import { TrayPillSkeleton } from "@/components/features/data-management/device-detail/device-section-skeletons";
 import {
   type DevicePort,
   type PortConnection,
@@ -78,7 +78,7 @@ export function PortTrayContainer({
     return (
       <div className="space-y-2 rounded-md border p-3">
         <p className="text-sm font-medium">{sectionTitle}</p>
-        <AppLoading label={t("portContainer.loadingTarget", { target: isCable ? "core" : "port" })} />
+        <TrayPillSkeleton trays={2} pillsPerTray={8} ariaLabel={t("portContainer.loadingTarget", { target: isCable ? "core" : "port" })} />
       </div>
     );
   }

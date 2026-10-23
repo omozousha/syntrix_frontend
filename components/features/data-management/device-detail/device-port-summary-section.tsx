@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import { Cable, Network } from "lucide-react";
 
-import { AppLoading } from "@/components/app-loading-new";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { MetricRowSkeleton, PortCardGridSkeleton } from "@/components/features/data-management/device-detail/device-section-skeletons";
 import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type DevicePort = {
@@ -112,7 +112,10 @@ export function DevicePortSummarySection({
       </CardHeader>
       <CardContent className="space-y-3 px-3 pb-3 pt-0">
         {loading ? (
-          <AppLoading label={t("portSummary.loading")} />
+          <div className="space-y-3">
+            <MetricRowSkeleton count={4} ariaLabel={t("portSummary.loading")} />
+            <PortCardGridSkeleton count={3} ariaLabel={t("portSummary.loading")} />
+          </div>
         ) : totalPorts ? (
           <>
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">

@@ -3,8 +3,7 @@
 import * as React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, ArrowLeft, CheckCircle2, AlertTriangle, AlertCircle, FileSpreadsheet, FileText, X, ArrowRight } from "lucide-react";
-import { AppLoading } from "@/components/app-loading-new";
+import { Upload, ArrowLeft, CheckCircle2, AlertTriangle, AlertCircle, FileSpreadsheet, FileText, X, ArrowRight, Loader2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useSession } from "@/components/session-context";
 import { apiFetch } from "@/lib/api";
@@ -14,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImportSummaryStat } from "@/components/features/data-management/import/import-summary-stat";
 import { ImportPreviewTable, type ImportPreviewRow } from "@/components/features/data-management/import/import-preview-table";
@@ -877,7 +877,23 @@ export default function OdpBulkImportPage() {
           )}
 
           {applyState === "loading" && (
-            <AppLoading variant="card" label="Sedang Menyimpan Data..." />
+            <div role="status" aria-label="Sedang Menyimpan Data..." className="space-y-3 py-2">
+              <span className="sr-only">Sedang Menyimpan Data...</span>
+              <div className="flex flex-col items-center justify-center gap-2">
+                <div className="p-2.5 bg-blue-500/10 rounded-full animate-pulse">
+                  <Loader2 className="size-6 text-blue-500 animate-spin" />
+                </div>
+                <p className="text-sm font-semibold uppercase tracking-wider font-mono text-blue-600">Sedang Menyimpan Data...</p>
+              </div>
+              <div className="rounded-lg border border-border p-3 bg-muted/10 space-y-2.5 font-mono text-xs">
+                <Skeleton className="h-3.5 w-40 rounded" />
+                <div className="grid grid-cols-2 gap-2.5">
+                  <Skeleton className="h-12 w-full rounded-md" />
+                  <Skeleton className="h-12 w-full rounded-md" />
+                </div>
+                <Skeleton className="h-3 w-2/3 rounded" />
+              </div>
+            </div>
           )}
 
           {applyState === "success" && importResult && (

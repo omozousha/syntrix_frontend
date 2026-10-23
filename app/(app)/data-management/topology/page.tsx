@@ -1035,6 +1035,32 @@ export default function TopologyWorkspacePage() {
             </div>
 
             {traceError ? <p className="text-sm text-destructive">{traceError}</p> : null}
+            {tracing && !traceResult ? (
+              <div role="status" aria-label={t("topology.loadingTrace")} className="space-y-2 rounded-md border bg-muted/30 px-3 py-2">
+                <span className="sr-only">{t("topology.loadingTrace")}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                </div>
+                <div className="rounded-md border p-2 space-y-2">
+                  <Skeleton className="h-3.5 w-24 rounded" />
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Skeleton className="h-8 w-24 rounded-md" />
+                        {i < 4 ? <Skeleton className="h-2 w-4 rounded" /> : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-9 w-full rounded-md" />
+                  ))}
+                </div>
+              </div>
+            ) : null}
             {traceResult ? (
               <div className="space-y-2 rounded-md border bg-muted/30 px-3 py-2">
                 <div className="flex flex-wrap items-center gap-2">
@@ -2156,7 +2182,18 @@ function ExistingConnectionsPanel({
         <Badge variant={connections.length ? "secondary" : "outline"}>{connections.length} connection</Badge>
       </div>
       {loading ? (
-        <p className="text-sm text-muted-foreground">{t("topology.loadingConnections")}</p>
+        <div role="status" aria-label={t("topology.loadingConnections")} className="space-y-2">
+          <span className="sr-only">{t("topology.loadingConnections")}</span>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={`conn-skel-${i}`} className={`rounded-md border px-3 py-2 ${i === 0 ? "border-amber-300 bg-amber-50/70" : "bg-muted/10"}`}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Skeleton className="h-3.5 w-40 rounded" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <Skeleton className="mt-1.5 h-3 w-2/3 rounded" />
+            </div>
+          ))}
+        </div>
       ) : connections.length === 0 ? (
         <p className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
           {t("topology.noConnectionsYet")}

@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
-import { AppLoading } from "@/components/app-loading-new";
+import { ChainCheckGridSkeleton } from "@/components/features/data-management/device-detail/device-section-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -106,7 +106,7 @@ export function OdcCoreChainSummarySection({
       </CardHeader>
       <CardContent className="px-3 pb-3 pt-0">
         {loading ? (
-          <AppLoading label={t("chainSection.loadingOdc")} />
+          <ChainCheckGridSkeleton checks={6} metrics={5} ariaLabel={t("chainSection.loadingOdc")} />
         ) : chainSummary ? (
           <div className="space-y-3">
             {/* 6 Check Status */}
@@ -272,7 +272,7 @@ export function OtbCoreChainSummarySection({
       </CardHeader>
       <CardContent className="px-3 pb-3 pt-0">
         {loading ? (
-          <AppLoading label={t("chainSection.loadingOtb")} />
+          <ChainCheckGridSkeleton checks={4} metrics={4} ariaLabel={t("chainSection.loadingOtb")} />
         ) : chainSummary ? (
           <div className="space-y-3">
             {/* Metrics */}
