@@ -40,6 +40,12 @@ import {
   type RackOption,
   type PopDocumentRef,
 } from "@/components/features/data-management/pop-detail";
+import {
+  CustomerBentoHeroTile,
+  CustomerBentoLabelTile,
+  CustomerBentoLocationTile,
+  CustomerBentoConnectionTile,
+} from "@/components/features/data-management/customer-detail";
 import { getStoredPopVisibleDeviceTypes, isRackMountable } from "@/lib/pop-device-config";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,10 +64,10 @@ import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob, resolveAttachment } from "@/lib/attachment-utils";
 import { DeviceNavigationModal } from "@/components/features/maps/device-navigation-modal";
 import { deviceTypeKeyToSlug, getCategoryBySlug } from "@/lib/data-management-config";
-import { buildCustomerRelationDisplay, buildDeviceQrRelationDisplay } from "@/lib/display-adapters/device-display-adapter";
+import { buildDeviceQrRelationDisplay } from "@/lib/display-adapters/device-display-adapter";
 import { useReferenceData } from "@/hooks/use-reference-data";
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
-import { buildDeviceQrHref, buildQrLabelPngDataUrl, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
+import { buildCustomerQrHref, buildDeviceQrHref, buildQrLabelPngDataUrl, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
 import {
   TopologyLookupData,
@@ -859,7 +865,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   const canEditAsset = me.role === "admin" || me.role === "user_all_region";
   const canOpenTopology = me.role === "admin" || me.role === "user_all_region";
   const canOpenAsBuilt = me.role === "admin" || me.role === "user_all_region";
-  const editable = canEditAsset && (category?.resource === "pops" || category?.resource === "devices");
+  const editable = canEditAsset && (category?.resource === "pops" || category?.resource === "devices" || category?.resource === "customers");
   const currentDeviceTypeKey = valueOf(item?.device_type_key).toUpperCase();
   const selectedDeviceTypeMaster = deviceTypeMasters.find((d) => d.device_type_key === currentDeviceTypeKey) || null;
   const resolvedLayoutType = selectedDeviceTypeMaster?.layout_type || (
@@ -1029,6 +1035,11 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       const popName = valueOf(item.pop_name, "POP");
       const popCode = valueOf(item.pop_code);
       return popCode ? `${popName} (${popCode})` : popName;
+    }
+    if (category.resource === "customers") {
+      const custName = valueOf(item.customer_name || item.name, "Customer");
+      const cid = valueOf(item.customer_number || item.customer_code);
+      return cid ? `${custName} (${cid})` : custName;
     }
     if (category.resource === "devices") {
       return `${valueOf(item.device_name)} (${valueOf(item.device_id)})`;
@@ -2203,10 +2214,10 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     };
   }, [deviceDirectHref]);
 
-  const isDeviceResource = category?.resource === "devices";
+  const needsQrLabelSettings = category?.resource === "devices" || category?.resource === "customers";
 
   useEffect(() => {
-    if (!token || !isDeviceResource) {
+    if (!token || !needsQrLabelSettings) {
       setQrLabelLogoDataUrl("");
       setQrLabelFooterText("");
       setQrLabelTemplateStyle("default");
@@ -2232,7 +2243,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     return () => {
       cancelled = true;
     };
-  }, [token, isDeviceResource]);
+  }, [token, needsQrLabelSettings]);
 
   async function handleSave() {
     if (!category || !item || !editable) return;
@@ -2240,46 +2251,51 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     setError("");
     setMessage("");
     try {
-      if (category.resource === "pops" || category.resource === "devices") {
-        const latitudeValidation = validateCoordinateFormat(form.latitude, "latitude");
-        if (!latitudeValidation.valid) {
-          throw new Error(`Latitude tidak valid: ${latitudeValidation.message}`);
-        }
-        const longitudeValidation = validateCoordinateFormat(form.longitude, "longitude");
-        if (!longitudeValidation.valid) {
-          throw new Error(`Longitude tidak valid: ${longitudeValidation.message}`);
+      if (category.resource === "pops" || category.resource === "devices" || category.resource === "customers") {
+        if (form.latitude || form.longitude) {
+          const latitudeValidation = validateCoordinateFormat(form.latitude, "latitude");
+          if (!latitudeValidation.valid) {
+            throw new Error(`Latitude tidak valid: ${latitudeValidation.message}`);
+          }
+          const longitudeValidation = validateCoordinateFormat(form.longitude, "longitude");
+          if (!longitudeValidation.valid) {
+            throw new Error(`Longitude tidak valid: ${longitudeValidation.message}`);
+          }
         }
       }
 
       const payload = buildUpdatePayload(form, category.resource, item) as Record<string, unknown>;
-      let mergedImageAttachments = infoImageAttachments.map((attachment) => ({
-        id: attachment.id,
-        original_name: attachmentNames[attachment.id] || attachment.name || "attachment",
-      }));
 
-      if (newImageFiles.length > 0) {
-        const uploaded = await Promise.all(
-          newImageFiles.map((file) =>
-            uploadAttachment({
-              token,
-              file,
-              fileCategory: "image",
-              entityType: category.resource === "pops" ? "pop" : "device",
-              entityId: item.id,
-            }),
-          ),
-        );
-        mergedImageAttachments = [...mergedImageAttachments, ...uploaded.map((img) => ({
-          id: img.id,
-          original_name: img.original_name,
-          mime_type: img.mime_type,
-          file_category: img.file_category,
-          size_bytes: img.size_bytes,
-        }))].slice(0, MAX_IMAGE_ATTACHMENTS);
+      if (category.resource === "pops" || category.resource === "devices") {
+        let mergedImageAttachments = infoImageAttachments.map((attachment) => ({
+          id: attachment.id,
+          original_name: attachmentNames[attachment.id] || attachment.name || "attachment",
+        }));
+
+        if (newImageFiles.length > 0) {
+          const uploaded = await Promise.all(
+            newImageFiles.map((file) =>
+              uploadAttachment({
+                token,
+                file,
+                fileCategory: "image",
+                entityType: category.resource === "pops" ? "pop" : "device",
+                entityId: item.id,
+              }),
+            ),
+          );
+          mergedImageAttachments = [...mergedImageAttachments, ...uploaded.map((img) => ({
+            id: img.id,
+            original_name: img.original_name,
+            mime_type: img.mime_type,
+            file_category: img.file_category,
+            size_bytes: img.size_bytes,
+          }))].slice(0, MAX_IMAGE_ATTACHMENTS);
+        }
+
+        payload.image_attachment_id = mergedImageAttachments[0]?.id || null;
+        payload.image_attachments = mergedImageAttachments;
       }
-
-      payload.image_attachment_id = mergedImageAttachments[0]?.id || null;
-      payload.image_attachments = mergedImageAttachments;
 
       // ODC upstream connection saving (if it changed)
       const isOdcDevice = category.resource === "devices" && valueOf(item.device_type_key).toUpperCase() === "ODC";
@@ -3066,7 +3082,7 @@ if (!category) {
           backHref={backToListHref}
           actions={
             <>
-              {(category?.resource === "devices" || category?.resource === "pops") && item &&
+              {(category?.resource === "devices" || category?.resource === "pops" || category?.resource === "customers") && item &&
                Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude)) ? (
                 <Button
                   type="button"
@@ -3532,8 +3548,110 @@ if (!category) {
                   onSubmit={handleEditPopRackSubmit}
                 />
               </div>
+            ) : category.resource === "customers" ? (
+              <div className="space-y-4">
+                {editable && isEditing ? (
+                  <Card className="rounded-2xl border border-border/60 bg-card p-4 sm:p-6 shadow-xs glass-inset">
+                    <CardHeader className="p-0 pb-4 border-b border-border/40">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <CardTitle className="text-base font-bold">Edit Informasi Customer</CardTitle>
+                          <CardDescription className="text-xs">Ubah data identitas, kontak, atau lokasi customer.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setForm(buildEditableForm(item, category.resource, deviceTopologySummary));
+                              setIsEditing(false);
+                            }}
+                            disabled={saving}
+                          >
+                            Batal
+                          </Button>
+                          <Button size="sm" onClick={() => void handleSave()} disabled={saving}>
+                            <Save className="mr-1.5 size-3.5" />
+                            {saving ? "Menyimpan..." : "Simpan Perubahan"}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0 pt-4">
+                      <CustomerDetailEditForm
+                        form={form}
+                        onChange={setForm}
+                        editing={isEditing}
+                        popOptions={popOptions}
+                        projectOptions={projectOptions}
+                        relationLabels={relationLabels}
+                        relationLoading={relationLabelsLoading}
+                      />
+                    </CardContent>
+                  </Card>
+                ) : null}
+
+                {/* 4-TILE BENTO GRID FOR CUSTOMER */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+                  {/* TILE 1: Hero Tile (7 Cols Desktop / 12 Mobile) */}
+                  <div className="sm:col-span-7 lg:col-span-7">
+                    <CustomerBentoHeroTile
+                      customerName={valueOf(item.customer_name || item.name)}
+                      customerNumber={valueOf(item.customer_number || item.customer_code)}
+                      status={valueOf(item.status, "active")}
+                      serviceType={relationLabels.serviceType || valueOf(item.service_type)}
+                      popName={relationLabels.pop || valueOf(item.pop_name)}
+                      popCode={valueOf(item.pop_code)}
+                      popId={valueOf(item.pop_id)}
+                      projectName={relationLabels.project || valueOf(item.project_name)}
+                      projectId={valueOf(item.project_id)}
+                      regionName={relationLabels.region || valueOf(item.region_name)}
+                      regionId={valueOf(item.region_id)}
+                      installationDate={valueOf(item.installation_date)}
+                      contactName={valueOf(item.contact_name)}
+                      contactPhone={valueOf(item.contact_phone)}
+                      email={valueOf(item.email)}
+                      tags={Array.isArray(item.tags) ? (item.tags as string[]) : []}
+                    />
+                  </div>
+
+                  {/* TILE 2: Label Patch Cord Download & Preview (5 Cols Desktop / 12 Mobile) */}
+                  <div className="sm:col-span-5 lg:col-span-5">
+                    <CustomerBentoLabelTile
+                      customerId={item.id}
+                      customerCode={valueOf(item.customer_number || item.customer_code)}
+                      customerName={valueOf(item.customer_name || item.name)}
+                      popName={relationLabels.pop || valueOf(item.pop_name)}
+                      portLabel={servicePortRelations[0]?.port_label || (servicePortRelations[0]?.port_index ? `Port ${servicePortRelations[0].port_index}` : undefined)}
+                      odpName={servicePortRelations[0]?.odpDevice?.device_name || undefined}
+                      defaultTemplateStyle={qrLabelPatchCordStyle}
+                      publicUrl={buildCustomerQrHref({ appBaseUrl: APP_BASE_URL, customerId: item.id })}
+                    />
+                  </div>
+
+                  {/* TILE 3: Lokasi & Geotagging (6 Cols Desktop / 12 Mobile) */}
+                  <div className="sm:col-span-6 lg:col-span-6">
+                    <CustomerBentoLocationTile
+                      address={valueOf(item.address)}
+                      city={relationLabels.city || valueOf(item.city)}
+                      province={relationLabels.province || valueOf(item.province)}
+                      latitude={item.latitude as number | string | null | undefined}
+                      longitude={item.longitude as number | string | null | undefined}
+                      onOpenNavigation={() => setNavModalOpen(true)}
+                    />
+                  </div>
+
+                  {/* TILE 4: Koneksi Jaringan & Port ODP (6 Cols Desktop / 12 Mobile) */}
+                  <div className="sm:col-span-6 lg:col-span-6">
+                    <CustomerBentoConnectionTile
+                      ports={servicePortRelations}
+                      loading={loadingServicePortRelations}
+                    />
+                  </div>
+                </div>
+              </div>
             ) : (
-              /* Non-device forms (customers, projects, routes) */
+              /* Non-device forms (projects, routes) */
               <div className="rounded-[2rem] border border-border/40 bg-muted/10 p-2 sm:p-3 shadow-xs">
                 <Card className="rounded-[calc(2rem-0.5rem)] border-border/60 shadow-xs glass-inset">
                   <CardHeader>
@@ -3548,9 +3666,6 @@ if (!category) {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {category.resource === "customers" ? (
-                      <CustomerDetailForm item={item} relationLabels={relationLabels} relationLoading={relationLabelsLoading} />
-                    ) : null}
                     {category.resource === "projects" ? (
                       <ProjectDetailForm
                         item={item}
@@ -3567,7 +3682,7 @@ if (!category) {
                     {category.resource === "routes" ? (
                       <RouteDetailForm item={item} relationLabels={relationLabels} relationLoading={relationLabelsLoading} />
                     ) : null}
-                    {category.resource !== "customers" && category.resource !== "projects" && category.resource !== "routes" ? (
+                    {category.resource !== "projects" && category.resource !== "routes" ? (
                       <GenericDeviceRawSection item={item} />
                     ) : null}
 
@@ -3754,7 +3869,7 @@ if (!category) {
           onOpenChange={setNavModalOpen}
           token={token || ""}
           deviceId={String(item.id)}
-          deviceName={String(item.device_name || item.pop_name || item.device_id || item.pop_code || "")}
+          deviceName={String(item.customer_name || item.device_name || item.pop_name || item.device_id || item.pop_code || item.customer_number || "")}
           deviceLat={Number(item.latitude)}
           deviceLng={Number(item.longitude)}
         />
@@ -3763,33 +3878,188 @@ if (!category) {
   );
 }
 
-function CustomerDetailForm({
-  item,
+const CUSTOMER_STATUS_OPTIONS = ["active", "suspended", "terminated", "draft"];
+
+function CustomerDetailEditForm({
+  form,
+  onChange,
+  editing,
+  popOptions,
+  projectOptions,
   relationLabels,
   relationLoading = false,
 }: {
-  item: GenericItem;
+  form: EditableForm;
+  onChange: React.Dispatch<React.SetStateAction<EditableForm>>;
+  editing: boolean;
+  popOptions: PopLookupOption[];
+  projectOptions: ProjectLookupOption[];
   relationLabels: RelationLabels;
   relationLoading?: boolean;
 }) {
-  const display = buildCustomerRelationDisplay(item, relationLabels);
-
   return (
-    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-      <DisplayField label="Customer Name" value={valueOf(item.customer_name, "-")} compact />
-      <DisplayField label="CID" value={valueOf(item.customer_number, "-")} compact />
-      <DisplayField label="Service Type" value={display.serviceType} loading={relationLoading} compact />
-      <DisplayField label="POP" value={display.pop} loading={relationLoading} compact />
-      <DisplayField label="Project" value={display.project} loading={relationLoading} compact />
-      <DisplayField label="Region" value={display.region} loading={relationLoading} compact />
-      <DisplayField label="Status" value={valueOf(item.status, "-")} compact />
-      <DisplayField label="Installation Date" value={formatDate(valueOf(item.installation_date))} compact />
-      <DisplayField label="Tags" value={arrayToCsv(item.tags) || "-"} compact />
-      <DisplayField className="md:col-span-2 xl:col-span-3" label="Address" value={valueOf(item.address, "-")} compact />
-      <DisplayField label="Province" value={relationLabels.province || valueOf(item.province, "-")} loading={relationLoading} compact />
-      <DisplayField label="City/Kabupaten" value={relationLabels.city || valueOf(item.city, "-")} loading={relationLoading} compact />
-      <DisplayField label="Longitude" value={valueOf(item.longitude, "-")} compact />
-      <DisplayField label="Latitude" value={valueOf(item.latitude, "-")} compact />
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="px-3 py-2">
+          <CardTitle className="text-sm">Identitas &amp; Layanan</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
+          <Field
+            label="Customer Name"
+            value={form.customer_name || ""}
+            onChange={(v) => onChange((p) => ({ ...p, customer_name: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="CID / Customer Number"
+            value={form.customer_number || ""}
+            onChange={(v) => onChange((p) => ({ ...p, customer_number: v }))}
+            disabled={!editing}
+            compact
+          />
+          <SelectField
+            label="Status"
+            value={form.status || "active"}
+            options={CUSTOMER_STATUS_OPTIONS}
+            onValueChange={(v) => onChange((p) => ({ ...p, status: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Service Type"
+            value={form.service_type || ""}
+            onChange={(v) => onChange((p) => ({ ...p, service_type: v }))}
+            disabled={!editing}
+            compact
+          />
+          {editing ? (
+            <div className="space-y-1">
+              <Label>POP Gateway</Label>
+              <Combobox
+                value={form.pop_id || ""}
+                onValueChange={(v) => onChange((p) => ({ ...p, pop_id: v }))}
+                options={popOptions.map((pop) => ({
+                  value: pop.id,
+                  label: `${pop.pop_name || "POP"} (${pop.pop_code || pop.id})`,
+                }))}
+                placeholder="Pilih POP Gateway"
+                searchPlaceholder="Cari POP..."
+                triggerClassName="h-8 text-xs"
+              />
+            </div>
+          ) : (
+            <DisplayField label="POP" value={relationLabels.pop || "-"} loading={relationLoading} compact />
+          )}
+          {editing ? (
+            <div className="space-y-1">
+              <Label>Project</Label>
+              <Combobox
+                value={form.project_id || ""}
+                onValueChange={(v) => onChange((p) => ({ ...p, project_id: v }))}
+                options={projectOptions.map((proj) => ({
+                  value: proj.id,
+                  label: `${proj.project_name || "Project"} (${proj.project_code || proj.id})`,
+                }))}
+                placeholder="Pilih Project"
+                searchPlaceholder="Cari Project..."
+                triggerClassName="h-8 text-xs"
+              />
+            </div>
+          ) : (
+            <DisplayField label="Project" value={relationLabels.project || "-"} loading={relationLoading} compact />
+          )}
+          <Field
+            label="Tanggal Instalasi"
+            type="date"
+            value={form.installation_date || ""}
+            onChange={(v) => onChange((p) => ({ ...p, installation_date: v }))}
+            disabled={!editing}
+            compact
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="px-3 py-2">
+          <CardTitle className="text-sm">Kontak Pelanggan</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
+          <Field
+            label="Nama Kontak (PIC)"
+            value={form.contact_name || ""}
+            onChange={(v) => onChange((p) => ({ ...p, contact_name: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Nomor Telepon"
+            value={form.contact_phone || ""}
+            onChange={(v) => onChange((p) => ({ ...p, contact_phone: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Email"
+            type="email"
+            value={form.email || ""}
+            onChange={(v) => onChange((p) => ({ ...p, email: v }))}
+            disabled={!editing}
+            compact
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="px-3 py-2">
+          <CardTitle className="text-sm">Lokasi &amp; Geotagging</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-2 px-3 pb-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
+          <Field
+            label="Alamat Lengkap"
+            value={form.address || ""}
+            onChange={(v) => onChange((p) => ({ ...p, address: v }))}
+            disabled={!editing}
+            className="md:col-span-2 xl:col-span-3"
+            compact
+          />
+          <Field
+            label="Kota / Kabupaten"
+            value={form.city || ""}
+            onChange={(v) => onChange((p) => ({ ...p, city: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Provinsi"
+            value={form.province || ""}
+            onChange={(v) => onChange((p) => ({ ...p, province: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Latitude"
+            value={form.latitude || ""}
+            onChange={(v) => onChange((p) => ({ ...p, latitude: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Longitude"
+            value={form.longitude || ""}
+            onChange={(v) => onChange((p) => ({ ...p, longitude: v }))}
+            disabled={!editing}
+            compact
+          />
+          <Field
+            label="Tags (Pisahkan koma)"
+            value={form.tags || ""}
+            onChange={(v) => onChange((p) => ({ ...p, tags: v }))}
+            disabled={!editing}
+            compact
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -4516,6 +4786,31 @@ function SelectField({
 }
 
 function buildEditableForm(item: GenericItem, resource: string, topologySummary?: DeviceTopologySummary | null): EditableForm {
+  if (resource === "customers") {
+    return {
+      customer_name: valueOf(item.customer_name || item.name),
+      customer_number: valueOf(item.customer_number || item.customer_code),
+      status: valueOf(item.status, "active"),
+      service_type_id: valueOf(item.service_type_id),
+      service_type: valueOf(item.service_type),
+      pop_id: valueOf(item.pop_id),
+      project_id: valueOf(item.project_id),
+      region_id: valueOf(item.region_id),
+      installation_date: valueOf(item.installation_date),
+      contact_name: valueOf(item.contact_name),
+      contact_phone: valueOf(item.contact_phone),
+      email: valueOf(item.email),
+      address: valueOf(item.address),
+      province_id: valueOf(item.province_id),
+      city_id: valueOf(item.city_id),
+      province: valueOf(item.province),
+      city: valueOf(item.city),
+      longitude: valueOf(item.longitude),
+      latitude: valueOf(item.latitude),
+      tags: arrayToCsv(item.tags),
+    };
+  }
+
   if (resource === "pops") {
     const custom = (item.custom_fields || {}) as Record<string, unknown>;
     return {
@@ -4621,6 +4916,31 @@ function buildEditableForm(item: GenericItem, resource: string, topologySummary?
 }
 
 function buildUpdatePayload(form: EditableForm, resource: string, originalItem?: GenericItem | null): Record<string, unknown> {
+  if (resource === "customers") {
+    return {
+      customer_name: nullIfEmpty(form.customer_name),
+      customer_number: nullIfEmpty(form.customer_number),
+      status: nullIfEmpty(form.status),
+      service_type_id: nullIfEmpty(form.service_type_id),
+      service_type: nullIfEmpty(form.service_type),
+      pop_id: nullIfEmpty(form.pop_id),
+      project_id: nullIfEmpty(form.project_id),
+      region_id: nullIfEmpty(form.region_id),
+      installation_date: nullIfEmpty(form.installation_date),
+      contact_name: nullIfEmpty(form.contact_name),
+      contact_phone: nullIfEmpty(form.contact_phone),
+      email: nullIfEmpty(form.email),
+      address: nullIfEmpty(form.address),
+      province_id: nullIfEmpty(form.province_id),
+      city_id: nullIfEmpty(form.city_id),
+      province: nullIfEmpty(form.province),
+      city: nullIfEmpty(form.city),
+      longitude: numberOrNull(form.longitude),
+      latitude: numberOrNull(form.latitude),
+      tags: csvToArray(form.tags),
+    };
+  }
+
   const normalizedValidation = normalizeValidationPayload(form.validation_status, form.validation_date);
 
   if (resource === "pops") {

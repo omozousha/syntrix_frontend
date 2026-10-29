@@ -92,7 +92,17 @@ import { buildCategoryApiPath, getCategoryBySlug } from "@/lib/data-management-c
 import { MASTER_DATA_FORM_CONFIG } from "@/lib/master-data-form-config";
 import { MasterDataFormFields, type LookupOptions } from "@/components/features/master-data/master-data-form-renderer";
 import { buildDeviceListDisplay, type DeviceListLookupMaps } from "@/lib/display-adapters/device-list-display-adapter";
-import { buildDeviceQrHref, drawQrLabelPdf, formatQrPopLabel, loadQrLabelLogoDataUrl, loadQrLabelSettings } from "@/lib/qr-label";
+import {
+  buildCustomerQrHref,
+  buildDeviceQrHref,
+  buildPatchCordLabelPngDataUrl,
+  drawPatchCordLabelPdf,
+  drawQrLabelPdf,
+  formatQrPopLabel,
+  loadQrLabelLogoDataUrl,
+  loadQrLabelSettings,
+  type PatchCordLabelPayload,
+} from "@/lib/qr-label";
 import { mapValidationStatus } from "@/lib/validation-status";
 import {
   type GenericItem,
@@ -364,7 +374,7 @@ export default function DataManagementListPage() {
   const isSoftDeleteResource = supportsSoftDeleteResource(category?.resource || "");
   const supportsPopFilter = supportsPopFilterResource(category?.resource || "");
   const supportsProjectFilter = supportsProjectFilterResource(category?.resource || "");
-  const supportsQrBulkDownload = category?.resource === "devices";
+  const supportsQrBulkDownload = category?.resource === "devices" || category?.resource === "customers";
   const isOdpCategory = category?.resource === "devices" && String(category?.deviceTypeKey || "").toUpperCase() === "ODP";
   const renameConfig = getRenameConfig(category?.resource || "");
   const createDefaults = useMemo(() => getCreateDefaults(category?.resource || ""), [category?.resource]);
@@ -1636,8 +1646,97 @@ export default function DataManagementListPage() {
     }
   }
 
+  async function buildCustomerPatchCordBulkPdf(rows: GenericItem[]) {
+    const qrLabelSetting = await loadQrLabelSettings(token).catch(() => null);
+    const variant = (qrLabelSetting?.customer_patch_cord_style === "qr" ? "qr" : "plain") as "plain" | "qr";
+
+    const patchCordItems: PatchCordLabelPayload[] = await Promise.all(
+      rows.map(async (row) => {
+        const customerId = row.id;
+        const rawCid = pick(row, ["customer_code", "customer_number", "id"]) || "CSC-XXXX";
+        const cleanCid = rawCid.replace(/^CID:\s*/i, "").trim().toUpperCase();
+        const popId = pick(row, ["pop_id"]);
+        const popName = (popId ? listDisplayLookups.pops?.[popId] : null) || pick(row, ["pop_name"]) || "POP";
+        const customerName = pick(row, ["customer_name", "name"]) || undefined;
+
+        let qrDataUrl: string | undefined;
+        if (variant === "qr") {
+          const href = buildCustomerQrHref({ appBaseUrl: APP_BASE_URL, customerId });
+          qrDataUrl = await QRCode.toDataURL(href, {
+            margin: 0,
+            width: 140,
+            errorCorrectionLevel: "M",
+            color: { dark: "#020617", light: "#FFFFFF" },
+          }).catch(() => undefined);
+        }
+
+        return {
+          popName: popName.trim().toUpperCase(),
+          customerCode: cleanCid,
+          customerId,
+          customerName,
+          variant,
+          qrDataUrl,
+        };
+      })
+    );
+
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    await drawPatchCordLabelPdf(doc, patchCordItems);
+    doc.save(`customer-patch-cord-labels-${new Date().toISOString().slice(0, 10)}.pdf`);
+    return patchCordItems.length;
+  }
+
+  async function handleDownloadCustomerLabelSingle(row: GenericItem) {
+    try {
+      const qrLabelSetting = await loadQrLabelSettings(token).catch(() => null);
+      const variant = (qrLabelSetting?.customer_patch_cord_style === "qr" ? "qr" : "plain") as "plain" | "qr";
+      const customerId = row.id;
+      const rawCid = pick(row, ["customer_code", "customer_number", "id"]) || "CSC-XXXX";
+      const cleanCid = rawCid.replace(/^CID:\s*/i, "").trim().toUpperCase();
+      const popId = pick(row, ["pop_id"]);
+      const popName = (popId ? listDisplayLookups.pops?.[popId] : null) || pick(row, ["pop_name"]) || "POP";
+      const customerName = pick(row, ["customer_name", "name"]) || undefined;
+
+      let qrDataUrl: string | undefined;
+      if (variant === "qr") {
+        const href = buildCustomerQrHref({ appBaseUrl: APP_BASE_URL, customerId });
+        qrDataUrl = await QRCode.toDataURL(href, {
+          margin: 0,
+          width: 140,
+          errorCorrectionLevel: "M",
+          color: { dark: "#020617", light: "#FFFFFF" },
+        }).catch(() => undefined);
+      }
+
+      const payload: PatchCordLabelPayload = {
+        popName: popName.trim().toUpperCase(),
+        customerCode: cleanCid,
+        customerId,
+        customerName,
+        variant,
+        qrDataUrl,
+      };
+
+      const dataUrl = await buildPatchCordLabelPngDataUrl(payload);
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      const cidSlug = cleanCid.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+      link.download = `label-patchcord-${cidSlug}-${variant}.png`;
+      link.click();
+      setSuccess(`Label patch cord customer ${cleanCid} berhasil diunduh.`);
+    } catch (err) {
+      setError((err as Error).message || "Gagal mengunduh label customer");
+    }
+  }
+
   async function buildQrPdf(rows: GenericItem[]) {
-    if (!category || category.resource !== "devices") return 0;
+    if (!category) return 0;
+    if (category.resource === "customers") {
+      return buildCustomerPatchCordBulkPdf(rows);
+    }
+    if (category.resource !== "devices") return 0;
     const [logoDataUrl, qrLabelSetting] = await Promise.all([
       loadQrLabelLogoDataUrl(token).catch(() => ""),
       loadQrLabelSettings(token).catch(() => null),
@@ -1681,7 +1780,7 @@ export default function DataManagementListPage() {
   }
 
   function handleBulkDownloadQr() {
-    if (!category || category.resource !== "devices") return;
+    if (!category || (category.resource !== "devices" && category.resource !== "customers")) return;
     if (selectedIds.size === 0) {
       setError(t("dataList.selectAtLeastOneDeviceQr"));
       return;
@@ -1690,7 +1789,7 @@ export default function DataManagementListPage() {
   }
 
   function handleDownloadFilteredQr() {
-    if (!category || category.resource !== "devices") return;
+    if (!category || (category.resource !== "devices" && category.resource !== "customers")) return;
     if (!idsFilter.length) {
       setError(t("dataList.noItemsForQrFilter"));
       return;
@@ -1699,7 +1798,7 @@ export default function DataManagementListPage() {
   }
 
   async function executeDownloadQrConfirmed() {
-    if (!downloadQrRequest || !category || category.resource !== "devices") return;
+    if (!downloadQrRequest || !category || (category.resource !== "devices" && category.resource !== "customers")) return;
     const request = downloadQrRequest;
     setDownloadQrRequest(null);
     setDownloadingQr(true);
@@ -2158,6 +2257,12 @@ export default function DataManagementListPage() {
                           <Eye className="mr-1 size-4" />
                           Detail
                         </ContextMenuItem>
+                        {category.resource === "customers" ? (
+                          <ContextMenuItem onSelect={() => void handleDownloadCustomerLabelSingle(rowItem)}>
+                            <Download className="mr-1 size-4" />
+                            Download Label Patch Cord
+                          </ContextMenuItem>
+                        ) : null}
                         {category.resource === "devices" && canTraceTopology ? (
                           <>
                             <ContextMenuItem onSelect={() => router.push(getTraceHref(rowItem))}>
