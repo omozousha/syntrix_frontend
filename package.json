@@ -9,7 +9,7 @@
     "lint": "eslint",
     "check:consistency": "node scripts/check-frontend-consistency.mjs",
     "check:locales": "node scripts/check-locales.mjs",
-    "test:frontend": "node scripts/test-frontend-topology-components.js && node scripts/test-frontend-odp-ont-assignment.js && node scripts/test-odp-formatters.js && node scripts/test-homepassed-calculator.mjs && node scripts/test-frontend-locales.mjs",
+    "test:frontend": "node scripts/test-frontend-topology-components.js && node scripts/test-frontend-odp-ont-assignment.js && node scripts/test-odp-formatters.js && node scripts/test-homepassed-calculator.mjs && node scripts/test-frontend-locales.mjs && node scripts/test-hazard-qr-label.mjs",
     "audit:relation-display": "node scripts/audit-relation-display.mjs",
     "audit:performance-safety": "node scripts/audit-performance-safety.mjs"
   },

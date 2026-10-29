@@ -1668,6 +1668,8 @@ export default function DataManagementListPage() {
           ),
           logoDataUrl,
           footerText: qrLabelSetting?.footer_text || undefined,
+          validationDate: pick(row, ["validation_date", "last_validation_at"]) || null,
+          templateStyle: qrLabelSetting?.device_template_style || "default",
         };
       }),
     );

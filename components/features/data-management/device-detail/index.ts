@@ -20,6 +20,7 @@ export {
 export { DeviceGallerySection } from "@/components/features/data-management/device-detail/device-gallery-section";
 export { DeviceOperationalSummary } from "@/components/features/data-management/device-detail/device-operational-summary";
 export { DevicePortSummarySection } from "@/components/features/data-management/device-detail/device-port-summary-section";
+export { PatchCordLabelsSection } from "@/components/features/data-management/device-detail/patch-cord-labels-section";
 export { DeviceTechnicalSummarySection } from "@/components/features/data-management/device-detail/device-technical-summary-section";
 export { DeviceValidationHistorySection } from "@/components/features/data-management/device-detail/device-validation-history-section";
 export { GenericDeviceRawSection } from "@/components/features/data-management/device-detail/generic-device-raw-section";

@@ -22,6 +22,7 @@ type DevicePort = {
   customer_id?: string | null;
   customer_name?: string | null;
   customer_number?: string | null;
+  customer_code?: string | null;
   ont_device_id?: string | null;
   notes?: string | null;
   updated_at?: string | null;

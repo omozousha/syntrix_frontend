@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import {
+  buildPatchCordLabelPngDataUrl,
   buildQrLabelPngDataUrl,
   clearQrLabelLogoCache,
   loadQrLabelLogoDataUrl,
@@ -40,6 +41,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
   const [setting, setSetting] = useState<QrLabelSettings | null>(null);
   const [logoPreviewDataUrl, setLogoPreviewDataUrl] = useState("");
   const [labelPreviewDataUrl, setLabelPreviewDataUrl] = useState("");
+  const [patchCordPreviewDataUrl, setPatchCordPreviewDataUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [cropSourceDataUrl, setCropSourceDataUrl] = useState("");
   const [cropPreviewDataUrl, setCropPreviewDataUrl] = useState("");
@@ -54,6 +56,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
   const [successTitle, setSuccessTitle] = useState("");
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+  const [previewTab, setPreviewTab] = useState<"device" | "patch_cord">("device");
 
   useEffect(() => {
     let cancelled = false;
@@ -102,10 +105,27 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
           qrDataUrl,
           logoDataUrl: logoPreviewDataUrl || undefined,
           footerText: setting?.footer_text || undefined,
+          validationDate: "2026-10-29",
+          templateStyle: setting?.device_template_style || "default",
         });
         if (!cancelled) setLabelPreviewDataUrl(dataUrl);
       } catch {
         if (!cancelled) setLabelPreviewDataUrl("");
+      }
+
+      try {
+        const patchCordDataUrl = await buildPatchCordLabelPngDataUrl({
+          popName: "DIPATIUKUR",
+          customerCode: "CSC-2026/0891",
+          customerName: "PT Sentosa Digital Solusindo",
+          portLabel: "PORT 04",
+          odpName: "AGD-ODP-01.01",
+          customerId: "sample-customer-id",
+          variant: setting?.customer_patch_cord_style === "qr" ? "qr" : "plain",
+        });
+        if (!cancelled) setPatchCordPreviewDataUrl(patchCordDataUrl);
+      } catch {
+        if (!cancelled) setPatchCordPreviewDataUrl("");
       }
     }
 
@@ -113,7 +133,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [loading, logoPreviewDataUrl, setting?.footer_text]);
+  }, [loading, logoPreviewDataUrl, setting?.footer_text, setting?.device_template_style, setting?.customer_patch_cord_style]);
 
   useEffect(() => {
     if (!cropSourceDataUrl) {
@@ -222,6 +242,8 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
         body: {
           qr_logo_attachment_id: logoAttachmentId,
           footer_text: setting?.footer_text || "Scan QR untuk membuka detail/validasi Device",
+          device_template_style: setting?.device_template_style || "default",
+          customer_patch_cord_style: setting?.customer_patch_cord_style || "plain",
           is_active: true,
         },
       });
@@ -257,6 +279,8 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
           reset_logo: true,
           // ponytail: default footer copy is persisted data (never localized) to keep API payload stable across locale toggle
           footer_text: setting?.footer_text || "Scan QR untuk membuka detail/validasi Device",
+          device_template_style: setting?.device_template_style || "default",
+          customer_patch_cord_style: setting?.customer_patch_cord_style || "plain",
           is_active: true,
         },
       });
@@ -362,19 +386,56 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                   </Button>
                   {mobilePreviewOpen ? (
                     <div className="mt-3 space-y-2">
-                      <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{t("qrLabel.previewLabel")}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{t("qrLabel.previewLabel")}</p>
+                        <div className="flex items-center gap-1 rounded-xl border border-border/40 bg-muted/20 p-0.5">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={previewTab === "device" ? "default" : "ghost"}
+                            className="h-6 rounded-lg px-2 font-mono text-[9px] uppercase tracking-[0.06em]"
+                            onClick={() => setPreviewTab("device")}
+                          >
+                            {t("qrLabel.previewDeviceTab")}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={previewTab === "patch_cord" ? "default" : "ghost"}
+                            className="h-6 rounded-lg px-2 font-mono text-[9px] uppercase tracking-[0.06em]"
+                            onClick={() => setPreviewTab("patch_cord")}
+                          >
+                            {t("qrLabel.previewPatchCordTab")}
+                          </Button>
+                        </div>
+                      </div>
                       <div className="overflow-hidden rounded-2xl border border-border/60 bg-white p-3 shadow-2xs">
-                        {labelPreviewDataUrl ? (
-                          <Image
-                            src={labelPreviewDataUrl}
-                            alt={t("qrLabel.previewAlt")}
-                            width={900}
-                            height={450}
-                            unoptimized
-                            className="h-auto w-full rounded-xl"
-                          />
+                        {previewTab === "device" ? (
+                          labelPreviewDataUrl ? (
+                            <Image
+                              src={labelPreviewDataUrl}
+                              alt={t("qrLabel.previewAlt")}
+                              width={900}
+                              height={450}
+                              unoptimized
+                              className="h-auto w-full rounded-xl"
+                            />
+                          ) : (
+                            <div className="flex aspect-[2/1] items-center justify-center text-xs text-muted-foreground">{t("qrLabel.previewUnavailable")}</div>
+                          )
                         ) : (
-                          <div className="flex aspect-[2/1] items-center justify-center text-xs text-muted-foreground">{t("qrLabel.previewUnavailable")}</div>
+                          patchCordPreviewDataUrl ? (
+                            <Image
+                              src={patchCordPreviewDataUrl}
+                              alt="Patch Cord Preview"
+                              width={720}
+                              height={220}
+                              unoptimized
+                              className="h-auto w-full rounded-xl"
+                            />
+                          ) : (
+                            <div className="flex aspect-[72/22] items-center justify-center text-xs text-muted-foreground">{t("qrLabel.previewUnavailable")}</div>
+                          )
                         )}
                       </div>
                     </div>
@@ -464,6 +525,101 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                   </div>
                 ) : null}
 
+                {/* Template Selection Section */}
+                <div className="space-y-4 rounded-2xl border border-border/60 bg-muted/10 p-4 shadow-2xs glass-inset">
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                    <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground">
+                      {t("qrLabel.templateSectionTitle")}
+                    </span>
+                  </div>
+
+                  {/* Device Template */}
+                  <div className="space-y-2">
+                    <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
+                      {t("qrLabel.deviceTemplateLabel")}
+                    </Label>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <Button
+                        type="button"
+                        variant={setting?.device_template_style !== "hazard" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSetting((prev) => ({ ...(prev || {}), device_template_style: "default" }))}
+                        disabled={saving}
+                        className="h-auto justify-start rounded-xl p-2.5 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.06em]">
+                            {t("qrLabel.deviceTemplateDefault")}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground opacity-80">
+                            900×450 · Clean White
+                          </p>
+                        </div>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={setting?.device_template_style === "hazard" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSetting((prev) => ({ ...(prev || {}), device_template_style: "hazard" }))}
+                        disabled={saving}
+                        className="h-auto justify-start rounded-xl p-2.5 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.06em]">
+                            {t("qrLabel.deviceTemplateHazard")}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground opacity-80">
+                            900×450 · Hazard Stripe
+                          </p>
+                        </div>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Customer Patch Cord Template */}
+                  <div className="space-y-2">
+                    <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
+                      {t("qrLabel.patchCordTemplateLabel")}
+                    </Label>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <Button
+                        type="button"
+                        variant={setting?.customer_patch_cord_style !== "qr" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSetting((prev) => ({ ...(prev || {}), customer_patch_cord_style: "plain" }))}
+                        disabled={saving}
+                        className="h-auto justify-start rounded-xl p-2.5 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.06em]">
+                            {t("qrLabel.patchCordTemplatePlain")}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground opacity-80">
+                            2-Panel · Text Only
+                          </p>
+                        </div>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={setting?.customer_patch_cord_style === "qr" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSetting((prev) => ({ ...(prev || {}), customer_patch_cord_style: "qr" }))}
+                        disabled={saving}
+                        className="h-auto justify-start rounded-xl p-2.5 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.06em]">
+                            {t("qrLabel.patchCordTemplateQr")}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground opacity-80">
+                            2-Panel · Scannable QR
+                          </p>
+                        </div>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Footer Text */}
                 <div className="space-y-1.5">
                   <Label htmlFor="qr-footer-text" className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
@@ -519,22 +675,62 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
           </div>
 
           {/* Desktop Preview */}
-          <div className="hidden min-w-0 space-y-2 xl:sticky xl:top-4 xl:block xl:self-start">
-            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{t("qrLabel.previewDesktopTitle")}</p>
+          <div className="hidden min-w-0 space-y-3 xl:sticky xl:top-4 xl:block xl:self-start">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{t("qrLabel.previewDesktopTitle")}</p>
+              <div className="flex items-center gap-1 rounded-xl border border-border/40 bg-muted/20 p-0.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={previewTab === "device" ? "default" : "ghost"}
+                  className="h-6 rounded-lg px-2 font-mono text-[9px] uppercase tracking-[0.06em]"
+                  onClick={() => setPreviewTab("device")}
+                >
+                  {t("qrLabel.previewDeviceTab")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={previewTab === "patch_cord" ? "default" : "ghost"}
+                  className="h-6 rounded-lg px-2 font-mono text-[9px] uppercase tracking-[0.06em]"
+                  onClick={() => setPreviewTab("patch_cord")}
+                >
+                  {t("qrLabel.previewPatchCordTab")}
+                </Button>
+              </div>
+            </div>
+
             <div className="overflow-hidden rounded-2xl border border-border/60 bg-white p-3.5 shadow-xs">
-              {labelPreviewDataUrl ? (
-                <Image
-                  src={labelPreviewDataUrl}
-                  alt={t("qrLabel.previewAlt")}
-                  width={900}
-                  height={450}
-                  unoptimized
-                  className="h-auto w-full max-w-full rounded-xl"
-                />
+              {previewTab === "device" ? (
+                labelPreviewDataUrl ? (
+                  <Image
+                    src={labelPreviewDataUrl}
+                    alt={t("qrLabel.previewAlt")}
+                    width={900}
+                    height={450}
+                    unoptimized
+                    className="h-auto w-full max-w-full rounded-xl"
+                  />
+                ) : (
+                  <div className="flex aspect-[2/1] items-center justify-center text-xs text-muted-foreground">
+                    {t("qrLabel.previewUnavailable")}
+                  </div>
+                )
               ) : (
-                <div className="flex aspect-[2/1] items-center justify-center text-xs text-muted-foreground">
-                  {t("qrLabel.previewUnavailable")}
-                </div>
+                patchCordPreviewDataUrl ? (
+                  <Image
+                    src={patchCordPreviewDataUrl}
+                    alt="Patch Cord Preview"
+                    width={720}
+                    height={220}
+                    unoptimized
+                    className="h-auto w-full max-w-full rounded-xl"
+                  />
+                ) : (
+                  <div className="flex aspect-[72/22] items-center justify-center text-xs text-muted-foreground">
+                    {t("qrLabel.previewUnavailable")}
+                  </div>
+                )
               )}
             </div>
             <p className="text-xs text-muted-foreground">

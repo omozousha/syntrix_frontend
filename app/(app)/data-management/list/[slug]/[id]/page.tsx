@@ -19,6 +19,7 @@ import {
   DeviceFormSelection,
   DeviceGallerySection,
   DevicePortSummarySection,
+  PatchCordLabelsSection,
   GenericDeviceRawSection,
   OdcCoreChainSummarySection,
   OtbCoreChainSummarySection,
@@ -117,6 +118,7 @@ type DevicePort = {
   customer_id?: string | null;
   customer_name?: string | null;
   customer_number?: string | null;
+  customer_code?: string | null;
   ont_device_id?: string | null;
   occupied_at?: string | null;
   notes?: string | null;
@@ -610,6 +612,8 @@ export default function DataManagementDetailPage() {
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [qrLabelLogoDataUrl, setQrLabelLogoDataUrl] = useState("");
   const [qrLabelFooterText, setQrLabelFooterText] = useState("");
+  const [qrLabelTemplateStyle, setQrLabelTemplateStyle] = useState<"default" | "hazard">("default");
+  const [qrLabelPatchCordStyle, setQrLabelPatchCordStyle] = useState<"plain" | "qr">("plain");
   const [qrLabelReady, setQrLabelReady] = useState(false);
   const [odpCustomers, setOdpCustomers] = useState<OdpCustomerOption[]>([]);
   const [odpOntDevices, setOdpOntDevices] = useState<OdpOntOption[]>([]);
@@ -2205,6 +2209,8 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     if (!token || !isDeviceResource) {
       setQrLabelLogoDataUrl("");
       setQrLabelFooterText("");
+      setQrLabelTemplateStyle("default");
+      setQrLabelPatchCordStyle("plain");
       setQrLabelReady(false);
       return;
     }
@@ -2218,6 +2224,8 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       if (cancelled) return;
       setQrLabelLogoDataUrl(logoDataUrl);
       setQrLabelFooterText(setting?.footer_text || "");
+      setQrLabelTemplateStyle(setting?.device_template_style || "default");
+      setQrLabelPatchCordStyle(setting?.customer_patch_cord_style || "plain");
       setQrLabelReady(true);
     });
 
@@ -2739,6 +2747,8 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         qrDataUrl,
         logoDataUrl: qrLabelLogoDataUrl || undefined,
         footerText: qrLabelFooterText || undefined,
+        validationDate: (item.validation_date as string) || (item.last_validation_at as string) || null,
+        templateStyle: qrLabelTemplateStyle,
       });
       const link = document.createElement("a");
       link.href = dataUrl;
@@ -3242,6 +3252,20 @@ if (!category) {
                       loading={loadingOdpPorts}
                     />
                   </div>
+
+                  {/* TILE 5B: Label Patch Cord Customer (12 Cols Full Width) */}
+                  {valueOf(item.device_type_key).toUpperCase() === "ODP" && (
+                    <div className="col-span-1 sm:col-span-12">
+                      <PatchCordLabelsSection
+                        odpName={valueOf(item.device_name, "ODP")}
+                        odpCode={valueOf(item.device_id)}
+                        popName={relationLabels.pop || valueOf(item.pop_name, "POP")}
+                        ports={odpPorts}
+                        defaultTemplateStyle={qrLabelPatchCordStyle}
+                        loading={loadingOdpPorts}
+                      />
+                    </div>
+                  )}
 
                   {/* TILE 6: Galeri Foto Aset (12 Cols Full Width) */}
                   <div className="col-span-1 sm:col-span-12">
