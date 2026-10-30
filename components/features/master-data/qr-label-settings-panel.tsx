@@ -538,10 +538,10 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                     <Label className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">
                       {t("qrLabel.deviceTemplateLabel")}
                     </Label>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                       <Button
                         type="button"
-                        variant={setting?.device_template_style !== "hazard" ? "default" : "outline"}
+                        variant={setting?.device_template_style === "default" || (!setting?.device_template_style) ? "default" : "outline"}
                         size="sm"
                         onClick={() => setSetting((prev) => ({ ...(prev || {}), device_template_style: "default" }))}
                         disabled={saving}
@@ -570,6 +570,23 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                           </p>
                           <p className="text-[10px] text-muted-foreground opacity-80">
                             900×450 · Hazard Stripe
+                          </p>
+                        </div>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={setting?.device_template_style === "hazard_compact" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSetting((prev) => ({ ...(prev || {}), device_template_style: "hazard_compact" }))}
+                        disabled={saving}
+                        className="h-auto justify-start rounded-xl p-2.5 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.06em]">
+                            Hazard Box
+                          </p>
+                          <p className="text-[10px] text-muted-foreground opacity-80">
+                            512×400 · ODP Outdoor
                           </p>
                         </div>
                       </Button>

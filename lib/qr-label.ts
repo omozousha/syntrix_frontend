@@ -12,7 +12,7 @@ export type QrLabelPayload = {
   logoDataUrl?: string;
   footerText?: string;
   validationDate?: string | null;
-  templateStyle?: "default" | "hazard" | null;
+  templateStyle?: "default" | "hazard" | "hazard_compact" | null;
 };
 
 export type QrLabelSettings = {
@@ -21,7 +21,7 @@ export type QrLabelSettings = {
   qr_logo_url?: string | null;
   qr_logo_original_name?: string | null;
   footer_text?: string | null;
-  device_template_style?: "default" | "hazard" | null;
+  device_template_style?: "default" | "hazard" | "hazard_compact" | null;
   customer_patch_cord_style?: "plain" | "qr" | null;
   is_active?: boolean;
   updated_at?: string | null;
@@ -84,6 +84,9 @@ export function buildCustomerQrHref({
 }
 
 export async function buildQrLabelPngDataUrl(payload: QrLabelPayload) {
+  if (payload.templateStyle === "hazard_compact") {
+    return buildHazardCompactQrLabelPngDataUrl(payload);
+  }
   if (payload.templateStyle === "hazard") {
     return buildHazardQrLabelPngDataUrl(payload);
   }
@@ -234,6 +237,220 @@ export function drawHazardBorder(
   const innerH = outerH - innerInset * 2;
   drawRoundedCanvasRect(context, innerX, innerY, innerW, innerH, innerRadius, "#ffffff", "#020617", 2);
   context.restore();
+}
+
+export async function buildHazardCompactQrLabelPngDataUrl({
+  deviceName,
+  deviceCode,
+  deviceType,
+  popName,
+  qrDataUrl,
+  logoDataUrl: providedLogoDataUrl,
+  validationDate,
+}: QrLabelPayload) {
+  // 2x high-res canvas: 1024×800 (base design 512×400)
+  const W = 1024;
+  const H = 800;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Browser tidak mendukung canvas export.");
+
+  const qrImage = await loadImage(qrDataUrl);
+  const logoDataUrl = providedLogoDataUrl ?? (await loadDefaultQrLogoDataUrl().catch(() => ""));
+  const logoImage = logoDataUrl ? await loadImage(logoDataUrl).catch(() => null) : null;
+
+  const INK = "#0D0D0D";
+  const HAZARD_YELLOW = "#FBD215";
+  const ALERT_RED = "#E3262B";
+
+  // ── Outer hazard stripe border (-45deg yellow/black) ──
+  const outerR = 80; // 40px * 2
+  const borderW = 6; // 3px * 2
+  const stripeW = 22; // 11px * 2
+  const padding = 30; // 15px * 2
+
+  // Draw outer rounded rect with hazard stripe pattern
+  const stripePattern = createHazardPattern(ctx, stripeW);
+  drawRoundedCanvasRect(ctx, 0, 0, W, H, outerR, stripePattern, INK, borderW);
+
+  // ── Inner yellow body ──
+  const innerR = 56; // 28px * 2
+  const bodyX = padding;
+  const bodyY = padding;
+  const bodyW = W - padding * 2;
+  const bodyH = H - padding * 2;
+  drawRoundedCanvasRect(ctx, bodyX, bodyY, bodyW, bodyH, innerR, HAZARD_YELLOW, INK, borderW);
+
+  // ── Top White Card (QR + Specs) ──
+  const topCardH = 296; // 148px * 2
+  const topCardR = 40; // 20px * 2
+  const topCardX = bodyX + 20;
+  const topCardY = bodyY + 20;
+  const topCardW = bodyW - 40;
+  drawRoundedCanvasRect(ctx, topCardX, topCardY, topCardW, topCardH, topCardR, "#FFFFFF", INK, borderW);
+
+  // QR section (left side of top card)
+  const qrSectionW = 336; // 168px * 2
+  // Vertical divider
+  ctx.fillStyle = INK;
+  ctx.fillRect(topCardX + qrSectionW, topCardY + 10, borderW, topCardH - 20);
+
+  // QR code
+  ctx.imageSmoothingEnabled = false;
+  const qrPad = 20;
+  const qrDrawSize = qrSectionW - qrPad * 2;
+  const qrX = topCardX + qrPad;
+  const qrY = topCardY + qrPad;
+  ctx.drawImage(qrImage, qrX, qrY, qrDrawSize, qrDrawSize);
+  if (logoImage) drawQrLogoImageCanvas(ctx, logoImage, qrX + qrDrawSize / 2, qrY + qrDrawSize / 2, 104);
+  else drawDefaultQrLogoCanvas(ctx, qrX + qrDrawSize / 2, qrY + qrDrawSize / 2, 104);
+
+  // Text specs (right side of top card)
+  const textX = topCardX + qrSectionW + 28;
+  const textMaxW = topCardW - qrSectionW - 56;
+  ctx.fillStyle = INK;
+
+  drawAdaptiveCanvasText(ctx, deviceName, textX, topCardY + 52, textMaxW, {
+    weight: 800,
+    maxSize: 50,
+    minSize: 28,
+  });
+  drawAdaptiveCanvasText(ctx, `ID: ${deviceCode}`, textX, topCardY + 112, textMaxW, {
+    weight: 700,
+    maxSize: 35,
+    minSize: 20,
+  });
+  drawAdaptiveCanvasText(ctx, `TYPE: ${deviceType}`, textX, topCardY + 164, textMaxW, {
+    weight: 700,
+    maxSize: 35,
+    minSize: 20,
+  });
+  drawAdaptiveCanvasText(ctx, `POP: ${popName}`, textX, topCardY + 216, textMaxW, {
+    weight: 700,
+    maxSize: 35,
+    minSize: 20,
+  });
+
+  // ── Middle Warning Panel ──
+  const warnPanelH = 236; // 118px * 2
+  const warnPanelR = 48; // 24px * 2
+  const warnPanelY = topCardY + topCardH + 20;
+  const warnPanelX = bodyX + 20;
+  const warnPanelW = bodyW - 40;
+  drawRoundedCanvasRect(ctx, warnPanelX, warnPanelY, warnPanelW, warnPanelH, warnPanelR, HAZARD_YELLOW, INK, borderW);
+
+  // Warning triangle icon (left side)
+  const triX = warnPanelX + 30;
+  const triY = warnPanelY + 30;
+  const triW = 184; // 92px * 2
+  const triH = 164; // 82px * 2
+  ctx.save();
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.moveTo(triX + triW / 2, triY);
+  ctx.lineTo(triX + triW, triY + triH);
+  ctx.quadraticCurveTo(triX + triW + 4, triY + triH + 10, triX + triW - 12, triY + triH + 10);
+  ctx.lineTo(triX + 12, triY + triH + 10);
+  ctx.quadraticCurveTo(triX - 4, triY + triH + 10, triX, triY + triH);
+  ctx.closePath();
+  ctx.fill();
+  // Exclamation bar
+  ctx.fillStyle = HAZARD_YELLOW;
+  const barCX = triX + triW / 2;
+  ctx.beginPath();
+  ctx.roundRect(barCX - 9, triY + 48, 18, 48, 5);
+  ctx.fill();
+  // Exclamation dot
+  ctx.beginPath();
+  ctx.roundRect(barCX - 9, triY + 104, 18, 18, 5);
+  ctx.fill();
+  ctx.restore();
+
+  // Dark text box (right side of warning panel)
+  const textBoxX = triX + triW + 20;
+  const textBoxY = warnPanelY + 16;
+  const textBoxW = warnPanelW - (textBoxX - warnPanelX) - 16;
+  const textBoxH = warnPanelH - 32;
+  const textBoxR = 36; // 18px * 2
+  drawRoundedCanvasRect(ctx, textBoxX, textBoxY, textBoxW, textBoxH, textBoxR, INK, "transparent", 0);
+
+  // Warning text with colored accents
+  const wTextX = textBoxX + 20;
+  const wTextMaxW = textBoxW - 40;
+  const lineH = 34;
+  let wTextY = textBoxY + 48;
+
+  ctx.font = "bold 33px Arial, sans-serif";
+  // Line 1: "PERHATIAN: PERANGKAT INI SUDAH DI VALIDASI & MASUK DATABASE SYNTRIX."
+  const parts1 = [
+    { text: "PERHATIAN", color: ALERT_RED },
+    { text: ": PERANGKAT INI SUDAH DI VALIDASI & MASUK DATABASE ", color: "#FFFFFF" },
+    { text: "SYNTRIX", color: ALERT_RED },
+    { text: ".", color: "#FFFFFF" },
+  ];
+  let curX = wTextX;
+  for (const part of parts1) {
+    ctx.fillStyle = part.color;
+    ctx.fillText(part.text, curX, wTextY);
+    curX += ctx.measureText(part.text).width;
+  }
+
+  // Line 2
+  wTextY += lineH + 6;
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = "bold 30px Arial, sans-serif";
+  wrapCanvasText(
+    ctx,
+    "JIKA ADA PERUBAHAN DATA HARAP KOORDINASI DENGAN OM REGIONAL & TEAM INVENTORY.",
+    wTextX,
+    wTextY,
+    wTextMaxW,
+    lineH,
+  );
+
+  // ── Bottom Validation Date Card ──
+  const valCardH = 84; // 42px * 2
+  const valCardR = 44; // 22px * 2
+  const valCardY = warnPanelY + warnPanelH + 20;
+  const valCardX = bodyX + 20;
+  const valCardW = bodyW - 40;
+  drawRoundedCanvasRect(ctx, valCardX, valCardY, valCardW, valCardH, valCardR, "#FFFFFF", INK, borderW);
+
+  const dateStr = formatValidationDate(validationDate);
+  ctx.font = "800 32px Arial, sans-serif";
+  ctx.fillStyle = INK;
+  ctx.fillText("VALIDATION DATE:", valCardX + 30, valCardY + 56);
+  const labelW = ctx.measureText("VALIDATION DATE: ").width;
+  ctx.fillStyle = "#2563EB";
+  ctx.fillText(dateStr, valCardX + 30 + labelW, valCardY + 56);
+
+  return canvas.toDataURL("image/png");
+}
+
+function wrapCanvasText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+) {
+  const words = text.split(" ");
+  let line = "";
+  let curY = y;
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line, x, curY);
+      line = word;
+      curY += lineHeight;
+    } else {
+      line = test;
+    }
+  }
+  if (line) ctx.fillText(line, x, curY);
 }
 
 export async function buildHazardQrLabelPngDataUrl({
@@ -391,14 +608,18 @@ export async function drawQrLabelPdf(doc: JsPdfDocument, rows: QrLabelPayload[])
   const margin = 8;
   const gap = 4;
   const columns = 2;
-  const rowsPerPage = 6;
+  // hazard_compact uses 2×3 grid (6 labels/page, ~92×72mm each — larger physical size)
+  // default/hazard use 2×6 grid (12 labels/page, ~92×42mm each)
+  const isCompact = rows.some((r) => r.templateStyle === "hazard_compact");
+  const rowsPerPage = isCompact ? 3 : 6;
   const labelWidth = (pageWidth - margin * 2 - gap * (columns - 1)) / columns;
   const labelHeight = (pageHeight - margin * 2 - gap * (rowsPerPage - 1)) / rowsPerPage;
+  const perPage = columns * rowsPerPage;
   const labelImages = await Promise.all(rows.map((row) => buildQrLabelPngDataUrl(row)));
 
   labelImages.forEach((labelDataUrl, index) => {
-    if (index > 0 && index % (columns * rowsPerPage) === 0) doc.addPage();
-    const pageIndex = index % (columns * rowsPerPage);
+    if (index > 0 && index % perPage === 0) doc.addPage();
+    const pageIndex = index % perPage;
     const column = pageIndex % columns;
     const rowIndex = Math.floor(pageIndex / columns);
     const x = margin + column * (labelWidth + gap);
@@ -669,7 +890,7 @@ function normalizeQrLabelSettings(setting: QrLabelSettings): QrLabelSettings {
     qr_logo_attachment_id: normalizeNullableSettingValue(setting?.qr_logo_attachment_id),
     qr_logo_url: normalizeNullableSettingValue(setting?.qr_logo_url),
     qr_logo_original_name: normalizeNullableSettingValue(setting?.qr_logo_original_name),
-    device_template_style: setting?.device_template_style === "hazard" ? "hazard" : "default",
+    device_template_style: ["hazard", "hazard_compact"].includes(setting?.device_template_style || "") ? setting!.device_template_style! : "default",
     customer_patch_cord_style: setting?.customer_patch_cord_style === "qr" ? "qr" : "plain",
   };
 }

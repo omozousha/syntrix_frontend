@@ -32,15 +32,17 @@ console.log("✅ formatValidationDate ISO date parsing verified");
 assert.strictEqual(formatValidationDate("29/10/2026"), "29/10/2026");
 console.log("✅ formatValidationDate custom date string passthrough verified");
 
-// 4. Template style fallback
+// 4. Template style fallback (supports hazard_compact)
 function resolveDeviceTemplateStyle(setting) {
-  return setting?.device_template_style === "hazard" ? "hazard" : "default";
+  const v = setting?.device_template_style;
+  return ["hazard", "hazard_compact"].includes(v) ? v : "default";
 }
 assert.strictEqual(resolveDeviceTemplateStyle({ device_template_style: "hazard" }), "hazard");
+assert.strictEqual(resolveDeviceTemplateStyle({ device_template_style: "hazard_compact" }), "hazard_compact");
 assert.strictEqual(resolveDeviceTemplateStyle({ device_template_style: "default" }), "default");
 assert.strictEqual(resolveDeviceTemplateStyle({ device_template_style: "invalid" }), "default");
 assert.strictEqual(resolveDeviceTemplateStyle(null), "default");
-console.log("✅ resolveDeviceTemplateStyle safety verified");
+console.log("✅ resolveDeviceTemplateStyle safety verified (incl. hazard_compact)");
 
 // 5. Customer Patch Cord style fallback
 function resolvePatchCordTemplateStyle(setting) {
@@ -108,5 +110,18 @@ assert.strictEqual(COLS * ROWS, 56);
 assert.ok(LABEL_W >= 46 && LABEL_W <= 48, `Expected label width ~46.5mm, got ${LABEL_W}`);
 assert.ok(LABEL_H >= 17 && LABEL_H <= 18, `Expected label height ~17.5mm, got ${LABEL_H}`);
 console.log("✅ Patch Cord 4x14 grid geometry (56 labels/A4) verified");
+
+// 10. Hazard Compact A4 PDF Sheet Geometry (2 cols x 3 rows = 6 labels)
+// Uses actual drawQrLabelPdf params: margin=8mm, gap=4mm
+const HC_MARGIN = 8;
+const HC_GAP = 4;
+const HC_COLS = 2;
+const HC_ROWS = 3;
+const HC_LABEL_W = (A4_WIDTH - HC_MARGIN * 2 - HC_GAP * (HC_COLS - 1)) / HC_COLS;
+const HC_LABEL_H = (A4_HEIGHT - HC_MARGIN * 2 - HC_GAP * (HC_ROWS - 1)) / HC_ROWS;
+assert.strictEqual(HC_COLS * HC_ROWS, 6);
+assert.ok(HC_LABEL_W >= 95 && HC_LABEL_W <= 99, `Expected hazard_compact label width ~95mm, got ${HC_LABEL_W}`);
+assert.ok(HC_LABEL_H >= 88 && HC_LABEL_H <= 94, `Expected hazard_compact label height ~90mm, got ${HC_LABEL_H}`);
+console.log("✅ Hazard Compact 2x3 grid geometry (6 labels/A4) verified");
 
 console.log("=== ALL HAZARD & PATCH CORD QR LABEL TESTS PASSED ===");

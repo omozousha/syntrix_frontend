@@ -618,7 +618,7 @@ export default function DataManagementDetailPage() {
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [qrLabelLogoDataUrl, setQrLabelLogoDataUrl] = useState("");
   const [qrLabelFooterText, setQrLabelFooterText] = useState("");
-  const [qrLabelTemplateStyle, setQrLabelTemplateStyle] = useState<"default" | "hazard">("default");
+  const [qrLabelTemplateStyle, setQrLabelTemplateStyle] = useState<"default" | "hazard" | "hazard_compact">("default");
   const [qrLabelPatchCordStyle, setQrLabelPatchCordStyle] = useState<"plain" | "qr">("plain");
   const [qrLabelReady, setQrLabelReady] = useState(false);
   const [odpCustomers, setOdpCustomers] = useState<OdpCustomerOption[]>([]);
