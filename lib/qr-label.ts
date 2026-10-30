@@ -265,192 +265,250 @@ export async function buildHazardCompactQrLabelPngDataUrl({
   const HAZARD_YELLOW = "#FBD215";
   const ALERT_RED = "#E3262B";
 
-  // ── Outer hazard stripe border (-45deg yellow/black) ──
+  // ── 1. Outer hazard stripe border (-45deg yellow/black) ──
   const outerR = 80; // 40px * 2
   const borderW = 6; // 3px * 2
   const stripeW = 22; // 11px * 2
   const padding = 30; // 15px * 2
 
-  // Draw outer rounded rect with hazard stripe pattern
   const stripePattern = createHazardPattern(ctx, stripeW);
   drawRoundedCanvasRect(ctx, 0, 0, W, H, outerR, stripePattern, INK, borderW);
 
-  // ── Inner yellow body ──
+  // ── 2. Inner yellow body ──
   const innerR = 56; // 28px * 2
   const bodyX = padding;
   const bodyY = padding;
-  const bodyW = W - padding * 2;
-  const bodyH = H - padding * 2;
+  const bodyW = W - padding * 2; // 964
+  const bodyH = H - padding * 2; // 740
   drawRoundedCanvasRect(ctx, bodyX, bodyY, bodyW, bodyH, innerR, HAZARD_YELLOW, INK, borderW);
 
-  // ── Top White Card (QR + Specs) ──
+  // ── 3. Top White Card (QR + Specs) with strict clipping ──
   const topCardH = 296; // 148px * 2
   const topCardR = 40; // 20px * 2
-  const topCardX = bodyX + 20;
-  const topCardY = bodyY + 20;
-  const topCardW = bodyW - 40;
-  drawRoundedCanvasRect(ctx, topCardX, topCardY, topCardW, topCardH, topCardR, "#FFFFFF", INK, borderW);
+  const topCardX = bodyX + 24; // 54
+  const topCardY = bodyY + 20; // 50
+  const topCardW = bodyW - 48; // 916
 
-  // QR section (left side of top card)
-  const qrSectionW = 336; // 168px * 2
-  // Vertical divider
-  ctx.fillStyle = INK;
-  ctx.fillRect(topCardX + qrSectionW, topCardY + 10, borderW, topCardH - 20);
+  // Draw and clip inside the white card to prevent any QR bleed
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(topCardX, topCardY, topCardW, topCardH, topCardR);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fill();
+  ctx.clip();
 
-  // QR code
+  // QR section (left side)
+  const qrSectionW = 320; // 160px * 2
+  const qrSize = 236; // comfortably fits inside topCardH (296) with 30px top/bottom margin
+  const qrX = topCardX + Math.round((qrSectionW - qrSize) / 2);
+  const qrY = topCardY + Math.round((topCardH - qrSize) / 2);
+
   ctx.imageSmoothingEnabled = false;
-  const qrPad = 20;
-  const qrDrawSize = qrSectionW - qrPad * 2;
-  const qrX = topCardX + qrPad;
-  const qrY = topCardY + qrPad;
-  ctx.drawImage(qrImage, qrX, qrY, qrDrawSize, qrDrawSize);
-  if (logoImage) drawQrLogoImageCanvas(ctx, logoImage, qrX + qrDrawSize / 2, qrY + qrDrawSize / 2, 104);
-  else drawDefaultQrLogoCanvas(ctx, qrX + qrDrawSize / 2, qrY + qrDrawSize / 2, 104);
+  ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+  if (logoImage) drawQrLogoImageCanvas(ctx, logoImage, qrX + qrSize / 2, qrY + qrSize / 2, 76);
+  else drawDefaultQrLogoCanvas(ctx, qrX + qrSize / 2, qrY + qrSize / 2, 76);
+
+  // Vertical divider between QR and Specs
+  ctx.fillStyle = INK;
+  ctx.fillRect(topCardX + qrSectionW, topCardY, borderW, topCardH);
 
   // Text specs (right side of top card)
   const textX = topCardX + qrSectionW + 28;
   const textMaxW = topCardW - qrSectionW - 56;
   ctx.fillStyle = INK;
 
-  drawAdaptiveCanvasText(ctx, deviceName, textX, topCardY + 52, textMaxW, {
+  drawAdaptiveCanvasText(ctx, deviceName, textX, topCardY + 64, textMaxW, {
     weight: 800,
-    maxSize: 50,
-    minSize: 28,
+    maxSize: 48,
+    minSize: 26,
   });
-  drawAdaptiveCanvasText(ctx, `ID: ${deviceCode}`, textX, topCardY + 112, textMaxW, {
+  drawAdaptiveCanvasText(ctx, `ID: ${deviceCode}`, textX, topCardY + 120, textMaxW, {
     weight: 700,
-    maxSize: 35,
-    minSize: 20,
+    maxSize: 32,
+    minSize: 18,
   });
-  drawAdaptiveCanvasText(ctx, `TYPE: ${deviceType}`, textX, topCardY + 164, textMaxW, {
+  drawAdaptiveCanvasText(ctx, `TYPE: ${deviceType}`, textX, topCardY + 168, textMaxW, {
     weight: 700,
-    maxSize: 35,
-    minSize: 20,
+    maxSize: 32,
+    minSize: 18,
   });
   drawAdaptiveCanvasText(ctx, `POP: ${popName}`, textX, topCardY + 216, textMaxW, {
     weight: 700,
-    maxSize: 35,
-    minSize: 20,
+    maxSize: 32,
+    minSize: 18,
   });
 
-  // ── Middle Warning Panel ──
+  ctx.restore();
+
+  // Re-stroke card border cleanly over clipped contents
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = borderW;
+  ctx.beginPath();
+  ctx.roundRect(topCardX, topCardY, topCardW, topCardH, topCardR);
+  ctx.stroke();
+
+  // ── 4. Middle Warning Panel ──
   const warnPanelH = 236; // 118px * 2
   const warnPanelR = 48; // 24px * 2
-  const warnPanelY = topCardY + topCardH + 20;
-  const warnPanelX = bodyX + 20;
-  const warnPanelW = bodyW - 40;
+  const warnPanelY = topCardY + topCardH + 20; // 366
+  const warnPanelX = bodyX + 24;
+  const warnPanelW = bodyW - 48;
   drawRoundedCanvasRect(ctx, warnPanelX, warnPanelY, warnPanelW, warnPanelH, warnPanelR, HAZARD_YELLOW, INK, borderW);
 
-  // Warning triangle icon (left side)
-  const triX = warnPanelX + 30;
-  const triY = warnPanelY + 30;
+  // SVG Warning triangle icon (left side) - exact vector scaling from label-odp-tailwind.html
   const triW = 184; // 92px * 2
   const triH = 164; // 82px * 2
+  const triX = warnPanelX + 16;
+  const triY = warnPanelY + Math.round((warnPanelH - triH) / 2);
+
   ctx.save();
+  ctx.translate(triX, triY);
+  ctx.scale(2.0, 2.0); // scale viewBox 0 0 92 82 by 2x
   ctx.fillStyle = INK;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 8;
+  ctx.lineJoin = "round";
   ctx.beginPath();
-  ctx.moveTo(triX + triW / 2, triY);
-  ctx.lineTo(triX + triW, triY + triH);
-  ctx.quadraticCurveTo(triX + triW + 4, triY + triH + 10, triX + triW - 12, triY + triH + 10);
-  ctx.lineTo(triX + 12, triY + triH + 10);
-  ctx.quadraticCurveTo(triX - 4, triY + triH + 10, triX, triY + triH);
+  ctx.moveTo(46, 6);
+  ctx.lineTo(84, 72);
+  ctx.quadraticCurveTo(86, 77, 80, 77);
+  ctx.lineTo(12, 77);
+  ctx.quadraticCurveTo(6, 77, 8, 72);
   ctx.closePath();
+  ctx.stroke();
   ctx.fill();
-  // Exclamation bar
+
+  // Exclamation bar & dot inside triangle
   ctx.fillStyle = HAZARD_YELLOW;
-  const barCX = triX + triW / 2;
-  ctx.beginPath();
-  ctx.roundRect(barCX - 9, triY + 48, 18, 48, 5);
-  ctx.fill();
-  // Exclamation dot
-  ctx.beginPath();
-  ctx.roundRect(barCX - 9, triY + 104, 18, 18, 5);
-  ctx.fill();
+  drawRoundedCanvasRect(ctx, 42, 30, 9, 24, 2.5, HAZARD_YELLOW, "transparent", 0);
+  drawRoundedCanvasRect(ctx, 42, 58, 9, 9, 2.5, HAZARD_YELLOW, "transparent", 0);
   ctx.restore();
 
   // Dark text box (right side of warning panel)
-  const textBoxX = triX + triW + 20;
-  const textBoxY = warnPanelY + 16;
-  const textBoxW = warnPanelW - (textBoxX - warnPanelX) - 16;
-  const textBoxH = warnPanelH - 32;
-  const textBoxR = 36; // 18px * 2
+  const textBoxX = triX + triW + 12;
+  const textBoxW = warnPanelX + warnPanelW - textBoxX - 10;
+  const textBoxH = warnPanelH - 20;
+  const textBoxY = warnPanelY + 10;
+  const textBoxR = 36;
   drawRoundedCanvasRect(ctx, textBoxX, textBoxY, textBoxW, textBoxH, textBoxR, INK, "transparent", 0);
 
-  // Warning text with colored accents
-  const wTextX = textBoxX + 20;
-  const wTextMaxW = textBoxW - 40;
-  const lineH = 34;
-  let wTextY = textBoxY + 48;
+  // Responsive rich-text warning message inside black box
+  renderAdaptiveWarningBoxText(ctx, textBoxX, textBoxY, textBoxW, textBoxH, ALERT_RED);
 
-  ctx.font = "bold 33px Arial, sans-serif";
-  // Line 1: "PERHATIAN: PERANGKAT INI SUDAH DI VALIDASI & MASUK DATABASE SYNTRIX."
-  const parts1 = [
-    { text: "PERHATIAN", color: ALERT_RED },
-    { text: ": PERANGKAT INI SUDAH DI VALIDASI & MASUK DATABASE ", color: "#FFFFFF" },
-    { text: "SYNTRIX", color: ALERT_RED },
-    { text: ".", color: "#FFFFFF" },
-  ];
-  let curX = wTextX;
-  for (const part of parts1) {
-    ctx.fillStyle = part.color;
-    ctx.fillText(part.text, curX, wTextY);
-    curX += ctx.measureText(part.text).width;
-  }
-
-  // Line 2
-  wTextY += lineH + 6;
-  ctx.fillStyle = "#FFFFFF";
-  ctx.font = "bold 30px Arial, sans-serif";
-  wrapCanvasText(
-    ctx,
-    "JIKA ADA PERUBAHAN DATA HARAP KOORDINASI DENGAN OM REGIONAL & TEAM INVENTORY.",
-    wTextX,
-    wTextY,
-    wTextMaxW,
-    lineH,
-  );
-
-  // ── Bottom Validation Date Card ──
+  // ── 5. Bottom Validation Date Card ──
   const valCardH = 84; // 42px * 2
   const valCardR = 44; // 22px * 2
-  const valCardY = warnPanelY + warnPanelH + 20;
-  const valCardX = bodyX + 20;
-  const valCardW = bodyW - 40;
+  const valCardY = warnPanelY + warnPanelH + 20; // 622
+  const valCardX = bodyX + 24;
+  const valCardW = bodyW - 48;
   drawRoundedCanvasRect(ctx, valCardX, valCardY, valCardW, valCardH, valCardR, "#FFFFFF", INK, borderW);
 
   const dateStr = formatValidationDate(validationDate);
-  ctx.font = "800 32px Arial, sans-serif";
+  ctx.font = '800 32px "Open Sans", Arial, sans-serif';
   ctx.fillStyle = INK;
-  ctx.fillText("VALIDATION DATE:", valCardX + 30, valCardY + 56);
-  const labelW = ctx.measureText("VALIDATION DATE: ").width;
+  const valLabel = "VALIDATION DATE: ";
+  ctx.fillText(valLabel, valCardX + 28, valCardY + 54);
+  const valLabelW = ctx.measureText(valLabel).width;
   ctx.fillStyle = "#2563EB";
-  ctx.fillText(dateStr, valCardX + 30 + labelW, valCardY + 56);
+  ctx.fillText(dateStr, valCardX + 28 + valLabelW, valCardY + 54);
 
   return canvas.toDataURL("image/png");
 }
 
-function wrapCanvasText(
+function renderAdaptiveWarningBoxText(
   ctx: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  lineHeight: number,
+  boxX: number,
+  boxY: number,
+  boxW: number,
+  boxH: number,
+  alertRed: string,
 ) {
-  const words = text.split(" ");
-  let line = "";
-  let curY = y;
-  for (const word of words) {
-    const test = line ? `${line} ${word}` : word;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      ctx.fillText(line, x, curY);
-      line = word;
-      curY += lineHeight;
-    } else {
-      line = test;
+  const padLeft = 20;
+  const padRight = 24;
+  const padTop = 14;
+  const maxW = boxW - padLeft - padRight;
+  const maxH = boxH - padTop * 2;
+
+  // Words breakdown with colors matching label-odp-tailwind.html
+  const tokens: Array<{ text: string; color: string }> = [
+    { text: "PERHATIAN:", color: alertRed },
+    { text: "PERANGKAT", color: "#FFFFFF" },
+    { text: "INI", color: "#FFFFFF" },
+    { text: "SUDAH", color: "#FFFFFF" },
+    { text: "DI", color: "#FFFFFF" },
+    { text: "VALIDASI", color: "#FFFFFF" },
+    { text: "&", color: "#FFFFFF" },
+    { text: "MASUK", color: "#FFFFFF" },
+    { text: "DATABASE", color: "#FFFFFF" },
+    { text: "SYNTRIX.", color: alertRed },
+    { text: "JIKA", color: "#FFFFFF" },
+    { text: "ADA", color: "#FFFFFF" },
+    { text: "PERUBAHAN", color: "#FFFFFF" },
+    { text: "DATA", color: "#FFFFFF" },
+    { text: "HARAP", color: "#FFFFFF" },
+    { text: "KOORDINASI", color: "#FFFFFF" },
+    { text: "DENGAN", color: "#FFFFFF" },
+    { text: "OM", color: "#FFFFFF" },
+    { text: "REGIONAL", color: "#FFFFFF" },
+    { text: "&", color: "#FFFFFF" },
+    { text: "TEAM", color: "#FFFFFF" },
+    { text: "INVENTORY.", color: "#FFFFFF" },
+  ];
+
+  // Try font sizes from 27px down to 18px until all wrapped lines comfortably fit maxH
+  let chosenFontSize = 20;
+  let chosenLines: Array<Array<{ text: string; color: string }>> = [];
+  let chosenLineH = 26;
+
+  for (let size = 27; size >= 18; size -= 1) {
+    ctx.font = `bold ${size}px "Open Sans", Arial, sans-serif`;
+    const spaceW = ctx.measureText(" ").width;
+    const lines: Array<Array<{ text: string; color: string }>> = [];
+    let curLine: Array<{ text: string; color: string }> = [];
+    let curLineW = 0;
+
+    for (const token of tokens) {
+      const wordW = ctx.measureText(token.text).width;
+      if (curLine.length > 0 && curLineW + spaceW + wordW > maxW) {
+        lines.push(curLine);
+        curLine = [token];
+        curLineW = wordW;
+      } else {
+        if (curLine.length > 0) curLineW += spaceW;
+        curLine.push(token);
+        curLineW += wordW;
+      }
     }
+    if (curLine.length > 0) lines.push(curLine);
+
+    const lineH = Math.round(size * 1.28);
+    const totalH = lines.length * lineH;
+    if (totalH <= maxH) {
+      chosenFontSize = size;
+      chosenLines = lines;
+      chosenLineH = lineH;
+      break;
+    }
+    chosenFontSize = size;
+    chosenLines = lines;
+    chosenLineH = lineH;
   }
-  if (line) ctx.fillText(line, x, curY);
+
+  // Draw lines vertically centered in black box
+  ctx.font = `bold ${chosenFontSize}px "Open Sans", Arial, sans-serif`;
+  const spaceW = ctx.measureText(" ").width;
+  const totalContentH = chosenLines.length * chosenLineH;
+  let startY = boxY + Math.round((boxH - totalContentH) / 2) + Math.round(chosenFontSize * 0.92);
+
+  for (const line of chosenLines) {
+    let curX = boxX + padLeft;
+    for (const word of line) {
+      ctx.fillStyle = word.color;
+      ctx.fillText(word.text, curX, startY);
+      curX += ctx.measureText(word.text).width + spaceW;
+    }
+    startY += chosenLineH;
+  }
 }
 
 export async function buildHazardQrLabelPngDataUrl({
