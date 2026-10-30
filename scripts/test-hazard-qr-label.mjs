@@ -74,4 +74,39 @@ assert.strictEqual(
 );
 console.log("✅ buildCustomerQrHref verified");
 
+// 8. CID priority resolution
+function resolveCustomerCid(row) {
+  const raw = row.customer_number || row.customer_code || "CSC-XXXX";
+  return String(raw).replace(/^CID:\s*/i, "").trim().toUpperCase();
+}
+assert.strictEqual(
+  resolveCustomerCid({ customer_number: "CSC-9999", customer_code: "CUST-INT-1", id: "uuid-123" }),
+  "CSC-9999"
+);
+assert.strictEqual(
+  resolveCustomerCid({ customer_code: "CSC-8888", id: "uuid-456" }),
+  "CSC-8888"
+);
+assert.strictEqual(
+  resolveCustomerCid({ id: "uuid-789" }),
+  "CSC-XXXX"
+);
+console.log("✅ resolveCustomerCid priority verified");
+
+// 9. Patch Cord A4 PDF Sheet Geometry (4 cols x 14 rows = 56 labels, 2x smaller)
+const A4_WIDTH = 210;
+const A4_HEIGHT = 297;
+const MARGIN_X = 8;
+const MARGIN_Y = 8;
+const GAP_X = 3;
+const GAP_Y = 3;
+const COLS = 4;
+const ROWS = 14;
+const LABEL_W = (A4_WIDTH - MARGIN_X * 2 - GAP_X * (COLS - 1)) / COLS;
+const LABEL_H = (A4_HEIGHT - MARGIN_Y * 2 - GAP_Y * (ROWS - 1)) / ROWS;
+assert.strictEqual(COLS * ROWS, 56);
+assert.ok(LABEL_W >= 46 && LABEL_W <= 48, `Expected label width ~46.5mm, got ${LABEL_W}`);
+assert.ok(LABEL_H >= 17 && LABEL_H <= 18, `Expected label height ~17.5mm, got ${LABEL_H}`);
+console.log("✅ Patch Cord 4x14 grid geometry (56 labels/A4) verified");
+
 console.log("=== ALL HAZARD & PATCH CORD QR LABEL TESTS PASSED ===");

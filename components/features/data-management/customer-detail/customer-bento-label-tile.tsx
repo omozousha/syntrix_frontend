@@ -42,6 +42,10 @@ export function CustomerBentoLabelTile({
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  useEffect(() => {
+    setSelectedVariant(defaultTemplateStyle);
+  }, [defaultTemplateStyle]);
+
   const cleanPopName = useMemo(() => {
     return (popName || "POP").trim().toUpperCase();
   }, [popName]);

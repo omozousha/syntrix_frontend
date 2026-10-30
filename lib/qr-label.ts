@@ -571,13 +571,16 @@ export async function buildPatchCordLabelPngDataUrl(payload: PatchCordLabelPaylo
 export async function drawPatchCordLabelPdf(doc: JsPdfDocument, rows: PatchCordLabelPayload[]) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 10;
-  const gapX = 6;
-  const gapY = 5;
-  const columns = 2;
-  const rowsPerPage = 7;
-  const labelWidth = (pageWidth - margin * 2 - gapX * (columns - 1)) / columns;
-  const labelHeight = (pageHeight - margin * 2 - gapY * (rowsPerPage - 1)) / rowsPerPage;
+  const marginX = 8;
+  const marginY = 8;
+  const gapX = 3;
+  const gapY = 3;
+  // 4 columns x 14 rows = 56 labels per A4 page (~46.5 x 17.5 mm per label)
+  // 2x smaller than standard device tags to fit thin patch cord flag labels
+  const columns = 4;
+  const rowsPerPage = 14;
+  const labelWidth = (pageWidth - marginX * 2 - gapX * (columns - 1)) / columns;
+  const labelHeight = (pageHeight - marginY * 2 - gapY * (rowsPerPage - 1)) / rowsPerPage;
   const labelImages = await Promise.all(rows.map((row) => buildPatchCordLabelPngDataUrl(row)));
 
   labelImages.forEach((labelDataUrl, index) => {
@@ -585,8 +588,8 @@ export async function drawPatchCordLabelPdf(doc: JsPdfDocument, rows: PatchCordL
     const pageIndex = index % (columns * rowsPerPage);
     const column = pageIndex % columns;
     const rowIndex = Math.floor(pageIndex / columns);
-    const x = margin + column * (labelWidth + gapX);
-    const y = margin + rowIndex * (labelHeight + gapY);
+    const x = marginX + column * (labelWidth + gapX);
+    const y = marginY + rowIndex * (labelHeight + gapY);
     doc.addImage(labelDataUrl, "PNG", x, y, labelWidth, labelHeight);
   });
 }

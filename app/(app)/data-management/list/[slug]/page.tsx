@@ -1653,7 +1653,8 @@ export default function DataManagementListPage() {
     const patchCordItems: PatchCordLabelPayload[] = await Promise.all(
       rows.map(async (row) => {
         const customerId = row.id;
-        const rawCid = pick(row, ["customer_code", "customer_number", "id"]) || "CSC-XXXX";
+        // Prioritize customer_number (CID), fallback to customer_code only if absent
+        const rawCid = pick(row, ["customer_number", "customer_code"]) || "CSC-XXXX";
         const cleanCid = rawCid.replace(/^CID:\s*/i, "").trim().toUpperCase();
         const popId = pick(row, ["pop_id"]);
         const popName = (popId ? listDisplayLookups.pops?.[popId] : null) || pick(row, ["pop_name"]) || "POP";
@@ -1693,7 +1694,8 @@ export default function DataManagementListPage() {
       const qrLabelSetting = await loadQrLabelSettings(token).catch(() => null);
       const variant = (qrLabelSetting?.customer_patch_cord_style === "qr" ? "qr" : "plain") as "plain" | "qr";
       const customerId = row.id;
-      const rawCid = pick(row, ["customer_code", "customer_number", "id"]) || "CSC-XXXX";
+      // Prioritize customer_number (CID), fallback to customer_code only if absent
+      const rawCid = pick(row, ["customer_number", "customer_code"]) || "CSC-XXXX";
       const cleanCid = rawCid.replace(/^CID:\s*/i, "").trim().toUpperCase();
       const popId = pick(row, ["pop_id"]);
       const popName = (popId ? listDisplayLookups.pops?.[popId] : null) || pick(row, ["pop_name"]) || "POP";

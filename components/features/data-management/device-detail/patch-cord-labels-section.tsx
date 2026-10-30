@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Cable, Download, Eye, FileDown, Loader2, QrCode } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,10 +51,14 @@ export function PatchCordLabelsSection({
   const [generatingPreview, setGeneratingPreview] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<"plain" | "qr">(defaultTemplateStyle);
 
+  useEffect(() => {
+    setSelectedVariant(defaultTemplateStyle);
+  }, [defaultTemplateStyle]);
+
   // Filter ports that have customer assignment
   const customerPorts = useMemo(() => {
     return (ports || [])
-      .filter((p) => Boolean(p.customer_id || p.customer_name || p.customer_code))
+      .filter((p) => Boolean(p.customer_id || p.customer_name || p.customer_number || p.customer_code))
       .sort((a, b) => Number(a.port_index) - Number(b.port_index));
   }, [ports]);
 
@@ -78,7 +82,8 @@ export function PatchCordLabelsSection({
   }
 
   function getPayloadForPort(port: CustomerPortItem, variant: "plain" | "qr", qrDataUrl?: string): PatchCordLabelPayload {
-    const rawCode = port.customer_code || port.customer_number || port.customer_id || "CSC-XXXX";
+    // Prioritize customer_number (CID), fallback to customer_code only if absent
+    const rawCode = port.customer_number || port.customer_code || "CSC-XXXX";
     const cleanCid = rawCode.replace(/^CID:\s*/i, "").trim().toUpperCase();
 
     return {
