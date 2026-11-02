@@ -15,7 +15,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,10 +26,17 @@ import {
   type PopsListResponse,
   type RegionsListResponse,
 } from "@/lib/api";
-import { getPopLabel, getRegionLabel } from "@/lib/relation-labels";
+import { deviceTypeKeyToSlug } from "@/lib/data-management-config";
+import { getRegionLabel } from "@/lib/relation-labels";
 import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type RoleKey = "superadmin" | "adminregion" | "validator";
+
+type FastActionHandler = {
+  approve: (id: string) => Promise<void>;
+  reject: (id: string) => Promise<void>;
+  loadingId: string;
+};
 
 type DeviceItem = DevicesListResponse["data"][number] & {
   validation_status?: string | null;
@@ -61,7 +67,9 @@ type ValidationRequestItem = {
   id: string;
   request_id?: string | null;
   entity_id?: string | null;
+  region_id?: string | null;
   current_status?: string | null;
+  created_at?: string | null;
   updated_at?: string | null;
   adminregion_review_note?: string | null;
   superadmin_review_note?: string | null;
@@ -177,7 +185,7 @@ export default function DashboardPage() {
       setActionLoadingId("");
     },
     loadingId: actionLoadingId,
-  }), [role, token, singleRegionScope, actionLoadingId, t]);
+  }), [role, token, singleRegionScope, scopeRegionIds, actionLoadingId, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -205,7 +213,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [role, singleRegionScope, token, regionFilterId]);
+  }, [role, singleRegionScope, scopeRegionIds, token, regionFilterId]);
 
   if (loading && !data.summary) {
     return (
@@ -238,7 +246,7 @@ export default function DashboardPage() {
         </Alert>
       ) : null}
 
-      <DashboardTabs data={data} role={role} loading={loading} singleRegionScope={singleRegionScope} />
+      <DashboardTabs data={data} role={role} loading={loading} singleRegionScope={singleRegionScope} fastAction={fastAction} />
     </div>
   );
 }
@@ -248,11 +256,13 @@ function DashboardTabs({
   role,
   loading,
   singleRegionScope,
+  fastAction,
 }: {
   data: DashboardData;
   role: RoleKey;
   loading: boolean;
   singleRegionScope: string;
+  fastAction: FastActionHandler;
 }) {
   const { t } = useTranslate();
   const showRegionTab = role === "superadmin";
@@ -284,7 +294,7 @@ function DashboardTabs({
       </TabsList>
 
       <TabsContent value="overview" className="space-y-4">
-        {role === "validator" ? <ValidatorOverviewDashboard data={data} loading={loading} singleRegionScope={singleRegionScope} /> : <AssetOverviewDashboard data={data} loading={loading} />}
+        {role === "validator" ? <ValidatorOverviewDashboard data={data} loading={loading} singleRegionScope={singleRegionScope} /> : <AssetOverviewDashboard data={data} role={role} loading={loading} />}
       </TabsContent>
       {showRegionTab ? (
         <TabsContent value="region" className="space-y-4">
@@ -300,8 +310,8 @@ function DashboardTabs({
         </TabsContent>
       ) : null}
       <TabsContent value="workflow" className="space-y-4">
-        {role === "superadmin" ? <SuperadminDashboard data={data} loading={loading} /> : null}
-        {role === "adminregion" ? <AdminregionDashboard data={data} loading={loading} singleRegionScope={singleRegionScope} /> : null}
+        {role === "superadmin" ? <SuperadminDashboard data={data} loading={loading} fastAction={fastAction} /> : null}
+        {role === "adminregion" ? <AdminregionDashboard data={data} loading={loading} singleRegionScope={singleRegionScope} fastAction={fastAction} /> : null}
         {role === "validator" ? <ValidatorDashboard data={data} loading={loading} singleRegionScope={singleRegionScope} /> : null}
       </TabsContent>
     </Tabs>
@@ -358,7 +368,7 @@ function DashboardHeader({
           >
             {refreshing ? t("dashboard.refreshing") : "⟳"}
           </Button>
-          {regions && onRegionFilterChange ? (
+          {regions && onRegionFilterChange && (role === "superadmin" || regions.length > 1) ? (
             <Select value={regionFilter || "__all__"} onValueChange={(v) => onRegionFilterChange(v === "__all__" ? "" : v)} disabled={refreshing || loading}>
               <SelectTrigger className="h-9 w-full sm:w-[180px] text-xs sm:text-sm">
                 <SelectValue placeholder={t("dashboard.regionFilterPlaceholder")} />
@@ -379,15 +389,43 @@ function DashboardHeader({
   );
 }
 
-function AssetOverviewDashboard({ data, loading }: { data: DashboardData; loading: boolean }) {
+function AssetOverviewDashboard({ data, role, loading }: { data: DashboardData; role: RoleKey; loading: boolean }) {
   const { t } = useTranslate();
   const s = data.summary;
   const odpStats = getOdpStatsFromSummary(s);
   const portStats = getPortStatsFromSummary(s);
+  const trendSource = role === "superadmin"
+    ? data.auditLogs
+    : [
+        ...data.adminregionRequests,
+        ...data.rejectedAdminregion,
+        ...data.rejectedSuperadmin,
+        ...data.evidenceMissing,
+      ];
+
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <DashboardMetricCard label={t("dashboard.metric.regions")} value={s?.regions?.total ?? data.regions.length} caption={t("dashboard.caption.regions")} badge={t("dashboard.badge.scope")} icon={MapPinned} loading={loading} />
+        {role === "adminregion" ? (
+          <DashboardMetricCard
+            label={t("dashboard.metric.needReview")}
+            value={data.adminregionRequests.length}
+            caption={t("dashboard.caption.needReview")}
+            badge={t("dashboard.badge.today")}
+            tone={data.adminregionRequests.length ? "amber" : "green"}
+            icon={ClipboardCheck}
+            loading={loading}
+          />
+        ) : (
+          <DashboardMetricCard
+            label={t("dashboard.metric.regions")}
+            value={s?.regions?.total ?? data.regions.length}
+            caption={t("dashboard.caption.regions")}
+            badge={t("dashboard.badge.scope")}
+            icon={MapPinned}
+            loading={loading}
+          />
+        )}
         <DashboardMetricCard label={t("dashboard.metric.pops")} value={s?.pops?.total ?? 0} caption={t("dashboard.caption.pops")} badge="POP" tone="blue" icon={Database} loading={loading} />
         <DashboardMetricCard label={t("dashboard.metric.devices")} value={s?.devices?.total ?? 0} caption={t("dashboard.caption.devices")} badge={t("dashboard.badge.inventory")} tone="green" icon={RadioTower} loading={loading} />
         <DashboardMetricCard label={t("dashboard.metric.odp")} value={odpStats.total} caption={t("dashboard.caption.odp", { validated: odpStats.validated, unvalidated: odpStats.unvalidated })} badge={t("dashboard.badge.field")} tone="amber" icon={ClipboardCheck} loading={loading} />
@@ -398,14 +436,14 @@ function AssetOverviewDashboard({ data, loading }: { data: DashboardData; loadin
         <DashboardDonutChartCard
           title={t("dashboard.chart.deviceType.title")}
           description={t("dashboard.chart.deviceType.description")}
-          data={toChartFromSummary(s?.devices?.byType, t)}
+          data={toDeviceTypeChartFromSummary(s?.devices?.byType, t)}
           emptyLabel={t("dashboard.chart.deviceType.empty")}
           loading={loading}
         />
         <DashboardBarChartCard
           title={t("dashboard.chart.popDistribution.title")}
           description={t("dashboard.chart.popDistribution.description")}
-          data={toChartFromSummary(s?.pops?.topByDevice, t)}
+          data={toPopChartFromSummary(s?.pops?.topByDevice, t)}
           emptyLabel={t("dashboard.chart.popDistribution.empty")}
           loading={loading}
         />
@@ -422,13 +460,13 @@ function AssetOverviewDashboard({ data, loading }: { data: DashboardData; loadin
         <DashboardTrendLine
           title={t("dashboard.chart.auditActivityTrend.title")}
           description={t("dashboard.chart.auditActivityTrend.description")}
-          data={weeklyAuditTrend(data.auditLogs)}
+          data={weeklyAuditTrend(trendSource)}
           loading={loading}
         />
         <DashboardMiniMap
           title={t("dashboard.chart.popLocationMap.title")}
           description={t("dashboard.chart.popLocationMap.description")}
-          markers={buildMapMarkers(data.pops, data.odpDevices)}
+          markers={buildMapMarkers(data.pops)}
           loading={loading}
         />
       </div>
@@ -499,7 +537,7 @@ function ValidatorOverviewDashboard({
         <DashboardBarChartCard
           title={t("dashboard.chart.topPopByOdp.title")}
           description={t("dashboard.chart.topPopByOdp.description")}
-          data={toChartFromSummary(data.summary?.pops?.topByOdp, t)}
+          data={toPopChartFromSummary(data.summary?.pops?.topByOdp, t)}
           emptyLabel={t("dashboard.chart.topPopByOdp.empty")}
           loading={loading}
         />
@@ -560,8 +598,8 @@ function RegionDashboardTab({ data, loading }: { data: DashboardData; loading: b
 function PopDashboardTab({ data, loading }: { data: DashboardData; loading: boolean }) {
   const { t } = useTranslate();
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <DashboardDonutChartCard
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <DashboardDonutChartCard
         title={t("dashboard.chart.popStatus.title")}
         description={t("dashboard.chart.popStatus.description")}
         data={toChartFromSummary(data.summary?.pops?.byStatus, t)}
@@ -571,14 +609,14 @@ function PopDashboardTab({ data, loading }: { data: DashboardData; loading: bool
       <DashboardBarChartCard
         title={t("dashboard.chart.topPopByDevice.title")}
         description={t("dashboard.chart.topPopByDevice.description")}
-        data={toChartFromSummary(data.summary?.pops?.topByDevice, t)}
+        data={toPopChartFromSummary(data.summary?.pops?.topByDevice, t)}
         emptyLabel={t("dashboard.chart.topPopByDevice.empty")}
         loading={loading}
       />
       <DashboardBarChartCard
         title={t("dashboard.chart.topPopByOdp.title")}
         description={t("dashboard.chart.topPopByOdp.description")}
-        data={toChartFromSummary(data.summary?.pops?.topByOdp, t)}
+        data={toPopChartFromSummary(data.summary?.pops?.topByOdp, t)}
         emptyLabel={t("dashboard.chart.topPopByOdp.empty")}
         loading={loading}
       />
@@ -598,10 +636,10 @@ function DeviceDashboardTab({ data, loading }: { data: DashboardData; loading: b
   const { t } = useTranslate();
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <DashboardDonutChartCard
+      <DashboardDonutChartCard
         title={t("dashboard.chart.deviceTypeComposition.title")}
         description={t("dashboard.chart.deviceTypeComposition.description")}
-        data={toChartFromSummary(data.summary?.devices?.byType, t)}
+        data={toDeviceTypeChartFromSummary(data.summary?.devices?.byType, t)}
         emptyLabel={t("dashboard.chart.deviceTypeComposition.empty")}
         loading={loading}
       />
@@ -630,7 +668,7 @@ function DeviceDashboardTab({ data, loading }: { data: DashboardData; loading: b
   );
 }
 
-function SuperadminDashboard({ data, loading }: { data: DashboardData; loading: boolean }) {
+function SuperadminDashboard({ data, loading, fastAction }: { data: DashboardData; loading: boolean; fastAction: FastActionHandler }) {
   const { t } = useTranslate();
   const odpStats = getOdpStatsFromSummary(data.summary);
   const portStats = getPortStatsFromSummary(data.summary);
@@ -650,7 +688,7 @@ function SuperadminDashboard({ data, loading }: { data: DashboardData; loading: 
           title={t("dashboard.queue.approvalCommand.title")}
           description={t("dashboard.queue.approvalCommand.description")}
           items={[
-            ...requestItems(data.superadminRequests, "pending_superadmin", t),
+            ...requestItems(data.superadminRequests, "pending_superadmin", t, fastAction),
             ...requestItems(data.rejectedSuperadmin, "rejected_superadmin", t),
           ]}
           emptyLabel={t("dashboard.queue.approvalCommand.empty")}
@@ -681,7 +719,17 @@ function SuperadminDashboard({ data, loading }: { data: DashboardData; loading: 
   );
 }
 
-function AdminregionDashboard({ data, loading, singleRegionScope }: { data: DashboardData; loading: boolean; singleRegionScope: string }) {
+function AdminregionDashboard({
+  data,
+  loading,
+  singleRegionScope,
+  fastAction,
+}: {
+  data: DashboardData;
+  loading: boolean;
+  singleRegionScope: string;
+  fastAction: FastActionHandler;
+}) {
   const { t } = useTranslate();
   const odpStats = getOdpStatsFromSummary(data.summary);
   const portStats = getPortStatsFromSummary(data.summary);
@@ -701,7 +749,7 @@ function AdminregionDashboard({ data, loading, singleRegionScope }: { data: Dash
           title={t("dashboard.queue.myRegionReview.title")}
           description={t("dashboard.queue.myRegionReview.description")}
           items={[
-            ...requestItems(data.adminregionRequests, "pending_adminregion", t),
+            ...requestItems(data.adminregionRequests, "pending_adminregion", t, fastAction),
             ...requestItems(data.rejectedSuperadmin, "rejected_superadmin", t),
           ]}
           emptyLabel={t("dashboard.queue.myRegionReview.empty")}
@@ -813,9 +861,9 @@ function RegionHealthCard({ data, loading }: { data: DashboardData; loading: boo
     { label: t("dashboard.regionHealth.portIssue"), value: portStats.problem },
   ];
   return (
-    <Card>
+    <Card className="rounded-2xl border-border/60 shadow-xs glass-inset">
       <CardHeader className="p-3 pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold tracking-tight">
           <Users className="size-4" />
           {t("dashboard.regionHealth.title")}
         </CardTitle>
@@ -823,9 +871,9 @@ function RegionHealthCard({ data, loading }: { data: DashboardData; loading: boo
       </CardHeader>
       <CardContent className="grid grid-cols-2 gap-2 p-3 pt-0">
         {rows.map((row) => (
-          <div key={row.label} className="rounded-md border bg-background p-3">
-            <p className="text-xs uppercase text-muted-foreground">{row.label}</p>
-            {loading ? <Skeleton className="mt-2 h-6 w-14" /> : <p className="mt-1 text-xl font-semibold">{row.value}</p>}
+          <div key={row.label} className="rounded-lg border border-border/60 bg-background p-3 shadow-2xs">
+            <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">{row.label}</p>
+            {loading ? <Skeleton className="mt-2 h-6 w-14" /> : <p className="mt-1 font-mono text-xl font-semibold tabular-nums">{row.value}</p>}
           </div>
         ))}
       </CardContent>
@@ -837,9 +885,9 @@ function ValidationProgressCard({ odpStats, loading }: { odpStats: { total: numb
   const { t } = useTranslate();
   const percent = odpStats.total ? Math.round((odpStats.validated / odpStats.total) * 100) : 0;
   return (
-    <Card>
+    <Card className="rounded-2xl border-border/60 shadow-xs glass-inset">
       <CardHeader className="p-3 pb-2">
-        <CardTitle className="text-base">{t("dashboard.odpValidationProgress.title")}</CardTitle>
+        <CardTitle className="text-base font-semibold tracking-tight">{t("dashboard.odpValidationProgress.title")}</CardTitle>
         <CardDescription>{t("dashboard.odpValidationProgress.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-3 pt-0">
@@ -847,10 +895,12 @@ function ValidationProgressCard({ odpStats, loading }: { odpStats: { total: numb
           <>
             <div className="flex items-end justify-between gap-3">
               <div>
-                <p className="text-3xl font-semibold">{percent}%</p>
+                <p className="font-mono text-3xl font-semibold tabular-nums">{percent}%</p>
                 <p className="text-xs text-muted-foreground">{t("dashboard.odpValidationProgress.validated", { validated: odpStats.validated, total: odpStats.total })}</p>
               </div>
-              <Badge variant={percent >= 80 ? "secondary" : "outline"}>{percent >= 80 ? t("dashboard.odpValidationProgress.healthy") : t("dashboard.odpValidationProgress.needsWork")}</Badge>
+              <Badge variant={percent >= 80 ? "secondary" : "outline"} className="font-mono text-[9px] uppercase tracking-[0.15em]">
+                {percent >= 80 ? t("dashboard.odpValidationProgress.healthy") : t("dashboard.odpValidationProgress.needsWork")}
+              </Badge>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-muted">
               <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${percent}%` }} />
@@ -871,13 +921,18 @@ async function loadDashboardData(token: string, role: RoleKey, regionId: string,
     safeFetch<PaginatedResponse<RegionItem>>(`/regions?page=1&limit=200`, token),
     safeFetch<PaginatedResponse<PopItem>>(`/pops?page=1&limit=200${suffix}`, token),
     isValidator ? fetchAllPaginated<DeviceItem>(`/devices?page=1&limit=200&device_type_key=ODP${suffix}`, token, 200) : Promise.resolve([]),
-    role === "adminregion" || role === "validator" ? safeFetch<{ data: ValidationRequestItem[] }>("/validation-requests?queue=adminregion", token) : Promise.resolve(null),
-    role === "superadmin" || role === "adminregion" ? safeFetch<{ data: ValidationRequestItem[] }>("/validation-requests?queue=superadmin", token) : Promise.resolve(null),
+    role === "adminregion" ? safeFetch<{ data: ValidationRequestItem[] }>(`/validation-requests?queue=adminregion${suffix}`, token) : Promise.resolve(null),
+    role === "superadmin" ? safeFetch<{ data: ValidationRequestItem[] }>(`/validation-requests?queue=superadmin${suffix}`, token) : Promise.resolve(null),
     safeFetch<{ data: ValidationRequestItem[] }>(`/validation-requests/quality-queue?queue=rejected_adminregion${suffix}`, token),
     safeFetch<{ data: ValidationRequestItem[] }>(`/validation-requests/quality-queue?queue=rejected_superadmin${suffix}`, token),
     safeFetch<{ data: ValidationRequestItem[] }>(`/validation-requests/quality-queue?queue=evidence_missing${suffix}`, token),
-    role === "superadmin" ? safeFetch<PaginatedResponse<AuditLogItem>>("/auditLogs?page=1&limit=8", token) : Promise.resolve(null),
+    role === "superadmin" ? safeFetch<PaginatedResponse<AuditLogItem>>("/auditLogs?page=1&limit=50", token) : Promise.resolve(null),
   ]);
+
+  const filterByRegion = (items: ValidationRequestItem[]) => {
+    if (!regionId) return items;
+    return items.filter((item) => !item.region_id || item.region_id === regionId);
+  };
 
   return {
     summary: summary?.data || null,
@@ -890,8 +945,8 @@ async function loadDashboardData(token: string, role: RoleKey, regionId: string,
     devices: [],
     odpDevices: isValidator ? (odpDevices || []).slice(0, 200) : [],
     ports: [],
-    adminregionRequests: adminregionRequests?.data || [],
-    superadminRequests: superadminRequests?.data || [],
+    adminregionRequests: filterByRegion(adminregionRequests?.data || []),
+    superadminRequests: filterByRegion(superadminRequests?.data || []),
     rejectedAdminregion: rejectedAdminregion?.data || [],
     rejectedSuperadmin: rejectedSuperadmin?.data || [],
     evidenceMissing: evidenceMissing?.data || [],
@@ -980,16 +1035,38 @@ function toChartFromSummary(rows: Array<{ label?: string; value?: number; href?:
   const restValue = rest.reduce((sum, item) => sum + item.value, 0);
   return [
     ...top,
-    { label: t("dashboard.helper.lainnya"), value: restValue, color: "var(--chart-3)", href: "/data-management/list/devices" },
+    { label: t("dashboard.helper.lainnya"), value: restValue, color: "var(--chart-3)", href: "/data-management" },
   ];
+}
+
+function toDeviceTypeChartFromSummary(rows: Array<{ label?: string; value?: number }> | null | undefined, t: TFn): DashboardChartDatum[] {
+  const mapped = (rows || []).map((row) => {
+    const label = row.label || "";
+    const slug = label && label.toLowerCase() !== "unknown" ? deviceTypeKeyToSlug(label) : "";
+    return {
+      label: row.label,
+      value: row.value,
+      href: slug ? `/data-management/list/${slug}` : "/data-management",
+    };
+  });
+  return toChartFromSummary(mapped, t);
+}
+
+function toPopChartFromSummary(rows: Array<{ label?: string; value?: number; pop_id?: string }> | null | undefined, t: TFn): DashboardChartDatum[] {
+  const mapped = (rows || []).map((row) => ({
+    label: row.label,
+    value: row.value,
+    href: row.pop_id ? `/data-management/list/odp?pop_id=${encodeURIComponent(row.pop_id)}` : "/data-management/list/pop",
+  }));
+  return toChartFromSummary(mapped, t);
 }
 
 function odpValidationFromSummary(s: DashboardSummaryResponse["data"] | null | undefined, data: DashboardData | undefined, t: TFn): DashboardChartDatum[] {
   const odp = s?.odp;
   const items: DashboardChartDatum[] = [];
   if (!odp) return items;
-  if (odp.validated) items.push({ label: t("dashboard.chart.legend.odpValidated"), value: odp.validated, color: "#16a34a", href: "/data-management/list/odp?status=validated" });
-  if (odp.unvalidated) items.push({ label: t("dashboard.chart.legend.odpUnvalidated"), value: odp.unvalidated, color: "#f59e0b", href: "/data-management/list/odp?status=unvalidated" });
+  if (odp.validated) items.push({ label: t("dashboard.chart.legend.odpValidated"), value: odp.validated, color: "#16a34a", href: "/data-management/list/odp?validation_status=valid" });
+  if (odp.unvalidated) items.push({ label: t("dashboard.chart.legend.odpUnvalidated"), value: odp.unvalidated, color: "#f59e0b", href: "/data-management/list/odp?validation_status=unvalidated" });
   if (data?.adminregionRequests?.length) items.push({ label: t("dashboard.chart.legend.pendingAdminRegion"), value: data.adminregionRequests.length, color: "#2563eb", href: "/requests" });
   if (data?.superadminRequests?.length) items.push({ label: t("dashboard.chart.legend.pendingSuperadmin"), value: data.superadminRequests.length, color: "#7c3aed", href: "/requests" });
   const rejected = (data?.rejectedAdminregion?.length || 0) + (data?.rejectedSuperadmin?.length || 0);
@@ -1002,37 +1079,39 @@ function popWithoutDeviceFromSummary(s: DashboardSummaryResponse["data"] | null 
     id: `pop-wd:${pop.pop_id}`,
     title: pop.pop_name || pop.pop_code || "POP",
     description: t("dashboard.pop.noDeviceDesc", { pop: pop.pop_code || "POP" }),
-    href: "/data-management",
+    href: "/data-management/list/pop",
     badge: t("dashboard.pop.noDevice"),
     tone: "amber" as const,
   }));
 }
 
-function weeklyAuditTrend(logs: AuditLogItem[]): TrendDatum[] {
-  const weeks: Record<string, number> = {};
+function weeklyAuditTrend(logs: Array<{ created_at?: string | null; updated_at?: string | null }>): TrendDatum[] {
+  const days: Record<string, number> = {};
   const now = new Date();
   for (let i = 6; i >= 0; i--) {
     const d = new Date(now);
-    d.setDate(d.getDate() - i * 7);
+    d.setDate(d.getDate() - i);
     const key = d.toISOString().slice(0, 10);
-    weeks[key] = 0;
+    days[key] = 0;
   }
   (logs || []).forEach((log) => {
-    if (!log.created_at) return;
-    const d = new Date(log.created_at);
+    const rawDate = log.created_at || log.updated_at;
+    if (!rawDate) return;
+    const d = new Date(rawDate);
+    if (Number.isNaN(d.getTime())) return;
     const key = d.toISOString().slice(0, 10);
-    if (key in weeks) weeks[key] = (weeks[key] || 0) + 1;
+    if (key in days) days[key] = (days[key] || 0) + 1;
   });
-  const keys = Object.keys(weeks).sort();
+  const keys = Object.keys(days).sort();
   return keys.map((k) => {
     const d = new Date(k);
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
-    return { label: `${month}/${day}`, value: weeks[k] };
+    return { label: `${month}/${day}`, value: days[k] };
   });
 }
 
-function buildMapMarkers(pops: PopItem[], odpDevices: DeviceItem[]): MapMarker[] {
+function buildMapMarkers(pops: PopItem[]): MapMarker[] {
   const markers: MapMarker[] = [];
   pops.forEach((pop) => {
     const lat = Number(pop.latitude);

@@ -5,9 +5,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "@/lib/use-theme";
 import { useTranslate } from "@/lib/use-locale";
+
+const emptySubscribe = () => () => {};
 
 type MapMarker = {
   id: string;
@@ -47,32 +49,47 @@ export function DashboardMiniMap({
   defaultCenter?: [number, number];
   defaultZoom?: number;
 }) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
   const { resolvedTheme } = useTheme();
   const { t } = useTranslate();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const tileUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const isDark = resolvedTheme === "dark";
+  const computedCenter: [number, number] = markers.length
+    ? [
+        markers.reduce((sum, m) => sum + m.lat, 0) / markers.length,
+        markers.reduce((sum, m) => sum + m.lng, 0) / markers.length,
+      ]
+    : defaultCenter;
+  const mapKey = `${computedCenter[0].toFixed(3)}:${computedCenter[1].toFixed(3)}:${markers.length}`;
 
   return (
-    <Card className="min-w-0 overflow-hidden">
+    <Card className="min-w-0 overflow-hidden rounded-2xl border-border/60 shadow-xs glass-inset">
       <CardHeader className="p-3 pb-2">
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         {loading ? (
           <Skeleton className="h-[240px] w-full rounded-none" />
         ) : mounted && markers.length ? (
-          <div className="h-[240px] w-full relative [&_.leaflet-tile]:brightness-[0.6] [&_.leaflet-tile]:invert [&_.leaflet-tile]:contrast-[3] [&_.leaflet-tile]:hue-rotate-[200deg] [&_.leaflet-tile]:saturate-[0.3] bg-[#18181b]">
+          <div
+            className={
+              isDark
+                ? "h-[240px] w-full relative [&_.leaflet-tile]:brightness-[0.6] [&_.leaflet-tile]:invert [&_.leaflet-tile]:contrast-[3] [&_.leaflet-tile]:hue-rotate-[200deg] [&_.leaflet-tile]:saturate-[0.3] bg-[#18181b]"
+                : "h-[240px] w-full relative bg-muted/20"
+            }
+          >
             <MapContainer
-              center={defaultCenter}
+              key={mapKey}
+              center={computedCenter}
               zoom={defaultZoom}
               scrollWheelZoom={false}
-              style={{ height: "100%", width: "100%", background: "#18181b" }}
+              style={{ height: "100%", width: "100%", background: isDark ? "#18181b" : "#f8fafc" }}
               attributionControl={false}
             >
               <TileLayer

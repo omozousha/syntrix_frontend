@@ -35,9 +35,9 @@ export function DashboardTrendLine({
   };
 
   return (
-    <Card className="min-w-0">
+    <Card className="min-w-0 rounded-2xl border-border/60 shadow-xs glass-inset">
       <CardHeader className="p-3 pb-2">
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="p-3 pt-0">

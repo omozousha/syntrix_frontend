@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Doto, Space_Grotesk, Space_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Space_Grotesk, Space_Mono } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeSync } from "@/components/providers/theme-sync";
 import { LocaleSync } from "@/components/providers/locale-sync";
@@ -19,16 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 // Nothing Design font stack:
-// - Doto: display/hero (≥36px)
-// - Space Grotesk: body/UI
+// - Space Grotesk: body/UI & display
 // - Space Mono: data, labels (ALL CAPS instrumentation)
-const fontDisplay = Doto({
-  variable: "--font-nd-display",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  display: "swap",
-});
-
 const fontBody = Space_Grotesk({
   variable: "--font-nd-body",
   subsets: ["latin"],
@@ -61,7 +52,7 @@ export default function RootLayout({
     <html
       lang="id"
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} ${fontDisplay.variable} ${fontBody.variable} ${fontMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fontBody.variable} ${fontMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

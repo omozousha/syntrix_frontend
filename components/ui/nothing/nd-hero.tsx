@@ -12,7 +12,7 @@ export function NdHero({
     <span
       className={className}
       style={{
-        fontFamily: "var(--font-nd-display), 'Doto', 'Space Mono', monospace",
+        fontFamily: "var(--font-nd-mono), 'Space Mono', monospace",
         color: "var(--nd-text-display)",
         letterSpacing: "-0.02em",
         lineHeight: 1.05,
