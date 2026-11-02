@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo } from "react";
 import type { LucideIcon } from "lucide-react";
 import { BookMarked, ChevronRight, Database, FolderTree, LayoutDashboard, Layers3, Map, Network, ShieldCheck, Trash2, Workflow } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { SidebarSmartTip } from "@/components/shell/sidebar-smart-tip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -21,7 +20,6 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { useTranslate } from "@/lib/use-locale";
 import type { MessageKey } from "@/lib/locales";
@@ -180,16 +178,20 @@ export function AppSidebar({
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <SidebarMenuSub>
-                          {item.items?.map((subItem) => (
-                            <SidebarMenuSubItem key={subItem.titleKey}>
-                              <SidebarMenuSubButton asChild isActive={isActive(subItem.url)} className="h-8 text-xs data-[active=true]:font-medium data-[active=true]:text-primary">
-                                <Link href={subItem.url} prefetch={false}>
-                                  {subItem.icon ? <subItem.icon className="size-4" /> : null}
-                                  <span>{t(subItem.titleKey)}</span>
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
+                          {item.items?.map((subItem) => {
+                            const subActive =
+                              subItem.url === item.url ? pathname === subItem.url : isActive(subItem.url);
+                            return (
+                              <SidebarMenuSubItem key={subItem.titleKey}>
+                                <SidebarMenuSubButton asChild isActive={subActive} className="h-8 text-xs data-[active=true]:font-medium data-[active=true]:text-primary">
+                                  <Link href={subItem.url} prefetch={false}>
+                                    {subItem.icon ? <subItem.icon className="size-4" /> : null}
+                                    <span>{t(subItem.titleKey)}</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            );
+                          })}
                         </SidebarMenuSub>
                       </CollapsibleContent>
                     </SidebarMenuItem>

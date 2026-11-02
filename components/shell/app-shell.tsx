@@ -8,8 +8,9 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { getCategoryBySlug } from "@/lib/data-management-config";
+import { formatRoleLabel, normalizeRole } from "@/lib/domain-formatters";
 import { MapsPersistentHost } from "@/components/features/maps/maps-persistent-host";
-import { useTranslate, type TFn } from "@/lib/use-locale";
+import { useTranslate, type Locale, type TFn } from "@/lib/use-locale";
 import type { MessageKey } from "@/lib/locales";
 
 export function AppShell({
@@ -22,16 +23,15 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { t } = useTranslate();
+  const { locale, t } = useTranslate();
   const normalizedRole = normalizeRole(me.role);
   const isSuperAdmin = normalizedRole === "superadmin";
   const isAdminRegion = normalizedRole === "adminregion";
-  const isValidator = normalizedRole === "validator";
   const canReviewValidation = isSuperAdmin || isAdminRegion;
   const menus: AppSidebarMenuItem[] = [
     { href: "/dashboard", label: t("sidebar.dashboard") },
     { href: "/data-management", label: t("sidebar.dataManagement") },
-    ...(isAdminRegion ? [{ href: "/data-management/list/odp", label: t("sidebar.listOdp") }] : []),
+    ...(isSuperAdmin || isAdminRegion ? [{ href: "/data-management/list/odp", label: t("sidebar.listOdp") }] : []),
     ...(canReviewValidation ? [{ href: "/requests", label: t("sidebar.requests") }] : []),
     { href: "/maps", label: t("sidebar.maps") },
     ...(isSuperAdmin ? [{ href: "/master-data", label: t("sidebar.masterData") }] : []),
@@ -40,7 +40,7 @@ export function AppShell({
     ...(isSuperAdmin || isAdminRegion ? [{ href: "/account-management", label: t("sidebar.accountManagement") }] : []),
   ];
 
-  const pageContext = buildPageContext(pathname, t);
+  const pageContext = buildPageContext(pathname, t, locale);
   const scopeLabel = buildScopeLabel(me, normalizedRole, t);
 
   return (
@@ -91,13 +91,6 @@ export function AppShell({
   );
 }
 
-function formatRoleLabel(role: string) {
-  if (role === "superadmin") return "Superadmin";
-  if (role === "adminregion") return "Admin Region";
-  if (role === "validator") return "Validator";
-  return role;
-}
-
 function buildScopeLabel(me: SessionUser, role: string, t: TFn) {
   if (role === "superadmin") return t("header.allRegions");
   const count = me.app_user.user_region_scopes?.length || 0;
@@ -106,7 +99,7 @@ function buildScopeLabel(me: SessionUser, role: string, t: TFn) {
   return t("header.regionScope");
 }
 
-function buildPageContext(pathname: string, t: TFn) {
+function buildPageContext(pathname: string, t: TFn, locale: Locale) {
   const segments = pathname.split("/").filter(Boolean);
   const first = segments[0] || "dashboard";
   const labels: Record<string, { eyebrowKey: MessageKey; titleKey: MessageKey; descriptionKey: MessageKey }> = {
@@ -121,7 +114,7 @@ function buildPageContext(pathname: string, t: TFn) {
       descriptionKey: "page.dataManagement.description",
     },
     requests: {
-      eyebrowKey: "sidebar.requests",
+      eyebrowKey: "sidebar.validation",
       titleKey: "sidebar.requests",
       descriptionKey: "page.requests.description",
     },
@@ -141,7 +134,7 @@ function buildPageContext(pathname: string, t: TFn) {
       descriptionKey: "page.auditTrail.description",
     },
     trash: {
-      eyebrowKey: "sidebar.trash",
+      eyebrowKey: "sidebar.administration",
       titleKey: "sidebar.trash",
       descriptionKey: "page.trash.description",
     },
@@ -156,7 +149,7 @@ function buildPageContext(pathname: string, t: TFn) {
       descriptionKey: "page.accountManagement.description",
     },
     profile: {
-      eyebrowKey: "sidebar.profile",
+      eyebrowKey: "sidebar.account",
       titleKey: "sidebar.profile",
       descriptionKey: "page.profile.description",
     },
@@ -168,28 +161,87 @@ function buildPageContext(pathname: string, t: TFn) {
     descriptionKey: "page.default.description",
   };
 
+  if ((first === "data-management" || first === "master-data") && segments.length > 1) {
+    const subContext = buildSubRouteContext(segments, t, locale, ctx.descriptionKey);
+    return {
+      eyebrow: t(ctx.eyebrowKey),
+      title: subContext.title,
+      description: subContext.description,
+    };
+  }
+
   return {
     eyebrow: t(ctx.eyebrowKey),
-    title: first === "master-data" && segments.length > 1 ? buildDataManagementTitle(segments) : t(ctx.titleKey),
+    title: t(ctx.titleKey),
     description: t(ctx.descriptionKey),
   };
 }
 
-function buildDataManagementTitle(segments: string[]) {
+function buildSubRouteContext(segments: string[], t: TFn, locale: Locale, fallbackDescriptionKey: MessageKey) {
   const listIndex = segments.indexOf("list");
   if (listIndex >= 0) {
     const slug = segments[listIndex + 1] || "";
     const category = getCategoryBySlug(slug);
     const label = category?.label || buildEntityTitle(slug);
-    return segments[listIndex + 2] ? `Detail ${label}` : `${label} List`;
+    const isDetail = Boolean(segments[listIndex + 2]);
+    const listTitle =
+      slug === "odp"
+        ? t("sidebar.listOdp")
+        : locale === "id"
+          ? `${t("sidebar.list")} ${label}`
+          : `${label} ${t("sidebar.list")}`;
+    return {
+      title: isDetail ? t("deviceDetail.title", { category: label }) : listTitle,
+      description: category?.description || t(fallbackDescriptionKey),
+    };
   }
 
-  if (segments.includes("topology")) return "Topology Management";
-  if (segments.includes("as-built-documents")) return "As-Built Documents";
-  if (segments.includes("as-built")) return "As-Built";
-  if (segments.includes("odp-quality")) return "ODP Quality";
-  if (segments.includes("create")) return "Create Asset";
-  return "Data Management";
+  const importIndex = segments.indexOf("import");
+  if (importIndex >= 0) {
+    const slug = segments[importIndex + 1] || "";
+    const category = getCategoryBySlug(slug);
+    const label = category?.label || buildEntityTitle(slug);
+    return {
+      title: t("import.page.title", { entity: label }),
+      description: t("import.page.uploadDesc"),
+    };
+  }
+
+  if (segments.includes("topology")) {
+    return {
+      title: t("sidebar.topologyManagement"),
+      description: t("topology.relationOverview"),
+    };
+  }
+  if (segments.includes("as-built-documents")) {
+    return {
+      title: t("sidebar.asBuiltDocuments"),
+      description: t("asBuilt.corePathDesc"),
+    };
+  }
+  if (segments.includes("as-built")) {
+    return {
+      title: t("sidebar.asBuilt"),
+      description: t("asBuilt.personalModeDesc"),
+    };
+  }
+  if (segments.includes("odp-quality")) {
+    return {
+      title: t("sidebar.odpQuality"),
+      description: t("assetOverview.description"),
+    };
+  }
+  if (segments.includes("create")) {
+    return {
+      title: t("sidebar.createAsset"),
+      description: t("createForm.headerSub"),
+    };
+  }
+
+  return {
+    title: t("sidebar.dataManagement"),
+    description: t(fallbackDescriptionKey),
+  };
 }
 
 function buildEntityTitle(value: string) {
@@ -210,11 +262,4 @@ function buildEntityTitle(value: string) {
     customer: "Customer",
   };
   return labels[value] || value.replaceAll("-", " ");
-}
-
-function normalizeRole(role: string) {
-  if (role === "admin") return "superadmin";
-  if (role === "user_all_region") return "adminregion";
-  if (role === "user_region") return "validator";
-  return role;
 }

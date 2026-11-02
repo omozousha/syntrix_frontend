@@ -10,6 +10,10 @@ const assert = {
 
 assert.strictEqual(translate("id", "sidebar.dashboard"), "Pusat Kendali", "ID translation");
 assert.strictEqual(translate("en", "sidebar.dashboard"), "Dashboard", "EN translation");
+assert.strictEqual(translate("id", "sidebar.listOdp"), "Daftar ODP", "ID ODP list header");
+assert.strictEqual(translate("en", "sidebar.listOdp"), "ODP List", "EN ODP list header");
+assert.strictEqual(translate("id", "deviceDetail.title", { category: "ODP" }), "Detail ODP", "ID detail header");
+assert.strictEqual(translate("en", "import.page.title", { entity: "ODP" }), "BULK IMPORT ODP", "EN bulk import header");
 assert.strictEqual(
   translate("id", "dashboard.openItem", { title: "X" }),
   "Buka X",

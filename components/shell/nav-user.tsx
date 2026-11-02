@@ -31,7 +31,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const THEME_KEY = "syntrix_theme";
 const AVATAR_CACHE_PREFIX = "syntrix_avatar_cache";
 const NOTIFICATION_POLL_INTERVAL_MS = 20_000;
 const LOGOUT_DIALOG_INTERVAL_MS = 5000;
@@ -86,7 +85,6 @@ export function NavUser({ me, onLogout }: { me: SessionUser; onLogout: () => voi
   const normalizedRole = normalizeRole(me.role);
   const canReviewValidation = normalizedRole === "adminregion" || normalizedRole === "superadmin";
   const { theme: currentTheme, setTheme: setThemePreference } = useTheme();
-  const isDarkMode = currentTheme === "dark" || (currentTheme === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [notifications, setNotifications] = useState<ValidationRequestNotificationItem[]>([]);
