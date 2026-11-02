@@ -697,6 +697,8 @@ function renderSinglePatchCordPanel(
 ) {
   const { popName, customerCode, customerName, portLabel, odpName, variant } = payload;
   const isQr = variant === "qr" && Boolean(qrImage);
+  const rawPopUpper = String(popName || "POP").trim().toUpperCase();
+  const popHeaderLabel = rawPopUpper.startsWith("POP ") || rawPopUpper === "POP" ? rawPopUpper : `POP ${rawPopUpper}`;
 
   // Outer border & fill
   drawRoundedCanvasRect(context, panelX, panelY, panelW, panelH, 10, "#FFFFFF", "#0F172A", 2);
@@ -706,7 +708,7 @@ function renderSinglePatchCordPanel(
     // Header for POP
     drawRoundedCanvasRect(context, panelX + 8, panelY + 8, panelW - 16, 42, 6, "#F8FAFC", "#CBD5E1", 1.5);
     context.fillStyle = "#0F172A";
-    drawAdaptiveCanvasText(context, `POP ${popName.toUpperCase()}`, panelX + 16, panelY + 35, panelW - 32, {
+    drawAdaptiveCanvasText(context, popHeaderLabel, panelX + 16, panelY + 35, panelW - 32, {
       weight: 800,
       maxSize: 18,
       minSize: 12,
@@ -761,7 +763,7 @@ function renderSinglePatchCordPanel(
     // POP pill
     drawRoundedCanvasRect(context, textX, panelY + 14, maxTextW, 36, 6, "#F8FAFC", "#CBD5E1", 1.5);
     context.fillStyle = "#0F172A";
-    drawAdaptiveCanvasText(context, `POP ${popName.toUpperCase()}`, textX + 8, panelY + 38, maxTextW - 16, {
+    drawAdaptiveCanvasText(context, popHeaderLabel, textX + 8, panelY + 38, maxTextW - 16, {
       weight: 800,
       maxSize: 13,
       minSize: 10,

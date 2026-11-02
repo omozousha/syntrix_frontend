@@ -46,9 +46,28 @@ export function buildCustomerRelationDisplay(item: DeviceRecord, relationLabels:
 }
 
 export function buildDeviceQrRelationDisplay(item: DeviceRecord, relationLabels: DeviceRelationLabels = {}) {
+  const embeddedPop = getRelationRecord(item.pop);
+  const embeddedRegion = getRelationRecord(item.region);
+  const popLabel = getPopLabel({
+    relation: embeddedPop,
+    fallback: relationLabels.pop || item.pop_name,
+    optional: true,
+  });
+  const regionLabel = getRegionLabel({
+    relation: embeddedRegion,
+    fallback: relationLabels.region || item.region_name,
+    optional: true,
+  });
   return {
-    popName: getPopLabel({ fallback: relationLabels.pop || item.pop_name, optional: true }),
-    popCode: valueOf(relationLabels.popCode || item.pop_code, ""),
+    popName: popLabel && popLabel !== "-" ? popLabel : regionLabel,
+    popCode: valueOf(
+      relationLabels.popCode ||
+        embeddedPop?.pop_code ||
+        item.pop_code ||
+        embeddedRegion?.region_code ||
+        item.region_code,
+      "",
+    ),
     projectName: getProjectLabel({
       relation: getRelationRecord(item.project),
       fallback: relationLabels.project || item.project_name,

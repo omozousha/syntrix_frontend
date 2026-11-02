@@ -96,16 +96,16 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
           errorCorrectionLevel: "H",
         });
         const dataUrl = await buildQrLabelPngDataUrl({
-          deviceName: "AGD-ODP-01.01",
-          deviceCode: "INV-2019/07/010/0003",
+          deviceName: "ODP-XXX-01.01",
+          deviceCode: "INV-XXXX/XX/XXX/0001",
           deviceType: "ODP",
-          popName: "DIPATIUKUR | DPU",
-          projectName: "FTTH Bandung 2026",
-          tenantName: "Retail",
+          popName: "POP XXX | KODE",
+          projectName: "NAMA PROJECT",
+          tenantName: "NAMA TENANT",
           qrDataUrl,
           logoDataUrl: logoPreviewDataUrl || undefined,
           footerText: setting?.footer_text || undefined,
-          validationDate: "2026-10-29",
+          validationDate: "DD/MM/YYYY",
           templateStyle: setting?.device_template_style || "default",
         });
         if (!cancelled) setLabelPreviewDataUrl(dataUrl);
@@ -115,11 +115,11 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
 
       try {
         const patchCordDataUrl = await buildPatchCordLabelPngDataUrl({
-          popName: "DIPATIUKUR",
-          customerCode: "CSC-2026/0891",
-          customerName: "PT Sentosa Digital Solusindo",
-          portLabel: "PORT 04",
-          odpName: "AGD-ODP-01.01",
+          popName: "POP XXX",
+          customerCode: "CSC-XXXX/0001",
+          customerName: "NAMA PELANGGAN",
+          portLabel: "PORT XX",
+          odpName: "ODP-XXX-01.01",
           customerId: "sample-customer-id",
           variant: setting?.customer_patch_cord_style === "qr" ? "qr" : "plain",
         });

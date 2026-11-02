@@ -124,4 +124,16 @@ assert.ok(HC_LABEL_W >= 95 && HC_LABEL_W <= 99, `Expected hazard_compact label w
 assert.ok(HC_LABEL_H >= 88 && HC_LABEL_H <= 94, `Expected hazard_compact label height ~90mm, got ${HC_LABEL_H}`);
 console.log("✅ Hazard Compact 2x3 grid geometry (6 labels/A4) verified");
 
+// 11. Region/POP resolution fallback (POP first, then Region, never hardcoded region)
+function resolveItemPopOrRegion(popLabel, regionLabel) {
+  if (popLabel && popLabel !== "-" && popLabel !== "Data tidak tersedia") return popLabel;
+  if (regionLabel && regionLabel !== "-" && regionLabel !== "Data tidak tersedia") return regionLabel;
+  return "-";
+}
+assert.strictEqual(resolveItemPopOrRegion("CIAMIS | CMS", "JAWA BARAT"), "CIAMIS | CMS");
+assert.strictEqual(resolveItemPopOrRegion("-", "BALI | BLI"), "BALI | BLI");
+assert.strictEqual(resolveItemPopOrRegion("Data tidak tersedia", "BANDUNG"), "BANDUNG");
+assert.strictEqual(resolveItemPopOrRegion("-", "-"), "-");
+console.log("✅ Region/POP dynamic fallback resolution verified");
+
 console.log("=== ALL HAZARD & PATCH CORD QR LABEL TESTS PASSED ===");

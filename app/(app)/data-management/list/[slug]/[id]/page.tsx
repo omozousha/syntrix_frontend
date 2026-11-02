@@ -3275,7 +3275,7 @@ if (!category) {
                       <PatchCordLabelsSection
                         odpName={valueOf(item.device_name, "ODP")}
                         odpCode={valueOf(item.device_id)}
-                        popName={relationLabels.pop || valueOf(item.pop_name, "POP")}
+                        popName={relationLabels.pop || relationLabels.region || valueOf(item.pop_name) || valueOf(item.region_name, "POP")}
                         ports={odpPorts}
                         defaultTemplateStyle={qrLabelPatchCordStyle}
                         loading={loadingOdpPorts}
@@ -3621,7 +3621,7 @@ if (!category) {
                       customerId={item.id}
                       customerCode={valueOf(item.customer_number || item.customer_code)}
                       customerName={valueOf(item.customer_name || item.name)}
-                      popName={relationLabels.pop || valueOf(item.pop_name)}
+                      popName={relationLabels.pop || relationLabels.region || valueOf(item.pop_name) || valueOf(item.region_name)}
                       portLabel={servicePortRelations[0]?.port_label || (servicePortRelations[0]?.port_index ? `Port ${servicePortRelations[0].port_index}` : undefined)}
                       odpName={servicePortRelations[0]?.odpDevice?.device_name || undefined}
                       defaultTemplateStyle={qrLabelPatchCordStyle}

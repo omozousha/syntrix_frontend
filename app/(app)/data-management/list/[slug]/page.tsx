@@ -141,6 +141,7 @@ type RelationMaps = {
   brands: Record<string, string>;
   provinces: Record<string, string>;
   projects: Record<string, string>;
+  regions: Record<string, string>;
 };
 type BulkActionType = "delete" | "activate" | "deactivate" | "restore";
 const DEVICE_ICON_OPTIONS = [
@@ -341,6 +342,7 @@ export default function DataManagementListPage() {
     brands: {},
     provinces: {},
     projects: {},
+    regions: {},
   });
   const [usageCheck, setUsageCheck] = useState<{
     total: number;
@@ -427,6 +429,7 @@ export default function DataManagementListPage() {
   const listDisplayLookups = useMemo<DeviceListLookupMaps>(
     () => ({
       pops: popLabelById,
+      regions: relationMaps.regions,
       projects: relationMaps.projects,
       manufacturers: relationMaps.manufacturers,
       brands: relationMaps.brands,
@@ -842,15 +845,19 @@ export default function DataManagementListPage() {
     const needsManufacturer = category.resource === "brands";
     const needsBrand = category.resource === "assetModels";
     const needsProvince = category.resource === "cities";
-    if (!needsManufacturer && !needsBrand && !needsProvince) {
-      setRelationMaps((previous) => ({ ...previous, manufacturers: {}, brands: {}, provinces: {} }));
+    const needsRegion =
+      category.resource === "devices" ||
+      category.resource === "customers" ||
+      category.resource === "poles";
+    if (!needsManufacturer && !needsBrand && !needsProvince && !needsRegion) {
+      setRelationMaps((previous) => ({ ...previous, manufacturers: {}, brands: {}, provinces: {}, regions: {} }));
       return;
     }
 
     let cancelled = false;
     async function loadRelationMaps() {
       try {
-        const next = { manufacturers: {}, brands: {}, provinces: {} } as Omit<RelationMaps, "projects">;
+        const next = { manufacturers: {}, brands: {}, provinces: {}, regions: {} } as Omit<RelationMaps, "projects">;
         const tasks: Array<Promise<void>> = [];
 
         if (needsManufacturer) {
@@ -880,11 +887,22 @@ export default function DataManagementListPage() {
             }),
           );
         }
+        if (needsRegion) {
+          tasks.push(
+            apiFetch<PaginatedResponse<GenericItem>>("/regions?page=1&limit=300", { token }).then((res) => {
+              (res.data || []).forEach((item) => {
+                next.regions[String(item.id)] = String(
+                  [item.region_name, item.region_code].filter(Boolean).join(" | ") || item.region_name || item.region_code || "-",
+                );
+              });
+            }),
+          );
+        }
 
         await Promise.all(tasks);
         if (!cancelled) setRelationMaps((previous) => ({ ...previous, ...next }));
       } catch {
-        if (!cancelled) setRelationMaps((previous) => ({ ...previous, manufacturers: {}, brands: {}, provinces: {} }));
+        if (!cancelled) setRelationMaps((previous) => ({ ...previous, manufacturers: {}, brands: {}, provinces: {}, regions: {} }));
       }
     }
 
@@ -1657,7 +1675,13 @@ export default function DataManagementListPage() {
         const rawCid = pick(row, ["customer_number", "customer_code"]) || "CSC-XXXX";
         const cleanCid = rawCid.replace(/^CID:\s*/i, "").trim().toUpperCase();
         const popId = pick(row, ["pop_id"]);
-        const popName = (popId ? listDisplayLookups.pops?.[popId] : null) || pick(row, ["pop_name"]) || "POP";
+        const regionId = pick(row, ["region_id"]);
+        const popName =
+          (popId && popId !== "-" ? listDisplayLookups.pops?.[popId] : null) ||
+          pick(row, ["pop_name"]) ||
+          (regionId && regionId !== "-" ? listDisplayLookups.regions?.[regionId] : null) ||
+          pick(row, ["region_name"]) ||
+          "POP";
         const customerName = pick(row, ["customer_name", "name"]) || undefined;
 
         let qrDataUrl: string | undefined;
@@ -1698,7 +1722,13 @@ export default function DataManagementListPage() {
       const rawCid = pick(row, ["customer_number", "customer_code"]) || "CSC-XXXX";
       const cleanCid = rawCid.replace(/^CID:\s*/i, "").trim().toUpperCase();
       const popId = pick(row, ["pop_id"]);
-      const popName = (popId ? listDisplayLookups.pops?.[popId] : null) || pick(row, ["pop_name"]) || "POP";
+      const regionId = pick(row, ["region_id"]);
+      const popName =
+        (popId && popId !== "-" ? listDisplayLookups.pops?.[popId] : null) ||
+        pick(row, ["pop_name"]) ||
+        (regionId && regionId !== "-" ? listDisplayLookups.regions?.[regionId] : null) ||
+        pick(row, ["region_name"]) ||
+        "POP";
       const customerName = pick(row, ["customer_name", "name"]) || undefined;
 
       let qrDataUrl: string | undefined;
@@ -1747,11 +1777,17 @@ export default function DataManagementListPage() {
       rows.map(async (row) => {
         const display = buildDeviceListDisplay(row, listDisplayLookups);
         const deviceId = pick(row, ["id"]);
+        const popOrRegion =
+          display.pop && display.pop !== "-" && display.pop !== "Data tidak tersedia"
+            ? display.pop
+            : display.region && display.region !== "Data tidak tersedia"
+              ? display.region
+              : "-";
         return {
           deviceName: pick(row, ["device_name", "name"]),
           deviceCode: pick(row, ["device_id", "id"]),
           deviceType: pick(row, ["device_type_key"]),
-          popName: formatQrPopLabel(display.pop, pick(row, ["pop_code", "pop_id"])),
+          popName: formatQrPopLabel(popOrRegion, pick(row, ["pop_code", "region_code", "pop_id"])),
           projectName: display.project,
           tenantName: display.tenant,
           qrDataUrl: await QRCode.toDataURL(
