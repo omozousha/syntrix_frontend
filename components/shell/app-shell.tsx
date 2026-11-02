@@ -31,7 +31,7 @@ export function AppShell({
   const menus: AppSidebarMenuItem[] = [
     { href: "/dashboard", label: t("sidebar.dashboard") },
     { href: "/data-management", label: t("sidebar.dataManagement") },
-    ...(isSuperAdmin || isAdminRegion ? [{ href: "/data-management/list/odp", label: t("sidebar.listOdp") }] : []),
+    ...(isAdminRegion ? [{ href: "/data-management/list/odp", label: t("sidebar.listOdp") }] : []),
     ...(canReviewValidation ? [{ href: "/requests", label: t("sidebar.requests") }] : []),
     { href: "/maps", label: t("sidebar.maps") },
     ...(isSuperAdmin ? [{ href: "/master-data", label: t("sidebar.masterData") }] : []),
