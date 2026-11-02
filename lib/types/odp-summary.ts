@@ -24,6 +24,10 @@ export interface OdpListSummary {
   unvalidated: number;
   validationRate: number | null;
   ports: PortStatistics;
+  cores?: PortStatistics;
+  cableLengthM?: number;
+  activeCount?: number;
+  customerLinkedCount?: number;
 }
 
 export interface OdpPopSummary {
@@ -37,4 +41,8 @@ export interface OdpPopSummary {
   totalPorts: number;
   usedPorts: number;
   availablePorts: number;
+  totalCores?: number;
+  usedCores?: number;
+  availableCores?: number;
+  cableLengthM?: number;
 }

@@ -9,6 +9,8 @@ interface OdpPopDistributionPanelProps {
   pops: OdpPopSummary[];
   activePopId?: string | null;
   totalOdpCount?: number;
+  deviceLabel?: string;
+  deviceTypeKey?: string;
   onPopSelect?: (popId: string | null) => void;
   loading?: boolean;
   error?: string | null;
@@ -18,12 +20,16 @@ interface OdpPopDistributionPanelProps {
 export function OdpPopDistributionPanel({
   pops,
   activePopId,
+  deviceLabel,
+  deviceTypeKey = "ODP",
   onPopSelect,
   loading,
   error,
   onRetry,
 }: OdpPopDistributionPanelProps) {
   const { t } = useTranslate();
+  const normalizedType = deviceTypeKey.toUpperCase();
+  const unitLabel = deviceLabel || t("deviceList.popPanel.odp");
 
   if (loading) {
     return (
@@ -114,13 +120,19 @@ export function OdpPopDistributionPanel({
                       {pop.total}
                     </span>
                     <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-                      {t("deviceList.popPanel.odp")}
+                      {unitLabel}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                     <span className="font-mono tabular-nums">
-                      {t("deviceList.popPanel.portUsage", { used: pop.usedPorts, total: pop.totalPorts })}
+                      {["ODC", "OTB", "JC"].includes(normalizedType) && ((pop.totalCores ?? 0) > 0 || pop.totalPorts === 0)
+                        ? t("deviceList.popPanel.coreUsage", { used: pop.usedCores ?? 0, total: pop.totalCores ?? 0 })
+                        : normalizedType === "CABLE"
+                          ? t("deviceList.popPanel.cableUsage", { length: Math.round(pop.cableLengthM ?? 0) })
+                          : ["ONT", "RACK", "RECTIFIER"].includes(normalizedType) && pop.totalPorts === 0
+                            ? `${pop.validated}/${pop.total}`
+                            : t("deviceList.popPanel.portUsage", { used: pop.usedPorts, total: pop.totalPorts })}
                     </span>
                     {validationStats.rate ? (
                       <span

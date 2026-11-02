@@ -14,6 +14,9 @@ assert.strictEqual(translate("id", "sidebar.listOdp"), "Daftar ODP", "ID ODP lis
 assert.strictEqual(translate("en", "sidebar.listOdp"), "ODP List", "EN ODP list header");
 assert.strictEqual(translate("id", "deviceDetail.title", { category: "ODP" }), "Detail ODP", "ID detail header");
 assert.strictEqual(translate("en", "import.page.title", { entity: "ODP" }), "BULK IMPORT ODP", "EN bulk import header");
+assert.strictEqual(translate("id", "deviceList.summary.totalDevice", { label: "ODC" }), "Total ODC", "ID device summary title");
+assert.strictEqual(translate("id", "deviceList.summary.core"), "Kapasitas Core", "ID core summary label");
+assert.strictEqual(translate("en", "deviceList.popPanel.coreUsage", { used: 12, total: 24 }), "12/24 cores", "EN pop panel core usage");
 assert.strictEqual(
   translate("id", "dashboard.openItem", { title: "X" }),
   "Buka X",

@@ -378,17 +378,19 @@ export default function DataManagementListPage() {
   const supportsPopFilter = supportsPopFilterResource(category?.resource || "");
   const supportsProjectFilter = supportsProjectFilterResource(category?.resource || "");
   const supportsQrBulkDownload = category?.resource === "devices" || category?.resource === "customers";
-  const isOdpCategory = category?.resource === "devices" && String(category?.deviceTypeKey || "").toUpperCase() === "ODP";
+  const isDeviceCategory = category?.resource === "devices";
   const renameConfig = getRenameConfig(category?.resource || "");
   const createDefaults = useMemo(() => getCreateDefaults(category?.resource || ""), [category?.resource]);
   const [activeTab, setActiveTab] = useState<"list" | "quality">("list");
-  
-  // ODP Summary Hook
+
+  // Device Summary Hook (ODP, ODC, OTB, OLT, Cable, etc.)
   const { data: odpSummary, loading: odpSummaryLoading, error: odpSummaryError } = useOdpSummary({
     regionScopeId: effectiveRegionScopeId,
     popId: popQueryParam !== "__all" && popQueryParam !== "__null__" ? popQueryParam : null,
     projectId: projectQueryParam !== "__all" ? projectQueryParam : null,
+    deviceTypeKey: category?.deviceTypeKey || null,
     token,
+    enabled: isDeviceCategory,
   });
   const handleFieldBlur = useCallback(
     async (field: { key: string; isKeyField?: boolean }, value: string) => {
@@ -1096,7 +1098,22 @@ export default function DataManagementListPage() {
       if (!category) return [];
       if (category.resource === "pops") return [selectAllHeader, "POP ID", "Code", "Name", "Pelanggan", "Status", "Updated"];
       if (category.resource === "devices") {
-        if (category.deviceTypeKey === "CABLE") return [selectAllHeader, "Device ID", "Name", "Type", "Kategori", "POP", "Status", "Validation", "Updated"];
+        const typeKey = String(category.deviceTypeKey || "").toUpperCase();
+        if (typeKey === "CABLE") {
+          return [selectAllHeader, "Device ID", "Name", "Type", "Kategori", "Core", "Panjang", "POP", "Status", "Validation", "Updated"];
+        }
+        if (typeKey === "ODP" || typeKey === "ODC") {
+          return [selectAllHeader, "Device ID", "Name", "Type", typeKey === "ODC" ? "Core / Port" : "Port", "Splitter", "POP", "Status", "Validation", "Updated"];
+        }
+        if (typeKey === "OTB" || typeKey === "JC") {
+          return [selectAllHeader, "Device ID", "Name", "Type", "Core", "POP", "Status", "Validation", "Updated"];
+        }
+        if (typeKey === "OLT" || typeKey === "SWITCH" || typeKey === "ROUTER") {
+          return [selectAllHeader, "Device ID", "Name", "Type", "Port", "POP", "Status", "Validation", "Updated"];
+        }
+        if (typeKey === "ONT") {
+          return [selectAllHeader, "Device ID", "Name", "Type", "Serial Number", "POP", "Status", "Validation", "Updated"];
+        }
         return [selectAllHeader, "Device ID", "Name", "Type", "POP", "Status", "Validation", "Updated"];
       }
       if (category.resource === "poles") return [selectAllHeader, "Pole ID", "Pole Number", "Region", "POP", "Status", "Updated"];
@@ -1180,21 +1197,38 @@ export default function DataManagementListPage() {
         const validationStatus = getDeviceDisplayValidationStatus(item);
         const validation = mapValidationStatus(validationStatus);
         const validationTitle = getDeviceValidationTitle(item, validation.label);
-        const isCable = category.deviceTypeKey === "CABLE";
+        const typeKey = String(category.deviceTypeKey || "").toUpperCase();
+        const totalPorts = Number(item.total_ports ?? 0) || (Number(item.feeder_port_count ?? 0) + Number(item.distribution_port_count ?? 0));
+        const usedPorts = Number(item.used_ports ?? 0);
+        const portCell = totalPorts > 0 ? `${usedPorts}/${totalPorts}` : "-";
+        const totalCores = Number(item.capacity_core ?? 0);
+        const usedCores = Number(item.used_core ?? 0);
+        const coreCell = totalCores > 0 ? `${usedCores}/${totalCores}` : "-";
+        const cableLength = Number(item.cable_length_m ?? 0);
+        const lengthCell = cableLength > 0 ? `${cableLength.toLocaleString("id-ID")} m` : "-";
+
         const baseCells = [
           selectCell,
           pick(item, ["device_id"]),
           pick(item, ["device_name", "name"]),
           pick(item, ["device_type_key"]),
         ];
-        const extraCableCells = isCable ? [pick(item, ["route_type"])] : [];
+        const extraCells = (() => {
+          if (typeKey === "CABLE") return [pick(item, ["route_type"]), coreCell, lengthCell];
+          if (typeKey === "ODP") return [portCell, pick(item, ["splitter_ratio"])];
+          if (typeKey === "ODC") return [coreCell !== "-" ? coreCell : portCell, pick(item, ["splitter_ratio"])];
+          if (typeKey === "OTB" || typeKey === "JC") return [coreCell];
+          if (typeKey === "OLT" || typeKey === "SWITCH" || typeKey === "ROUTER") return [portCell];
+          if (typeKey === "ONT") return [pick(item, ["serial_number"])];
+          return [];
+        })();
         const remainingCells = [
           display.pop,
           pick(item, ["status"]),
           <span key={`validation-${item.id}`} title={validationTitle} className={`inline-flex rounded border px-2 py-0.5 text-xs ${validation.className}`}>{validation.label}</span>,
           formatDateTime(pick(item, ["updated_at", "created_at"])),
         ];
-        return [...baseCells, ...extraCableCells, ...remainingCells];
+        return [...baseCells, ...extraCells, ...remainingCells];
       }
       if (category.resource === "poles") {
         return [
@@ -1972,11 +2006,13 @@ export default function DataManagementListPage() {
           }}
         />
 
-        {isOdpCategory ? (
+        {isDeviceCategory ? (
           <OdpListSummaryStrip
             summary={odpSummary?.odp ?? null}
             popCount={odpSummary?.pops?.length}
             loading={odpSummaryLoading}
+            deviceTypeKey={category.deviceTypeKey}
+            categoryLabel={category.label}
           />
         ) : (
           <DataListKpiStrip
@@ -1986,16 +2022,21 @@ export default function DataManagementListPage() {
             supportsPopFilter={supportsPopFilter}
             isPopFilterActive={popQueryParam !== "__all"}
             selectedPopLabel={selectedPopLabel}
+            isMasterCategory={isMasterCategory}
+            activeCount={isMasterCategory ? rows.filter((r) => !isArchived(r) && String(r.is_active ?? "true") !== "false").length : undefined}
+            archivedCount={isMasterCategory ? rows.filter((r) => isArchived(r) || String(r.is_active ?? "true") === "false").length : undefined}
             customerCount={category?.resource === "pops" ? popCustomerTotal : undefined}
           />
         )}
 
-        {isOdpCategory ? (
+        {isDeviceCategory ? (
           <>
             <OdpPopDistributionPanel
               pops={odpSummary?.pops ?? []}
               activePopId={popQueryParam === "__null__" ? "__unassigned__" : (popQueryParam !== "__all" ? popQueryParam : null)}
               totalOdpCount={odpSummary?.odp?.total ?? 0}
+              deviceLabel={category.label}
+              deviceTypeKey={category.deviceTypeKey}
               onPopSelect={(popId) => {
                 if (popId === null) {
                   if (popQueryParam === "__null__") {
@@ -2227,7 +2268,7 @@ export default function DataManagementListPage() {
                   rows={rows}
                   showValidationBadge={category?.resource === "devices"}
                   supportsPopFilter={supportsPopFilter}
-                  canTraceTopology={isOdpCategory && canTraceTopology}
+                  canTraceTopology={isDeviceCategory && canTraceTopology}
                   selectedIds={selectedIds}
                   allCurrentPageSelected={allCurrentRowsSelected}
                   onSelectAllPage={handleToggleSelectCurrentPage}
@@ -2266,7 +2307,7 @@ export default function DataManagementListPage() {
                   enableColumnVisibility
                   defaultColumnVisibility={defaultColumnVisibility}
                   selectedRowIndices={selectedRowIndices}
-                  hiddenOnMobile={isOdpCategory}
+                  hiddenOnMobile={true}
                   onRowClick={(rowIndex) => {
                     const row = rows[rowIndex];
                     if (!row) return;

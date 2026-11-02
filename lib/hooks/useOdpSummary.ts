@@ -13,6 +13,7 @@ interface UseOdpSummaryOptions {
   regionScopeId?: string | null;
   popId?: string | null;
   projectId?: string | null;
+  deviceTypeKey?: string | null;
   token?: string | undefined;
   enabled?: boolean;
 }
@@ -21,6 +22,7 @@ export function useOdpSummary({
   regionScopeId,
   popId,
   projectId,
+  deviceTypeKey,
   token,
   enabled = true,
 }: UseOdpSummaryOptions) {
@@ -35,37 +37,41 @@ export function useOdpSummary({
     }
 
     let cancelled = false;
-    
+
     async function fetchData() {
       setLoading(true);
       setError(null);
-      
+
       try {
         const queryParams = new URLSearchParams();
-        
+
         if (regionScopeId) {
           queryParams.set("region_id", regionScopeId);
         }
-        
+
         if (popId) {
           queryParams.set("pop_id", popId);
         }
-        
+
         if (projectId) {
           queryParams.set("project_id", projectId);
         }
-        
+
+        if (deviceTypeKey) {
+          queryParams.set("device_type_key", deviceTypeKey);
+        }
+
         const queryString = queryParams.toString();
         const path = `/dashboard/odp-summary${queryString ? `?${queryString}` : ""}`;
-        
+
         const result = await apiFetch<{ data: OdpSummaryResponse }>(path, { token });
-        
+
         if (!cancelled && result?.data) {
           setData(result.data);
         }
       } catch (err) {
         if (!cancelled) {
-          setError((err as Error).message || "Gagal memuat ringkasan ODP");
+          setError((err as Error).message || "Gagal memuat ringkasan perangkat");
           setData(null);
         }
       } finally {
@@ -80,7 +86,7 @@ export function useOdpSummary({
     return () => {
       cancelled = true;
     };
-  }, [regionScopeId, popId, projectId, token, enabled]);
+  }, [regionScopeId, popId, projectId, deviceTypeKey, token, enabled]);
 
   return { data, loading, error };
 }
