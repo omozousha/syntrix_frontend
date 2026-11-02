@@ -4,6 +4,7 @@ type DeviceRecord = Record<string, unknown>;
 
 export type DeviceRelationLabels = {
   region?: string;
+  regionCode?: string;
   pop?: string;
   popCode?: string;
   project?: string;
@@ -64,6 +65,7 @@ export function buildDeviceQrRelationDisplay(item: DeviceRecord, relationLabels:
       relationLabels.popCode ||
         embeddedPop?.pop_code ||
         item.pop_code ||
+        relationLabels.regionCode ||
         embeddedRegion?.region_code ||
         item.region_code,
       "",

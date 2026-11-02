@@ -352,21 +352,22 @@ export default function DataManagementListPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const forceDeleteRef = useRef(false);
 
+  const isScopedRegionRole = me.role === "user_region" || me.role === "user_all_region";
   const regionScopeIds = useMemo(
     () =>
-      me.role === "user_region"
+      isScopedRegionRole
         ? (me.app_user.user_region_scopes || [])
             .map((scope) => String(scope.region_id || "").trim())
             .filter(Boolean)
         : [],
-    [me],
+    [me, isScopedRegionRole],
   );
   const explicitRegionId = (searchParams.get("region_id") || "").trim();
   const isExplicitRegionInScope = regionScopeIds.includes(explicitRegionId);
   const defaultScopedRegionId = regionScopeIds[0] || "";
   const effectiveRegionScopeId =
-    me.role === "user_region"
-      ? (isExplicitRegionInScope ? explicitRegionId : defaultScopedRegionId)
+    isScopedRegionRole
+      ? (isExplicitRegionInScope ? explicitRegionId : regionScopeIds.length === 1 ? defaultScopedRegionId : "")
       : explicitRegionId;
   const canWrite = canWriteResource(me.role, category?.resource || "");
   const canTraceTopology = me.role === "admin" || me.role === "user_all_region";

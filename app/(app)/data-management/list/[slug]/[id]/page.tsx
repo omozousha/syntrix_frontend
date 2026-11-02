@@ -531,6 +531,7 @@ type ServicePortRelation = DevicePort & {
 };
 type RelationLabels = {
   region?: string;
+  regionCode?: string;
   pop?: string;
   project?: string;
   serviceType?: string;
@@ -1167,20 +1168,24 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         if (activeCategory.resource === "devices") {
           const embeddedRegion = getRelationRecord(activeItem.region);
           const embeddedPop = getRelationRecord(activeItem.pop);
+          const embeddedProject = getRelationRecord(activeItem.project);
           const embeddedManufacturer = getRelationRecord(activeItem.manufacturer);
           const embeddedBrand = getRelationRecord(activeItem.brand);
           const embeddedModel = getRelationRecord(activeItem.model);
           const embeddedTenant = getRelationRecord(activeItem.tenant);
           const referenceRegion = relationReferenceMaps.regions.get(valueOf(activeItem.region_id));
           const referencePop = relationReferenceMaps.pops.get(valueOf(activeItem.pop_id));
+          const referenceProject = relationReferenceMaps.projects.get(valueOf(activeItem.project_id));
           const referenceManufacturer = relationReferenceMaps.manufacturers.get(valueOf(activeItem.manufacturer_id));
           const referenceBrand = relationReferenceMaps.brands.get(valueOf(activeItem.brand_id));
           const referenceModel = relationReferenceMaps.models.get(valueOf(activeItem.model_id));
           const referenceTenant = relationReferenceMaps.tenants.get(valueOf(activeItem.tenant_id));
 
           labels.region = valueOf(embeddedRegion?.region_name || referenceRegion?.region_name);
+          labels.regionCode = valueOf(embeddedRegion?.region_code || referenceRegion?.region_code);
           labels.pop = valueOf(embeddedPop?.pop_name || referencePop?.pop_name);
           labels.popCode = valueOf(embeddedPop?.pop_code || referencePop?.pop_code);
+          labels.project = valueOf(embeddedProject?.project_name || referenceProject?.project_name);
           labels.manufacturer = valueOf(embeddedManufacturer?.manufacturer_name || referenceManufacturer?.manufacturer_name);
           labels.brand = valueOf(embeddedBrand?.brand_name || referenceBrand?.brand_name);
           labels.model = valueOf(embeddedModel?.model_name || referenceModel?.model_name);
