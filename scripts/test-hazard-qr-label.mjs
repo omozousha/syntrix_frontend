@@ -111,18 +111,25 @@ assert.ok(LABEL_W >= 46 && LABEL_W <= 48, `Expected label width ~46.5mm, got ${L
 assert.ok(LABEL_H >= 17 && LABEL_H <= 18, `Expected label height ~17.5mm, got ${LABEL_H}`);
 console.log("✅ Patch Cord 4x14 grid geometry (56 labels/A4) verified");
 
-// 10. Hazard Compact A4 PDF Sheet Geometry (2 cols x 3 rows = 6 labels)
+// 10. Hazard Compact A4 PDF Sheet Geometry (2 cols x 4 rows = 8 labels, locked to 1024x725 single download ratio)
 // Uses actual drawQrLabelPdf params: margin=8mm, gap=4mm
 const HC_MARGIN = 8;
 const HC_GAP = 4;
 const HC_COLS = 2;
-const HC_ROWS = 3;
+const HC_ROWS = 4;
+const HC_CANVAS_W = 1024;
+const HC_CANVAS_H = 725;
 const HC_LABEL_W = (A4_WIDTH - HC_MARGIN * 2 - HC_GAP * (HC_COLS - 1)) / HC_COLS;
-const HC_LABEL_H = (A4_HEIGHT - HC_MARGIN * 2 - HC_GAP * (HC_ROWS - 1)) / HC_ROWS;
-assert.strictEqual(HC_COLS * HC_ROWS, 6);
+const HC_SLOT_H = (A4_HEIGHT - HC_MARGIN * 2 - HC_GAP * (HC_ROWS - 1)) / HC_ROWS;
+const HC_LABEL_H = Math.min(HC_SLOT_H, HC_LABEL_W * (HC_CANVAS_H / HC_CANVAS_W));
+assert.strictEqual(HC_COLS * HC_ROWS, 8);
 assert.ok(HC_LABEL_W >= 95 && HC_LABEL_W <= 99, `Expected hazard_compact label width ~95mm, got ${HC_LABEL_W}`);
-assert.ok(HC_LABEL_H >= 88 && HC_LABEL_H <= 94, `Expected hazard_compact label height ~90mm, got ${HC_LABEL_H}`);
-console.log("✅ Hazard Compact 2x3 grid geometry (6 labels/A4) verified");
+assert.ok(HC_LABEL_H >= 67 && HC_LABEL_H <= 68, `Expected hazard_compact label height ~67.25mm, got ${HC_LABEL_H}`);
+assert.ok(
+  Math.abs(HC_LABEL_W / HC_LABEL_H - HC_CANVAS_W / HC_CANVAS_H) < 0.001,
+  "Expected PDF label aspect ratio to match single download canvas ratio (1024x725)",
+);
+console.log("✅ Hazard Compact 2x4 grid geometry (8 labels/A4) & 1:1 ratio lock verified");
 
 // 11. Region/POP resolution fallback (POP first, then Region, never hardcoded region)
 function resolveItemPopOrRegion(popLabel, regionLabel) {

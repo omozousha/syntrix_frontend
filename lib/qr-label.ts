@@ -186,34 +186,58 @@ export function formatValidationDate(value?: string | null): string {
   return `${day}/${month}/${year}`;
 }
 
-export function createHazardPattern(context: CanvasRenderingContext2D, stripeWidth = 14): CanvasPattern | string {
+export function createHazardPattern(
+  context: CanvasRenderingContext2D,
+  stripeWidth = 14,
+  yellowColor = "#F59E0B",
+  darkColor = "#020617",
+  reverseAngle = false,
+): CanvasPattern | string {
   const patternCanvas = document.createElement("canvas");
   const size = stripeWidth * 2;
   patternCanvas.width = size;
   patternCanvas.height = size;
   const pctx = patternCanvas.getContext("2d");
-  if (!pctx) return "#F59E0B";
+  if (!pctx) return yellowColor;
 
-  pctx.fillStyle = "#F59E0B";
+  pctx.fillStyle = yellowColor;
   pctx.fillRect(0, 0, size, size);
 
-  pctx.fillStyle = "#020617";
-  pctx.beginPath();
-  pctx.moveTo(0, 0);
-  pctx.lineTo(stripeWidth, 0);
-  pctx.lineTo(0, stripeWidth);
-  pctx.closePath();
-  pctx.fill();
+  pctx.fillStyle = darkColor;
+  if (reverseAngle) {
+    // -45deg diagonal stripes (matching label-odp-tailwind.html)
+    pctx.beginPath();
+    pctx.moveTo(stripeWidth, 0);
+    pctx.lineTo(size, 0);
+    pctx.lineTo(size, stripeWidth);
+    pctx.closePath();
+    pctx.fill();
 
-  pctx.beginPath();
-  pctx.moveTo(0, size);
-  pctx.lineTo(size, 0);
-  pctx.lineTo(size, stripeWidth);
-  pctx.lineTo(stripeWidth, size);
-  pctx.closePath();
-  pctx.fill();
+    pctx.beginPath();
+    pctx.moveTo(0, 0);
+    pctx.lineTo(size, size);
+    pctx.lineTo(stripeWidth, size);
+    pctx.lineTo(0, stripeWidth);
+    pctx.closePath();
+    pctx.fill();
+  } else {
+    pctx.beginPath();
+    pctx.moveTo(0, 0);
+    pctx.lineTo(stripeWidth, 0);
+    pctx.lineTo(0, stripeWidth);
+    pctx.closePath();
+    pctx.fill();
 
-  return context.createPattern(patternCanvas, "repeat") || "#F59E0B";
+    pctx.beginPath();
+    pctx.moveTo(0, size);
+    pctx.lineTo(size, 0);
+    pctx.lineTo(size, stripeWidth);
+    pctx.lineTo(stripeWidth, size);
+    pctx.closePath();
+    pctx.fill();
+  }
+
+  return context.createPattern(patternCanvas, "repeat") || yellowColor;
 }
 
 export function drawHazardBorder(
@@ -239,6 +263,9 @@ export function drawHazardBorder(
   context.restore();
 }
 
+export const HAZARD_COMPACT_CANVAS_WIDTH = 1024;
+export const HAZARD_COMPACT_CANVAS_HEIGHT = 725;
+
 export async function buildHazardCompactQrLabelPngDataUrl({
   deviceName,
   deviceCode,
@@ -248,9 +275,9 @@ export async function buildHazardCompactQrLabelPngDataUrl({
   logoDataUrl: providedLogoDataUrl,
   validationDate,
 }: QrLabelPayload) {
-  // 2x high-res canvas: 1024×800 (base design 512×400)
-  const W = 1024;
-  const H = 800;
+  // 2x high-res canvas: 1024×725 (aspect ratio 1.4124:1 — matches 2×4 A4 grid 95×67.25mm with 0% distortion)
+  const W = HAZARD_COMPACT_CANVAS_WIDTH;
+  const H = HAZARD_COMPACT_CANVAS_HEIGHT;
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -265,29 +292,33 @@ export async function buildHazardCompactQrLabelPngDataUrl({
   const HAZARD_YELLOW = "#FBD215";
   const ALERT_RED = "#E3262B";
 
-  // ── 1. Outer hazard stripe border (-45deg yellow/black) ──
-  const outerR = 80; // 40px * 2
-  const borderW = 6; // 3px * 2
-  const stripeW = 22; // 11px * 2
-  const padding = 30; // 15px * 2
+  // Fill white canvas background first so outer rounded corners never render black in PDF streams
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, W, H);
 
-  const stripePattern = createHazardPattern(ctx, stripeW);
+  // ── 1. Outer hazard stripe border (-45deg yellow/black) ──
+  const outerR = 76;
+  const borderW = 6;
+  const stripeW = 22;
+  const padding = 26;
+
+  const stripePattern = createHazardPattern(ctx, stripeW, HAZARD_YELLOW, INK, true);
   drawRoundedCanvasRect(ctx, 0, 0, W, H, outerR, stripePattern, INK, borderW);
 
   // ── 2. Inner yellow body ──
-  const innerR = 56; // 28px * 2
+  const innerR = 54;
   const bodyX = padding;
   const bodyY = padding;
-  const bodyW = W - padding * 2; // 964
-  const bodyH = H - padding * 2; // 740
+  const bodyW = W - padding * 2; // 972
+  const bodyH = H - padding * 2; // 673
   drawRoundedCanvasRect(ctx, bodyX, bodyY, bodyW, bodyH, innerR, HAZARD_YELLOW, INK, borderW);
 
   // ── 3. Top White Card (QR + Specs) with strict clipping ──
-  const topCardH = 296; // 148px * 2
-  const topCardR = 40; // 20px * 2
-  const topCardX = bodyX + 24; // 54
-  const topCardY = bodyY + 20; // 50
-  const topCardW = bodyW - 48; // 916
+  const topCardH = 288;
+  const topCardR = 40;
+  const topCardX = bodyX + 24;
+  const topCardY = bodyY + 20;
+  const topCardW = bodyW - 48; // 924
 
   // Draw and clip inside the white card to prevent any QR bleed
   ctx.save();
@@ -298,15 +329,15 @@ export async function buildHazardCompactQrLabelPngDataUrl({
   ctx.clip();
 
   // QR section (left side)
-  const qrSectionW = 320; // 160px * 2
-  const qrSize = 236; // comfortably fits inside topCardH (296) with 30px top/bottom margin
+  const qrSectionW = 312;
+  const qrSize = 236;
   const qrX = topCardX + Math.round((qrSectionW - qrSize) / 2);
   const qrY = topCardY + Math.round((topCardH - qrSize) / 2);
 
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
-  if (logoImage) drawQrLogoImageCanvas(ctx, logoImage, qrX + qrSize / 2, qrY + qrSize / 2, 76);
-  else drawDefaultQrLogoCanvas(ctx, qrX + qrSize / 2, qrY + qrSize / 2, 76);
+  if (logoImage) drawQrLogoImageCanvas(ctx, logoImage, qrX + qrSize / 2, qrY + qrSize / 2, 74);
+  else drawDefaultQrLogoCanvas(ctx, qrX + qrSize / 2, qrY + qrSize / 2, 74);
 
   // Vertical divider between QR and Specs
   ctx.fillStyle = INK;
@@ -317,22 +348,22 @@ export async function buildHazardCompactQrLabelPngDataUrl({
   const textMaxW = topCardW - qrSectionW - 56;
   ctx.fillStyle = INK;
 
-  drawAdaptiveCanvasText(ctx, deviceName, textX, topCardY + 64, textMaxW, {
+  drawAdaptiveCanvasText(ctx, deviceName, textX, topCardY + 66, textMaxW, {
     weight: 800,
-    maxSize: 48,
-    minSize: 26,
+    maxSize: 46,
+    minSize: 18,
   });
-  drawAdaptiveCanvasText(ctx, `ID: ${deviceCode}`, textX, topCardY + 120, textMaxW, {
+  drawAdaptiveCanvasText(ctx, `ID: ${deviceCode}`, textX, topCardY + 126, textMaxW, {
     weight: 700,
     maxSize: 32,
     minSize: 18,
   });
-  drawAdaptiveCanvasText(ctx, `TYPE: ${deviceType}`, textX, topCardY + 168, textMaxW, {
+  drawAdaptiveCanvasText(ctx, `TYPE: ${deviceType}`, textX, topCardY + 178, textMaxW, {
     weight: 700,
     maxSize: 32,
     minSize: 18,
   });
-  drawAdaptiveCanvasText(ctx, `POP: ${popName}`, textX, topCardY + 216, textMaxW, {
+  drawAdaptiveCanvasText(ctx, `POP: ${popName}`, textX, topCardY + 230, textMaxW, {
     weight: 700,
     maxSize: 32,
     minSize: 18,
@@ -348,22 +379,22 @@ export async function buildHazardCompactQrLabelPngDataUrl({
   ctx.stroke();
 
   // ── 4. Middle Warning Panel ──
-  const warnPanelH = 236; // 118px * 2
-  const warnPanelR = 48; // 24px * 2
-  const warnPanelY = topCardY + topCardH + 20; // 366
+  const warnPanelH = 224;
+  const warnPanelR = 46;
+  const warnPanelY = topCardY + topCardH + 18;
   const warnPanelX = bodyX + 24;
   const warnPanelW = bodyW - 48;
   drawRoundedCanvasRect(ctx, warnPanelX, warnPanelY, warnPanelW, warnPanelH, warnPanelR, HAZARD_YELLOW, INK, borderW);
 
   // SVG Warning triangle icon (left side) - exact vector scaling from label-odp-tailwind.html
-  const triW = 184; // 92px * 2
-  const triH = 164; // 82px * 2
+  const triW = 184;
+  const triH = 164;
   const triX = warnPanelX + 16;
   const triY = warnPanelY + Math.round((warnPanelH - triH) / 2);
 
   ctx.save();
   ctx.translate(triX, triY);
-  ctx.scale(2.0, 2.0); // scale viewBox 0 0 92 82 by 2x
+  ctx.scale(2.0, 2.0);
   ctx.fillStyle = INK;
   ctx.strokeStyle = INK;
   ctx.lineWidth = 8;
@@ -396,9 +427,9 @@ export async function buildHazardCompactQrLabelPngDataUrl({
   renderAdaptiveWarningBoxText(ctx, textBoxX, textBoxY, textBoxW, textBoxH, ALERT_RED);
 
   // ── 5. Bottom Validation Date Card ──
-  const valCardH = 84; // 42px * 2
-  const valCardR = 44; // 22px * 2
-  const valCardY = warnPanelY + warnPanelH + 20; // 622
+  const valCardH = 84;
+  const valCardR = 42;
+  const valCardY = warnPanelY + warnPanelH + 18;
   const valCardX = bodyX + 24;
   const valCardW = bodyW - 48;
   drawRoundedCanvasRect(ctx, valCardX, valCardY, valCardW, valCardH, valCardR, "#FFFFFF", INK, borderW);
@@ -666,12 +697,17 @@ export async function drawQrLabelPdf(doc: JsPdfDocument, rows: QrLabelPayload[])
   const margin = 8;
   const gap = 4;
   const columns = 2;
-  // hazard_compact uses 2×3 grid (6 labels/page, ~92×72mm each — larger physical size)
-  // default/hazard use 2×6 grid (12 labels/page, ~92×42mm each)
+  // hazard_compact uses 2×4 grid (8 labels/page, 95×67.25mm each — locked to 1024×725 single download ratio)
+  // default/hazard use 2×6 grid (12 labels/page, 95×43.5mm each)
   const isCompact = rows.some((r) => r.templateStyle === "hazard_compact");
-  const rowsPerPage = isCompact ? 3 : 6;
+  const rowsPerPage = isCompact ? 4 : 6;
   const labelWidth = (pageWidth - margin * 2 - gap * (columns - 1)) / columns;
-  const labelHeight = (pageHeight - margin * 2 - gap * (rowsPerPage - 1)) / rowsPerPage;
+  const slotHeight = (pageHeight - margin * 2 - gap * (rowsPerPage - 1)) / rowsPerPage;
+  const labelHeight = isCompact
+    ? Math.min(slotHeight, labelWidth * (HAZARD_COMPACT_CANVAS_HEIGHT / HAZARD_COMPACT_CANVAS_WIDTH))
+    : slotHeight;
+  const totalGridHeight = rowsPerPage * labelHeight + (rowsPerPage - 1) * gap;
+  const startY = Math.max(margin, (pageHeight - totalGridHeight) / 2);
   const perPage = columns * rowsPerPage;
   const labelImages = await Promise.all(rows.map((row) => buildQrLabelPngDataUrl(row)));
 
@@ -681,8 +717,8 @@ export async function drawQrLabelPdf(doc: JsPdfDocument, rows: QrLabelPayload[])
     const column = pageIndex % columns;
     const rowIndex = Math.floor(pageIndex / columns);
     const x = margin + column * (labelWidth + gap);
-    const y = margin + rowIndex * (labelHeight + gap);
-    doc.addImage(labelDataUrl, "PNG", x, y, labelWidth, labelHeight);
+    const y = startY + rowIndex * (labelHeight + gap);
+    doc.addImage(labelDataUrl, "PNG", x, y, labelWidth, labelHeight, undefined, "FAST");
   });
 }
 
@@ -871,7 +907,7 @@ export async function drawPatchCordLabelPdf(doc: JsPdfDocument, rows: PatchCordL
     const rowIndex = Math.floor(pageIndex / columns);
     const x = marginX + column * (labelWidth + gapX);
     const y = marginY + rowIndex * (labelHeight + gapY);
-    doc.addImage(labelDataUrl, "PNG", x, y, labelWidth, labelHeight);
+    doc.addImage(labelDataUrl, "PNG", x, y, labelWidth, labelHeight, undefined, "FAST");
   });
 }
 

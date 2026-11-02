@@ -586,7 +586,7 @@ export function QrLabelSettingsPanel({ token }: QrLabelSettingsPanelProps) {
                             Hazard Box
                           </p>
                           <p className="text-[10px] text-muted-foreground opacity-80">
-                            512×400 · ODP Outdoor
+                            1024×725 · 8 Label/A4
                           </p>
                         </div>
                       </Button>
