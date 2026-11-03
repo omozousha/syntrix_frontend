@@ -44,6 +44,7 @@ import { DataListKpiStrip } from "@/components/features/data-management/device-l
 import { DataMobileList } from "@/components/features/data-management/device-list/data-mobile-list";
 import { DataTableView } from "@/components/features/data-management/device-list/data-table-view";
 import { OdpListSummaryStrip } from "@/components/features/data-management/device-list/odp-list-summary-strip";
+import { PopListSummaryStrip } from "@/components/features/data-management/device-list/pop-list-summary-strip";
 import { OdpPopDistributionPanel } from "@/components/features/data-management/device-list/odp-pop-distribution-panel";
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
 import { useOdpSummary } from "@/lib/hooks/useOdpSummary";
@@ -2014,6 +2015,14 @@ export default function DataManagementListPage() {
             deviceTypeKey={category.deviceTypeKey}
             categoryLabel={category.label}
           />
+        ) : category?.resource === "pops" ? (
+          <PopListSummaryStrip
+            total={total}
+            activeCount={rows.filter((r) => !isArchived(r) && String(r.is_active ?? "true") !== "false").length}
+            archivedCount={rows.filter((r) => isArchived(r) || String(r.is_active ?? "true") === "false").length}
+            customerCount={popCustomerTotal}
+            loading={loading}
+          />
         ) : (
           <DataListKpiStrip
             total={total}
@@ -2025,7 +2034,7 @@ export default function DataManagementListPage() {
             isMasterCategory={isMasterCategory}
             activeCount={isMasterCategory ? rows.filter((r) => !isArchived(r) && String(r.is_active ?? "true") !== "false").length : undefined}
             archivedCount={isMasterCategory ? rows.filter((r) => isArchived(r) || String(r.is_active ?? "true") === "false").length : undefined}
-            customerCount={category?.resource === "pops" ? popCustomerTotal : undefined}
+            customerCount={undefined}
           />
         )}
 

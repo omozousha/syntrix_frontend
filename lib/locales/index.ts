@@ -201,6 +201,12 @@ const id = {
   "dashboard.metric.healthy": "Sehat",
   "dashboard.metric.needsWork": "Perlu Perbaikan",
 
+  // Device List Summary (POP & generic)
+  "deviceList.summary.totalPop": "Total POP",
+  "deviceList.summary.totalPopCaption": "Jumlah keseluruhan Point of Presence.",
+  "deviceList.summary.customerCoverage": "Cakupan Pelanggan",
+  "deviceList.summary.customerCoverageCaption": "{count} pelanggan terhubung ke POP.",
+
   // Dashboard captions
   "dashboard.caption.regions": "Wilayah aktif sesuai cakupan pengguna.",
   "dashboard.caption.pops": "POP yang menjadi titik agregasi jaringan.",
@@ -1995,6 +2001,8 @@ const id = {
   "deviceList.summary.activeStatusCaption": "{count} perangkat berstatus aktif",
   "deviceList.summary.popCoverage": "Cakupan POP",
   "deviceList.summary.popCoverageCaption": "{count} POP dalam cakupan aktif",
+  "deviceList.summary.archived": "Tercatat Arsip",
+  "deviceList.summary.archivedCaption": "{count} POP berstatus arsip/non-aktif",
   "deviceList.filter.toggleHide": "Sembunyikan Filter",
   "deviceList.filter.toggleShow": "Tampilkan Filter",
   "deviceList.filter.activeCount": "{count} aktif",
@@ -5227,8 +5235,14 @@ const en: Messages = {
   "deviceList.summary.customerLinkedCaption": "{count} not linked to a customer",
   "deviceList.summary.activeStatus": "Active Status",
   "deviceList.summary.activeStatusCaption": "{count} active devices",
+  "deviceList.summary.totalPop": "Total POP",
+  "deviceList.summary.totalPopCaption": "Total Point of Presence",
+  "deviceList.summary.customerCoverage": "Customer Coverage",
+  "deviceList.summary.customerCoverageCaption": "{count} customers linked to POP",
   "deviceList.summary.popCoverage": "POP Coverage",
   "deviceList.summary.popCoverageCaption": "{count} POPs in the active scope",
+  "deviceList.summary.archived": "Archived Records",
+  "deviceList.summary.archivedCaption": "{count} POPs in archived/inactive status",
   "deviceList.filter.toggleHide": "Hide Filters",
   "deviceList.filter.toggleShow": "Show Filters",
   "deviceList.filter.activeCount": "{count} active",
