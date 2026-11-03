@@ -2,14 +2,24 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useTheme } from "@/lib/use-theme";
 import { useTranslate } from "@/lib/use-locale";
 
 const emptySubscribe = () => () => {};
+
+function FitBounds({ positions }: { positions: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!positions.length) return;
+    const bounds = L.latLngBounds(positions);
+    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 13 });
+  }, [map, positions]);
+  return null;
+}
 
 type MapMarker = {
   id: string;
@@ -59,13 +69,8 @@ export function DashboardMiniMap({
 
   const tileUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
   const isDark = resolvedTheme === "dark";
-  const computedCenter: [number, number] = markers.length
-    ? [
-        markers.reduce((sum, m) => sum + m.lat, 0) / markers.length,
-        markers.reduce((sum, m) => sum + m.lng, 0) / markers.length,
-      ]
-    : defaultCenter;
-  const mapKey = `${computedCenter[0].toFixed(3)}:${computedCenter[1].toFixed(3)}:${markers.length}`;
+  const positions = markers.map((m): [number, number] => [m.lat, m.lng]);
+  const mapKey = `map:${markers.length}:${isDark ? "d" : "l"}`;
 
   return (
     <Card className="min-w-0 overflow-hidden rounded-2xl border-border/60 shadow-xs glass-inset">
@@ -86,12 +91,13 @@ export function DashboardMiniMap({
           >
             <MapContainer
               key={mapKey}
-              center={computedCenter}
+              center={defaultCenter}
               zoom={defaultZoom}
               scrollWheelZoom={false}
               style={{ height: "100%", width: "100%", background: isDark ? "#18181b" : "#f8fafc" }}
               attributionControl={false}
             >
+              <FitBounds positions={positions} />
               <TileLayer
                 url={tileUrl}
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
