@@ -9,4 +9,5 @@ export { PopDetailSummaryStrip } from "./pop-detail-summary-strip";
 export { PopRackElevationCanvas } from "./pop-rack-elevation-canvas";
 export { PopRackFormDialog } from "./pop-rack-form-dialog";
 export { PopUnmountedTray } from "./pop-unmounted-tray";
+export { PopBentoGalleryTile } from "./pop-bento-gallery-tile";
 export { PopRackMountModal, type DeviceToMount, type RackOption } from "./pop-rack-mount-modal";

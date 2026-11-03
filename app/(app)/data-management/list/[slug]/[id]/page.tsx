@@ -30,6 +30,7 @@ import {
   PopBentoLocationTile,
   PopBentoPropertyTile,
   PopBentoDocumentsTile,
+  PopBentoGalleryTile,
   PopBentoRackKpiTile,
   PopDetailSummaryStrip,
   PopRackElevationCanvas,
@@ -3333,6 +3334,7 @@ if (!category) {
                             size="sm"
                             onClick={() => {
                               setForm(buildEditableForm(item, category.resource, deviceTopologySummary));
+                              setNewImageFiles([]);
                               setIsEditing(false);
                             }}
                             disabled={saving}
@@ -3435,8 +3437,8 @@ if (!category) {
 
                           {/* TILE 4: Galeri Foto Ruang/Site POP (12 Cols Full Width) */}
                           <div className="col-span-1 sm:col-span-12">
-                            <DeviceBentoGalleryTile
-                              deviceTypeLabel="Site POP"
+                            <PopBentoGalleryTile
+                              popName={typeof item?.name === "string" ? item.name : undefined}
                               attachments={galleryImageAttachments}
                               imagePreviewUrls={imagePreviewUrls}
                               attachmentNames={attachmentNames}
