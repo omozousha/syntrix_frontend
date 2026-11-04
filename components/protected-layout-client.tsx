@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { AppLoading } from "@/components/app-loading-new";
@@ -160,12 +160,17 @@ export function ProtectedLayoutClient({ children }: { children: React.ReactNode 
     };
   }, [token, refreshToken, tokenExpiresAt, logout]);
 
-  if (loading || !me || !token) {
+  const sessionValue = useMemo(
+    () => (me ? { token, me, logout } : null),
+    [token, me, logout],
+  );
+
+  if (loading || !me || !token || !sessionValue) {
     return <AppLoading fullscreen label="Sedang memuat sesi pengguna..." />;
   }
 
   return (
-    <SessionProvider value={{ token, me, logout }}>
+    <SessionProvider value={sessionValue}>
       <AppShell me={me} onLogout={logout}>
         {children}
       </AppShell>

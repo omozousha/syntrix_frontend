@@ -103,7 +103,7 @@ export function AddDataMenu({
   canCreateDevice = true,
   canManageMaster = false,
 }: AddDataMenuProps) {
-  const token = useSession();
+  const { token } = useSession();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [deviceTypes, setDeviceTypes] = useState<DeviceTypeRow[]>([]);
@@ -117,7 +117,7 @@ export function AddDataMenu({
       try {
         const result = await apiFetch<PaginatedResponse<DeviceTypeRow>>(
           "/deviceTypes?page=1&limit=200&is_active=true",
-          token,
+          { token },
         );
         if (cancelled) return;
         const rows = (result.data || [])
