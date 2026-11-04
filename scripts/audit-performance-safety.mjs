@@ -101,7 +101,7 @@ const checks = [
       if (listPage.includes("/attachments/") || listPage.includes("/attachments?")) {
         issues.push("data-management list page fetches attachment files directly");
       }
-      if (!detailPage.includes("DeviceGallerySection")) {
+      if (!/DeviceGallerySection|DeviceBentoGalleryTile/.test(detailPage)) {
         issues.push("device detail page does not isolate gallery rendering in DeviceGallerySection");
       }
       return issues;
