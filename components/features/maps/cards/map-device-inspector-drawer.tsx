@@ -257,7 +257,7 @@ export function MapDeviceInspectorDrawer({
               <button
                 type="button"
                 onClick={onClose}
-                title="Tutup inspector"
+                title={t("mapInspector.close")}
                 className="size-7 flex items-center justify-center rounded-full border border-border/60 text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all active:scale-95"
               >
                 <X className="size-3.5" />

@@ -1,37 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback, memo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowDown, ArrowRight, Download, ExternalLink, MapPin, Navigation, QrCode, ShieldCheck, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch } from "@/lib/api";
 import { buildQrFallbackDisplay } from "@/lib/display-adapters/qr-fallback-display-adapter";
-
-const FullPageSkeleton = memo(() => (
-  <div className="min-h-dvh bg-background flex items-center justify-center">
-    <div className="w-full max-w-7xl mx-auto p-6 space-y-8">
-      <div className="h-12 bg-muted/50 rounded-2xl animate-pulse" />
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-7 space-y-6">
-          <div className="h-20 bg-muted/50 rounded-3xl animate-pulse" />
-          <div className="h-32 bg-muted/50 rounded-3xl animate-pulse" />
-          <div className="grid grid-cols-3 gap-4">
-            <div className="h-24 bg-muted/50 rounded-2xl animate-pulse" />
-            <div className="h-24 bg-muted/50 rounded-2xl animate-pulse" />
-            <div className="h-24 bg-muted/50 rounded-2xl animate-pulse" />
-          </div>
-        </div>
-        <div className="col-span-5">
-          <div className="h-[520px] bg-muted/50 rounded-3xl animate-pulse" />
-        </div>
-      </div>
-    </div>
-  </div>
-));
+import { useTranslate } from "@/lib/use-locale";
 
 type DeviceQrContext = {
   id: string;
@@ -59,6 +38,7 @@ const APK_DOWNLOAD_URL = "https://od.lk/fl/OTRfMTcyOTg2MDBf";
 export default function OdpPublicGuestPortalPage() {
   const params = useParams<{ id: string }>();
   const id = String(params?.id || "").trim();
+  const { t } = useTranslate();
   const [device, setDevice] = useState<DeviceQrContext | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadMessage, setLoadMessage] = useState("");
@@ -82,11 +62,11 @@ export default function OdpPublicGuestPortalPage() {
         if (cancelled) return;
         setDevice(result.data || null);
         if (!result.data) {
-          setLoadMessage("Informasi rinci perangkat tidak ditemukan atau telah diarsipkan.");
+          setLoadMessage(t("fieldQr.notFoundOrArchived"));
         }
       } catch {
         if (!cancelled) {
-          setLoadMessage("Gagal memuat detail perangkat dari server public.");
+          setLoadMessage(t("fieldQr.loadFailed"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -97,7 +77,7 @@ export default function OdpPublicGuestPortalPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, t]);
 
   function openSyntrixOne() {
     window.location.href = appOpenHref;
@@ -121,13 +101,13 @@ export default function OdpPublicGuestPortalPage() {
               <QrCode className="size-4 sm:size-5" />
             </div>
             <div>
-              <p className="text-sm sm:text-base font-bold tracking-tight text-foreground">Syntrix Public Portal</p>
-              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Guest Device Verification</p>
+              <p className="text-sm sm:text-base font-bold tracking-tight text-foreground">{t("fieldQr.portalTitle")}</p>
+              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">{t("fieldQr.portalSub")}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.18em] border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              Guest Access
+              {t("fieldQr.guestAccessBadge")}
             </Badge>
           </div>
         </header>
@@ -138,10 +118,10 @@ export default function OdpPublicGuestPortalPage() {
             <TabsList className="grid h-10 w-full grid-cols-2 rounded-xl bg-card/95 p-1 border border-border/60 shadow-xs backdrop-blur-md">
               <TabsTrigger value="overview" className="rounded-lg font-mono text-[11px] uppercase tracking-wider font-semibold data-[state=active]:bg-background data-[state=active]:shadow-2xs flex items-center justify-center gap-1.5">
                 <QrCode className="size-3.5" />
-                <span>Ringkasan</span>
+                <span>{t("fieldQr.tabOverview")}</span>
               </TabsTrigger>
               <TabsTrigger value="details" className="rounded-lg font-mono text-[11px] uppercase tracking-wider font-semibold data-[state=active]:bg-background data-[state=active]:shadow-2xs flex items-center justify-center gap-1.5">
-                <span>Detail Aset QR</span>
+                <span>{t("fieldQr.tabDetail")}</span>
                 <span className="relative flex size-2 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                   <span className="relative inline-flex rounded-full size-2 bg-primary"></span>
@@ -158,19 +138,19 @@ export default function OdpPublicGuestPortalPage() {
             <div className="rounded-2xl border border-border/60 bg-card p-5 sm:p-8 shadow-xs glass-inset space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.18em]">
-                  Asset Identification
+                  {t("fieldQr.assetIdBadge")}
                 </Badge>
                 <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.18em]">
-                  Public QR Reader
+                  {t("fieldQr.publicReaderBadge")}
                 </Badge>
               </div>
 
               <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground leading-[1.15]">
-                Informasi Aset Perangkat Fiber Optik
+                {t("fieldQr.heroTitle")}
               </h1>
 
               <p className="text-xs sm:text-base leading-relaxed text-muted-foreground">
-                Anda melakukan pemindaian QR Code perangkat infrastruktur telko Syntrix sebagai <strong>Tamu / Guest</strong>. Halaman ini menyajikan informasi dasar lokasi dan aset tanpa memerlukan akun login.
+                {t("fieldQr.heroDescLead")} <strong>{t("fieldQr.heroDescGuest")}</strong>. {t("fieldQr.heroDescTail")}
               </p>
 
               {/* Primary Call To Actions */}
@@ -182,7 +162,7 @@ export default function OdpPublicGuestPortalPage() {
                   className="h-11 rounded-full bg-primary px-6 text-xs sm:text-sm font-semibold text-primary-foreground shadow-xs transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] hover:bg-primary/90"
                 >
                   <Smartphone className="mr-2 size-4" />
-                  Buka di Aplikasi Syntrix-One
+                  {t("fieldQr.openInApp")}
                   <ArrowRight className="ml-2 size-4" />
                 </Button>
                 <Button
@@ -195,7 +175,7 @@ export default function OdpPublicGuestPortalPage() {
                   }}
                 >
                   <Download className="mr-2 size-4 text-primary" />
-                  Download Aplikasi (APK)
+                  {t("fieldQr.downloadApk")}
                 </Button>
               </div>
 
@@ -206,7 +186,7 @@ export default function OdpPublicGuestPortalPage() {
                   onClick={scrollToDetails}
                   className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-primary hover:underline focus:outline-none"
                 >
-                  <span>Lihat rincian spesifikasi &amp; Detail Aset QR</span>
+                  <span>{t("fieldQr.viewSpecsLink")}</span>
                   <ArrowDown className="size-3.5" />
                 </button>
               </div>
@@ -217,7 +197,7 @@ export default function OdpPublicGuestPortalPage() {
               <Card className="rounded-2xl border border-border/60 bg-card shadow-xs glass-inset p-4 sm:p-5 space-y-3">
                 <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-foreground">
                   <Navigation className="size-4 text-primary" />
-                  <span>Lokasi &amp; Navigasi Peta</span>
+                  <span>{t("fieldQr.navTitle")}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <a
@@ -236,7 +216,7 @@ export default function OdpPublicGuestPortalPage() {
                     className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/20 px-4 text-xs font-mono font-medium text-foreground transition-all duration-200 hover:border-primary/50 hover:bg-primary/5 active:scale-[0.98]"
                   >
                     <Navigation className="size-3.5 text-sky-500" />
-                    Buka Waze
+                    {t("fieldQr.openWaze")}
                   </a>
                 </div>
               </Card>
@@ -244,9 +224,9 @@ export default function OdpPublicGuestPortalPage() {
 
             {/* Guest Portal Highlights */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-              <SafetyPoint title="Akses Publik" description="Dapat diakses oleh siapa saja tanpa login." />
-              <SafetyPoint title="Verifikasi QR" description="Memastikan identitas fisik label perangkat." />
-              <SafetyPoint title="Integrasi App" description="Dapat dibuka langsung ke app Syntrix-One." />
+              <SafetyPoint title={t("fieldQr.point1Title")} description={t("fieldQr.point1Desc")} />
+              <SafetyPoint title={t("fieldQr.point2Title")} description={t("fieldQr.point2Desc")} />
+              <SafetyPoint title={t("fieldQr.point3Title")} description={t("fieldQr.point3Desc")} />
             </div>
           </div>
 
@@ -259,9 +239,9 @@ export default function OdpPublicGuestPortalPage() {
                     <ShieldCheck className="size-5" />
                   </div>
                   <div>
-                    <CardTitle className="text-base sm:text-lg font-bold tracking-tight">Detail Aset QR</CardTitle>
+                    <CardTitle className="text-base sm:text-lg font-bold tracking-tight">{t("fieldQr.tabDetail")}</CardTitle>
                     <CardDescription className="text-xs">
-                      {loading ? "Memuat data perangkat..." : "Informasi terdaftar pada server Syntrix."}
+                      {loading ? t("fieldQr.loadingData") : t("fieldQr.registeredInfo")}
                     </CardDescription>
                   </div>
                 </div>
@@ -269,10 +249,10 @@ export default function OdpPublicGuestPortalPage() {
 
               <CardContent className="p-4 sm:p-5 space-y-4">
                 <div className="space-y-2.5">
-                  <InfoRow label="Tipe Perangkat" value={display.deviceType} loading={loading} />
-                  <InfoRow label="Nama Perangkat" value={display.deviceName} loading={loading} />
-                  <InfoRow label="POP Terhubung" value={display.pop} loading={loading} />
-                  <InfoRow label="Tenant / Pengelola" value={display.tenant} loading={loading} />
+                  <InfoRow label={t("fieldQr.rowDeviceType")} value={display.deviceType} loading={loading} />
+                  <InfoRow label={t("fieldQr.rowDeviceName")} value={display.deviceName} loading={loading} />
+                  <InfoRow label={t("fieldQr.rowConnectedPop")} value={display.pop} loading={loading} />
+                  <InfoRow label={t("fieldQr.rowTenant")} value={display.tenant} loading={loading} />
                 </div>
 
                 {loadMessage ? (
@@ -282,7 +262,7 @@ export default function OdpPublicGuestPortalPage() {
                 ) : null}
 
                 <div className="rounded-xl border border-border/50 bg-muted/30 p-3.5 text-xs leading-relaxed text-muted-foreground">
-                  Ingin melakukan perubahan data atau validasi foto presisi? Buka aplikasi <strong>Syntrix-One</strong> melalui tombol di bawah.
+                  {t("fieldQr.editPromptLead")} <strong>Syntrix-One</strong> {t("fieldQr.editPromptTail")}
                 </div>
 
                 <div className="space-y-2">
@@ -291,7 +271,7 @@ export default function OdpPublicGuestPortalPage() {
                     className="w-full justify-between h-10 rounded-xl bg-primary text-primary-foreground px-4 text-xs font-semibold shadow-xs transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] hover:bg-primary/90"
                     onClick={openSyntrixOne}
                   >
-                    <span>Buka di Syntrix-One App</span>
+                    <span>{t("fieldQr.openInAppShort")}</span>
                     <ExternalLink className="size-4" />
                   </Button>
 
@@ -303,7 +283,7 @@ export default function OdpPublicGuestPortalPage() {
                       window.location.href = APK_DOWNLOAD_URL;
                     }}
                   >
-                    <span>Download App (APK Android)</span>
+                    <span>{t("fieldQr.downloadApkAndroid")}</span>
                     <Download className="size-4 text-muted-foreground" />
                   </Button>
                 </div>

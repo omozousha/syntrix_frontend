@@ -6,6 +6,7 @@ import {
   getActivePortStatusClass,
   getActivePortStatusLabel,
 } from "./olt-port-card";
+import { useTranslate } from "@/lib/use-locale";
 
 export { getActivePortStatusClass, getActivePortStatusLabel };
 
@@ -44,6 +45,7 @@ export function SwitchPortCard({
   disabled?: boolean;
   className?: string;
 }) {
+  const { t } = useTranslate();
   const status = port.status || "idle";
   const isIdle = status === "idle";
   const statusClass = getActivePortStatusClass(status);
@@ -56,7 +58,7 @@ export function SwitchPortCard({
       type="button"
       disabled={disabled}
       onClick={() => onClick?.(port)}
-      title={`${port.port_label || `#${port.port_index}`} · ${portTypeLabel} · Status: ${statusLabel}${port.notes ? ` · ${port.notes}` : ""}`}
+      title={`${port.port_label || `#${port.port_index}`} · ${portTypeLabel} · ${t("portCard.statusTitle", { status: statusLabel })}${port.notes ? ` · ${port.notes}` : ""}`}
       className={cn(
         "group relative flex cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border bg-background p-1.5 text-center transition-all",
         "hover:border-foreground/30 hover:shadow-sm",
@@ -109,7 +111,7 @@ export function SwitchPortCard({
       {/* Hover indicator for idle ports */}
       {isIdle && !disabled && (
         <span className="absolute inset-0 flex items-center justify-center rounded-md bg-foreground/5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-          <span className="text-[9px] font-medium text-foreground/70">Assign</span>
+          <span className="text-[9px] font-medium text-foreground/70">{t("portCard.assign")}</span>
         </span>
       )}
     </button>

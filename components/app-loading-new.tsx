@@ -4,6 +4,7 @@ import * as React from "react";
 import { AlertTriangle, Inbox, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 
 export type AppLoadingVariant =
   | "card"
@@ -29,12 +30,14 @@ export type AppLoadingProps = React.ComponentProps<"div"> & {
 export function AppLoading({
   variant = "card",
   status,
-  label = "Sedang memuat data...",
+  label,
   fullscreen = false,
   rows = 4,
   className,
   ...props
 }: AppLoadingProps) {
+  const { t } = useTranslate();
+  const resolvedLabel = label !== undefined ? label : t("appLoading.defaultCard");
   // Normalize legacy variant ("loading" | "empty" | "error") to status
   let resolvedStatus: AppLoadingStatus = status || "loading";
   let resolvedVariant: AppLoadingVariant = variant;
@@ -68,9 +71,9 @@ export function AppLoading({
           className="size-4 animate-spin text-muted-foreground shrink-0 motion-reduce:animate-none"
           aria-hidden="true"
         />
-        {label ? (
+        {resolvedLabel ? (
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-            {label}
+            {resolvedLabel}
           </span>
         ) : null}
       </span>
@@ -89,7 +92,7 @@ export function AppLoading({
         {Array.from({ length: rows }).map((_, index) => (
           <Skeleton key={index} className="h-10 w-full rounded-xl" />
         ))}
-        <span className="sr-only">{typeof label === "string" ? label : "Memuat tabel..."}</span>
+        <span className="sr-only">{typeof resolvedLabel === "string" ? resolvedLabel : t("appLoading.defaultTable")}</span>
       </div>
     );
   }
@@ -121,19 +124,19 @@ export function AppLoading({
             ) : (
               <Loader2 className="size-6 animate-spin text-primary motion-reduce:animate-none" />
             )}
-            {label ? (
+            {resolvedLabel ? (
               <p
                 className={cn(
                   "font-mono text-[10px] uppercase tracking-[0.15em]",
                   resolvedStatus === "error" ? "text-destructive" : "text-muted-foreground"
                 )}
               >
-                {label}
+                {resolvedLabel}
               </p>
             ) : null}
           </div>
         </div>
-        <span className="sr-only">{typeof label === "string" ? label : "Memuat..."}</span>
+        <span className="sr-only">{typeof resolvedLabel === "string" ? resolvedLabel : t("appLoading.defaultInline")}</span>
       </div>
     );
   }
@@ -163,38 +166,40 @@ export function AppLoading({
             <Loader2 className="size-5 animate-spin motion-reduce:animate-none" />
           </div>
         )}
-        {label ? (
+        {resolvedLabel ? (
           <p
             className={cn(
               "font-mono text-[10px] uppercase tracking-[0.12em]",
               resolvedStatus === "error" ? "text-destructive" : "text-muted-foreground"
             )}
           >
-            {label}
+            {resolvedLabel}
           </p>
         ) : null}
       </div>
-      <span className="sr-only">{typeof label === "string" ? label : "Memuat..."}</span>
+      <span className="sr-only">{typeof resolvedLabel === "string" ? resolvedLabel : t("appLoading.defaultInline")}</span>
     </div>
   );
 }
 
 // Named ergonomic helpers — all point to AppLoading
-export function InlineLoader({ label = "Memuat...", className }: { label?: React.ReactNode; className?: string }) {
-  return <AppLoading variant="inline" label={label} className={className} />;
+export function InlineLoader({ label, className }: { label?: React.ReactNode; className?: string }) {
+  const { t } = useTranslate();
+  return <AppLoading variant="inline" label={label !== undefined ? label : t("appLoading.defaultInline")} className={className} />;
 }
 
 export function ButtonLoader({ className }: { className?: string }) {
   return <AppLoading variant="button" className={className} />;
 }
 
-export function PageLoader({ title = "Memuat halaman...", className }: { title?: React.ReactNode; className?: string }) {
-  return <AppLoading variant="page" label={title} className={className} />;
+export function PageLoader({ title, className }: { title?: React.ReactNode; className?: string }) {
+  const { t } = useTranslate();
+  return <AppLoading variant="page" label={title !== undefined ? title : t("appLoading.defaultPageTitle")} className={className} />;
 }
 
 export function LoadingState({
   variant = "card",
-  label = "Memuat data",
+  label,
   rows = 4,
   className,
 }: {
@@ -203,7 +208,8 @@ export function LoadingState({
   rows?: number;
   className?: string;
 }) {
-  return <AppLoading variant={variant} label={label} rows={rows} className={className} />;
+  const { t } = useTranslate();
+  return <AppLoading variant={variant} label={label !== undefined ? label : t("appLoading.defaultStateTitle")} rows={rows} className={className} />;
 }
 
 export default AppLoading;

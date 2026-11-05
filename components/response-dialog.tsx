@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 
 export type ResponseDialogVariant = "success" | "error" | "destructive" | "warning" | "info";
 
@@ -58,12 +59,14 @@ export function ResponseDialog({
   title,
   description,
   variant = "info",
-  actionLabel = "OK",
+  actionLabel,
   onAction,
   onOpenChange,
   loading = false,
   showAction = true,
 }: ResponseDialogProps) {
+  const { t } = useTranslate();
+  const resolvedActionLabel = actionLabel ?? t("responseDialog.defaultAction");
   const meta = VARIANT_META[variant];
   const Icon = meta.icon;
 
@@ -74,13 +77,13 @@ export function ResponseDialog({
           <div className={cn("mx-auto mb-2 flex size-12 items-center justify-center rounded-xl", meta.mediaClassName)}>
             {loading ? <ButtonLoader /> : <Icon className="size-5" />}
           </div>
-          <AlertDialogTitle className="text-center">{title || "Response"}</AlertDialogTitle>
+          <AlertDialogTitle className="text-center">{title || t("responseDialog.defaultTitle")}</AlertDialogTitle>
           {description ? <AlertDialogDescription className="text-center">{description}</AlertDialogDescription> : null}
         </AlertDialogHeader>
         {showAction ? (
           <AlertDialogFooter>
             <AlertDialogAction className={cn("w-full", meta.actionClassName)} onClick={onAction}>
-              {actionLabel}
+              {resolvedActionLabel}
             </AlertDialogAction>
           </AlertDialogFooter>
         ) : null}

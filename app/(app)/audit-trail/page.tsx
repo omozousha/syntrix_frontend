@@ -21,11 +21,11 @@ import { useSession } from "@/components/session-context";
 import { useTranslate, type TFn } from "@/lib/use-locale";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import {
-  ACTION_LABELS,
-  ACTION_OPTIONS,
   AUDIT_RESOURCE_LABELS,
   ENTITY_LABELS,
   EXACT_ACTION_FILTERS,
+  getActionLabel,
+  getActionOptions,
 } from "@/lib/audit-labels";
 
 type AuditLogItem = {
@@ -153,7 +153,7 @@ export default function AuditTrailPage() {
         const nextMap: Record<string, string> = {};
         (payload.data || []).forEach((user) => {
           if (!user.id) return;
-          nextMap[user.id] = user.full_name?.trim() || user.email?.trim() || "User tidak tersedia";
+          nextMap[user.id] = user.full_name?.trim() || user.email?.trim() || "";
         });
         _userMapCache = nextMap;
         _userMapCacheAt = Date.now();
@@ -211,9 +211,9 @@ export default function AuditTrailPage() {
       `syntrix-audit-trail-page-${page}.csv`,
       rows.map((item) => ({
         waktu: formatDateTime(item.created_at, locale),
-        action: formatAction(item.action_name),
-        entity: formatEntityName(item),
-        actor: formatActorName(item.actor_user_id, userMap),
+        action: formatAction(item.action_name, t),
+        entity: formatEntityName(item, t),
+        actor: formatActorName(item.actor_user_id, userMap, t),
         ip_address: item.ip_address || "-",
         request_id: getAuditRequestId(item) || "-",
         entity_id: item.entity_id || "-",
@@ -233,7 +233,7 @@ export default function AuditTrailPage() {
                 <CardDescription>{t("audit.description")}</CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline">Admin Only</Badge>
+                <Badge variant="outline">{t("audit.adminOnlyTitle")}</Badge>
                 <Badge variant="secondary">{t("audit.logCount", { total })}</Badge>
               </div>
             </div>
@@ -279,7 +279,7 @@ export default function AuditTrailPage() {
                     setPage(1);
                     setActionFilter(value);
                   }}
-                  options={ACTION_OPTIONS}
+                  options={getActionOptions(t)}
                 />
                 <div className="grid grid-cols-2 gap-3 sm:col-span-2 lg:col-span-2 2xl:col-span-1 2xl:grid-cols-[120px_128px]">
                   <Select
@@ -406,7 +406,7 @@ export default function AuditTrailPage() {
                     value={pageInput}
                     onChange={(event) => setPageInput(event.target.value.replace(/\D/g, ""))}
                     className="h-8 w-16 text-center"
-                    aria-label="Go to page"
+                    aria-label={t("audit.goToPageAria")}
                   />
                   <span>/ {totalPages}</span>
                 </form>
@@ -467,9 +467,9 @@ function AuditTrailTable({
               <div className="flex min-w-0 items-start justify-between gap-2">
                 <div className="min-w-0 space-y-1">
                   <Badge variant="outline" className="max-w-full whitespace-normal text-left font-mono text-[9px] uppercase tracking-[0.12em]">
-                    {formatAction(item.action_name)}
+                    {formatAction(item.action_name, t)}
                   </Badge>
-                  <p className="break-words text-sm font-medium">{formatEntityName(item)}</p>
+                  <p className="break-words text-sm font-medium">{formatEntityName(item, t)}</p>
                   <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] tabular-nums text-muted-foreground">
                     <span>{formatDateTime(item.created_at, locale)}</span>
                     {requestId ? <span>{requestId}</span> : null}
@@ -482,9 +482,9 @@ function AuditTrailTable({
                   onClick={() => onToggleExpanded(item.id)}
                   aria-label={
                     expanded
-                      ? t("audit.closeDetailAria", { action: formatAction(item.action_name) })
+                      ? t("audit.closeDetailAria", { action: formatAction(item.action_name, t) })
                       : t("audit.openDetailAria", {
-                          action: formatAction(item.action_name),
+                          action: formatAction(item.action_name, t),
                           date: formatDateTime(item.created_at, locale),
                         })
                   }
@@ -494,7 +494,7 @@ function AuditTrailTable({
                 </Button>
               </div>
               <div className="mt-2 grid grid-cols-1 gap-1.5 text-xs sm:grid-cols-2">
-                <AuditMiniField label="Actor" value={formatActorName(item.actor_user_id, userMap)} />
+                <AuditMiniField label="Actor" value={formatActorName(item.actor_user_id, userMap, t)} />
                 <AuditMiniField label="IP" value={item.ip_address || "-"} />
               </div>
               {expanded ? (
@@ -544,9 +544,9 @@ function AuditTrailTable({
                         onClick={() => onToggleExpanded(item.id)}
                         aria-label={
                           expanded
-                            ? t("audit.closeDetailAria", { action: formatAction(item.action_name) })
+                            ? t("audit.closeDetailAria", { action: formatAction(item.action_name, t) })
                             : t("audit.openDetailAria", {
-                                action: formatAction(item.action_name),
+                                action: formatAction(item.action_name, t),
                                 date: formatDateTime(item.created_at, locale),
                               })
                         }
@@ -558,18 +558,18 @@ function AuditTrailTable({
                     <TableCell>
                       <div className="space-y-1">
                         <Badge variant="outline" className="max-w-full whitespace-normal text-left font-mono text-[9px] uppercase tracking-[0.12em]">
-                          {formatAction(item.action_name)}
+                          {formatAction(item.action_name, t)}
                         </Badge>
                         {requestId ? <p className="font-mono text-[10px] tabular-nums text-muted-foreground">{requestId}</p> : null}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="min-w-0">
-                        <p className="break-words text-sm font-medium">{formatEntityName(item)}</p>
+                        <p className="break-words text-sm font-medium">{formatEntityName(item, t)}</p>
                         <p className="font-mono text-[10px] tabular-nums text-muted-foreground">{formatEntityType(item.entity_type || "-")}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="break-words text-sm">{formatActorName(item.actor_user_id, userMap)}</TableCell>
+                    <TableCell className="break-words text-sm">{formatActorName(item.actor_user_id, userMap, t)}</TableCell>
                     <TableCell className="whitespace-nowrap font-mono tabular-nums text-xs">{item.ip_address || "-"}</TableCell>
                     <TableCell>
                       <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => onToggleExpanded(item.id)}>
@@ -674,20 +674,21 @@ function AuditJsonBlock({ title, value }: { title: string; value?: Record<string
   );
 }
 
-function formatAction(value?: string | null) {
+function formatAction(value: string | null | undefined, t: TFn) {
   const text = (value || "").trim();
   if (!text) return "-";
-  if (ACTION_LABELS[text]) return ACTION_LABELS[text];
+  const mapped = getActionLabel(text, t);
+  if (mapped) return mapped;
   const [action, entity] = text.split(":");
   if (!entity) return toTitleCase(text.replaceAll("_", " "));
   const entityLabel = formatAuditResourceName(entity);
-  if (action === "create") return `Create ${entityLabel}`;
-  if (action === "update") return `Update ${entityLabel}`;
-  if (action === "delete" || action === "soft_delete") return `Hapus ${entityLabel}`;
-  if (action === "restore") return `Restore ${entityLabel}`;
-  if (action === "purge") return `Purge ${entityLabel}`;
-  if (action === "import") return `Import ${entityLabel}`;
-  if (action === "provision_ports") return `Provision port ${entityLabel}`;
+  if (action === "create") return t("audit.verbCreate", { entity: entityLabel });
+  if (action === "update") return t("audit.verbUpdate", { entity: entityLabel });
+  if (action === "delete" || action === "soft_delete") return t("audit.verbDelete", { entity: entityLabel });
+  if (action === "restore") return t("audit.verbRestore", { entity: entityLabel });
+  if (action === "purge") return t("audit.verbPurge", { entity: entityLabel });
+  if (action === "import") return t("audit.verbImport", { entity: entityLabel });
+  if (action === "provision_ports") return t("audit.verbProvision", { entity: entityLabel });
   return `${toTitleCase(action.replaceAll("_", " "))} ${entityLabel}`;
 }
 
@@ -771,12 +772,12 @@ function csvCell(value: string) {
   return text;
 }
 
-function formatActorName(actorUserId: string | null | undefined, userMap: Record<string, string>) {
+function formatActorName(actorUserId: string | null | undefined, userMap: Record<string, string>, t: TFn) {
   if (!actorUserId) return "-";
-  return userMap[actorUserId] || "User tidak tersedia";
+  return userMap[actorUserId] || t("audit.userUnavailable");
 }
 
-function formatEntityName(item: AuditLogItem) {
+function formatEntityName(item: AuditLogItem, t: TFn) {
   const entityType = (item.entity_type || "").trim();
   const sources = getAuditEntitySources(item);
   const pick = (...keys: string[]) => {
@@ -791,7 +792,8 @@ function formatEntityName(item: AuditLogItem) {
     return "";
   };
 
-  if (!entityType) return "Data tidak tersedia";
+  const fallback = t("audit.dataUnavailable");
+  if (!entityType) return fallback;
 
   if (entityType === "validation_requests") {
     const label = pick(
@@ -805,28 +807,28 @@ function formatEntityName(item: AuditLogItem) {
     );
     const requestId = pick("request_id");
     if (label && requestId && label !== requestId) return `${label} (${requestId})`;
-    return label || requestId || "Request tidak tersedia";
+    return label || requestId || fallback;
   }
-  if (entityType === "regions") return pick("region_name", "region_code") || "Region tidak tersedia";
-  if (entityType === "deviceTypes") return pick("device_type_name", "device_type_key") || "Tipe device tidak tersedia";
-  if (entityType === "popTypes") return pick("pop_type_name", "pop_type_code") || "Tipe POP tidak tersedia";
-  if (entityType === "manufacturers") return pick("manufacturer_name", "manufacturer_code") || "Manufacturer tidak tersedia";
-  if (entityType === "brands") return pick("brand_name", "brand_code") || "Brand tidak tersedia";
-  if (entityType === "assetModels") return pick("model_name", "model_code") || "Model tidak tersedia";
-  if (entityType === "provinces") return pick("province_name") || "Provinsi tidak tersedia";
-  if (entityType === "cities") return pick("city_name", "city_code") || "Kota tidak tersedia";
-  if (entityType === "pops") return pick("pop_name", "pop_code") || "POP tidak tersedia";
-  if (entityType === "devices") return pick("device_name", "device_code", "inventory_id", "device_id") || "Device tidak tersedia";
-  if (entityType === "projects") return pick("project_name", "project_code") || "Project tidak tersedia";
-  if (entityType === "routes") return pick("route_name", "route_code") || "Route tidak tersedia";
-  if (entityType === "poles") return pick("pole_number", "pole_code") || "Pole tidak tersedia";
-  if (entityType === "devicePorts") return pick("port_label", "port_index") || "Port tidak tersedia";
-  if (entityType === "validations") return pick("device_name", "validation_type", "status") || "Validation tidak tersedia";
-  if (entityType === "app_user") return pick("full_name", "email", "user_code") || "Account tidak tersedia";
-  if (entityType === "attachments") return pick("file_name", "original_name", "attachment_name") || "Attachment tidak tersedia";
-  if (entityType === "import_job") return pick("file_name", "entity_type", "status") || "Import job tidak tersedia";
+  if (entityType === "regions") return pick("region_name", "region_code") || fallback;
+  if (entityType === "deviceTypes") return pick("device_type_name", "device_type_key") || fallback;
+  if (entityType === "popTypes") return pick("pop_type_name", "pop_type_code") || fallback;
+  if (entityType === "manufacturers") return pick("manufacturer_name", "manufacturer_code") || fallback;
+  if (entityType === "brands") return pick("brand_name", "brand_code") || fallback;
+  if (entityType === "assetModels") return pick("model_name", "model_code") || fallback;
+  if (entityType === "provinces") return pick("province_name") || fallback;
+  if (entityType === "cities") return pick("city_name", "city_code") || fallback;
+  if (entityType === "pops") return pick("pop_name", "pop_code") || fallback;
+  if (entityType === "devices") return pick("device_name", "device_code", "inventory_id", "device_id") || fallback;
+  if (entityType === "projects") return pick("project_name", "project_code") || fallback;
+  if (entityType === "routes") return pick("route_name", "route_code") || fallback;
+  if (entityType === "poles") return pick("pole_number", "pole_code") || fallback;
+  if (entityType === "devicePorts") return pick("port_label", "port_index") || fallback;
+  if (entityType === "validations") return pick("device_name", "validation_type", "status") || fallback;
+  if (entityType === "app_user") return pick("full_name", "email", "user_code") || fallback;
+  if (entityType === "attachments") return pick("file_name", "original_name", "attachment_name") || fallback;
+  if (entityType === "import_job") return pick("file_name", "entity_type", "status") || fallback;
 
-  return pick("entity_label", "name", "title", "code") || "Data tidak tersedia";
+  return pick("entity_label", "name", "title", "code") || fallback;
 }
 
 function getAuditEntitySources(item: AuditLogItem): Array<Record<string, unknown>> {

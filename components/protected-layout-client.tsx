@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { AppLoading } from "@/components/app-loading-new";
 import { SessionProvider } from "@/components/session-context";
+import { useTranslate } from "@/lib/use-locale";
 import {
   clearStoredToken,
   fetchCurrentUser,
@@ -22,6 +23,7 @@ const IDLE_WINDOW_MS = 30 * 60_000;
 const SYNTRIX_ONE_APP_URL = "io.syntrixone.app://login";
 
 export function ProtectedLayoutClient({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslate();
   const router = useRouter();
   const pathname = usePathname();
   const [token, setToken] = useState("");
@@ -166,7 +168,7 @@ export function ProtectedLayoutClient({ children }: { children: React.ReactNode 
   );
 
   if (loading || !me || !token || !sessionValue) {
-    return <AppLoading fullscreen label="Sedang memuat sesi pengguna..." />;
+    return <AppLoading fullscreen label={t("appLoading.loadingSession")} />;
   }
 
   return (

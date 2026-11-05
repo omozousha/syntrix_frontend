@@ -1793,9 +1793,9 @@ export default function DataManagementListPage() {
       const cidSlug = cleanCid.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
       link.download = `label-patchcord-${cidSlug}-${variant}.png`;
       link.click();
-      setSuccess(`Label patch cord customer ${cleanCid} berhasil diunduh.`);
+      setSuccess(t("dataList.customerPatchCordDownloaded", { cid: cleanCid }));
     } catch (err) {
-      setError((err as Error).message || "Gagal mengunduh label customer");
+      setError((err as Error).message || t("dataList.customerLabelDownloadFailed"));
     }
   }
 
@@ -1814,9 +1814,9 @@ export default function DataManagementListPage() {
         const display = buildDeviceListDisplay(row, listDisplayLookups);
         const deviceId = pick(row, ["id"]);
         const popOrRegion =
-          display.pop && display.pop !== "-" && display.pop !== "Data tidak tersedia"
+          display.pop && display.pop !== "-" && display.pop !== "Data tidak tersedia" && display.pop !== t("audit.dataUnavailable")
             ? display.pop
-            : display.region && display.region !== "Data tidak tersedia"
+            : display.region && display.region !== "Data tidak tersedia" && display.region !== t("audit.dataUnavailable")
               ? display.region
               : "-";
         return {
@@ -2312,7 +2312,7 @@ export default function DataManagementListPage() {
                 <DataTableView
                   headers={headers}
                   rows={tableRows}
-                  tableLabel={`${category.label} Columns`}
+                  tableLabel={t("dataList.tableColumnsLabel", { label: category.label })}
                   enableColumnVisibility
                   defaultColumnVisibility={defaultColumnVisibility}
                   selectedRowIndices={selectedRowIndices}
@@ -2341,41 +2341,41 @@ export default function DataManagementListPage() {
                     if (!rowItem) return null;
                     return (
                       <>
-                        <ContextMenuLabel>{category.label} Actions</ContextMenuLabel>
+                        <ContextMenuLabel>{t("dataList.ctxActionsLabel", { label: category.label })}</ContextMenuLabel>
                         <ContextMenuItem onSelect={() => router.push(getDetailHref(rowItem.id))}>
                           <Eye className="mr-1 size-4" />
-                          Detail
+                          {t("dataList.ctxDetail")}
                         </ContextMenuItem>
                         {category.resource === "customers" ? (
                           <ContextMenuItem onSelect={() => void handleDownloadCustomerLabelSingle(rowItem)}>
                             <Download className="mr-1 size-4" />
-                            Download Label Patch Cord
+                            {t("dataList.ctxDownloadPatchCord")}
                           </ContextMenuItem>
                         ) : null}
                         {category.resource === "devices" && canTraceTopology ? (
                           <>
                             <ContextMenuItem onSelect={() => router.push(getTraceHref(rowItem))}>
                               <Waypoints className="mr-1 size-4" />
-                              Trace Device
+                              {t("dataList.ctxTraceDevice")}
                             </ContextMenuItem>
                           </>
                         ) : null}
                         {canWrite && renameConfig ? (
                           <ContextMenuItem onSelect={() => openRename(rowItem)}>
                             <Pencil className="mr-1 size-4" />
-                            Rename
+                            {t("dataList.ctxRename")}
                           </ContextMenuItem>
                         ) : null}
                         {canWrite && isMasterCategory ? (
                           <ContextMenuItem onSelect={() => openQuickEdit(rowItem)}>
                             <Pencil className="mr-1 size-4" />
-                            Quick Edit
+                            {t("dataList.ctxQuickEdit")}
                           </ContextMenuItem>
                         ) : null}
                         {canWrite && isSoftDeleteResource && isArchived(rowItem) ? (
                           <ContextMenuItem onSelect={() => void submitRestore(rowItem)}>
                             <RotateCcw className="mr-1 size-4" />
-                            Restore
+                            {t("dataList.ctxRestore")}
                           </ContextMenuItem>
                         ) : null}
                         {canWrite ? (
@@ -2384,7 +2384,7 @@ export default function DataManagementListPage() {
                             {!isSoftDeleteResource || !isArchived(rowItem) ? (
                               <ContextMenuItem variant="destructive" onSelect={() => setDeleteTarget(rowItem)}>
                                 <Trash2 className="mr-1 size-4" />
-                                {isSoftDeleteResource ? "Archive" : "Delete"}
+                                {isSoftDeleteResource ? t("dataList.actionArchive") : t("dataList.actionDelete")}
                               </ContextMenuItem>
                             ) : null}
                           </>

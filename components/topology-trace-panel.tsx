@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useTranslate } from "@/lib/use-locale";
 
 type TraceNode = {
   id: string;
@@ -48,13 +49,16 @@ export function TopologyTracePanel({
   data,
   maxRows = 8,
   showRawJson = false,
-  schematicTitle = "Path Diagram",
+  schematicTitle,
 }: {
   data: TopologyTraceData;
   maxRows?: number;
   showRawJson?: boolean;
   schematicTitle?: string;
 }) {
+  const { t } = useTranslate();
+  const resolvedSchematicTitle = schematicTitle ?? t("tracePanel.pathDiagram");
+  const nodeUnavailableLabel = t("tracePanel.nodeUnavailable");
   const path = data.trace.path || [];
   const nodes = data.graph.nodes || [];
   const edges = data.graph.edges || [];
@@ -66,23 +70,23 @@ export function TopologyTracePanel({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Badge variant={data.trace.found ? "secondary" : "outline"}>
-          {data.trace.found ? "Path Found" : "Path Not Found"}
+          {data.trace.found ? t("tracePanel.pathFound") : t("tracePanel.pathNotFound")}
         </Badge>
-        <Badge variant="outline">Hop: {data.trace.hop_count}</Badge>
-        <Badge variant="outline">Nodes: {nodes.length}</Badge>
-        <Badge variant="outline">Edges: {edges.length}</Badge>
+        <Badge variant="outline">{t("tracePanel.hopCount", { count: data.trace.hop_count })}</Badge>
+        <Badge variant="outline">{t("tracePanel.nodesCount", { count: nodes.length })}</Badge>
+        <Badge variant="outline">{t("tracePanel.edgesCount", { count: edges.length })}</Badge>
       </div>
 
       <Card>
         <CardHeader className="px-3 py-2">
-          <CardTitle className="text-sm">Path Sequence</CardTitle>
+          <CardTitle className="text-sm">{t("tracePanel.pathSequence")}</CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-3 pt-0">
           {path.length ? (
             <ScrollArea className="w-full whitespace-nowrap">
               <div className="inline-flex items-center gap-2 pb-1">
                 {path.map((node, index) => {
-                  const label = node.device_name || node.device_id || "Node tidak tersedia";
+                  const label = node.device_name || node.device_id || nodeUnavailableLabel;
                   return (
                     <div key={`${node.id}-${index}`} className="inline-flex items-center gap-2">
                       <div className="rounded-md border bg-muted/30 px-2 py-1.5 text-xs">
@@ -97,34 +101,34 @@ export function TopologyTracePanel({
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
           ) : (
-            <p className="text-sm text-muted-foreground">Belum ada path yang bisa ditampilkan.</p>
+            <p className="text-sm text-muted-foreground">{t("tracePanel.noPath")}</p>
           )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="px-3 py-2">
-          <CardTitle className="text-sm">{schematicTitle}</CardTitle>
+          <CardTitle className="text-sm">{resolvedSchematicTitle}</CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-3 pt-0">
           {path.length ? (
             <div className="space-y-2">
               {path.map((node, index) => {
                 const edge = pathEdges[index];
-                const nodeLabel = node.device_name || node.device_id || "Node tidak tersedia";
+                const nodeLabel = node.device_name || node.device_id || nodeUnavailableLabel;
                 const step = index + 1;
                 return (
                   <div key={`${node.id}-${index}`} className="rounded-md border bg-muted/20 p-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold">Step {step}: {nodeLabel}</p>
+                        <p className="truncate text-xs font-semibold">{t("tracePanel.stepTitle", { step, label: nodeLabel })}</p>
                         <p className="text-[11px] text-muted-foreground">{node.device_type_key || "-"}</p>
                       </div>
-                      <Badge variant="outline" className="max-w-full truncate text-[10px]">{node.device_id || "Tanpa Device ID"}</Badge>
+                      <Badge variant="outline" className="max-w-full truncate text-[10px]">{node.device_id || t("tracePanel.noDeviceId")}</Badge>
                     </div>
                     {edge ? (
                       <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                        <span>Next Link:</span>
+                        <span>{t("tracePanel.nextLink")}</span>
                         <Badge variant="secondary" className="text-[10px]">
                           {edge.connection_type || edge.status || "link"}
                         </Badge>
@@ -138,27 +142,27 @@ export function TopologyTracePanel({
               })}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Belum ada jalur diagram untuk ditampilkan.</p>
+            <p className="text-sm text-muted-foreground">{t("tracePanel.noDiagramPath")}</p>
           )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="px-3 py-2">
-          <CardTitle className="text-sm">Branching Topology View</CardTitle>
+          <CardTitle className="text-sm">{t("tracePanel.branchingTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-3 pt-0">
           {!branching.columns.length ? (
-            <p className="text-sm text-muted-foreground">Belum ada relasi topology untuk divisualisasikan.</p>
+            <p className="text-sm text-muted-foreground">{t("tracePanel.noBranching")}</p>
           ) : (
             <ScrollArea className="w-full whitespace-nowrap">
               <div className="inline-flex min-w-full gap-3 pb-1 align-top">
                 {branching.columns.map((column, depth) => (
                   <div key={`col-${depth}`} className="min-w-[220px] max-w-[260px] space-y-2 rounded-md border bg-muted/20 p-2 align-top">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Level {depth}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t("tracePanel.levelBadge", { depth })}</p>
                     {column.map((nodeId) => {
                       const node = nodeMap.get(nodeId);
-                      const label = node?.device_name || node?.device_id || "Node tidak tersedia";
+                      const label = node?.device_name || node?.device_id || nodeUnavailableLabel;
                       const type = node?.device_type_key || "-";
                       const outgoing = edges.filter((edge) => edge.from_device_id === nodeId);
                       const incoming = edges.filter((edge) => edge.to_device_id === nodeId);
@@ -169,13 +173,13 @@ export function TopologyTracePanel({
                           <p className="truncate text-xs font-semibold">{label}</p>
                           <div className="flex flex-wrap items-center gap-1">
                             <Badge variant="outline" className="text-[10px]">{type}</Badge>
-                            {isSplitterNode ? <Badge variant="secondary" className="text-[10px]">Splitter Node</Badge> : null}
+                            {isSplitterNode ? <Badge variant="secondary" className="text-[10px]">{t("tracePanel.splitterNode")}</Badge> : null}
                             {incoming.length ? <Badge variant="outline" className="text-[10px]">In: {incoming.length}</Badge> : null}
                             {outgoing.length ? <Badge variant="outline" className="text-[10px]">Out: {outgoing.length}</Badge> : null}
                           </div>
                           {outgoing.slice(0, 3).map((edge) => {
                             const target = nodeMap.get(edge.to_device_id);
-                            const targetLabel = target?.device_name || target?.device_id || "Target tidak tersedia";
+                            const targetLabel = target?.device_name || target?.device_id || t("tracePanel.targetUnavailable");
                             const coreRange = edge.core_start && edge.core_end ? `${edge.core_start}-${edge.core_end}` : "-";
                             const colorSummary = summarizeCoreColors(edge.fiber_cores?.colors || {});
                             return (
@@ -205,18 +209,18 @@ export function TopologyTracePanel({
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Card>
           <CardHeader className="px-3 py-2">
-            <CardTitle className="text-sm">Node Detail</CardTitle>
+            <CardTitle className="text-sm">{t("tracePanel.nodeDetailTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3 pt-0">
             <div className="space-y-2 lg:hidden">
               {nodes.slice(0, maxRows).map((node) => (
                 <TraceDetailCard
                   key={node.id}
-                  title={formatTraceNodeLabel(node)}
+                  title={formatTraceNodeLabel(node, nodeUnavailableLabel)}
                   meta={node.device_type_key || "-"}
                 />
               ))}
-              {!nodes.length ? <p className="text-sm text-muted-foreground">Tidak ada node.</p> : null}
+              {!nodes.length ? <p className="text-sm text-muted-foreground">{t("tracePanel.noNodes")}</p> : null}
             </div>
             <div className="hidden overflow-x-auto lg:block">
               <Table>
@@ -229,14 +233,14 @@ export function TopologyTracePanel({
                 <TableBody>
                   {nodes.slice(0, maxRows).map((node) => (
                     <TableRow key={node.id}>
-                      <TableCell>{formatTraceNodeLabel(node)}</TableCell>
+                      <TableCell>{formatTraceNodeLabel(node, nodeUnavailableLabel)}</TableCell>
                       <TableCell>{node.device_type_key || "-"}</TableCell>
                     </TableRow>
                   ))}
                   {!nodes.length ? (
                     <TableRow>
                       <TableCell colSpan={2} className="text-muted-foreground">
-                        Tidak ada node.
+                        {t("tracePanel.noNodes")}
                       </TableCell>
                     </TableRow>
                   ) : null}
@@ -248,18 +252,18 @@ export function TopologyTracePanel({
 
         <Card>
           <CardHeader className="px-3 py-2">
-            <CardTitle className="text-sm">Edge Detail</CardTitle>
+            <CardTitle className="text-sm">{t("tracePanel.edgeDetailTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3 pt-0">
             <div className="space-y-2 lg:hidden">
               {edges.slice(0, maxRows).map((edge) => (
                 <TraceDetailCard
                   key={edge.id}
-                  title={`${formatTraceEndpointLabel(edge.from_device_id, nodeMap)} to ${formatTraceEndpointLabel(edge.to_device_id, nodeMap)}`}
+                  title={`${formatTraceEndpointLabel(edge.from_device_id, nodeMap, nodeUnavailableLabel)} to ${formatTraceEndpointLabel(edge.to_device_id, nodeMap, nodeUnavailableLabel)}`}
                   meta={edge.status || edge.connection_type || "-"}
                 />
               ))}
-              {!edges.length ? <p className="text-sm text-muted-foreground">Tidak ada edge.</p> : null}
+              {!edges.length ? <p className="text-sm text-muted-foreground">{t("tracePanel.noEdges")}</p> : null}
             </div>
             <div className="hidden overflow-x-auto lg:block">
               <Table>
@@ -273,15 +277,15 @@ export function TopologyTracePanel({
                 <TableBody>
                   {edges.slice(0, maxRows).map((edge) => (
                     <TableRow key={edge.id}>
-                      <TableCell>{formatTraceEndpointLabel(edge.from_device_id, nodeMap)}</TableCell>
-                      <TableCell>{formatTraceEndpointLabel(edge.to_device_id, nodeMap)}</TableCell>
+                      <TableCell>{formatTraceEndpointLabel(edge.from_device_id, nodeMap, nodeUnavailableLabel)}</TableCell>
+                      <TableCell>{formatTraceEndpointLabel(edge.to_device_id, nodeMap, nodeUnavailableLabel)}</TableCell>
                       <TableCell>{edge.status || edge.connection_type || "-"}</TableCell>
                     </TableRow>
                   ))}
                   {!edges.length ? (
                     <TableRow>
                       <TableCell colSpan={3} className="text-muted-foreground">
-                        Tidak ada edge.
+                        {t("tracePanel.noEdges")}
                       </TableCell>
                     </TableRow>
                   ) : null}
@@ -294,7 +298,7 @@ export function TopologyTracePanel({
 
       {showRawJson ? (
         <details className="rounded-md border bg-muted/20 p-2">
-          <summary className="cursor-pointer text-sm font-medium">Show Raw JSON</summary>
+          <summary className="cursor-pointer text-sm font-medium">{t("tracePanel.showRawJson")}</summary>
           <pre className="mt-2 overflow-auto text-xs text-muted-foreground">{JSON.stringify(data, null, 2)}</pre>
         </details>
       ) : null}
@@ -373,16 +377,16 @@ function TraceDetailCard({ title, meta }: { title: string; meta: string }) {
   );
 }
 
-function formatTraceNodeLabel(node?: TraceNode) {
-  if (!node) return "Node tidak tersedia";
-  return node.device_name || node.device_id || "Node tidak tersedia";
+function formatTraceNodeLabel(node: TraceNode | undefined, fallback: string) {
+  if (!node) return fallback;
+  return node.device_name || node.device_id || fallback;
 }
 
-function formatTraceEndpointLabel(deviceId: string, nodeMap: Map<string, TraceNode>) {
+function formatTraceEndpointLabel(deviceId: string, nodeMap: Map<string, TraceNode>, fallback: string) {
   const direct = nodeMap.get(deviceId);
-  if (direct) return formatTraceNodeLabel(direct);
+  if (direct) return formatTraceNodeLabel(direct, fallback);
   const byInventoryId = Array.from(nodeMap.values()).find((node) => node.device_id === deviceId);
-  if (byInventoryId) return formatTraceNodeLabel(byInventoryId);
+  if (byInventoryId) return formatTraceNodeLabel(byInventoryId, fallback);
   return `Device ${shortTraceId(deviceId)}`;
 }
 

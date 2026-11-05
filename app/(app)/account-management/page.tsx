@@ -24,6 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSession } from "@/components/session-context";
 import { apiFetch, type RegionsListResponse, type UsersListResponse } from "@/lib/api";
 import { getVerificationState, ROLE_LABELS } from "@/lib/domain-formatters";
+import { useTranslate } from "@/lib/use-locale";
 
 type RoleName = "admin" | "user_region" | "user_all_region";
 type UserRow = UsersListResponse["data"][number];
@@ -74,6 +75,7 @@ async function fetchAllRegions(token: string) {
 export default function AccountManagementPage() {
   const router = useRouter();
   const { token, me } = useSession();
+  const { t } = useTranslate();
   const isSuperadmin = me.role === "admin";
   const isAdminRegion = me.role === "user_all_region";
   const canManageAccounts = isSuperadmin || isAdminRegion;
@@ -144,25 +146,25 @@ export default function AccountManagementPage() {
   const assignableRoleOptions = useMemo<ComboboxOption[]>(
     () =>
       isAdminRegion
-        ? [{ value: "user_region", label: "Validator" }]
+        ? [{ value: "user_region", label: t("accountPage.roleValidator") }]
         : [
-            { value: "admin", label: "Superadmin" },
-            { value: "user_all_region", label: "Admin Region" },
-            { value: "user_region", label: "Validator" },
+            { value: "admin", label: t("accountPage.roleSuperadmin") },
+            { value: "user_all_region", label: t("accountPage.roleAdminRegion") },
+            { value: "user_region", label: t("accountPage.roleValidator") },
           ],
-    [isAdminRegion],
+    [isAdminRegion, t],
   );
   const filterRoleOptions = useMemo<ComboboxOption[]>(
     () =>
       isAdminRegion
-        ? [{ value: "user_region", label: "Validator" }]
+        ? [{ value: "user_region", label: t("accountPage.roleValidator") }]
         : [
-            { value: "__all__", label: "Semua role" },
-            { value: "user_all_region", label: "Admin Region" },
-            { value: "user_region", label: "Validator" },
-            { value: "admin", label: "Superadmin" },
+            { value: "__all__", label: t("accountPage.allRoles") },
+            { value: "user_all_region", label: t("accountPage.roleAdminRegion") },
+            { value: "user_region", label: t("accountPage.roleValidator") },
+            { value: "admin", label: t("accountPage.roleSuperadmin") },
           ],
-    [isAdminRegion],
+    [isAdminRegion, t],
   );
 
   const refreshUsersAndRegions = useCallback(async () => {
@@ -296,8 +298,8 @@ export default function AccountManagementPage() {
 
   function validateRegionalAssignment(roleName: RoleName, regionId: string) {
     if (roleName === "admin") return "";
-    if (regionId === "__none__") return "Akun regional harus memiliki default region.";
-    if (isAdminRegion && !scopedRegionIds.has(regionId)) return "Region harus sesuai scope adminregion.";
+    if (regionId === "__none__") return t("accountPage.errRegionalRequiresDefault");
+    if (isAdminRegion && !scopedRegionIds.has(regionId)) return t("accountPage.errRegionOutOfScope");
     return "";
   }
 
@@ -320,26 +322,26 @@ export default function AccountManagementPage() {
 
     if (!createForm.full_name.trim() || !createForm.email.trim() || !createForm.password) {
       setCreateSaving(false);
-      setErrorMessage("Full name, email, dan password wajib diisi.");
-      showResponseDialog("Create Account Gagal", "Full name, email, dan password wajib diisi.", "error");
+      setErrorMessage(t("accountPage.errRequiredFields"));
+      showResponseDialog(t("accountPage.createFailedTitle"), t("accountPage.errRequiredFields"), "error");
       return;
     }
     if (createForm.password.length < 8) {
       setCreateSaving(false);
-      setErrorMessage("Password minimal 8 karakter.");
-      showResponseDialog("Create Account Gagal", "Password minimal 8 karakter.", "error");
+      setErrorMessage(t("accountPage.errPasswordMin"));
+      showResponseDialog(t("accountPage.createFailedTitle"), t("accountPage.errPasswordMin"), "error");
       return;
     }
     if (createForm.password !== createForm.confirm_password) {
       setCreateSaving(false);
-      setErrorMessage("Konfirmasi password tidak sama.");
-      showResponseDialog("Create Account Gagal", "Konfirmasi password tidak sama.", "error");
+      setErrorMessage(t("accountPage.errPasswordMismatch"));
+      showResponseDialog(t("accountPage.createFailedTitle"), t("accountPage.errPasswordMismatch"), "error");
       return;
     }
     if (assignmentError) {
       setCreateSaving(false);
       setErrorMessage(assignmentError);
-      showResponseDialog("Create Account Gagal", assignmentError, "error");
+      showResponseDialog(t("accountPage.createFailedTitle"), assignmentError, "error");
       return;
     }
 
@@ -361,16 +363,16 @@ export default function AccountManagementPage() {
 
       await refreshUsersAndRegions();
       setCreateOpen(false);
-      setMessage(`Akses Syntrix untuk ${createForm.email.trim()} berhasil dibuat. Jika email ini pernah diverifikasi, statusnya akan langsung Verified.`);
+      setMessage(t("accountPage.createSuccessMsg", { email: createForm.email.trim() }));
       showResponseDialog(
-        "Create Account Berhasil",
-        `Akses Syntrix untuk ${createForm.email.trim()} berhasil dibuat. Jika email ini pernah diverifikasi, akun akan langsung berstatus Verified. Jika belum, gunakan tombol Resend untuk mengirim email verifikasi.`,
+        t("accountPage.createSuccessTitle"),
+        t("accountPage.createSuccessDialogDesc", { email: createForm.email.trim() }),
         "success",
       );
     } catch (error) {
       const description = (error as Error).message;
       setErrorMessage(description);
-      showResponseDialog("Create Account Gagal", description, "error");
+      showResponseDialog(t("accountPage.createFailedTitle"), description, "error");
     } finally {
       setCreateSaving(false);
     }
@@ -406,28 +408,28 @@ export default function AccountManagementPage() {
     if (assignmentError) {
       setEditSaving(false);
       setErrorMessage(assignmentError);
-      showResponseDialog("Edit Account Gagal", assignmentError, "error");
+      showResponseDialog(t("accountPage.editFailedTitle"), assignmentError, "error");
       return;
     }
     if (hasPasswordInput) {
       if (editForm.new_password.length < 8) {
         setEditSaving(false);
-        setErrorMessage("Password baru minimal 8 karakter.");
-        showResponseDialog("Edit Account Gagal", "Password baru minimal 8 karakter.", "error");
+        setErrorMessage(t("accountPage.errNewPasswordMin"));
+        showResponseDialog(t("accountPage.editFailedTitle"), t("accountPage.errNewPasswordMin"), "error");
         return;
       }
       if (editForm.new_password !== editForm.confirm_password) {
         setEditSaving(false);
-        setErrorMessage("Konfirmasi password tidak sama.");
-        showResponseDialog("Edit Account Gagal", "Konfirmasi password tidak sama.", "error");
+        setErrorMessage(t("accountPage.errPasswordMismatch"));
+        showResponseDialog(t("accountPage.editFailedTitle"), t("accountPage.errPasswordMismatch"), "error");
         return;
       }
       if (editTarget.id !== me.app_user.id) {
         setEditSaving(false);
-        setErrorMessage("Untuk keamanan, ganti password hanya bisa untuk akun yang sedang login.");
+        setErrorMessage(t("accountPage.errSelfPasswordOnly"));
         showResponseDialog(
-          "Edit Account Gagal",
-          "Untuk keamanan, ganti password hanya bisa untuk akun yang sedang login.",
+          t("accountPage.editFailedTitle"),
+          t("accountPage.errSelfPasswordOnly"),
           "error",
         );
         return;
@@ -455,14 +457,14 @@ export default function AccountManagementPage() {
       }
 
       await refreshUsersAndRegions();
-      setMessage(`Akun ${editTarget.email} berhasil diupdate.`);
-      showResponseDialog("Edit Account Berhasil", `Akun ${editTarget.email} berhasil diupdate.`, "success");
+      setMessage(t("accountPage.editSuccessMsg", { email: editTarget.email }));
+      showResponseDialog(t("accountPage.editSuccessTitle"), t("accountPage.editSuccessMsg", { email: editTarget.email }), "success");
       setEditOpen(false);
       setEditTarget(null);
     } catch (error) {
       const description = (error as Error).message;
       setErrorMessage(description);
-      showResponseDialog("Edit Account Gagal", description, "error");
+      showResponseDialog(t("accountPage.editFailedTitle"), description, "error");
     } finally {
       setEditSaving(false);
     }
@@ -484,7 +486,7 @@ export default function AccountManagementPage() {
     try {
       await apiFetch(`/users/${deleteTarget.id}`, { method: "DELETE", token });
       await refreshUsersAndRegions();
-      setMessage(`Akses Syntrix untuk ${deleteTarget.email} berhasil dihapus.`);
+      setMessage(t("accountPage.deleteSuccessMsg", { email: deleteTarget.email }));
       setDeleteOpen(false);
       setDeleteTarget(null);
     } catch (error) {
@@ -510,13 +512,13 @@ export default function AccountManagementPage() {
       // apiFetch resolves to the envelope { success, message, data }, not to data itself.
       const result = res?.data;
       if (result?.email_sent) {
-        setMessage(`Email verifikasi untuk ${user.email} berhasil dikirim ulang.`);
+        setMessage(t("accountPage.resendSuccessMsg", { email: user.email }));
       } else if (result?.reason === "RESEND_COOLDOWN") {
         const wait = result.retry_after_seconds ?? 0;
-        setErrorMessage(`Email verifikasi untuk ${user.email} baru saja dikirim. Tunggu ${wait} detik lagi sebelum kirim ulang.`);
+        setErrorMessage(t("accountPage.resendCooldownMsg", { email: user.email, wait }));
       } else {
-        const detail = result?.reason ? ` Alasan: ${result.reason}` : "";
-        setErrorMessage(`Email verifikasi untuk ${user.email} belum terkirim.${detail}`);
+        const detail = result?.reason ? t("accountPage.resendReasonSuffix", { reason: result.reason }) : "";
+        setErrorMessage(t("accountPage.resendNotSentMsg", { email: user.email, detail }));
       }
     } catch (error) {
       setErrorMessage((error as Error).message);
@@ -530,12 +532,12 @@ export default function AccountManagementPage() {
       <div className="space-y-4 px-3 pb-3 md:px-4 md:pb-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Manajemen Pengguna</p>
-            <h2 className="mt-0.5 text-2xl font-semibold tracking-tight">Account Management</h2>
+            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{t("accountPage.badge")}</p>
+            <h2 className="mt-0.5 text-2xl font-semibold tracking-tight">{t("accountPage.title")}</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
               {isSuperadmin
-                ? "Kelola akun adminregion dan validator."
-                : "Kelola akun validator di region yang menjadi tanggung jawab Anda."}
+                ? t("accountPage.descSuperadmin")
+                : t("accountPage.descAdminRegion")}
             </p>
           </div>
           <Button
@@ -544,21 +546,21 @@ export default function AccountManagementPage() {
             className="gap-2 rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
           >
             <UserPlus className="size-4" />
-            Buat Akun
+            {t("accountPage.createButton")}
           </Button>
         </div>
 
         {message ? (
           <Alert>
             <ShieldCheck className="size-4" />
-            <AlertTitle>Berhasil</AlertTitle>
+            <AlertTitle>{t("accountPage.successAlertTitle")}</AlertTitle>
             <AlertDescription>{message}</AlertDescription>
           </Alert>
         ) : null}
 
         {errorMessage ? (
           <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>{t("common.errorTitle")}</AlertTitle>
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
@@ -567,15 +569,15 @@ export default function AccountManagementPage() {
 
         <Card size="sm">
           <CardHeader className="pb-1">
-            <CardTitle>User Accounts</CardTitle>
-            <CardDescription>List user aplikasi, scope region, status aktif, dan status verifikasi email.</CardDescription>
+            <CardTitle>{t("accountPage.cardTitle")}</CardTitle>
+            <CardDescription>{t("accountPage.cardDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <AccountFilterBar
               searchTerm={searchTerm}
               filterRegion={filterRegion}
               filterRole={filterRole}
-              regionOptions={[{ value: "__all__", label: "Semua region" }, ...regionOptions]}
+              regionOptions={[{ value: "__all__", label: t("accountPage.allRegions") }, ...regionOptions]}
               roleOptions={filterRoleOptions}
               roleDisabled={isAdminRegion}
               onSearchTermChange={setSearchTerm}
@@ -603,7 +605,7 @@ export default function AccountManagementPage() {
           saving={createSaving}
           form={createForm}
           roleOptions={assignableRoleOptions}
-          regionOptions={[...(isSuperadmin ? [{ value: "__none__", label: "None" }] : []), ...regionOptions]}
+          regionOptions={[...(isSuperadmin ? [{ value: "__none__", label: t("accountPage.regionNone") }] : []), ...regionOptions]}
           roleDisabled={isAdminRegion}
           showPassword={showCreatePassword}
           showConfirmPassword={showCreateConfirmPassword}
@@ -619,7 +621,7 @@ export default function AccountManagementPage() {
           saving={editSaving}
           form={editForm}
           roleOptions={assignableRoleOptions}
-          regionOptions={[...(isSuperadmin ? [{ value: "__none__", label: "None" }] : []), ...regionOptions]}
+          regionOptions={[...(isSuperadmin ? [{ value: "__none__", label: t("accountPage.regionNone") }] : []), ...regionOptions]}
           roleDisabled={isAdminRegion}
           showPassword={showNewPassword}
           showConfirmPassword={showConfirmPassword}
@@ -633,13 +635,13 @@ export default function AccountManagementPage() {
         <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Hapus Akses Syntrix?</AlertDialogTitle>
+              <AlertDialogTitle>{t("accountPage.deleteDialogTitle")}</AlertDialogTitle>
               <AlertDialogDescription>
-                Akses Syntrix untuk <span className="font-medium">{deleteTarget?.email || "-"}</span> akan dihapus dari aplikasi.
+                {t("accountPage.deleteDialogDesc", { email: deleteTarget?.email || "-" })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={(event) => {
@@ -648,7 +650,7 @@ export default function AccountManagementPage() {
                 }}
                 disabled={deleteLoading}
               >
-                {deleteLoading ? "Menghapus..." : "Ya, Hapus Akses"}
+                {deleteLoading ? t("accountPage.deleting") : t("accountPage.deleteConfirm")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -659,7 +661,7 @@ export default function AccountManagementPage() {
           title={responseDialog.title}
           description={responseDialog.description}
           variant={responseDialog.variant}
-          actionLabel="OK"
+          actionLabel={t("common.ok")}
           onOpenChange={(open) => setResponseDialog((prev) => ({ ...prev, open }))}
         />
       </div>

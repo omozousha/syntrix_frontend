@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useTranslate } from "@/lib/use-locale";
 
 const AUTH_DIALOG_INTERVAL_MS = 5000;
 const SYNTRIX_ONE_APP_URL = "io.syntrixone.app://login";
@@ -19,10 +20,11 @@ const SYNTRIX_ONE_APP_URL = "io.syntrixone.app://login";
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [status, setStatus] = useState("Masukkan akun Anda untuk melanjutkan.");
-  const [statusTitle, setStatusTitle] = useState("Status Login");
+  const [status, setStatus] = useState(() => t("login.defaultStatus"));
+  const [statusTitle, setStatusTitle] = useState(() => t("login.defaultStatusTitle"));
   const [statusType, setStatusType] = useState<"default" | "destructive" | "success">("default");
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,30 +68,30 @@ export default function LoginPage() {
     event.preventDefault();
     setLoading(true);
     setStatusDialogOpen(true);
-    setStatusTitle("Memproses Login");
-    setStatus("Sedang memproses login...");
+    setStatusTitle(t("login.processingTitle"));
+    setStatus(t("login.processingDesc"));
     setStatusType("default");
     try {
       const session = await loginWithPassword(email, password);
       const profile = await fetchCurrentUser(session.accessToken);
       if (profile.role === "user_region") {
         clearStoredToken();
-        setStatusTitle("Akses Validator Dialihkan");
-        setStatus("Akun validator hanya dapat digunakan melalui aplikasi Syntrix-One. Membuka aplikasi sekarang...");
+        setStatusTitle(t("login.validatorRedirectTitle"));
+        setStatus(t("login.validatorRedirectDesc"));
         setStatusType("default");
         await delay(800);
         openSyntrixOneApp();
         return;
       }
       storeSessionTokens(session);
-      setStatusTitle("Login Berhasil");
-      setStatus("Login sukses.");
+      setStatusTitle(t("login.successTitle"));
+      setStatus(t("login.successDesc"));
       setStatusType("success");
       await delay(AUTH_DIALOG_INTERVAL_MS);
       router.replace(getNextPath());
     } catch (error) {
-      setStatusTitle("Login Gagal");
-      setStatus(`Login gagal: ${(error as Error).message}`);
+      setStatusTitle(t("login.failedTitle"));
+      setStatus(t("login.failedDesc", { error: (error as Error).message }));
       setStatusType("destructive");
     } finally {
       setLoading(false);
@@ -99,29 +101,29 @@ export default function LoginPage() {
   async function onResetPassword() {
     if (!email.trim()) {
       setStatusType("destructive");
-      setStatusTitle("Email Wajib Diisi");
-      setStatus("Isi email terlebih dahulu untuk reset password.");
+      setStatusTitle(t("login.emailRequiredTitle"));
+      setStatus(t("login.emailRequiredDesc"));
       setStatusDialogOpen(true);
       return;
     }
 
     setResetLoading(true);
     setStatusDialogOpen(true);
-    setStatusTitle("Mengirim Reset Password");
+    setStatusTitle(t("login.sendingResetTitle"));
     setStatusType("default");
-    setStatus("Mengirim email reset password...");
+    setStatus(t("login.sendingResetDesc"));
     try {
       await apiFetch("/auth/reset-password", {
         method: "POST",
         body: JSON.stringify({ email: email.trim() }),
       });
-      setStatusTitle("Reset Password Dikirim");
+      setStatusTitle(t("login.resetSentTitle"));
       setStatusType("success");
-      setStatus("Email reset password berhasil dikirim. Silakan cek inbox/spam.");
+      setStatus(t("login.resetSentDesc"));
     } catch (error) {
-      setStatusTitle("Reset Password Gagal");
+      setStatusTitle(t("login.resetFailedTitle"));
       setStatusType("destructive");
-      setStatus(`Gagal mengirim reset password: ${(error as Error).message}`);
+      setStatus(t("login.resetFailedDesc", { error: (error as Error).message }));
     } finally {
       setResetLoading(false);
     }
@@ -130,7 +132,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-dvh overflow-hidden bg-[linear-gradient(135deg,var(--background),var(--muted)_62%)]">
       {isCheckingSession ? (
-        <AppLoading fullscreen label="Memeriksa sesi..." />
+        <AppLoading fullscreen label={t("login.checkingSession")} />
       ) : (
     <>
       <div className="mx-auto grid min-h-dvh w-full max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
@@ -142,26 +144,26 @@ export default function LoginPage() {
               </span>
               <span className="text-sm font-semibold text-foreground">Syntrix</span>
               <span className="h-4 w-px bg-border" />
-              <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Ops Console</span>
+              <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground">{t("login.opsConsole")}</span>
             </div>
 
             <div className="max-w-2xl space-y-4">
               <h1 className="text-5xl font-semibold leading-[1.02] tracking-tight text-balance">
-                Synchronization & Validation Matrix
+                {t("login.heroTitle")}
               </h1>
               <p className="max-w-xl text-sm leading-6 text-muted-foreground">
-                Workspace operasional untuk inventory region, POP, device, validasi lapangan, approval chain, dan audit data jaringan Syntrix.
+                {t("login.heroDesc")}
               </p>
             </div>
 
             <div className="rounded-2xl border border-border/40 bg-muted/10 p-1.5 shadow-xs dark:bg-white/[0.02]">
               <div className="rounded-[calc(1.25rem-0.25rem)] border border-border/60 bg-background p-3">
                 <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2">
-                  <MatrixNode icon={Network} title="Inventory" description="Region, POP, Device" />
+                  <MatrixNode icon={Network} title={t("login.nodeInventoryTitle")} description={t("login.nodeInventoryDesc")} />
                   <ArrowRight className="size-4 text-muted-foreground" />
-                  <MatrixNode icon={Radar} title="Validation" description="Field evidence" />
+                  <MatrixNode icon={Radar} title={t("login.nodeValidationTitle")} description={t("login.nodeValidationDesc")} />
                   <ArrowRight className="size-4 text-muted-foreground" />
-                  <MatrixNode icon={ShieldCheck} title="Approval" description="Role based" />
+                  <MatrixNode icon={ShieldCheck} title={t("login.nodeApprovalTitle")} description={t("login.nodeApprovalDesc")} />
                 </div>
               </div>
             </div>
@@ -172,9 +174,9 @@ export default function LoginPage() {
                   <LockKeyhole className="size-4" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">Secure role workspace</p>
+                  <p className="text-sm font-medium">{t("login.secureRoleTitle")}</p>
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    Setelah login, Syntrix membuka dashboard, antrian, dan data sesuai role serta scope region akun.
+                    {t("login.secureRoleDesc")}
                   </p>
                 </div>
               </div>
@@ -191,7 +193,7 @@ export default function LoginPage() {
                 </span>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold">Syntrix</p>
-                  <p className="truncate font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Synchronization & Validation Matrix</p>
+                  <p className="truncate font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">{t("login.heroTitle")}</p>
                 </div>
               </div>
               <Badge variant="secondary" className="font-mono text-[9px] uppercase tracking-[0.12em]">Secure</Badge>
@@ -205,8 +207,8 @@ export default function LoginPage() {
                       <ShieldCheck className="size-5" />
                     </div>
                     <div>
-                      <CardTitle className="text-2xl">Login Syntrix</CardTitle>
-                      <CardDescription>Masuk ke workspace sesuai role akun.</CardDescription>
+                      <CardTitle className="text-2xl">{t("login.cardTitle")}</CardTitle>
+                      <CardDescription>{t("login.cardDesc")}</CardDescription>
                     </div>
                   </div>
                 </div>
@@ -215,20 +217,20 @@ export default function LoginPage() {
                 <form onSubmit={onSubmit}>
                   <FieldGroup>
                     <Field>
-                      <FieldLabel htmlFor="email">Email</FieldLabel>
+                      <FieldLabel htmlFor="email">{t("login.emailLabel")}</FieldLabel>
                       <Input
                         id="email"
                         type="email"
                         value={email}
                         onChange={(event) => setEmail(event.target.value)}
                         autoComplete="email"
-                        placeholder="nama@domain.com"
+                        placeholder={t("login.emailPlaceholder")}
                         required
                       />
                     </Field>
 
                     <Field>
-                      <FieldLabel htmlFor="password">Password</FieldLabel>
+                      <FieldLabel htmlFor="password">{t("login.passwordLabel")}</FieldLabel>
                       <div className="relative">
                         <Input
                           id="password"
@@ -236,7 +238,7 @@ export default function LoginPage() {
                           value={password}
                           onChange={(event) => setPassword(event.target.value)}
                           autoComplete="current-password"
-                          placeholder="Masukkan password"
+                          placeholder={t("login.passwordPlaceholder")}
                           className="pr-10"
                           required
                         />
@@ -246,7 +248,7 @@ export default function LoginPage() {
                           size="icon"
                           className="absolute right-1 top-1/2 size-8 -translate-y-1/2"
                           onClick={() => setShowPassword((value) => !value)}
-                          aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                          aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
                         >
                           {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                         </Button>
@@ -255,7 +257,7 @@ export default function LoginPage() {
 
                     <Button type="submit" disabled={loading} className="w-full rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] shadow-sm shadow-primary/20">
                       {loading ? <ButtonLoader className="mr-2" /> : null}
-                      {loading ? "Memproses..." : "Login"}
+                      {loading ? t("login.submitting") : t("login.submit")}
                     </Button>
 
                     <Button
@@ -266,7 +268,7 @@ export default function LoginPage() {
                       className="w-full rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
                     >
                       {resetLoading ? <ButtonLoader className="mr-2" /> : null}
-                      {resetLoading ? "Mengirim..." : "Reset Password"}
+                      {resetLoading ? t("login.sendingReset") : t("login.resetPassword")}
                     </Button>
 
                   </FieldGroup>
@@ -274,7 +276,7 @@ export default function LoginPage() {
 
                 <div className="rounded-md border bg-muted/35 px-3 py-2">
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    Gunakan akun admin untuk masuk ke workspace Syntrix. Akun validator akan diarahkan ke aplikasi Syntrix-One.
+                    {t("login.footerHint")}
                   </p>
                 </div>
               </CardContent>
@@ -290,7 +292,7 @@ export default function LoginPage() {
         variant={statusType === "destructive" ? "error" : statusType === "success" ? "success" : "info"}
         loading={loading || resetLoading}
         showAction={!loading && !resetLoading}
-        actionLabel="Mengerti"
+        actionLabel={t("login.acknowledge")}
         onOpenChange={(open) => {
           if (loading || resetLoading) return;
           setStatusDialogOpen(open);

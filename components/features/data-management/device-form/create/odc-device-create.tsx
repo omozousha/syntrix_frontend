@@ -5,6 +5,7 @@ import { DeviceHardwareFields } from "@/components/features/data-management/devi
 import { FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
+import { useTranslate } from "@/lib/use-locale";
 
 type OdpTypeOption = { id: string; odp_type_name: string; odp_type_code?: string | null };
 type InstallationTypeOption = { id: string; installation_type_name: string; installation_type_code?: string | null };
@@ -60,6 +61,7 @@ export function OdcDeviceCreate({
   deviceCoreCapacities?: DeviceCoreCapacityOption[];
   onChange: (patch: Record<string, string>) => void;
 }) {
+  const { t } = useTranslate();
   const filteredCoreCapacities = deviceCoreCapacities.filter((item) => {
     const allowedKeys = item.allowed_device_type_keys || [];
     if (!allowedKeys.length) return true;
@@ -77,48 +79,48 @@ export function OdcDeviceCreate({
       />
 
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border bg-muted/40 px-3 py-1.5">
-        Spesifikasi Kapasitas ODC
+        {t("createForm.odcSpecsSection")}
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label="Kapasitas Core Cabinet" tooltip="Pilih total kapasitas core optik ODC dari master data." required />
+        <FieldLabel label={t("createForm.odcCabinetCoreCapacity")} tooltip="Pilih total kapasitas core optik ODC dari master data." required />
         <Combobox
           value={values.capacity_core || "__none__"}
           onValueChange={(val) => onChange({ capacity_core: val === "__none__" ? "" : val })}
           options={[
-            { value: "__none__", label: "Pilih kapasitas core" },
+            { value: "__none__", label: t("createForm.selectCapacity") },
             ...filteredCoreCapacities.map((item) => ({
               value: String(item.core_capacity_value),
               label: `${item.core_capacity_value} Core${item.label ? ` — ${item.label}` : ""}`,
             })),
           ]}
-          placeholder="Pilih kapasitas core"
-          searchPlaceholder="Cari kapasitas core..."
+          placeholder={t("createForm.selectCapacity")}
+          searchPlaceholder={t("createForm.searchCapacity")}
         />
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label="Total Port Cabinet" tooltip="Jumlah port adaptor/terminasi pada frame ODC." />
+        <FieldLabel label={t("createForm.totalPortsCabinet")} tooltip="Jumlah port adaptor/terminasi pada frame ODC." />
         <Input
           type="number"
           value={values.total_ports || ""}
           onChange={(e) => onChange({ total_ports: e.target.value })}
-          placeholder="Contoh: 144"
+          placeholder={t("createForm.odcPortPlaceholder")}
         />
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label="Tipe Mounting Cabinet" tooltip="Jenis instalasi fisik cabinet di lapangan." />
+        <FieldLabel label={t("createForm.odcMountingType")} tooltip="Jenis instalasi fisik cabinet di lapangan." />
         <Combobox
           value={values.installation_type || "__none__"}
           onValueChange={(val) => onChange({ installation_type: val === "__none__" ? "" : val })}
-          options={[{ value: "__none__", label: "Pilih tipe mounting" }, ...ODC_MOUNTING_OPTIONS]}
-          placeholder="Pilih tipe mounting"
+          options={[{ value: "__none__", label: t("createForm.odcSelectMounting") }, ...ODC_MOUNTING_OPTIONS]}
+          placeholder={t("createForm.odcSelectMounting")}
         />
       </div>
 
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border bg-muted/40 px-3 py-1.5">
-        Identitas Perangkat &amp; Vendor
+        {t("createForm.deviceVendorSection")}
       </div>
 
       <DeviceHardwareFields

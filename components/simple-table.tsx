@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useTranslate } from "@/lib/use-locale";
 
 type CellValue = string | number | ReactNode;
 
@@ -36,11 +37,11 @@ export function SimpleTable({
   enableSorting = true,
   disableSortColumns = [],
   enableColumnVisibility = false,
-  tableLabel = "Table",
-  columnVisibilityLabel = "Columns",
+  tableLabel,
+  columnVisibilityLabel,
   columnVisibilityLabels,
   defaultColumnVisibility,
-  emptyMessage = "No data.",
+  emptyMessage,
 }: {
   headers: ReactNode[];
   rows: CellValue[][];
@@ -57,6 +58,11 @@ export function SimpleTable({
   defaultColumnVisibility?: Record<string, boolean>;
   emptyMessage?: string;
 }) {
+  const { t } = useTranslate();
+  const resolvedTableLabel = tableLabel ?? t("simpleTable.defaultTableLabel");
+  const resolvedColumnVisibilityLabel = columnVisibilityLabel ?? t("simpleTable.defaultColumnsLabel");
+  const resolvedEmptyMessage = emptyMessage ?? t("simpleTable.defaultEmptyMessage");
+  const columnFallbackPrefix = t("simpleTable.columnFallbackPrefix");
   const [sorting, setSorting] = useState<SortState>(null);
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() => {
     if (defaultColumnVisibility) return defaultColumnVisibility;
@@ -113,11 +119,11 @@ export function SimpleTable({
             <DropdownMenuTrigger asChild>
               <Button type="button" variant="outline" size="sm" className="rounded-full gap-2 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">
                 <SlidersHorizontal className="size-4" />
-                {columnVisibilityLabel}
+                {resolvedColumnVisibilityLabel}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuLabel>{tableLabel}</DropdownMenuLabel>
+              <DropdownMenuLabel>{resolvedTableLabel}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {headers.map((header, index) => {
                 const columnId = `col_${index}`;
@@ -132,7 +138,7 @@ export function SimpleTable({
                       }))
                     }
                   >
-                    {getHeaderLabel(header, columnId, columnVisibilityLabels)}
+                    {getHeaderLabel(header, columnId, columnVisibilityLabels, columnFallbackPrefix)}
                   </DropdownMenuCheckboxItem>
                 );
               })}
@@ -220,7 +226,7 @@ export function SimpleTable({
               ) : (
                 <TableRow>
                   <TableCell className="px-4 py-10 text-center text-sm text-muted-foreground" colSpan={Math.max(visibleColumnIndices.length, 1)}>
-                    {emptyMessage}
+                    {resolvedEmptyMessage}
                   </TableCell>
                 </TableRow>
               )}
@@ -250,12 +256,17 @@ function extractText(node: ReactNode): string {
   return "";
 }
 
-function getHeaderLabel(header: unknown, fallbackId: string, columnVisibilityLabels?: string[]) {
+function getHeaderLabel(
+  header: unknown,
+  fallbackId: string,
+  columnVisibilityLabels?: string[],
+  columnFallbackPrefix = "Column ",
+) {
   const columnIndex = Number(fallbackId.replace(/^col_/, ""));
   if (Number.isInteger(columnIndex) && columnVisibilityLabels?.[columnIndex]) return columnVisibilityLabels[columnIndex];
   if (typeof header === "string" && header.trim()) return header;
   if (typeof header === "number") return String(header);
   const fromNode = extractText(header as ReactNode).trim();
   if (fromNode) return fromNode;
-  return fallbackId.replace(/^col_/, "Column ");
+  return fallbackId.replace(/^col_/, columnFallbackPrefix);
 }

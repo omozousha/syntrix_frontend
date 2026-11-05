@@ -25,18 +25,19 @@ import {
   OdpBulkImportNoticeDialog,
   type PopPrerequisiteCheck,
 } from "@/components/features/data-management/import/odp-bulk-import-notice";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 type StepKey = "template" | "upload" | "preview";
-
-const STEPS: Array<{ value: StepKey; label: string }> = [
-  { value: "template", label: "01 · TEMPLATE" },
-  { value: "upload", label: "02 · UPLOAD" },
-  { value: "preview", label: "03 · VALIDASI" },
-];
 
 export default function OdpBulkImportPage() {
   const router = useRouter();
   const session = useSession();
+  const { t } = useTranslate();
+  const steps: Array<{ value: StepKey; label: string }> = [
+    { value: "template", label: t("import.page.stepTemplate") },
+    { value: "upload", label: t("import.page.stepUpload") },
+    { value: "preview", label: t("import.page.stepValidation") },
+  ];
   const [step, setStep] = useState<StepKey>("template");
   const [filename, setFilename] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -68,7 +69,7 @@ export default function OdpBulkImportPage() {
       setPopCheck({
         hasPop: false,
         popCount: 0,
-        message: "Tidak ada sesi login. Silakan login ulang.",
+        message: t("odpImport.noSession"),
       });
       return null;
     }
@@ -83,8 +84,8 @@ export default function OdpBulkImportPage() {
       const total = response?.meta?.total ?? items.length;
       const message =
         total > 0
-          ? `${total} data POP tersedia untuk ODP Anda.`
-          : "Belum ada data POP. Silakan buat data POP terlebih dahulu.";
+          ? t("odpImport.popAvailableCount", { total })
+          : t("odpImport.noPopAvailable");
       const result: PopPrerequisiteCheck = {
         hasPop: total > 0,
         popCount: total,
@@ -97,14 +98,14 @@ export default function OdpBulkImportPage() {
       const result: PopPrerequisiteCheck = {
         hasPop: false,
         popCount: 0,
-        message: `Gagal memeriksa data POP: ${errorMsg}`,
+        message: t("odpImport.checkPopFailed", { error: errorMsg }),
       };
       setPopCheck(result);
       return result;
     } finally {
       setIsCheckingPops(false);
     }
-  }, [session?.token]);
+  }, [session?.token, t]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -145,7 +146,7 @@ export default function OdpBulkImportPage() {
     setParseError(null);
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (ext !== "csv" && ext !== "xlsx" && ext !== "xls") {
-      setParseError("Format file harus .csv, .xlsx, atau .xls");
+      setParseError(t("import.page.invalidFormat"));
       setUploadFile(null);
       setFilename(null);
       return;
@@ -163,7 +164,7 @@ export default function OdpBulkImportPage() {
         const buffer = await file.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
-        if (!sheetName) throw new Error("File excel kosong atau tidak valid");
+        if (!sheetName) throw new Error(t("import.page.emptyExcel"));
         const sheet = workbook.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
         parsed = rows.map((row) =>
@@ -171,21 +172,21 @@ export default function OdpBulkImportPage() {
         );
       }
     } catch (err) {
-      setParseError(err instanceof Error ? err.message : "Gagal membaca berkas.");
+      setParseError(err instanceof Error ? err.message : t("import.page.readFailed"));
       setUploadFile(null);
       setFilename(null);
       return;
     }
 
     if (parsed.length === 0) {
-      setParseError("File tidak memiliki baris data (kosong).");
+      setParseError(t("import.page.noRows"));
       setUploadFile(null);
       setFilename(null);
       return;
     }
 
     if (parsed.length > 2000) {
-      setParseError(`Jumlah baris data (${parsed.length}) melebihi batas maksimal 2.000 baris.`);
+      setParseError(t("import.page.overLimit", { count: parsed.length }));
       setUploadFile(null);
       setFilename(null);
       return;
@@ -198,7 +199,7 @@ export default function OdpBulkImportPage() {
     ).length;
 
     if (matchCount < 4) {
-      setParseError("Format kolom template tidak dikenal. Pastikan nama kolom sesuai template.");
+      setParseError(t("import.page.unknownFormat"));
       setUploadFile(null);
       setFilename(null);
       return;
@@ -210,13 +211,13 @@ export default function OdpBulkImportPage() {
     try {
       [regionsList, allowedRegionIds] = await Promise.all([
         loadRegionsCatalog(session?.token),
-        Promise.resolve(getUserScopeRegionIds(session)),
+        Promise.resolve(getUserScopeRegionIds(session, t)),
       ]);
     } catch (scopeErr) {
       setParseError(
         scopeErr instanceof Error
           ? scopeErr.message
-          : "Role ini tidak didukung untuk impor massal ODP.",
+          : t("import.page.unsupportedRole"),
       );
       setUploadFile(null);
       setFilename(null);
@@ -224,7 +225,7 @@ export default function OdpBulkImportPage() {
     }
 
     let preview = parsed.map((data, idx) => {
-      const baseRow = validateOdpRow(data);
+      const baseRow = validateOdpRow(data, t);
       return {
         rowIndex: idx + 2, // +1 for 1-indexed, +1 for header row
         valid: baseRow.valid,
@@ -281,7 +282,7 @@ export default function OdpBulkImportPage() {
             errors: Array.from(
               new Set([
                 ...row.errors,
-                `region "${rawRegion}" tidak terdaftar di master regions`,
+                t("odpImport.rowErrRegionUnknown", { region: rawRegion }),
               ]),
             ),
           };
@@ -297,7 +298,7 @@ export default function OdpBulkImportPage() {
             errors: Array.from(
               new Set([
                 ...row.errors,
-                `region "${rawRegion}" tidak termasuk dalam scope admin Anda`,
+                t("odpImport.rowErrRegionOutOfScope", { region: rawRegion }),
               ]),
             ),
           };
@@ -306,18 +307,18 @@ export default function OdpBulkImportPage() {
       });
 
       if (unknownRegions.size) {
-        fileMessage = `Berkas ini memiliki nama region yang tidak dikenali: ${Array.from(unknownRegions).join(', ')}.`;
+        fileMessage = t("import.page.errRegionUnknownDesc", { regions: Array.from(unknownRegions).join(', ') });
       } else if (role === 'admin' && uniqueRegionIds.size > 1) {
-        fileMessage = `Berkas ini berisi ${uniqueRegionIds.size} region berbeda. Untuk role admin, satu file hanya boleh berisi tepat satu region. Pisahkan per region.`;
+        fileMessage = t("import.page.errMultiRegionDesc", { count: uniqueRegionIds.size });
       } else if (role === 'user_all_region' && allowedRegionIds.length === 0) {
-        fileMessage = 'Akun admin Anda belum memiliki region scope yang ditetapkan. Hubungi administrator.';
+        fileMessage = t("import.page.errScopeNotSetDesc");
       } else if (
         role === 'user_all_region' &&
         uniqueRegionIds.size > 0 &&
         Array.from(uniqueRegionIds).some((id) => !allowedRegionIds.includes(id))
       ) {
         const outOfScopeIds = Array.from(uniqueRegionIds).filter((id) => !allowedRegionIds.includes(id));
-        fileMessage = `Berkas ini berisi region di luar scope adminregion Anda (${outOfScopeIds.length} region). Hanya region dalam scope yang boleh diimpor.`;
+        fileMessage = t("import.page.errOutOfScopeDesc", { count: outOfScopeIds.length });
       }
     }
 
@@ -368,19 +369,19 @@ export default function OdpBulkImportPage() {
     if (!popResult?.hasPop) {
       setNoticeOpen(true);
       setApplyState("error");
-      setApplyMessage("Tidak dapat menerapkan: data POP belum tersedia.");
+      setApplyMessage(t("odpImport.applyNoPop"));
       return;
     }
 
     if (!session?.token) {
       setApplyState("error");
-      setApplyMessage("Token session tidak ditemukan. Silakan login ulang.");
+      setApplyMessage(t("import.page.tokenExpired"));
       return;
     }
 
     if (!uploadFile) {
       setApplyState("error");
-      setApplyMessage("File belum diunggah.");
+      setApplyMessage(t("import.page.noFile"));
       return;
     }
 
@@ -391,8 +392,8 @@ export default function OdpBulkImportPage() {
       setApplyState("error");
       setApplyMessage(
         fileLevelError
-          ? `Terdapat masalah scope region: ${fileLevelError}`
-          : "Terdapat baris error. Selesaikan dulu sebelum menerapkan.",
+          ? t("odpImport.applyScopeProblem", { error: fileLevelError })
+          : t("import.page.errorRowsApply"),
       );
       return;
     }
@@ -434,11 +435,11 @@ export default function OdpBulkImportPage() {
         errors: serverErrors,
       });
       setApplyState("success");
-      setApplyMessage("Batch impor massal berhasil diproses.");
+      setApplyMessage(t("import.page.applySuccess"));
     } catch (err) {
       setApplyState("error");
       setApplyMessage(
-        err instanceof Error ? err.message : "Gagal menerapkan batch di server.",
+        err instanceof Error ? err.message : t("import.page.applyFailed"),
       );
     }
   }
@@ -464,20 +465,21 @@ export default function OdpBulkImportPage() {
       {/* Hero */}
       <header className="space-y-2">
         <div className="flex items-center gap-2">
-          <h2 className="text-2xl font-bold tracking-tight">IMPOR MASSAL ODP</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t("import.page.title", { entity: "ODP" })}</h2>
           {popCheck && (
             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
               popCheck.hasPop
                 ? "bg-green-500/10 text-green-500 border-green-500/20"
                 : "bg-amber-500/10 text-amber-500 border-amber-500/20"
             }`}>
-              {popCheck.hasPop ? "POP Siap" : "POP Tidak Tersedia"}
+              {popCheck.hasPop
+                ? t("import.page.badgeReady", { entity: "POP" })
+                : t("import.page.badgeUnavailable", { entity: "POP" })}
             </span>
           )}
         </div>
         <p className="text-sm text-muted-foreground">
-          Tambahkan ratusan atau ribuan data ODP sekaligus menggunakan fail CSV atau Excel.
-          Pastikan data format koordinat, POP, dan region sudah valid sebelum diunggah.
+          {t("import.page.subtitleWithPop", { entity: "ODP" })}
         </p>
       </header>
 
@@ -485,10 +487,10 @@ export default function OdpBulkImportPage() {
 
       {/* Stepper */}
       <div className="w-full">
-        <nav className="flex items-center justify-between border border-border bg-muted/20 p-1.5 rounded-lg max-w-4xl mx-auto" aria-label="Progress">
-          {STEPS.map((s, idx) => {
+        <nav className="flex items-center justify-between border border-border bg-muted/20 p-1.5 rounded-lg max-w-4xl mx-auto" aria-label={t("import.page.progressLabel")}>
+          {steps.map((s, idx) => {
             const isActive = step === s.value;
-            const isCompleted = STEPS.findIndex(x => x.value === step) > idx;
+            const isCompleted = steps.findIndex(x => x.value === step) > idx;
             const isLocked = !isCompleted && !isActive;
             return (
               <React.Fragment key={s.value}>
@@ -512,9 +514,9 @@ export default function OdpBulkImportPage() {
                       {idx + 1}
                     </span>
                   )}
-                  {s.label.split(" · ")[1]}
+                  {s.label}
                 </button>
-                {idx < STEPS.length - 1 && (
+                {idx < steps.length - 1 && (
                   <ArrowRight className="size-3.5 text-muted-foreground/30" />
                 )}
               </React.Fragment>
@@ -529,50 +531,50 @@ export default function OdpBulkImportPage() {
       {isTemplateStep && (
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
-            <CardTitle>LANGKAH 1: UNDUH TEMPLATE & PETUNJUK</CardTitle>
+            <CardTitle>{t("import.page.templateHeading")}</CardTitle>
             <CardDescription>
-              Gunakan berkas template resmi agar kolom dan baris terpetakan dengan benar di database.
+              {t("import.page.templateDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="rounded-lg border border-border p-4 bg-muted/10 space-y-4">
-              <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground font-mono">Daftar Kolom Wajib (9 Kolom):</h4>
+              <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground font-mono">{t("import.page.columnList", { count: 9 })}</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs font-mono">
                 <div className="p-2 border border-border bg-card rounded">
                   <span className="text-primary font-bold">device name</span>
-                  <p className="text-muted-foreground text-[10px] mt-1">Nama ODP unik (misal: ODP-JKT-001)</p>
+                  <p className="text-muted-foreground text-[10px] mt-1">{t("odpImport.colDesc.deviceName")}</p>
                 </div>
                 <div className="p-2 border border-border bg-card rounded">
                   <span className="text-primary font-bold">device type</span>
-                  <p className="text-muted-foreground text-[10px] mt-1">Isi "ODP" (selalu bernilai ODP)</p>
+                  <p className="text-muted-foreground text-[10px] mt-1">{t("odpImport.colDesc.deviceType")}</p>
                 </div>
                 <div className="p-2 border border-border bg-card rounded">
                   <span className="text-primary font-bold">status</span>
-                  <p className="text-muted-foreground text-[10px] mt-1">draft / installed / active / inactive / maintenance / retired</p>
+                  <p className="text-muted-foreground text-[10px] mt-1">{t("odpImport.colDesc.status")}</p>
                 </div>
                 <div className="p-2 border border-border bg-card rounded">
                   <span className="text-primary font-bold">region</span>
-                  <p className="text-muted-foreground text-[10px] mt-1">Nama region lengkap (harus persis sama dengan master di database)</p>
+                  <p className="text-muted-foreground text-[10px] mt-1">{t("odpImport.colDesc.region")}</p>
                 </div>
                 <div className="p-2 border border-border bg-card rounded">
                   <span className="text-primary font-bold">POP</span>
-                  <p className="text-muted-foreground text-[10px] mt-1">Kode POP (CBN), nama POP (Bintaro), atau ID inventori (INV-POP-S89P4U2)</p>
+                  <p className="text-muted-foreground text-[10px] mt-1">{t("odpImport.colDesc.pop")}</p>
                 </div>
                 <div className="p-2 border border-border bg-card rounded">
                   <span className="text-primary font-bold">longitude</span>
-                  <p className="text-muted-foreground text-[10px] mt-1">Koordinat desimal (-180 s/d 180)</p>
+                  <p className="text-muted-foreground text-[10px] mt-1">{t("odpImport.colDesc.longitude")}</p>
                 </div>
                 <div className="p-2 border border-border bg-card rounded">
                   <span className="text-primary font-bold">latitude</span>
-                  <p className="text-muted-foreground text-[10px] mt-1">Koordinat desimal (-90 s/d 90)</p>
+                  <p className="text-muted-foreground text-[10px] mt-1">{t("odpImport.colDesc.latitude")}</p>
                 </div>
                 <div className="p-2 border border-border bg-card rounded">
                   <span className="text-primary font-bold">kapasitas odp</span>
-                  <p className="text-muted-foreground text-[10px] mt-1">Kapasitas total port (misal: 8)</p>
+                  <p className="text-muted-foreground text-[10px] mt-1">{t("odpImport.colDesc.odpCapacity")}</p>
                 </div>
                 <div className="p-2 border border-border bg-card rounded">
                   <span className="text-primary font-bold">kapasitas splitter</span>
-                  <p className="text-muted-foreground text-[10px] mt-1">Format rasio (misal: 1:8)</p>
+                  <p className="text-muted-foreground text-[10px] mt-1">{t("odpImport.colDesc.splitterCapacity")}</p>
                 </div>
               </div>
             </div>
@@ -586,16 +588,16 @@ export default function OdpBulkImportPage() {
       {isUploadStep && (
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
-            <CardTitle>LANGKAH 2: UNGGAH BERKAS DATA ODP</CardTitle>
+            <CardTitle>{t("import.page.uploadHeading", { entity: "ODP" })}</CardTitle>
             <CardDescription>
-              Pilih file CSV atau XLSX hasil pengisian template. Batas maksimum impor adalah 2.000 baris data.
+              {t("import.page.uploadDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {parseError && (
               <Alert variant="destructive">
                 <AlertCircle className="size-4" />
-                <AlertTitle>Kesalahan Pembacaan Berkas</AlertTitle>
+                <AlertTitle>{t("import.page.readError")}</AlertTitle>
                 <AlertDescription>{parseError}</AlertDescription>
               </Alert>
             )}
@@ -613,15 +615,15 @@ export default function OdpBulkImportPage() {
                 onDrop={handleDrop}
               >
                 <Upload className="size-10 text-muted-foreground mb-4" />
-                <h3 className="text-sm font-semibold uppercase tracking-wider font-mono">Tarik & Letakkan File</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wider font-mono">{t("import.page.dragDrop")}</h3>
                 <p className="text-xs text-muted-foreground mt-1 mb-4">
-                  Dukung format .xlsx, .xls, atau .csv (Maksimal 2.000 baris data)
+                  {t("import.page.dragDropHint")}
                 </p>
                 <Label
                   htmlFor="import-file-upload"
                   className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 cursor-pointer"
                 >
-                  Pilih File Manual
+                  {t("import.page.pickFile")}
                 </Label>
                 <Input
                   id="import-file-upload"
@@ -647,30 +649,30 @@ export default function OdpBulkImportPage() {
                   <div>
                     <p className="text-sm font-semibold">{filename}</p>
                     <p className="text-xs text-muted-foreground font-mono">
-                      {(uploadFile.size / 1024).toFixed(1)} KB · Siap divalidasi
+                      {(uploadFile.size / 1024).toFixed(1)} KB · {t("import.page.fileReady")}
                     </p>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={removeFile} title="Hapus berkas">
+                <Button variant="ghost" size="icon" onClick={removeFile} title={t("import.page.removeFile")}>
                   <X className="size-4" />
                 </Button>
               </div>
             )}
 
             <div className="rounded-lg border border-border p-4 bg-muted/5 space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">Checklist Impor Massal ODP:</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">{t("import.page.checklist", { entity: "ODP" })}</h4>
               <ul className="text-xs space-y-1 text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <span className={`w-1.5 h-1.5 rounded-full ${popCheck?.hasPop ? "bg-green-500" : "bg-red-500"}`} />
-                  Prasyarat POP: {popCheck?.hasPop ? "Terpenuhi" : "Belum terpenuhi (Harap buat POP dahulu)"}
+                  {t("import.page.prereqLabel")} POP: {popCheck?.hasPop ? t("import.page.prereqMet") : t("import.page.prereqNotMet")}
                 </li>
                 <li className="flex items-center gap-2">
                   <span className={`w-1.5 h-1.5 rounded-full ${uploadFile ? "bg-green-500" : "bg-muted-foreground"}`} />
-                  File Terpilih: {uploadFile ? "Ya" : "Belum diunggah"}
+                  {t("import.page.fileSelected")}: {uploadFile ? t("import.page.fileSelectedYes") : t("import.page.fileSelectedNo")}
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                  Maksimal 2.000 baris data per batch file.
+                  {t("import.page.maxRows")}
                 </li>
               </ul>
             </div>
@@ -683,18 +685,18 @@ export default function OdpBulkImportPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 max-w-4xl mx-auto">
             <ImportSummaryStat
-              label="TOTAL BARIS"
+              label={t("import.page.totalRows")}
               value={summary.total}
               tone="primary"
             />
             <ImportSummaryStat
-              label="BARIS VALID"
+              label={t("import.page.validRows")}
               value={summary.valid}
               total={summary.total || 1}
               tone="success"
             />
             <ImportSummaryStat
-              label="BARIS ERROR"
+              label={t("import.page.errorRows")}
               value={summary.invalid}
               total={summary.total || 1}
               tone="destructive"
@@ -704,11 +706,12 @@ export default function OdpBulkImportPage() {
           {summary.invalid > 0 && (
             <Alert variant="destructive" className="max-w-4xl mx-auto">
               <AlertTriangle className="size-4" />
-              <AlertTitle>Ditemukan Data Tidak Valid</AlertTitle>
+              <AlertTitle>{t("import.page.invalidFound")}</AlertTitle>
               <AlertDescription>
-                Terdapat {summary.invalid} baris data yang memiliki kesalahan validasi.
-                Hanya baris dengan status <strong className="text-red-600">VALID</strong> yang akan disimpan saat proses penerapan.
-                Anda bisa memfilter dan mengunduh baris yang error melalui tabel pratinjau di bawah.
+                {t("import.page.invalidDescA", { count: summary.invalid })}{" "}
+                <strong className="text-red-600">VALID</strong>{" "}
+                {t("import.page.invalidDescB")}{" "}
+                {t("odpImport.invalidFilterHint")}
               </AlertDescription>
             </Alert>
           )}
@@ -718,10 +721,10 @@ export default function OdpBulkImportPage() {
               <AlertCircle className="size-4" />
               <AlertTitle>
                 {session?.me?.role === "admin"
-                  ? "File Mengandung Multi-Region"
+                  ? t("import.page.errMultiRegion")
                   : session?.me?.role === "user_all_region"
-                    ? "Region Tidak Termasuk Scope Anda"
-                    : "Region Tidak Dikenali"}
+                    ? t("import.page.errOutOfScope")
+                    : t("import.page.errRegionUnknown")}
               </AlertTitle>
               <AlertDescription>{fileLevelError}</AlertDescription>
             </Alert>
@@ -730,14 +733,14 @@ export default function OdpBulkImportPage() {
           <Card className="w-full">
             <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <CardTitle>LANGKAH 3: HASIL VALIDASI DATA ODP</CardTitle>
+                <CardTitle>{t("import.page.previewHeading", { entity: "ODP" })}</CardTitle>
                 <CardDescription>
-                  Pratinjau maksimum 50 baris data pertama. Lakukan pengecekan status validitas.
+                  {t("import.page.previewDesc")}
                 </CardDescription>
               </div>
               {uploadFile && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-                  <span>Berkas: <strong>{filename}</strong></span>
+                  <span>{t("import.page.fileLabel")} <strong>{filename}</strong></span>
                   <Button
                     variant="outline"
                     size="sm"
@@ -747,7 +750,7 @@ export default function OdpBulkImportPage() {
                     }}
                     className="h-7 text-[10px]"
                   >
-                    GANTI FILE
+                    {t("import.page.changeFile")}
                   </Button>
                 </div>
               )}
@@ -772,7 +775,7 @@ export default function OdpBulkImportPage() {
           className="rounded-full"
         >
           <ArrowLeft className="mr-2 size-4" />
-          KEMBALI
+          {t("import.page.back")}
         </Button>
 
         <div className="flex items-center gap-2">
@@ -782,7 +785,7 @@ export default function OdpBulkImportPage() {
             className="rounded-full"
             onClick={() => router.push("/data-management")}
           >
-            BATAL
+            {t("import.page.cancel")}
           </Button>
           <Button
             type="button"
@@ -800,9 +803,9 @@ export default function OdpBulkImportPage() {
             }
             className="rounded-full"
           >
-            {isTemplateStep && "LANJUT UNGGAH"}
-            {isUploadStep && "LIHAT VALIDASI"}
-            {isPreviewStep && "LANJUT TERAPKAN"}
+            {isTemplateStep && t("import.page.nextUpload")}
+            {isUploadStep && t("import.page.viewValidation")}
+            {isPreviewStep && t("import.page.apply")}
           </Button>
         </div>
       </div>
@@ -822,39 +825,39 @@ export default function OdpBulkImportPage() {
           <DialogHeader>
             <DialogTitle className="text-lg font-bold font-mono">
               {applyState === "success"
-                ? "IMPOR MASSAL SELESAI"
+                ? t("import.page.dialog.successTitle", { entity: "ODP" })
                 : applyState === "error"
-                  ? "GAGAL MENYIMPAN DATA"
-                  : "KONFIRMASI PENYIMPANAN BATCH"}
+                  ? t("import.page.dialog.errorTitle")
+                  : t("import.page.dialog.confirmTitle")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground font-mono">
               {applyState === "success"
-                ? "Berkas berhasil diproses oleh backend server."
+                ? t("import.page.dialog.successDesc")
                 : applyState === "error"
-                  ? "Proses impor massal mengalami kegagalan."
-                  : "Tinjau ringkasan sebelum menyimpan data ke database."}
+                  ? t("import.page.dialog.errorDesc")
+                  : t("import.page.dialog.confirmDesc")}
             </DialogDescription>
           </DialogHeader>
 
           {applyState === "idle" && (
             <div className="space-y-4 py-2">
               <div className="rounded-lg border border-border p-3 bg-muted/10 space-y-2.5 text-xs font-mono">
-                <h3 className="font-semibold uppercase tracking-wider text-muted-foreground">Ringkasan Impor:</h3>
+                <h3 className="font-semibold uppercase tracking-wider text-muted-foreground">{t("import.page.dialog.summaryTitle")}</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-muted-foreground">Nama Berkas:</span>
+                    <span className="text-muted-foreground">{t("import.page.dialog.fileName")}</span>
                     <p className="font-semibold text-foreground mt-0.5 truncate">{filename}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Jumlah Data:</span>
-                    <p className="font-semibold text-foreground mt-0.5">{summary.total} Baris</p>
+                    <span className="text-muted-foreground">{t("import.page.dialog.dataCount")}</span>
+                    <p className="font-semibold text-foreground mt-0.5">{t("import.page.dialog.rows", { count: summary.total })}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Akan Diimpor (Valid):</span>
+                    <span className="text-muted-foreground">{t("import.page.dialog.willImport")}</span>
                     <p className="font-semibold text-green-600 mt-0.5">{summary.valid} ODP</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Akan Dilewati (Error):</span>
+                    <span className="text-muted-foreground">{t("import.page.dialog.willSkip")}</span>
                     <p className="font-semibold text-red-500 mt-0.5">{summary.invalid} ODP</p>
                   </div>
                 </div>
@@ -864,11 +867,11 @@ export default function OdpBulkImportPage() {
                 <div className="flex gap-2">
                   <AlertTriangle className="size-4 shrink-0 text-amber-600 mt-0.5" />
                   <div>
-                    <strong className="block font-semibold mb-1">Perhatian Sebelum Menyimpan:</strong>
+                    <strong className="block font-semibold mb-1">{t("import.page.dialog.warningTitle")}</strong>
                     <ul className="list-disc pl-4 space-y-1">
-                      <li>Aksi ini akan membuat data ODP baru di database Syntrix.</li>
-                      <li>Proses pembentukan kode inventori unik akan berjalan secara otomatis di backend.</li>
-                      <li>Relasi kabel feeder, port mapping, dan data sekunder lainnya dapat dilengkapi di halaman Detail ODP setelah impor massal selesai.</li>
+                      <li>{t("import.page.dialog.warningCreate", { entity: "ODP" })}</li>
+                      <li>{t("import.page.dialog.warningInventory")}</li>
+                      <li>{t("odpImport.warningSecondaryRelations")}</li>
                     </ul>
                   </div>
                 </div>
@@ -877,13 +880,13 @@ export default function OdpBulkImportPage() {
           )}
 
           {applyState === "loading" && (
-            <div role="status" aria-label="Sedang Menyimpan Data..." className="space-y-3 py-2">
-              <span className="sr-only">Sedang Menyimpan Data...</span>
+            <div role="status" aria-label={t("import.page.dialog.saving")} className="space-y-3 py-2">
+              <span className="sr-only">{t("import.page.dialog.saving")}</span>
               <div className="flex flex-col items-center justify-center gap-2">
                 <div className="p-2.5 bg-blue-500/10 rounded-full animate-pulse">
                   <Loader2 className="size-6 text-blue-500 animate-spin" />
                 </div>
-                <p className="text-sm font-semibold uppercase tracking-wider font-mono text-blue-600">Sedang Menyimpan Data...</p>
+                <p className="text-sm font-semibold uppercase tracking-wider font-mono text-blue-600">{t("import.page.dialog.saving")}</p>
               </div>
               <div className="rounded-lg border border-border p-3 bg-muted/10 space-y-2.5 font-mono text-xs">
                 <Skeleton className="h-3.5 w-40 rounded" />
@@ -902,18 +905,18 @@ export default function OdpBulkImportPage() {
                 <div className="p-2.5 bg-green-500/10 text-green-500 rounded-full">
                   <CheckCircle2 className="size-6" />
                 </div>
-                <h3 className="text-sm font-semibold text-green-600 uppercase tracking-wider font-mono">Impor Selesai</h3>
+                <h3 className="text-sm font-semibold text-green-600 uppercase tracking-wider font-mono">{t("import.page.dialog.completeTitle")}</h3>
               </div>
 
               <div className="rounded-lg border border-border p-3 bg-muted/10 space-y-2.5 font-mono text-xs">
-                <h4 className="font-semibold uppercase tracking-wider text-muted-foreground">Hasil Eksekusi:</h4>
+                <h4 className="font-semibold uppercase tracking-wider text-muted-foreground">{t("import.page.dialog.executionTitle")}</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-muted-foreground">Sukses Dibuat:</span>
+                    <span className="text-muted-foreground">{t("import.page.dialog.successCount")}</span>
                     <p className="font-bold text-green-600 text-base">{importResult.successCount}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Gagal/Dilewati:</span>
+                    <span className="text-muted-foreground">{t("import.page.dialog.failedCount")}</span>
                     <p className="font-bold text-red-500 text-base">{importResult.failedCount}</p>
                   </div>
                 </div>
@@ -921,11 +924,11 @@ export default function OdpBulkImportPage() {
 
               {importResult.errors.length > 0 && (
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">Daftar Error Server ({importResult.errors.length}):</Label>
+                  <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">{t("import.page.dialog.errorListTitle", { count: importResult.errors.length })}</Label>
                   <div className="border border-border rounded-md bg-card max-h-[140px] overflow-y-auto p-2.5 space-y-2 font-mono text-[10px]">
                     {importResult.errors.map((err, i) => (
                       <div key={i} className="text-red-500 border-b border-border/50 pb-1.5 last:border-0 last:pb-0">
-                        <span className="font-bold">Baris {err.row_index}:</span>
+                        <span className="font-bold">{t("import.page.dialog.rowLabel", { row: err.row_index })}</span>
                         <p className="text-muted-foreground mt-0.5">{err.errors.join(", ")}</p>
                       </div>
                     ))}
@@ -939,7 +942,7 @@ export default function OdpBulkImportPage() {
             <div className="space-y-4 py-2">
               <Alert variant="destructive">
                 <AlertCircle className="size-4" />
-                <AlertTitle>Gagal Menyimpan Data</AlertTitle>
+                <AlertTitle>{t("import.page.dialog.failedSave")}</AlertTitle>
                 <AlertDescription className="text-xs mt-1">{applyMessage}</AlertDescription>
               </Alert>
             </div>
@@ -954,7 +957,7 @@ export default function OdpBulkImportPage() {
                   onClick={() => setApplyDialogOpen(false)}
                   className="w-full sm:w-auto"
                 >
-                  BATAL
+                  {t("import.page.cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -963,13 +966,13 @@ export default function OdpBulkImportPage() {
                   disabled={summary.valid === 0 || summary.invalid > 0 || fileLevelError !== null}
                   title={
                     summary.invalid > 0
-                      ? "Selesaikan baris error sebelum menerapkan."
+                      ? t("import.page.dialog.retryTitle")
                       : fileLevelError
                         ? fileLevelError
                         : ""
                   }
                 >
-                  MULAI TERAPKAN
+                  {t("import.page.dialog.apply")}
                 </Button>
               </>
             )}
@@ -990,7 +993,7 @@ export default function OdpBulkImportPage() {
                   }}
                   className="w-full sm:flex-1 font-mono text-xs uppercase tracking-wider"
                 >
-                  Impor File Baru
+                  {t("import.page.dialog.newImport")}
                 </Button>
                 <Button
                   type="button"
@@ -1000,7 +1003,7 @@ export default function OdpBulkImportPage() {
                   }}
                   className="w-full sm:flex-1 font-mono text-xs uppercase tracking-wider"
                 >
-                  Lihat List ODP
+                  {t("import.page.dialog.viewList", { entity: "ODP" })}
                 </Button>
               </div>
             )}
@@ -1013,14 +1016,14 @@ export default function OdpBulkImportPage() {
                   onClick={() => setApplyState("idle")}
                   className="w-full sm:w-auto"
                 >
-                  KEMBALI
+                  {t("import.page.back")}
                 </Button>
                 <Button
                   type="button"
                   onClick={handleApply}
                   className="w-full sm:w-auto"
                 >
-                  COBA LAGI
+                  {t("import.page.dialog.retry")}
                 </Button>
               </>
             )}
@@ -1060,7 +1063,7 @@ function parseCsv(text: string): Record<string, string>[] {
   return result;
 }
 
-function validateOdpRow(row: Record<string, string>): {
+function validateOdpRow(row: Record<string, string>, t: TFn): {
   valid: boolean;
   errors: string[];
 } {
@@ -1075,56 +1078,56 @@ function validateOdpRow(row: Record<string, string>): {
   };
 
   const deviceName = getValue("device name");
-  if (!deviceName) errors.push("device name wajib diisi");
+  if (!deviceName) errors.push(t("odpImport.val.deviceNameRequired"));
 
   const status = getValue("status").toLowerCase();
   if (!status) {
-    errors.push("status wajib diisi");
+    errors.push(t("odpImport.val.statusRequired"));
   } else if (!["draft", "installed", "active", "inactive", "maintenance", "retired"].includes(status)) {
-    errors.push("status harus draft/installed/active/inactive/maintenance/retired");
+    errors.push(t("odpImport.val.statusInvalid"));
   }
 
   const region = getValue("region");
-  if (!region) errors.push("region wajib diisi");
+  if (!region) errors.push(t("odpImport.val.regionRequired"));
 
   const pop = getValue("POP");
-  if (!pop) errors.push("POP wajib diisi");
+  if (!pop) errors.push(t("odpImport.val.popRequired"));
 
   const longStr = getValue("longitude");
   if (!longStr) {
-    errors.push("longitude wajib diisi");
+    errors.push(t("odpImport.val.lngRequired"));
   } else {
     const longitude = Number(longStr);
     if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-      errors.push("longitude harus -180..180");
+      errors.push(t("odpImport.val.lngRange"));
     }
   }
 
   const latStr = getValue("latitude");
   if (!latStr) {
-    errors.push("latitude wajib diisi");
+    errors.push(t("odpImport.val.latRequired"));
   } else {
     const latitude = Number(latStr);
     if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-      errors.push("latitude harus -90..90");
+      errors.push(t("odpImport.val.latRange"));
     }
   }
 
   const capacityStr = getValue("kapasitas odp");
   if (!capacityStr) {
-    errors.push("kapasitas odp wajib diisi");
+    errors.push(t("odpImport.val.odpCapRequired"));
   } else {
     const totalPorts = Number(capacityStr);
     if (!Number.isFinite(totalPorts) || totalPorts <= 0 || !Number.isInteger(totalPorts)) {
-      errors.push("kapasitas odp harus integer > 0");
+      errors.push(t("odpImport.val.odpCapPositiveInt"));
     }
   }
 
   const splitter = getValue("kapasitas splitter");
   if (!splitter) {
-    errors.push("kapasitas splitter wajib diisi");
+    errors.push(t("odpImport.val.splitterRequired"));
   } else if (!/^1:\d+$/.test(splitter)) {
-    errors.push("kapasitas splitter harus format 1:N (contoh 1:8)");
+    errors.push(t("odpImport.val.splitterFormat"));
   }
 
   return { valid: errors.length === 0, errors };
@@ -1187,6 +1190,7 @@ async function loadRegionsCatalog(
 
 function getUserScopeRegionIds(
   session: ReturnType<typeof useSession> | undefined,
+  t: TFn,
 ): string[] | null {
   const me = session?.me;
   if (!me) return null;
@@ -1198,6 +1202,6 @@ function getUserScopeRegionIds(
     const scopes = me.app_user?.user_region_scopes || [];
     return scopes.map((s) => s.region_id).filter(Boolean);
   }
-  throw new Error("Role ini tidak didukung untuk impor massal ODP.");
+  throw new Error(t("import.page.unsupportedRole"));
 }
 

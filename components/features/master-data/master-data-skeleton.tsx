@@ -3,6 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import type { LucideIcon } from "lucide-react";
 import { Boxes, Cable, Globe, HardDrive } from "lucide-react";
+import { useTranslate } from "@/lib/use-locale";
 
 type SectionShape = {
   key: string;
@@ -18,13 +19,14 @@ const SECTION_SHAPES: SectionShape[] = [
 ];
 
 export function MasterDataSkeleton() {
+  const { t } = useTranslate();
   return (
     <div
       role="status"
-      aria-label="Memuat data master..."
+      aria-label={t("skeleton.masterDataAria")}
       className="space-y-5 w-full"
     >
-      <span className="sr-only">Memuat data master...</span>
+      <span className="sr-only">{t("skeleton.masterDataAria")}</span>
 
       {/* Search Bar Skeleton */}
       <div className="relative">

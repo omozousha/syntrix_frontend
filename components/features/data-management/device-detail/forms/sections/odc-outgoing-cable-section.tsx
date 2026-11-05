@@ -1,6 +1,7 @@
 import { Cable, SplitSquareVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -55,7 +56,7 @@ export type OdcOutgoingCableSectionProps = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-function groupByCable(items: OutgoingCableItem[]): CableGroup[] {
+function groupByCable(items: OutgoingCableItem[], noCableLabel: string): CableGroup[] {
   const groups = new Map<string, OutgoingCableItem[]>();
 
   for (const item of items) {
@@ -71,7 +72,7 @@ function groupByCable(items: OutgoingCableItem[]): CableGroup[] {
     const cableName = cable?.device_name
       ? String(cable.device_name)
       : cableId === "__no_cable__"
-        ? "Tanpa Kabel"
+        ? noCableLabel
         : `Cable ${cableId.slice(0, 8)}...`;
 
     const cores = connections
@@ -93,9 +94,9 @@ function formatCoreRange(item: OutgoingCableItem): string {
   return "-";
 }
 
-function peerName(item: OutgoingCableItem): string {
+function peerName(item: OutgoingCableItem, unknownLabel: string): string {
   const peer = item.peer_device;
-  if (!peer) return "ODP tidak dikenal";
+  if (!peer) return unknownLabel;
   return String(peer.device_name || peer.device_id || peer.id || "ODP");
 }
 
@@ -111,15 +112,15 @@ function odcPortLabel(item: OutgoingCableItem): string {
   return String(port.port_label || port.port_id || `Port ${port.port_index || "?"}`);
 }
 
-function statusBadge(status: string | null | undefined) {
+function statusBadge(status: string | null | undefined, t: TFn) {
   const s = String(status || "").toLowerCase();
   if (s === "approved" || s === "active") {
-    return <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px]">Active</Badge>;
+    return <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px]">{t("odcOut.statusActive")}</Badge>;
   }
   if (s === "draft" || s === "pending") {
-    return <Badge className="border-amber-200 bg-amber-50 text-amber-700 text-[10px]">Draft</Badge>;
+    return <Badge className="border-amber-200 bg-amber-50 text-amber-700 text-[10px]">{t("odcOut.statusDraft")}</Badge>;
   }
-  return <Badge className="border-slate-200 bg-slate-50 text-slate-600 text-[10px]">{s || "Unknown"}</Badge>;
+  return <Badge className="border-slate-200 bg-slate-50 text-slate-600 text-[10px]">{s || t("odcOut.statusUnknown")}</Badge>;
 }
 
 function valueOf(value: unknown, fallback = "") {
@@ -136,17 +137,18 @@ export function OdcOutgoingCableSection({
   coreSummary,
   loading = false,
 }: OdcOutgoingCableSectionProps) {
+  const { t } = useTranslate();
   const items = downstream || [];
-  const cableGroups = groupByCable(items);
+  const cableGroups = groupByCable(items, t("odcOut.noCableName"));
   const totalOdp = items.length;
 
   return (
     <Card className="bg-transparent">
       <CardHeader className="px-3 py-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">Outgoing Cable (Downstream)</CardTitle>
+          <CardTitle className="text-sm">{t("odcOut.title")}</CardTitle>
           <Badge variant="outline" className="text-xs">
-            {totalOdp} ODP terhubung
+            {t("odcOut.connectedOdpCount", { count: totalOdp })}
           </Badge>
         </div>
       </CardHeader>
@@ -155,7 +157,7 @@ export function OdcOutgoingCableSection({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-md border bg-muted/20 p-2">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              Distribution Ports
+              {t("odcOut.distributionPorts")}
             </p>
             <p className="mt-1 text-lg font-semibold text-amber-600">
               {portSummary?.distribution ?? 0}
@@ -163,7 +165,7 @@ export function OdcOutgoingCableSection({
           </div>
           <div className="rounded-md border bg-muted/20 p-2">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              Port Active
+              {t("odcOut.portActive")}
             </p>
             <p className="mt-1 text-lg font-semibold text-emerald-600">
               {portSummary?.active ?? 0}
@@ -171,7 +173,7 @@ export function OdcOutgoingCableSection({
           </div>
           <div className="rounded-md border bg-muted/20 p-2">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              Distribution Cables
+              {t("odcOut.distributionCables")}
             </p>
             <p className="mt-1 text-lg font-semibold">
               {coreSummary?.unique_cables ?? cableGroups.length}
@@ -179,7 +181,7 @@ export function OdcOutgoingCableSection({
           </div>
           <div className="rounded-md border bg-muted/20 p-2">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              Cores Used
+              {t("odcOut.coresUsed")}
             </p>
             <p className="mt-1 text-lg font-semibold">
               {coreSummary?.total_cores_used ?? items.reduce((sum, i) => sum + (i.core_start != null && i.core_end != null ? i.core_end - i.core_start + 1 : 0), 0)}
@@ -190,14 +192,14 @@ export function OdcOutgoingCableSection({
         {/* Cable Groups */}
         {loading ? (
           <div className="flex items-center justify-center rounded-md border bg-muted/10 p-6">
-            <p className="text-sm text-muted-foreground">Memuat data kabel distribusi...</p>
+            <p className="text-sm text-muted-foreground">{t("odcOut.loading")}</p>
           </div>
         ) : cableGroups.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-md border bg-muted/10 p-6">
             <Cable className="mb-2 size-8 text-muted-foreground/40" />
-            <p className="text-sm font-medium text-muted-foreground">Belum ada outgoing cable</p>
+            <p className="text-sm font-medium text-muted-foreground">{t("odcOut.emptyTitle")}</p>
             <p className="text-xs text-muted-foreground/60 mt-1">
-              Buat relasi distribusi ODC ke ODP melalui Topology Workspace untuk menambahkan kabel.
+              {t("odcOut.emptyDesc")}
             </p>
           </div>
         ) : (
@@ -232,10 +234,10 @@ export function OdcOutgoingCableSection({
                       <div className="flex items-center gap-2 min-w-0">
                         <SplitSquareVertical className="size-3.5 shrink-0 text-amber-500" />
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-medium">{peerName(conn)}</p>
+                          <p className="truncate text-xs font-medium">{peerName(conn, t("odcOut.unknownOdp"))}</p>
                           <p className="truncate text-[10px] text-muted-foreground">
-                            Port ODP: {peerPortLabel(conn)}
-                            {odcPortLabel(conn) !== "-" ? ` | Port ODC: ${odcPortLabel(conn)}` : ""}
+                            {t("odcOut.odpPortsPrefix", { ports: peerPortLabel(conn) })}
+                            {odcPortLabel(conn) !== "-" ? ` | ${t("odcOut.odcPortsPrefix", { ports: odcPortLabel(conn) })}` : ""}
                           </p>
                         </div>
                       </div>
@@ -243,7 +245,7 @@ export function OdcOutgoingCableSection({
                         <span className="text-[10px] font-medium text-purple-700">
                           Core {formatCoreRange(conn)}
                         </span>
-                        {statusBadge(conn.status)}
+                        {statusBadge(conn.status, t)}
                       </div>
                     </div>
                   ))}

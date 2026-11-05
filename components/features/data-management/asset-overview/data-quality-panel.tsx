@@ -379,9 +379,10 @@ function matchesSeverityFilter(severity: SeverityFilter, filter: SeverityFilter)
 }
 
 function QualityLoading() {
+  const { t } = useTranslate();
   return (
-    <div className="space-y-4" role="status" aria-label="Memuat data kualitas...">
-      <span className="sr-only">Memuat data kualitas...</span>
+    <div className="space-y-4" role="status" aria-label={t("dataQuality.loading")}>
+      <span className="sr-only">{t("dataQuality.loading")}</span>
       {/* Health cards (4-up, mirrored from HealthCard) */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (

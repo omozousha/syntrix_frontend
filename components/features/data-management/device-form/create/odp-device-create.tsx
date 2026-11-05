@@ -5,6 +5,7 @@ import { DeviceHardwareFields } from "@/components/features/data-management/devi
 import { FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
+import { useTranslate } from "@/lib/use-locale";
 
 type PopOption = { id: string; pop_name: string; pop_code: string; region_id: string };
 type ProjectOption = { id: string; project_name: string; project_code?: string | null; region_id?: string | null; pop_id?: string | null };
@@ -73,6 +74,7 @@ export function OdpDeviceCreate({
   rearRelationLabel?: string;
   onChange: (patch: Record<string, string>) => void;
 }) {
+  const { t } = useTranslate();
   return (
     <>
       <DeviceCreateForm
@@ -84,11 +86,11 @@ export function OdpDeviceCreate({
       />
 
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border bg-muted/40 px-3 py-1.5">
-        Spesifikasi Port &amp; Splitter ODP
+        {t("createForm.odpSpecsSection")}
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label="Rasio Splitter" tooltip="Pilih rasio splitter optik terpasang pada ODP." />
+        <FieldLabel label={t("createForm.odpSplitterRatio")} tooltip="Pilih rasio splitter optik terpasang pada ODP." />
         <Combobox
           value={values.splitter_ratio || "__none__"}
           onValueChange={(val) => {
@@ -98,29 +100,29 @@ export function OdpDeviceCreate({
             onChange({ splitter_ratio: nextRatio, total_ports: autoPorts });
           }}
           options={[
-            { value: "__none__", label: "Pilih rasio splitter" },
+            { value: "__none__", label: t("createForm.selectSplitter") },
             ...(splitterProfiles || []).map((p) => ({
               value: p.ratio_label,
               label: `Splitter ${p.ratio_label} (${p.output_port_count || 0} port)`,
             })),
           ]}
-          placeholder="Pilih rasio splitter"
-          searchPlaceholder="Cari rasio splitter..."
+          placeholder={t("createForm.selectSplitter")}
+          searchPlaceholder={t("createForm.searchSplitter")}
         />
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label="Kapasitas Port Distribusi" tooltip="Total port ODP yang dapat melayani sambungan drop pelanggan." />
+        <FieldLabel label={t("createForm.odpDistributionPorts")} tooltip="Total port ODP yang dapat melayani sambungan drop pelanggan." />
         <Input
           type="number"
           value={values.total_ports || ""}
           onChange={(e) => onChange({ total_ports: e.target.value })}
-          placeholder="8 atau 16"
+          placeholder={t("createForm.odpPortPlaceholder")}
         />
       </div>
 
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border bg-muted/40 px-3 py-1.5">
-        Identitas Perangkat &amp; Vendor
+        {t("createForm.deviceVendorSection")}
       </div>
 
       <DeviceHardwareFields

@@ -845,7 +845,7 @@ export default function CreateDataManagementPage() {
       return;
     }
     if (list.length > MAX_IMAGE_ATTACHMENTS) {
-      setErrorMessage(`Maksimal ${MAX_IMAGE_ATTACHMENTS} gambar per data.`);
+      setErrorMessage(t("createPage.maxImagesExceeded", { max: MAX_IMAGE_ATTACHMENTS }));
       return;
     }
     const invalidSize = list.find((file) => file.size > MAX_IMAGE_FILE_SIZE_BYTES);
@@ -1798,11 +1798,11 @@ export default function CreateDataManagementPage() {
                     <Separator />
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <p className="text-sm font-medium">Custom Fields</p>
+                        <p className="text-sm font-medium">{t("createPage.customFieldsTitle")}</p>
                         <p className="text-xs text-muted-foreground">{t("createPage.customFieldsSpecificDevice")}</p>
                       </div>
                       <Button type="button" variant="outline" size="sm" onClick={() => setCustomDialogOpen(true)}>
-                        Add Custom Field
+                        {t("createPage.addCustomFieldTitle")}
                       </Button>
                     </div>
                     {customDefinitions.length === 0 ? (
@@ -1916,7 +1916,7 @@ export default function CreateDataManagementPage() {
               />
               {isPop || isProject || showDeviceImageField ? (
                 <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-                  Lampiran Gambar
+                  {t("createPage.imageAttachmentsLabel")}
                 </div>
               ) : null}
               {isPop ? (
@@ -1994,8 +1994,8 @@ export default function CreateDataManagementPage() {
               {isDevice && showDeviceImageField ? (
                 <div className={`space-y-1.5 ${sectionSpanClass}`}>
                   <ImageAttachmentField
-                    label="Image Attachments"
-                    tooltip="Upload maksimal 10 foto perangkat (masing-masing max 5MB)."
+                    label={t("createPage.imageAttachmentsLabel")}
+                    tooltip={t("createPage.imageAttachmentsTooltip")}
                     files={imageFiles}
                     previewUrls={imagePreviewUrls}
                     onChange={handleImageFilesChange}
@@ -2007,7 +2007,7 @@ export default function CreateDataManagementPage() {
               {!isCableDevice ? (
                 <>
                   <div className={`${sectionSpanClass} ${sectionLabelClass}`}>
-                    Lokasi
+                    {t("createPage.locationSection")}
                   </div>
                   <CreateLocationFields
                     values={{
@@ -2034,11 +2034,11 @@ export default function CreateDataManagementPage() {
               <Separator />
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm font-medium">Custom Fields</p>
-                  <p className="text-xs text-muted-foreground">Khusus untuk data POP yang sedang dibuat.</p>
+                  <p className="text-sm font-medium">{t("createPage.customFieldsTitle")}</p>
+                  <p className="text-xs text-muted-foreground">{t("createPage.customFieldsSpecificPop")}</p>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={() => setCustomDialogOpen(true)}>
-                  Add Custom Field
+                  {t("createPage.addCustomFieldTitle")}
                 </Button>
               </div>
 
@@ -2114,7 +2114,7 @@ export default function CreateDataManagementPage() {
         <AlertDialog open={customDialogOpen && (isPop || isDevice)} onOpenChange={setCustomDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Add Custom Field</AlertDialogTitle>
+            <AlertDialogTitle>{t("createPage.addCustomFieldTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
               {t("createPage.customFieldDialogDesc")}
             </AlertDialogDescription>
@@ -2134,7 +2134,7 @@ export default function CreateDataManagementPage() {
               placeholder="rack_label"
             />
             <div className="space-y-1.5">
-              <Label>Field Type</Label>
+              <Label>{t("createPage.fieldTypeLabel")}</Label>
               <Combobox
                 value={customDraft.field_type}
                 onValueChange={(v) => setCustomDraft((p) => ({ ...p, field_type: v }))}
@@ -2148,7 +2148,7 @@ export default function CreateDataManagementPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Layout Span</Label>
+              <Label>{t("createPage.layoutSpanLabel")}</Label>
               <Combobox
                 value={customDraft.layout_span}
                 onValueChange={(v) => setCustomDraft((p) => ({ ...p, layout_span: v }))}
@@ -2160,7 +2160,7 @@ export default function CreateDataManagementPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Required</Label>
+              <Label>{t("createPage.requiredLabel")}</Label>
               <Combobox
                 value={customDraft.is_required}
                 onValueChange={(v) => setCustomDraft((p) => ({ ...p, is_required: v }))}
@@ -2172,13 +2172,13 @@ export default function CreateDataManagementPage() {
               />
             </div>
             <Field
-              label="Options (CSV)"
+              label={t("createPage.optionsCsvLabel")}
               value={customDraft.options_csv}
               onChange={(v) => setCustomDraft((p) => ({ ...p, options_csv: v }))}
               placeholder={t("createPage.optionsCsvPlaceholder")}
             />
             <Field
-              label="Help Text"
+              label={t("createPage.helpTextLabel")}
               value={customDraft.help_text}
               onChange={(v) => setCustomDraft((p) => ({ ...p, help_text: v }))}
               placeholder={t("createPage.helpTextPlaceholder")}
@@ -2208,7 +2208,7 @@ export default function CreateDataManagementPage() {
                 }
               }}
             >
-              Tambah
+              {t("createPage.addCustomFieldBtn")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

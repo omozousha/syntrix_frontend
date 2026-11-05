@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { type DevicePort } from "./port-tray-types";
+import { useTranslate } from "@/lib/use-locale";
 
 /**
  * Status visual helpers untuk active device (OLT/SWITCH).
@@ -36,6 +37,7 @@ export function OltPortCard({
   disabled?: boolean;
   className?: string;
 }) {
+  const { t } = useTranslate();
   const status = port.status || "idle";
   const isIdle = status === "idle";
   const statusClass = getActivePortStatusClass(status);
@@ -46,7 +48,7 @@ export function OltPortCard({
       type="button"
       disabled={disabled}
       onClick={() => onClick?.(port)}
-      title={`${port.port_label || `#${port.port_index}`} · Status: ${statusLabel}${port.notes ? ` · ${port.notes}` : ""}`}
+      title={`${port.port_label || `#${port.port_index}`} · ${t("portCard.statusTitle", { status: statusLabel })}${port.notes ? ` · ${port.notes}` : ""}`}
       className={cn(
         "group relative flex cursor-pointer flex-col items-center justify-center gap-1 rounded-md border bg-background p-1.5 text-center transition-all",
         "hover:border-foreground/30 hover:shadow-sm",
@@ -87,7 +89,7 @@ export function OltPortCard({
       {/* Hover indicator for idle ports */}
       {isIdle && !disabled && (
         <span className="absolute inset-0 flex items-center justify-center rounded-md bg-foreground/5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-          <span className="text-[9px] font-medium text-foreground/70">Assign</span>
+          <span className="text-[9px] font-medium text-foreground/70">{t("portCard.assign")}</span>
         </span>
       )}
     </button>

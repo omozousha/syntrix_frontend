@@ -2,15 +2,17 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton";
+import { useTranslate } from "@/lib/use-locale";
 
 export function AccountManagementSkeleton() {
+  const { t } = useTranslate();
   return (
     <div
       role="status"
-      aria-label="Memuat manajemen akun..."
+      aria-label={t("skeleton.accountManagementAria")}
       className="space-y-4 w-full"
     >
-      <span className="sr-only">Memuat manajemen akun...</span>
+      <span className="sr-only">{t("skeleton.accountManagementAria")}</span>
 
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -59,7 +61,7 @@ export function AccountManagementSkeleton() {
           columnWidths={["w-40", "w-28", "w-32", "w-24", "w-20", "w-24"]}
           rowCount={5}
           showCheckbox={false}
-          ariaLabel="Memuat daftar akun pengguna..."
+          ariaLabel={t("skeleton.accountTableAria")}
         />
       </div>
     </div>

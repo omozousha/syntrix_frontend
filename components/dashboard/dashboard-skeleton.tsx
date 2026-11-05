@@ -1,12 +1,14 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslate } from "@/lib/use-locale";
 
 export function DashboardSkeleton({
   role = "superadmin",
 }: {
   role?: "superadmin" | "adminregion" | "validator";
 }) {
+  const { t } = useTranslate();
   const isValidator = role === "validator";
   const metricCount = isValidator ? 4 : 5;
   const tabCount = isValidator ? 3 : role === "superadmin" ? 5 : 4;
@@ -14,10 +16,10 @@ export function DashboardSkeleton({
   return (
     <div
       role="status"
-      aria-label="Memuat dashboard..."
+      aria-label={t("skeleton.dashboardAria")}
       className="space-y-4 w-full"
     >
-      <span className="sr-only">Memuat dashboard...</span>
+      <span className="sr-only">{t("skeleton.dashboardAria")}</span>
 
       {/* Double-Bezel Dashboard Header Skeleton */}
       <div className="rounded-[2rem] border border-border/40 bg-gradient-to-br from-muted/10 to-muted/5 p-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:bg-gradient-to-br dark:from-white/[0.02] dark:to-transparent">

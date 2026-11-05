@@ -5,6 +5,7 @@ import { DeviceCreateForm } from "@/components/features/data-management/device-f
 import { DeviceHardwareFields } from "@/components/features/data-management/device-form/device-hardware-fields";
 import { RouteFileUploadField } from "@/components/features/data-management/device-form/route-file-upload-field";
 import { Field, FieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
+import { useTranslate } from "@/lib/use-locale";
 
 type PopOption = { id: string; pop_name: string; pop_code: string; region_id: string };
 type ProjectOption = { id: string; project_name: string; project_code?: string | null; region_id?: string | null; pop_id?: string | null };
@@ -82,6 +83,7 @@ export function CableDeviceCreate({
   onChange: (patch: Record<string, string>) => void;
 }) {
   // Filter core capacities based on selected route type
+  const { t } = useTranslate();
   const routeType = values.route_type || "";
   const filteredCoreCapacities = coreCapacities.filter((item) => {
     const allowedKeys = item.allowed_route_type_keys || [];
@@ -103,66 +105,66 @@ export function CableDeviceCreate({
 
       {/* ═══ 2. INFORMASI ROUTE ═══ */}
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border bg-muted/40 px-3 py-1.5">
-        Informasi Route
+        {t("createForm.routeInfoSection")}
       </div>
 
       {/* Kategori Kabel */}
       <div className="space-y-1.5">
-        <FieldLabel label="Kategori Kabel" tooltip="Kategori fungsi kabel dalam jaringan. Menggunakan data Route Types dari master data." />
+        <FieldLabel label={t("createForm.cableCategory")} tooltip="Kategori fungsi kabel dalam jaringan. Menggunakan data Route Types dari master data." />
         <Combobox
           value={values.route_type || "__none__"}
           onValueChange={(v) => onChange({ route_type: v === "__none__" ? "" : v })}
           options={[
-            { value: "__none__", label: "Pilih kategori kabel" },
+            { value: "__none__", label: t("createForm.selectCableCategory") },
             ...routeTypes.map((rt) => ({
               value: rt.route_type_code || rt.route_type_name,
               label: rt.route_type_code ? `${rt.route_type_name} (${rt.route_type_code})` : rt.route_type_name,
             })),
           ]}
-          placeholder="Pilih kategori kabel"
-          searchPlaceholder="Cari kategori kabel..."
+          placeholder={t("createForm.selectCableCategory")}
+          searchPlaceholder={t("createForm.searchCableCategory")}
         />
       </div>
 
       {/* Tipe Kabel */}
       <div className="space-y-1.5">
-        <FieldLabel label="Tipe Kabel" tooltip="Pilih tipe kabel fiber optik dari master data." />
+        <FieldLabel label={t("createForm.cableType")} tooltip="Pilih tipe kabel fiber optik dari master data." />
         <Combobox
           value={values.cable_type || "__none__"}
           onValueChange={(v) => onChange({ cable_type: v === "__none__" ? "" : v })}
           options={[
-            { value: "__none__", label: "Pilih tipe kabel" },
-            ...cableTypes.map((t) => ({
-              value: t.cable_type_code,
-              label: t.cable_type_name,
+            { value: "__none__", label: t("createForm.selectCableType") },
+            ...cableTypes.map((ct) => ({
+              value: ct.cable_type_code,
+              label: ct.cable_type_name,
             })),
           ]}
-          placeholder="Pilih tipe kabel"
-          searchPlaceholder="Cari tipe kabel..."
+          placeholder={t("createForm.selectCableType")}
+          searchPlaceholder={t("createForm.searchCableType")}
         />
       </div>
 
       {/* Kapasitas Core */}
       <div className="space-y-1.5">
-        <FieldLabel label="Kapasitas Core" tooltip="Pilih total core optik dalam kabel." required />
+        <FieldLabel label={t("createForm.coreCapacityLabel")} tooltip="Pilih total core optik dalam kabel." required />
         <Combobox
           value={values.capacity_core || "__none__"}
           onValueChange={(v) => onChange({ capacity_core: v === "__none__" ? "" : v })}
           options={[
-            { value: "__none__", label: "Pilih kapasitas core" },
+            { value: "__none__", label: t("createForm.selectCapacity") },
             ...filteredCoreCapacities.map((c) => ({
               value: String(c.core_capacity_value),
               label: `${c.core_capacity_value} Core${c.label ? ` — ${c.label}` : ""}`,
             })),
           ]}
-          placeholder="Pilih kapasitas core"
-          searchPlaceholder="Cari kapasitas core..."
+          placeholder={t("createForm.selectCapacity")}
+          searchPlaceholder={t("createForm.searchCapacity")}
         />
       </div>
 
       {/* Route Name */}
       <Field
-        label="Route Name"
+        label={t("createForm.routeNameLabel")}
         value={values.route_name}
         onChange={(v) => onChange({ route_name: v })}
         tooltip="Nama route kabel (contoh: Jakarta-Bogor Segmen A)."
@@ -171,7 +173,7 @@ export function CableDeviceCreate({
       {/* ═══ 3. UPLOAD ROUTE FILE ═══ */}
       <div className="col-span-full space-y-2">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border bg-muted/40 px-3 py-1.5">
-          Upload Route File
+          {t("createForm.uploadRouteFileLabel")}
         </div>
         <RouteFileUploadField
           disabled={false}
@@ -186,7 +188,7 @@ export function CableDeviceCreate({
 
       {/* Panjang Kabel (auto-fill dari upload atau manual) */}
       <Field
-        label="Panjang Kabel (m)"
+        label={t("deviceDetail.cable.cableLength")}
         type="number"
         value={values.cable_length_m}
         onChange={(v) => onChange({ cable_length_m: v })}
@@ -195,7 +197,7 @@ export function CableDeviceCreate({
 
       {/* ═══ 4. SPESIFIKASI KABEL ═══ */}
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border bg-muted/40 px-3 py-1.5">
-        Spesifikasi Kabel
+        {t("createForm.cableSpecsSection")}
       </div>
 
       <DeviceHardwareFields
@@ -213,8 +215,8 @@ export function CableDeviceCreate({
 
       {/* ═══ 5. DOKUMENTASI ═══ */}
       <div className="col-span-full text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rounded-md border border-dashed bg-muted/20 px-3 py-1.5">
-        Dokumentasi
-        <span className="ml-2 font-normal normal-case text-muted-foreground">— Tambah gambar/attachment setelah device tersimpan, melalui halaman detail CABLE.</span>
+        {t("createForm.documentationTitle")}
+        <span className="ml-2 font-normal normal-case text-muted-foreground">{t("createForm.cableDocHint")}</span>
       </div>
     </>
   );
