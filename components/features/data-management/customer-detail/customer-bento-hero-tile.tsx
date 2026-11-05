@@ -75,7 +75,7 @@ export function CustomerBentoHeroTile({
   const isStatusActive = cleanStatus === "active";
 
   return (
-    <Card className="flex flex-col justify-between rounded-2xl border-border/60 shadow-xs glass-inset transition-all duration-300">
+    <Card className="flex h-full flex-col justify-between rounded-2xl border-border/60 shadow-xs glass-inset transition-all duration-300">
       <CardContent className="p-5 sm:p-6 space-y-4">
         {/* Eyebrow & Badges */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">

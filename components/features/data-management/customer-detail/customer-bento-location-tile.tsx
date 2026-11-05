@@ -43,7 +43,7 @@ export function CustomerBentoLocationTile({
   }
 
   return (
-    <Card className="flex flex-col justify-between rounded-2xl border-border/60 shadow-xs glass-inset transition-all duration-300">
+    <Card className="flex h-full flex-col justify-between rounded-2xl border-border/60 shadow-xs glass-inset transition-all duration-300">
       <CardContent className="p-5 sm:p-6 space-y-4 flex flex-col justify-between h-full">
         <div className="space-y-3">
           {/* Header */}
@@ -108,17 +108,17 @@ export function CustomerBentoLocationTile({
 
         {/* Navigation Action */}
         {hasCoords && (
-          <div className="flex gap-2 pt-2 border-t border-border/30">
+          <div className={`${onOpenNavigation ? "grid grid-cols-1 gap-2 sm:grid-cols-2" : "flex"} pt-2 border-t border-border/30`}>
             {onOpenNavigation ? (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={onOpenNavigation}
-                className="w-full h-8 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                className="w-full min-w-0 h-8 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
               >
                 <Navigation className="mr-1.5 size-3.5 text-primary" />
-                {t("detailPage.ui.routeNavigation")}
+                <span className="truncate">{t("detailPage.ui.routeNavigation")}</span>
               </Button>
             ) : null}
             <Button
@@ -126,10 +126,10 @@ export function CustomerBentoLocationTile({
               variant="outline"
               size="sm"
               onClick={handleOpenGoogleMaps}
-              className="w-full h-8 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+              className="w-full min-w-0 h-8 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
             >
               <MapPin className="mr-1.5 size-3.5 text-primary" />
-              {t("detailPage.customerTile.googleMaps")}
+              <span className="truncate">{t("detailPage.customerTile.googleMaps")}</span>
             </Button>
           </div>
         )}
