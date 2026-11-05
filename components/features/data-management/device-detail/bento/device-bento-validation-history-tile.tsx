@@ -4,6 +4,7 @@ import { ShieldCheck, User, Calendar, CheckCircle2, AlertTriangle, XCircle, File
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { mapValidationStatus } from "@/lib/validation-status";
+import { useTranslate } from "@/lib/use-locale";
 
 type ValidationRecordItem = {
   id: string;
@@ -35,11 +36,12 @@ export function DeviceBentoValidationHistoryTile({
   records = [],
   loading = false,
 }: DeviceBentoValidationHistoryTileProps) {
+  const { t, locale } = useTranslate();
   function formatDate(value?: string | null) {
     if (!value) return "-";
     try {
       const d = new Date(value);
-      return d.toLocaleDateString("id-ID", {
+      return d.toLocaleDateString(locale === "en" ? "en-US" : "id-ID", {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -61,26 +63,26 @@ export function DeviceBentoValidationHistoryTile({
               <ShieldCheck className="size-4" />
             </span>
             <div>
-              <h2 className="text-sm font-bold tracking-tight text-foreground">Riwayat Validasi Lapangan</h2>
+              <h2 className="text-sm font-bold tracking-tight text-foreground">{t("detailPage.validationHistoryTile.title")}</h2>
               <p className="text-xs text-muted-foreground">
-                Daftar audit fisik, pemeriksaan teknis, dan keputusan approval tim operasional.
+                {t("detailPage.validationHistoryTile.description")}
               </p>
             </div>
           </div>
           <Badge variant="outline" className="rounded-full px-2.5 font-mono text-[10px] tabular-nums">
-            {records.length} riwayat
+            {t("detailPage.validationHistoryTile.countBadge", { count: records.length })}
           </Badge>
         </div>
 
         {/* Content list */}
         {loading ? (
           <div className="p-8 text-center text-xs text-muted-foreground animate-pulse">
-            Memuat riwayat validasi...
+            {t("detailPage.validationHistoryTile.loading")}
           </div>
         ) : records.length > 0 ? (
           <div className="space-y-3">
             {records.map((rec, index) => {
-              const statusUi = mapValidationStatus(rec.request_status || rec.status);
+              const statusUi = mapValidationStatus(rec.request_status || rec.status, t);
               return (
                 <div
                   key={rec.id || index}
@@ -90,7 +92,7 @@ export function DeviceBentoValidationHistoryTile({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs font-bold text-foreground">
-                        {rec.validation_id || `Validasi #${index + 1}`}
+                        {rec.validation_id || t("detailPage.validationHistoryTile.itemFallback", { index: index + 1 })}
                       </span>
                       <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
                         {formatDate(rec.validated_at || rec.created_at)}
@@ -106,7 +108,7 @@ export function DeviceBentoValidationHistoryTile({
                     <div className="rounded-lg bg-background/60 p-2 border border-border/40 space-y-0.5">
                       <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[9px] uppercase tracking-wider">
                         <User className="size-3" />
-                        <span>Validator</span>
+                        <span>{t("detailPage.validationHistoryTile.validator")}</span>
                       </div>
                       <p className="font-medium text-foreground truncate">{rec.validator_name || "-"}</p>
                     </div>
@@ -114,7 +116,7 @@ export function DeviceBentoValidationHistoryTile({
                     <div className="rounded-lg bg-background/60 p-2 border border-border/40 space-y-0.5">
                       <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[9px] uppercase tracking-wider">
                         <ShieldCheck className="size-3 text-sky-500" />
-                        <span>Admin Region</span>
+                        <span>{t("detailPage.validationHistoryTile.adminRegion")}</span>
                       </div>
                       <p className="font-medium text-foreground truncate">{rec.adminregion_actor_name || "-"}</p>
                     </div>
@@ -122,7 +124,7 @@ export function DeviceBentoValidationHistoryTile({
                     <div className="rounded-lg bg-background/60 p-2 border border-border/40 space-y-0.5">
                       <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[9px] uppercase tracking-wider">
                         <ShieldCheck className="size-3 text-emerald-500" />
-                        <span>Superadmin</span>
+                        <span>{t("detailPage.validationHistoryTile.superadmin")}</span>
                       </div>
                       <p className="font-medium text-foreground truncate">{rec.superadmin_actor_name || "-"}</p>
                     </div>
@@ -133,19 +135,19 @@ export function DeviceBentoValidationHistoryTile({
                     <div className="rounded-lg bg-muted/30 p-2.5 border border-border/30 text-xs space-y-1">
                       {rec.findings ? (
                         <p className="text-foreground leading-relaxed">
-                          <span className="font-mono text-[10px] uppercase text-muted-foreground">Catatan Validator: </span>
+                          <span className="font-mono text-[10px] uppercase text-muted-foreground">{t("detailPage.validationHistoryTile.validatorNote")}</span>
                           {rec.findings}
                         </p>
                       ) : null}
                       {rec.adminregion_review_note ? (
                         <p className="text-foreground leading-relaxed">
-                          <span className="font-mono text-[10px] uppercase text-muted-foreground">Catatan Adminregion: </span>
+                          <span className="font-mono text-[10px] uppercase text-muted-foreground">{t("detailPage.validationHistoryTile.adminRegionNote")}</span>
                           {rec.adminregion_review_note}
                         </p>
                       ) : null}
                       {rec.superadmin_review_note ? (
                         <p className="text-foreground leading-relaxed">
-                          <span className="font-mono text-[10px] uppercase text-muted-foreground">Catatan Superadmin: </span>
+                          <span className="font-mono text-[10px] uppercase text-muted-foreground">{t("detailPage.validationHistoryTile.superadminNote")}</span>
                           {rec.superadmin_review_note}
                         </p>
                       ) : null}
@@ -158,9 +160,9 @@ export function DeviceBentoValidationHistoryTile({
         ) : (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/10 p-8 text-center">
             <ShieldCheck className="size-8 text-muted-foreground/50 mb-2" />
-            <p className="text-xs font-semibold text-foreground">Belum ada riwayat validasi</p>
+            <p className="text-xs font-semibold text-foreground">{t("detailPage.validationHistoryTile.emptyTitle")}</p>
             <p className="text-xs text-muted-foreground mt-0.5 max-w-sm">
-              Perangkat ini belum pernah diajukan atau disetujui dalam workflow validasi lapangan.
+              {t("detailPage.validationHistoryTile.emptyDesc")}
             </p>
           </div>
         )}

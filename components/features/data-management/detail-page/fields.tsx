@@ -81,7 +81,7 @@ export function CoordinateField({
   kind: "longitude" | "latitude";
 }) {
   const { t } = useTranslate();
-  const validation = validateCoordinateFormat(value, kind);
+  const validation = validateCoordinateFormat(value, kind, t);
   const placeholder = kind === "latitude" ? "-6.200000" : "106.816666";
 
   return (

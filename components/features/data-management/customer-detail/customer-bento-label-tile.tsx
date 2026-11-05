@@ -13,6 +13,7 @@ import {
 } from "@/lib/qr-label";
 import { toast } from "sonner";
 import QRCodeLib from "qrcode";
+import { useTranslate } from "@/lib/use-locale";
 
 type CustomerBentoLabelTileProps = {
   customerId: string;
@@ -35,6 +36,7 @@ export function CustomerBentoLabelTile({
   defaultTemplateStyle = "plain",
   publicUrl,
 }: CustomerBentoLabelTileProps) {
+  const { t } = useTranslate();
   const [selectedVariant, setSelectedVariant] = useState<"plain" | "qr">(defaultTemplateStyle);
   const [previewDataUrl, setPreviewDataUrl] = useState<string>("");
   const [generating, setGenerating] = useState(false);
@@ -106,9 +108,9 @@ export function CustomerBentoLabelTile({
       const cidSlug = cleanCid.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
       link.download = `label-patchcord-${cidSlug}-${selectedVariant}.png`;
       link.click();
-      toast.success("Label patch cord customer berhasil diunduh (PNG)");
+      toast.success(t("detailPage.customerTile.labelPngDownloaded"));
     } catch (err) {
-      toast.error((err as Error).message || "Gagal mengunduh label");
+      toast.error((err as Error).message || t("detailPage.customerTile.labelDownloadFailed"));
     } finally {
       setDownloadingPng(false);
     }
@@ -144,9 +146,9 @@ export function CustomerBentoLabelTile({
       await drawPatchCordLabelPdf(doc, [payload]);
       const cidSlug = cleanCid.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
       doc.save(`label-patchcord-${cidSlug}-${selectedVariant}.pdf`);
-      toast.success("Lembar label cetak siap (PDF)");
+      toast.success(t("detailPage.customerTile.labelPdfReady"));
     } catch (err) {
-      toast.error((err as Error).message || "Gagal generate PDF label");
+      toast.error((err as Error).message || t("detailPage.customerTile.labelPdfFailed"));
     } finally {
       setDownloadingPdf(false);
     }
@@ -157,7 +159,7 @@ export function CustomerBentoLabelTile({
     if (!url) return;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
-    toast.success("Tautan profil customer disalin ke clipboard");
+    toast.success(t("detailPage.customerTile.profileLinkCopiedToast"));
     setTimeout(() => setCopiedLink(false), 2000);
   }
 
@@ -169,7 +171,7 @@ export function CustomerBentoLabelTile({
           <div className="flex items-center justify-between border-b border-border/40 pb-3">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
               <QrCode className="size-4 text-primary" />
-              <span>Label Patch Cord Customer</span>
+              <span>{t("detailPage.customerTile.labelTitle")}</span>
             </div>
             <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-wider">
               2-Panel 720×220
@@ -179,7 +181,7 @@ export function CustomerBentoLabelTile({
           {/* Switcher Variant */}
           <div className="flex items-center justify-between gap-2">
             <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Varian Label
+              {t("detailPage.customerTile.labelVariant")}
             </span>
             <div className="inline-flex items-center rounded-lg border border-border/60 bg-muted/30 p-0.5 text-xs">
               <button
@@ -213,7 +215,7 @@ export function CustomerBentoLabelTile({
             {generating ? (
               <div className="flex items-center gap-2 text-xs text-muted-foreground py-6">
                 <Loader2 className="size-4 animate-spin text-primary" />
-                <span>Membuat preview...</span>
+                <span>{t("detailPage.customerTile.generatingPreview")}</span>
               </div>
             ) : previewDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -223,7 +225,7 @@ export function CustomerBentoLabelTile({
                 className="w-full h-auto rounded-lg border border-border/60 shadow-xs object-contain"
               />
             ) : (
-              <span className="text-xs text-muted-foreground py-6">Preview tidak tersedia</span>
+              <span className="text-xs text-muted-foreground py-6">{t("detailPage.ui.previewUnavailable")}</span>
             )}
           </div>
         </div>
@@ -260,7 +262,7 @@ export function CustomerBentoLabelTile({
               ) : (
                 <FileDown className="mr-1.5 size-3.5" />
               )}
-              PDF Cetak
+              {t("detailPage.customerTile.printPdf")}
             </Button>
           </div>
 
@@ -274,12 +276,12 @@ export function CustomerBentoLabelTile({
             {copiedLink ? (
               <>
                 <Check className="mr-1.5 size-3 text-emerald-500" />
-                Tautan Disalin
+                {t("detailPage.customerTile.linkCopied")}
               </>
             ) : (
               <>
                 <Copy className="mr-1.5 size-3" />
-                Salin Tautan Profil
+                {t("detailPage.customerTile.copyProfileLink")}
               </>
             )}
           </Button>

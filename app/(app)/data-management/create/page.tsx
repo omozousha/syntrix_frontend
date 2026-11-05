@@ -59,6 +59,7 @@ import { apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/li
 import { deviceTypeKeyToSlug } from "@/lib/data-management-config";
 import { normalizeDeviceName, normalizePopName } from "@/lib/name-normalization";
 import { useTranslate, type Locale, type TFn } from "@/lib/use-locale";
+import { validateCoordinateFormat } from "@/components/features/data-management/detail-page/helpers";
 
 type PopOption = {
   id: string;
@@ -2333,100 +2334,6 @@ function formatFieldList(fields: string[], locale: Locale) {
 
 function getApprovalRequestId(value?: ApprovalResponse | null) {
   return value?.approval_request?.request_id || value?.approval_request?.id || "";
-}
-
-function validateCoordinateFormat(value: string, kind: "longitude" | "latitude", t: TFn) {
-  const text = String(value || "").trim();
-  if (!text) {
-    return { valid: true, state: "idle" as const, message: "" };
-  }
-
-  if (text.includes(",")) {
-    return { valid: false, state: "invalid" as const, message: t("createPage.coordDecimalPeriod") };
-  }
-
-  if (!text.includes(".")) {
-    return { valid: false, state: "invalid" as const, message: t("createPage.coordMustPeriod") };
-  }
-
-  const allowedPattern = kind === "latitude" ? /^[-0-9.]+$/ : /^[0-9.]+$/;
-  if (!allowedPattern.test(text)) {
-    const invalidChars = Array.from(new Set((text.match(/[^0-9.\-]/g) || []).filter((ch) => ch.trim() !== "")));
-    if (invalidChars.length > 0) {
-      return {
-        valid: false,
-        state: "invalid" as const,
-        message: t("createPage.coordInvalidChars", {
-          chars: invalidChars.join(" "),
-          sign: kind === "latitude" ? t("createPage.plusMinusPrefix") : "",
-        }),
-      };
-    }
-    if (/\s/.test(text)) {
-      return { valid: false, state: "invalid" as const, message: t("createPage.coordNoSpace") };
-    }
-    return {
-      valid: false,
-      state: "invalid" as const,
-      message: t("createPage.coordAllowedCharsOnly", {
-        sign: kind === "latitude" ? t("createPage.andMinusPrefix") : "",
-      }),
-    };
-  }
-
-  if (kind === "latitude") {
-    if (!text.startsWith("-")) {
-      return { valid: false, state: "invalid" as const, message: t("createPage.latMustMinus") };
-    }
-
-    if (!/^-?\d+\.\d+$/.test(text)) {
-      return { valid: false, state: "invalid" as const, message: t("createPage.latAllowedChars") };
-    }
-
-    const parts = text.slice(1).split(".");
-    if (parts.length !== 2) {
-      return { valid: false, state: "invalid" as const, message: t("createPage.latSinglePeriod") };
-    }
-
-    const [whole, decimal] = parts;
-    if (whole.length !== 1) {
-      return { valid: false, state: "invalid" as const, message: t("createPage.latPrefixDigits") };
-    }
-    if (decimal.length < 6) {
-      return { valid: false, state: "invalid" as const, message: t("createPage.latSuffixDigits") };
-    }
-    return {
-      valid: true,
-      state: "valid" as const,
-      message: t("createPage.formatCorrect"),
-    };
-  }
-
-  if (text.startsWith("-")) {
-    return { valid: false, state: "invalid" as const, message: t("createPage.lngNoMinus") };
-  }
-  if (!/^\d+\.\d+$/.test(text)) {
-    return { valid: false, state: "invalid" as const, message: t("createPage.lngAllowedChars") };
-  }
-
-  const parts = text.split(".");
-  if (parts.length !== 2) {
-    return { valid: false, state: "invalid" as const, message: t("createPage.lngSinglePeriod") };
-  }
-
-  const [whole, decimal] = parts;
-  if (whole.length !== 3) {
-    return { valid: false, state: "invalid" as const, message: t("createPage.lngPrefixDigits") };
-  }
-  if (decimal.length < 6) {
-    return { valid: false, state: "invalid" as const, message: t("createPage.lngSuffixDigits") };
-  }
-
-  return {
-    valid: true,
-    state: "valid" as const,
-    message: t("createPage.formatCorrect"),
-  };
 }
 
 async function fetchAllPaginated<T>(basePath: string, token: string, pageSize = 100) {

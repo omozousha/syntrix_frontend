@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Cable, ExternalLink, Network, Radio, Router } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { useTranslate } from "@/lib/use-locale";
 
 export type ServicePortItem = {
   id: string;
@@ -32,6 +33,7 @@ export function CustomerBentoConnectionTile({
   ports,
   loading = false,
 }: CustomerBentoConnectionTileProps) {
+  const { t } = useTranslate();
   const hasConnections = Array.isArray(ports) && ports.length > 0;
 
   return (
@@ -42,25 +44,25 @@ export function CustomerBentoConnectionTile({
           <div className="flex items-center justify-between border-b border-border/40 pb-3">
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
               <Network className="size-4 text-emerald-500" />
-              <span>Koneksi Jaringan &amp; Port ODP</span>
+              <span>{t("detailPage.customerTile.connectionTitle")}</span>
             </div>
             <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-wider">
-              {ports.length} Port Terhubung
+              {t("detailPage.customerTile.connectedPortsCount", { count: ports.length })}
             </Badge>
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-8 text-xs text-muted-foreground gap-2">
-              <span className="font-mono text-xs">Memuat relasi koneksi...</span>
+              <span className="font-mono text-xs">{t("detailPage.customerTile.loadingConnections")}</span>
             </div>
           ) : !hasConnections ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 py-6 px-4 text-center">
               <div className="flex size-9 items-center justify-center rounded-full bg-muted/60 text-muted-foreground mb-2">
                 <Cable className="size-4" />
               </div>
-              <p className="text-xs font-medium text-foreground">Belum Terhubung ke Port ODP</p>
+              <p className="text-xs font-medium text-foreground">{t("detailPage.customerTile.notConnectedTitle")}</p>
               <p className="text-[11px] text-muted-foreground max-w-xs mt-0.5">
-                Hubungkan pelanggan ini ke port drop/distribution melalui halaman Detail ODP.
+                {t("detailPage.customerTile.notConnectedDesc")}
               </p>
             </div>
           ) : (
@@ -83,7 +85,7 @@ export function CustomerBentoConnectionTile({
                         </div>
                         <div>
                           <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                            ODP Terhubung
+                            {t("detailPage.customerTile.connectedOdp")}
                           </span>
                           {odp ? (
                             <Link
@@ -97,7 +99,7 @@ export function CustomerBentoConnectionTile({
                               <ExternalLink className="size-3 opacity-60" />
                             </Link>
                           ) : (
-                            <span className="text-xs font-semibold text-foreground">ODP ID: {port.device_id}</span>
+                            <span className="text-xs font-semibold text-foreground">{t("detailPage.customerTile.odpIdPrefix", { id: port.device_id || "-" })}</span>
                           )}
                         </div>
                       </div>
@@ -128,7 +130,7 @@ export function CustomerBentoConnectionTile({
                           className="inline-flex items-center gap-1 font-mono text-[10px] text-primary hover:underline"
                         >
                           <Router className="size-3" />
-                          <span>ONT Device</span>
+                          <span>{t("detailPage.customerTile.ontDevice")}</span>
                           <ExternalLink className="size-2.5 opacity-60" />
                         </Link>
                       )}

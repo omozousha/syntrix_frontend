@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api";
+import type { TFn } from "@/lib/use-locale";
 import type {
   GenericItem,
   RelationRecord,
@@ -98,18 +99,18 @@ export function numberOrNull(value: string) {
   return Number.isFinite(number) ? number : null;
 }
 
-export function validateCoordinateFormat(value: string, kind: "longitude" | "latitude") {
+export function validateCoordinateFormat(value: string, kind: "longitude" | "latitude", t: TFn) {
   const text = String(value || "").trim();
   if (!text) {
     return { valid: true, state: "idle" as const, message: "" };
   }
 
   if (text.includes(",")) {
-    return { valid: false, state: "invalid" as const, message: "Gunakan titik (.) sebagai pemisah desimal, bukan koma (,)." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.coordDecimalPeriod") };
   }
 
   if (!text.includes(".")) {
-    return { valid: false, state: "invalid" as const, message: "Format harus menggunakan titik (.) desimal." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.coordMustPeriod") };
   }
 
   const allowedPattern = kind === "latitude" ? /^[-0-9.]+$/ : /^[0-9.]+$/;
@@ -119,71 +120,76 @@ export function validateCoordinateFormat(value: string, kind: "longitude" | "lat
       return {
         valid: false,
         state: "invalid" as const,
-        message: `Ada karakter tidak valid: ${invalidChars.join(" ")}. Gunakan hanya angka dan titik${kind === "latitude" ? ", plus minus (-) di depan" : ""}.`,
+        message: t("createPage.coordInvalidChars", {
+          chars: invalidChars.join(" "),
+          sign: kind === "latitude" ? t("createPage.plusMinusPrefix") : "",
+        }),
       };
     }
     if (/\s/.test(text)) {
-      return { valid: false, state: "invalid" as const, message: "Koordinat tidak boleh mengandung spasi." };
+      return { valid: false, state: "invalid" as const, message: t("createPage.coordNoSpace") };
     }
     return {
       valid: false,
       state: "invalid" as const,
-      message: `Koordinat hanya boleh berisi angka, titik${kind === "latitude" ? ", dan minus (-) di depan" : ""}.`,
+      message: t("createPage.coordAllowedCharsOnly", {
+        sign: kind === "latitude" ? t("createPage.andMinusPrefix") : "",
+      }),
     };
   }
 
   if (kind === "latitude") {
     if (!text.startsWith("-")) {
-      return { valid: false, state: "invalid" as const, message: "Latitude harus diawali tanda minus (-)." };
+      return { valid: false, state: "invalid" as const, message: t("createPage.latMustMinus") };
     }
+
     if (!/^-?\d+\.\d+$/.test(text)) {
-      return { valid: false, state: "invalid" as const, message: "Latitude hanya boleh berisi angka, minus, dan titik desimal." };
+      return { valid: false, state: "invalid" as const, message: t("createPage.latAllowedChars") };
     }
 
     const parts = text.slice(1).split(".");
     if (parts.length !== 2) {
-      return { valid: false, state: "invalid" as const, message: "Latitude harus memiliki satu titik desimal." };
+      return { valid: false, state: "invalid" as const, message: t("createPage.latSinglePeriod") };
     }
 
     const [whole, decimal] = parts;
     if (whole.length !== 1) {
-      return { valid: false, state: "invalid" as const, message: "Digit sebelum titik untuk latitude harus tepat 1 angka." };
+      return { valid: false, state: "invalid" as const, message: t("createPage.latPrefixDigits") };
     }
     if (decimal.length < 6) {
-      return { valid: false, state: "invalid" as const, message: "Digit setelah titik untuk latitude minimal 6 angka." };
+      return { valid: false, state: "invalid" as const, message: t("createPage.latSuffixDigits") };
     }
-
     return {
       valid: true,
       state: "valid" as const,
-      message: "Format benar.",
+      message: t("createPage.formatCorrect"),
     };
   }
 
   if (text.startsWith("-")) {
-    return { valid: false, state: "invalid" as const, message: "Longitude tidak boleh diawali minus (-)." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.lngNoMinus") };
   }
   if (!/^\d+\.\d+$/.test(text)) {
-    return { valid: false, state: "invalid" as const, message: "Longitude hanya boleh berisi angka dan titik desimal." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.lngAllowedChars") };
   }
 
   const parts = text.split(".");
   if (parts.length !== 2) {
-    return { valid: false, state: "invalid" as const, message: "Longitude harus memiliki satu titik desimal." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.lngSinglePeriod") };
   }
 
   const [whole, decimal] = parts;
   if (whole.length !== 3) {
-    return { valid: false, state: "invalid" as const, message: "Digit sebelum titik untuk longitude harus tepat 3 angka." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.lngPrefixDigits") };
   }
   if (decimal.length < 6) {
-    return { valid: false, state: "invalid" as const, message: "Digit setelah titik untuk longitude minimal 6 angka." };
+    return { valid: false, state: "invalid" as const, message: t("createPage.lngSuffixDigits") };
   }
 
   return {
     valid: true,
     state: "valid" as const,
-    message: "Format benar.",
+    message: t("createPage.formatCorrect"),
   };
 }
 

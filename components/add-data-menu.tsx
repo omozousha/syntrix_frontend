@@ -26,6 +26,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useSession } from "@/components/session-context";
+import { useTranslate } from "@/lib/use-locale";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -104,6 +105,7 @@ export function AddDataMenu({
   canManageMaster = false,
 }: AddDataMenuProps) {
   const { token } = useSession();
+  const { t } = useTranslate();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [deviceTypes, setDeviceTypes] = useState<DeviceTypeRow[]>([]);
@@ -153,13 +155,13 @@ export function AddDataMenu({
         <DropdownMenuTrigger asChild>
           <Button type="button" className="gap-2">
             <Plus className="size-4" />
-            Add
+            {t("addMenu.trigger")}
           </Button>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-80 p-2">
           <div className="mb-1 flex items-center justify-between px-1">
-            <DropdownMenuLabel className="px-0">Add data</DropdownMenuLabel>
+            <DropdownMenuLabel className="px-0">{t("addMenu.header")}</DropdownMenuLabel>
             <Button
               type="button"
               variant="ghost"
@@ -181,9 +183,9 @@ export function AddDataMenu({
             >
               <FolderPlus className="mt-0.5 size-4 text-muted-foreground" />
               <div className="space-y-0.5">
-                <p className="text-sm font-medium">POP</p>
+                <p className="text-sm font-medium">{t("addMenu.popTitle")}</p>
                 <p className="text-xs text-muted-foreground">
-                  Create Point of Presence data.
+                  {t("addMenu.popDesc")}
                 </p>
               </div>
             </DropdownMenuItem>
@@ -196,9 +198,9 @@ export function AddDataMenu({
             >
               <Sparkles className="mt-0.5 size-4 text-muted-foreground" />
               <div className="space-y-0.5">
-                <p className="text-sm font-medium">Project</p>
+                <p className="text-sm font-medium">{t("addMenu.projectTitle")}</p>
                 <p className="text-xs text-muted-foreground">
-                  Create delivery project for topology rollout.
+                  {t("addMenu.projectDesc")}
                 </p>
               </div>
             </DropdownMenuItem>
@@ -214,9 +216,9 @@ export function AddDataMenu({
             >
               <UserRound className="mt-0.5 size-4 text-muted-foreground" />
               <div className="space-y-0.5">
-                <p className="text-sm font-medium">Customer</p>
+                <p className="text-sm font-medium">{t("addMenu.customerTitle")}</p>
                 <p className="text-xs text-muted-foreground">
-                  Create customer and service location data.
+                  {t("addMenu.customerDesc")}
                 </p>
               </div>
             </DropdownMenuItem>
@@ -227,9 +229,9 @@ export function AddDataMenu({
               <DropdownMenuSubTrigger className="items-start gap-3 py-2">
                 <RouterIcon className="mt-0.5 size-4 text-muted-foreground" />
                 <div className="space-y-0.5 text-left">
-                  <p className="text-sm font-medium">Device</p>
+                  <p className="text-sm font-medium">{t("addMenu.deviceTitle")}</p>
                   <p className="text-xs text-muted-foreground">
-                    Choose device type to create.
+                    {t("addMenu.deviceDesc")}
                   </p>
                 </div>
               </DropdownMenuSubTrigger>
@@ -284,9 +286,9 @@ export function AddDataMenu({
               >
                 <LibraryBig className="mt-0.5 size-4 text-muted-foreground" />
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium">Master Data</p>
+                  <p className="text-sm font-medium">{t("addMenu.masterDataTitle")}</p>
                   <p className="text-xs text-muted-foreground">
-                    Kelola data referensi reusable.
+                    {t("addMenu.masterDataDesc")}
                   </p>
                 </div>
               </DropdownMenuItem>
@@ -298,9 +300,9 @@ export function AddDataMenu({
               >
                 <Boxes className="mt-0.5 size-4 text-muted-foreground" />
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium">Device Types</p>
+                  <p className="text-sm font-medium">{t("addMenu.deviceTypesTitle")}</p>
                   <p className="text-xs text-muted-foreground">
-                    Atur referensi tipe perangkat.
+                    {t("addMenu.deviceTypesDesc")}
                   </p>
                 </div>
               </DropdownMenuItem>
@@ -310,9 +312,9 @@ export function AddDataMenu({
               >
                 <Building2 className="mt-0.5 size-4 text-muted-foreground" />
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium">Manufacturers & Brands</p>
+                  <p className="text-sm font-medium">{t("addMenu.manufacturersTitle")}</p>
                   <p className="text-xs text-muted-foreground">
-                    Standardize vendor references.
+                    {t("addMenu.manufacturersDesc")}
                   </p>
                 </div>
               </DropdownMenuItem>
@@ -322,9 +324,9 @@ export function AddDataMenu({
               >
                 <Building2 className="mt-0.5 size-4 text-muted-foreground" />
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium">Tenants</p>
+                  <p className="text-sm font-medium">{t("addMenu.tenantsTitle")}</p>
                   <p className="text-xs text-muted-foreground">
-                    Kelola referensi tenant perangkat.
+                    {t("addMenu.tenantsDesc")}
                   </p>
                 </div>
               </DropdownMenuItem>
@@ -334,9 +336,9 @@ export function AddDataMenu({
               >
                 <MapPinned className="mt-0.5 size-4 text-muted-foreground" />
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium">Provinces & Cities</p>
+                  <p className="text-sm font-medium">{t("addMenu.provincesTitle")}</p>
                   <p className="text-xs text-muted-foreground">
-                    Location references for POP data.
+                    {t("addMenu.provincesDesc")}
                   </p>
                 </div>
               </DropdownMenuItem>

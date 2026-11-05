@@ -53,8 +53,8 @@ const placeholders = (value) => {
 
 const problems = [];
 
-const idEntries = parseEntries("id", "\n} as const;");
-const enEntries = parseEntries("en", "\n};");
+const idEntries = parseEntries("id", "} as const;");
+const enEntries = parseEntries("en", "};");
 const idKeys = new Set(idEntries.map((e) => e.key));
 const enKeys = new Set(enEntries.map((e) => e.key));
 

@@ -52,7 +52,7 @@ export function MasterDataQuickEditSheet({
             MASTER DATA / QUICK EDIT
           </p>
           <SheetTitle className="text-base font-semibold text-foreground">
-            Quick Edit {categoryLabel}
+            {t("masterData.quickEdit.title", { label: categoryLabel })}
           </SheetTitle>
           <SheetDescription className="text-xs text-muted-foreground">
             {t("masterData.quickEdit.description")}
@@ -70,8 +70,8 @@ export function MasterDataQuickEditSheet({
                   value={statusValue}
                   onValueChange={onStatusChange}
                   options={[
-                    { value: "true", label: "Active" },
-                    { value: "false", label: "Inactive" },
+                    { value: "true", label: t("common.status.active") },
+                    { value: "false", label: t("common.status.inactive") },
                   ]}
                 />
               </div>

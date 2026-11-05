@@ -53,6 +53,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/components/session-context";
+import { useTranslate } from "@/lib/use-locale";
 import { apiFetch, type PaginatedResponse } from "@/lib/api";
 import { downloadAttachmentFile, fetchAttachmentBlob } from "@/lib/attachment-utils";
 import { DeviceNavigationModal } from "@/components/features/maps/device-navigation-modal";
@@ -146,6 +147,7 @@ export default function DataManagementDetailPage() {
   const id = params?.id || "";
   const category = getCategoryBySlug(slug);
   const { token, me } = useSession();
+  const { t } = useTranslate();
   const relationReferenceQuery = useReferenceData({
     token,
     groups: ["regions", "pops", "tenants", "manufacturers", "brands", "assetModels", "projects", "serviceTypes"],
@@ -533,7 +535,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         setAttachmentNames({});
       } catch (err) {
         if (cancelled) return;
-        setError((err as Error).message || "Gagal memuat detail data.");
+        setError((err as Error).message || t("detailPage.msg.loadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -959,7 +961,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           setOdpPorts([]);
           setDevicePortConnections([]);
           setDeviceTopologySummary(null);
-          setError((err as Error).message || "Gagal memuat topology summary device.");
+          setError((err as Error).message || t("detailPage.msg.loadTopologyFailed"));
         }
       } finally {
         if (!cancelled) setLoadingOdpPorts(false);
@@ -1141,12 +1143,12 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           },
         },
       });
-      setMessage(`Rak ${data.device_name} (${data.rack_u_height}U) berhasil dibuat.`);
+      setMessage(t("detailPage.msg.rackCreated", { name: data.device_name, u: data.rack_u_height }));
       const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
       setPopDevices(res.data || []);
       if (newRack?.data?.id) setSelectedPopRackId(newRack.data.id);
     } catch (err) {
-      setError((err as Error).message || "Gagal membuat rak baru.");
+      setError((err as Error).message || t("detailPage.msg.rackCreateFailed"));
     }
   }
 
@@ -1172,11 +1174,11 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           },
         },
       });
-      setMessage(`Konfigurasi ${data.device_name} berhasil diperbarui.`);
+      setMessage(t("detailPage.msg.rackUpdated", { name: data.device_name }));
       const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
       setPopDevices(res.data || []);
     } catch (err) {
-      setError((err as Error).message || "Gagal memperbarui konfigurasi rak.");
+      setError((err as Error).message || t("detailPage.msg.rackUpdateFailed"));
     }
   }
 
@@ -1228,7 +1230,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       );
     } catch (err) {
       setPopDevices(previousDevices);
-      setError((err as Error).message || "Gagal mereset slot rak.");
+      setError((err as Error).message || t("detailPage.msg.rackResetFailed"));
     }
   }
 
@@ -1262,14 +1264,14 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         method: "DELETE",
         token,
       });
-      setMessage("Rak cabinet berhasil dihapus.");
+      setMessage(t("detailPage.msg.rackDeleted"));
       const res = await apiFetch<PaginatedResponse<GenericItem>>(`/devices?page=1&limit=500&pop_id=${encodeURIComponent(item.id)}`, { token });
       const nextRows = res.data || [];
       setPopDevices(nextRows);
       const remainingRacks = nextRows.filter((d) => d.device_type_key === "RACK");
       setSelectedPopRackId(remainingRacks[0]?.id || "");
     } catch (err) {
-      setError((err as Error).message || "Gagal menghapus rak.");
+      setError((err as Error).message || t("detailPage.msg.rackDeleteFailed"));
     }
   }
 
@@ -1277,7 +1279,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     if (!token || !item?.id) return;
     const targetDev = popDevices.find((d) => d.id === deviceId);
     if (!targetDev || !isRackMountable(targetDev)) {
-      setError("Hanya perangkat aktif dan OTB yang dapat dipasang ke dalam rak.");
+      setError(t("detailPage.msg.rackOnlyActiveAndOtb"));
       return;
     }
     const specs = (targetDev.specifications as Record<string, unknown> | undefined) || {};
@@ -1305,7 +1307,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       });
     } catch (err) {
       setPopDevices(previousDevices);
-      setError((err as Error).message || "Gagal memasang perangkat ke rak.");
+      setError((err as Error).message || t("detailPage.msg.rackMountFailed"));
     }
   }
 
@@ -1336,7 +1338,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       });
     } catch (err) {
       setPopDevices(previousDevices);
-      setError((err as Error).message || "Gagal melepas perangkat dari rak.");
+      setError((err as Error).message || t("detailPage.msg.rackUnmountFailed"));
     }
   }
 
@@ -1453,9 +1455,9 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       });
 
       setPopDocuments((prev) => [newDoc, ...prev]);
-      setMessage(`Berkas "${file.name}" berhasil diunggah.`);
+      setMessage(t("detailPage.msg.docUploaded", { name: file.name }));
     } catch (err) {
-      setError((err as Error).message || "Gagal mengunggah berkas dokumen.");
+      setError((err as Error).message || t("detailPage.msg.docUploadFailed"));
     }
   }
 
@@ -1485,9 +1487,9 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       });
 
       setPopDocuments((prev) => prev.filter((d) => d.id !== docId));
-      setMessage("Berkas dokumen berhasil dihapus.");
+      setMessage(t("detailPage.msg.docDeleted"));
     } catch (err) {
-      setError((err as Error).message || "Gagal menghapus berkas dokumen.");
+      setError((err as Error).message || t("detailPage.msg.docDeleteFailed"));
     }
   }
 
@@ -1614,7 +1616,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         if (cancelled) return;
         setOdpValidations(legacyResult.data || []);
       } catch (err) {
-        if (!cancelled) setError((err as Error).message || "Gagal memuat histori validasi device.");
+        if (!cancelled) setError((err as Error).message || t("detailPage.msg.loadValidationHistoryFailed"));
       } finally {
         if (!cancelled) setLoadingOdpValidations(false);
       }
@@ -1644,7 +1646,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       } catch (err) {
         if (cancelled) return;
         setOdpCoreChainSummary(null);
-        setError((err as Error).message || "Gagal memuat ringkasan rantai core ODP.");
+        setError((err as Error).message || t("detailPage.msg.loadOdpChainFailed"));
       } finally {
         if (!cancelled) setLoadingOdpCoreChainSummary(false);
       }
@@ -1768,7 +1770,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
             .sort((a, b) => Number(a.port_index) - Number(b.port_index)),
         );
       } catch (err) {
-        if (!cancelled) setError((err as Error).message || "Gagal memuat relasi ODP service.");
+        if (!cancelled) setError((err as Error).message || t("detailPage.msg.loadOdpRelationFailed"));
       } finally {
         if (!cancelled) setLoadingServicePortRelations(false);
       }
@@ -1843,13 +1845,13 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     try {
       if (category.resource === "pops" || category.resource === "devices" || category.resource === "customers") {
         if (form.latitude || form.longitude) {
-          const latitudeValidation = validateCoordinateFormat(form.latitude, "latitude");
+          const latitudeValidation = validateCoordinateFormat(form.latitude, "latitude", t);
           if (!latitudeValidation.valid) {
-            throw new Error(`Latitude tidak valid: ${latitudeValidation.message}`);
+            throw new Error(t("detailPage.msg.invalidLatitude", { message: latitudeValidation.message }));
           }
-          const longitudeValidation = validateCoordinateFormat(form.longitude, "longitude");
+          const longitudeValidation = validateCoordinateFormat(form.longitude, "longitude", t);
           if (!longitudeValidation.valid) {
-            throw new Error(`Longitude tidak valid: ${longitudeValidation.message}`);
+            throw new Error(t("detailPage.msg.invalidLongitude", { message: longitudeValidation.message }));
           }
         }
       }
@@ -1933,7 +1935,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
                 const otbPorts = otbPortsRes.data || [];
                 const otbPort = otbPorts.find(p => p.direction?.toLowerCase() === 'out') || otbPorts[0];
                 if (!otbPort) {
-                  throw new Error("Perangkat OTB terpilih tidak memiliki port.");
+                  throw new Error(t("detailPage.msg.otbHasNoPorts"));
                 }
                 fromPortId = otbPort.id;
               }
@@ -1954,7 +1956,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
               // Find feeder/input port of ODC
               const odcPort = odpPorts.find(p => p.direction?.toLowerCase() === 'in') || odpPorts[0];
               if (!odcPort) {
-                throw new Error("ODC tidak memiliki port input/feeder. Silakan buat port input terlebih dahulu.");
+                throw new Error(t("detailPage.msg.odcHasNoInputPorts"));
               }
 
               // Find output/feeder port of OTB
@@ -1965,7 +1967,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
               const otbPorts = otbPortsRes.data || [];
               const otbPort = otbPorts.find(p => p.direction?.toLowerCase() === 'out') || otbPorts[0];
               if (!otbPort) {
-                throw new Error("Perangkat OTB terpilih tidak memiliki port.");
+                throw new Error(t("detailPage.msg.otbHasNoPorts"));
               }
 
               await apiFetch(`/topology/port-connections`, {
@@ -1993,7 +1995,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         token,
         body: JSON.stringify(payload),
       });
-      setMessage("Perubahan berhasil disimpan.");
+      setMessage(t("detailPage.msg.saved"));
       setIsEditing(false);
       setNewImageFiles([]);
       const refreshed = await apiFetch<{ data: GenericItem }>(`/${category.resource}/${item.id}`, { token });
@@ -2024,7 +2026,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
 
       setForm(buildEditableForm(refreshed.data, category.resource, finalSummary));
     } catch (err) {
-      setError((err as Error).message || "Gagal menyimpan perubahan.");
+      setError((err as Error).message || t("detailPage.msg.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -2091,17 +2093,17 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     }
     const existingCount = infoImageAttachments.length;
     if (existingCount + list.length > MAX_IMAGE_ATTACHMENTS) {
-      setError(`Maksimal ${MAX_IMAGE_ATTACHMENTS} gambar per data.`);
+      setError(t("detailPage.msg.maxImages", { max: MAX_IMAGE_ATTACHMENTS }));
       return;
     }
     const invalidSize = list.find((file) => file.size > MAX_IMAGE_FILE_SIZE_BYTES);
     if (invalidSize) {
-      setError(`File "${invalidSize.name}" melebihi batas 5MB.`);
+      setError(t("detailPage.msg.imageTooLarge", { name: invalidSize.name }));
       return;
     }
     const invalidType = list.find((file) => !file.type.startsWith("image/"));
     if (invalidType) {
-      setError(`File "${invalidType.name}" bukan format gambar.`);
+      setError(t("detailPage.msg.imageInvalidType", { name: invalidType.name }));
       return;
     }
     setError("");
@@ -2116,7 +2118,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     if (!renamingAttachmentId || !token) return;
     const nextName = renameDraft.trim();
     if (!nextName) {
-      setError("Nama file tidak boleh kosong.");
+      setError(t("detailPage.msg.fileNameRequired"));
       return;
     }
 
@@ -2131,9 +2133,9 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       setAttachmentNames((prev) => ({ ...prev, [renamingAttachmentId]: nextName }));
       setRenamingAttachmentId("");
       setRenameDraft("");
-      setMessage("Nama file attachment berhasil diperbarui.");
+      setMessage(t("detailPage.msg.attachmentRenamed"));
     } catch (err) {
-      setError((err as Error).message || "Gagal rename attachment.");
+      setError((err as Error).message || t("detailPage.msg.attachmentRenameFailed"));
     } finally {
       setRenaming(false);
     }
@@ -2151,7 +2153,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         body: JSON.stringify({ profile_name: "default" }),
       });
       const created = Number(result.data?.created_count || 0);
-      setMessage(created ? `${created} port ODP berhasil dibuat.` : "Semua port ODP sudah tersedia.");
+      setMessage(created ? t("detailPage.msg.odpPortsGenerated", { count: created }) : t("detailPage.msg.odpPortsAllExist"));
       const refreshed = await apiFetch<{ data: DeviceTopologySummary }>(
         `/topology/devices/${encodeURIComponent(item.id)}/summary?limit=200`,
         { token },
@@ -2161,7 +2163,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       setDevicePortConnections(summary.connections?.items || []);
       setDeviceTopologySummary(summary);
     } catch (err) {
-      setError((err as Error).message || "Gagal generate port ODP.");
+      setError((err as Error).message || t("detailPage.msg.odpPortsGenerateFailed"));
     } finally {
       setProvisioningPorts(false);
     }
@@ -2221,8 +2223,8 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         }
         setMessage(
           newOnt
-            ? `ONT berhasil di-assign ke port ${port.port_label || port.port_index}.`
-            : `ONT berhasil di-disconnect dari port ${port.port_label || port.port_index}.`,
+            ? t("detailPage.msg.ontAssigned", { port: port.port_label || port.port_index })
+            : t("detailPage.msg.ontDisconnected", { port: port.port_label || port.port_index }),
         );
         return;
       }
@@ -2245,9 +2247,9 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           .map((item) => (item.id === port.id ? { ...item, ...result.data } : item))
           .sort((a, b) => Number(a.port_index) - Number(b.port_index)),
       );
-      setMessage(`Port ${port.port_label || port.port_index} berhasil diperbarui.`);
+      setMessage(t("detailPage.msg.odpPortUpdated", { port: port.port_label || port.port_index }));
     } catch (err) {
-      setError((err as Error).message || "Gagal update port ODP.");
+      setError((err as Error).message || t("detailPage.msg.odpPortUpdateFailed"));
     } finally {
       setUpdatingPortId("");
     }
@@ -2255,7 +2257,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
 
   async function handleArchiveOdpDevice() {
     if (!item || !token || !category) return;
-    const ok = window.confirm("Archive ODP ini? Data akan masuk ke Trash dan bisa di-restore.");
+    const ok = window.confirm(t("detailPage.msg.confirmArchiveOdp"));
     if (!ok) return;
     setSaving(true);
     setError("");
@@ -2265,12 +2267,12 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         method: "DELETE",
         token,
       });
-      setMessage("ODP berhasil di-archive. Mengarahkan ke halaman Trash...");
+      setMessage(t("detailPage.msg.odpArchived"));
       window.setTimeout(() => {
         window.location.href = `/trash?entity_type=${encodeURIComponent(category.resource)}&entity_id=${encodeURIComponent(item.id)}`;
       }, 450);
     } catch (err) {
-      setError((err as Error).message || "Gagal archive ODP.");
+      setError((err as Error).message || t("detailPage.msg.odpArchiveFailed"));
     } finally {
       setSaving(false);
     }
@@ -2279,7 +2281,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   async function handleArchiveOdpPort(port: DevicePort) {
     if (!token) return;
     const label = port.port_label || `Port ${port.port_index}`;
-    const ok = window.confirm(`Archive ${label}? Port akan masuk ke Trash.`);
+    const ok = window.confirm(t("detailPage.msg.confirmArchivePort", { label }));
     if (!ok) return;
     setUpdatingPortId(port.id);
     setError("");
@@ -2290,9 +2292,9 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         token,
       });
       setOdpPorts((prev) => prev.filter((item) => item.id !== port.id));
-      setMessage(`${label} berhasil di-archive.`);
+      setMessage(t("detailPage.msg.portArchived", { label }));
     } catch (err) {
-      setError((err as Error).message || `Gagal archive ${label}.`);
+      setError((err as Error).message || t("detailPage.msg.portArchiveFailed", { label }));
     } finally {
       setUpdatingPortId("");
     }
@@ -2308,7 +2310,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
   }) {
     if (!item || !token) return;
     if (!payload.odpPortId) {
-      setError("Pilih port ODP target terlebih dahulu.");
+      setError(t("detailPage.msg.selectTargetOdpPort"));
       return;
     }
 
@@ -2328,12 +2330,12 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           fiber_count: payload.fiberCount ?? null,
         }),
       });
-      setMessage(result?.data?.created ? "Draft link berhasil dibuat." : "Draft link sudah ada.");
+      setMessage(result?.data?.created ? t("detailPage.msg.draftLinkCreated") : t("detailPage.msg.draftLinkExists"));
 
       const refreshed = await apiFetch<{ data: OdpCoreChainSummary }>(`/devices/${item.id}/core-chain-draft`, { token });
       setOdpCoreChainSummary(refreshed.data || null);
     } catch (err) {
-      setError((err as Error).message || "Gagal membuat draft link ODP.");
+      setError((err as Error).message || t("detailPage.msg.draftLinkFailed"));
     } finally {
       setCreatingDraftLink(false);
     }
@@ -2363,7 +2365,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     };
 
     void download().catch((err) => {
-      setError((err as Error).message || "Gagal download QR label.");
+      setError((err as Error).message || t("detailPage.msg.qrDownloadFailed"));
     });
   }
 
@@ -2374,7 +2376,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
 
   async function handleSendValidationReminder() {
     if (!item || !selectedReminderValidatorId) {
-      setReminderError("Pilih validator terlebih dahulu.");
+      setReminderError(t("detailPage.msg.selectValidatorFirst"));
       return;
     }
 
@@ -2392,9 +2394,9 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         },
       });
       setReminderDialogOpen(false);
-      setMessage("Reminder validasi berhasil dikirim ke validator.");
+      setMessage(t("detailPage.msg.reminderSent"));
     } catch (err) {
-      setReminderError((err as Error).message || "Gagal mengirim reminder validasi.");
+      setReminderError((err as Error).message || t("detailPage.msg.reminderSendFailed"));
     } finally {
       setSendingReminder(false);
     }
@@ -2405,7 +2407,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     try {
       await downloadAttachmentFile(record.evidence_attachment_id, token);
     } catch (err) {
-      setError((err as Error).message || "Gagal download evidence validasi.");
+      setError((err as Error).message || t("detailPage.msg.evidenceDownloadFailed"));
     }
   }
 
@@ -2420,7 +2422,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
         const chain = odpCoreChainSummary
           || (await apiFetch<{ data: OdpCoreChainSummary }>(`/devices/${item.id}/core-chain-draft`, { token })).data;
         if (!chain?.is_complete) {
-          throw new Error("ODP belum bisa ditandai valid karena rantai core belum lengkap (ODC, splitter, kabel distribusi, dan mapping core).");
+          throw new Error(t("detailPage.msg.odpChainIncomplete"));
         }
       }
 
@@ -2446,9 +2448,9 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       });
 
       setOdpValidationDraft((prev) => ({ ...prev, findings: "" }));
-      setMessage("Catatan validasi tersimpan sebagai histori. Status dan detail ODP tidak berubah sampai request disetujui adminregion dan superadmin.");
+      setMessage(t("detailPage.msg.validationNoteSaved"));
     } catch (err) {
-      setError((err as Error).message || "Gagal menyimpan validasi lapangan ODP.");
+      setError((err as Error).message || t("detailPage.msg.validationSaveFailed"));
     } finally {
       setSubmittingOdpValidation(false);
     }
@@ -2603,7 +2605,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
           status: "active",
         }),
       });
-      setMessage("Port berhasil di-assign.");
+      setMessage(t("detailPage.msg.portAssigned"));
       setTrayDrawerOpen(false);
       const refreshed = await apiFetch<{ data: DeviceTopologySummary }>("/topology/devices/" + encodeURIComponent(activeItem.id) + "/summary?limit=200", { token });
       const summary = refreshed.data || {};
@@ -2611,9 +2613,9 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       setDevicePortConnections(summary.connections?.items || []);
       setDeviceTopologySummary(summary);
     } catch (err) {
-    const message = (err as Error).message || "Gagal assign port.";
+    const message = (err as Error).message || t("detailPage.msg.portAssignFailed");
     const isPortConflict = /already used|not idle|409|conflict/i.test(message);
-    setError(isPortConflict ? "Port sudah digunakan oleh koneksi lain. Daftar port sudah diperbarui, silakan pilih port lain." : message);
+    setError(isPortConflict ? t("detailPage.msg.portConflict") : message);
 
     if (isPortConflict && trayPeerDeviceValue && trayPeerDeviceValue !== "__none__") {
       const abortController = new AbortController();
@@ -2640,7 +2642,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
     setError("");
     try {
       await apiFetch("/topology/port-connections/" + conn.id, { method: "DELETE", token });
-      setMessage("Koneksi port diputuskan.");
+      setMessage(t("detailPage.msg.portDisconnected"));
       setTrayDrawerOpen(false);
       const refreshed = await apiFetch<{ data: DeviceTopologySummary }>("/topology/devices/" + encodeURIComponent(activeItem.id) + "/summary?limit=200", { token });
       const summary = refreshed.data || {};
@@ -2648,7 +2650,7 @@ const [creatingDraftLink, setCreatingDraftLink] = useState(false);
       setDevicePortConnections(summary.connections?.items || []);
       setDeviceTopologySummary(summary);
     } catch (err) {
-      setError((err as Error).message || "Gagal putuskan koneksi.");
+      setError((err as Error).message || t("detailPage.msg.portDisconnectFailed"));
     } finally {
       setTrayAssignLoading(false);
     }
@@ -2679,7 +2681,7 @@ if (!category) {
                   variant="outline"
                   onClick={() => setNavModalOpen(true)}
                 >
-                  Navigasi Rute
+                  {t("detailPage.ui.routeNavigation")}
                 </Button>
               ) : null}
               {editable && !isEditing ? (
@@ -2689,7 +2691,7 @@ if (!category) {
                   onClick={() => setIsEditing(true)}
                 >
                   <Pencil className="mr-1.5 size-3.5" />
-                  Edit Data
+                  {t("detailPage.ui.editData")}
                 </Button>
               ) : null}
             </>
@@ -2709,8 +2711,8 @@ if (!category) {
                     <CardHeader className="p-0 pb-4 border-b border-border/40">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <CardTitle className="text-base font-bold">Edit Informasi Perangkat</CardTitle>
-                          <CardDescription className="text-xs">Ubah data aset, lokasi, atau informasi operasional.</CardDescription>
+                          <CardTitle className="text-base font-bold">{t("detailPage.ui.editDeviceTitle")}</CardTitle>
+                          <CardDescription className="text-xs">{t("detailPage.ui.editDeviceDesc")}</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
@@ -2723,11 +2725,11 @@ if (!category) {
                             }}
                             disabled={saving}
                           >
-                            Batal
+                            {t("common.cancel")}
                           </Button>
                           <Button size="sm" onClick={() => void handleSave()} disabled={saving}>
                             <Save className="mr-1.5 size-3.5" />
-                            {saving ? "Menyimpan..." : "Simpan Perubahan"}
+                            {saving ? t("common.saving") : t("detailPage.ui.saveChanges")}
                           </Button>
                         </div>
                       </div>
@@ -2909,8 +2911,8 @@ if (!category) {
                     <CardHeader className="p-0 pb-4 border-b border-border/40">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <CardTitle className="text-base font-bold">Edit Informasi POP</CardTitle>
-                          <CardDescription className="text-xs">Ubah data site, lokasi, atau informasi operasional POP.</CardDescription>
+                          <CardTitle className="text-base font-bold">{t("detailPage.ui.editPopTitle")}</CardTitle>
+                          <CardDescription className="text-xs">{t("detailPage.ui.editPopDesc")}</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
@@ -2923,11 +2925,11 @@ if (!category) {
                             }}
                             disabled={saving}
                           >
-                            Batal
+                            {t("common.cancel")}
                           </Button>
                           <Button size="sm" onClick={() => void handleSave()} disabled={saving}>
                             <Save className="mr-1.5 size-3.5" />
-                            {saving ? "Menyimpan..." : "Simpan Perubahan"}
+                            {saving ? t("common.saving") : t("detailPage.ui.saveChanges")}
                           </Button>
                         </div>
                       </div>
@@ -2968,13 +2970,13 @@ if (!category) {
                           value="overview"
                           className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=active]:bg-card data-[state=active]:shadow-xs px-4 py-1.5"
                         >
-                          Overview
+                          {t("detailPage.ui.tabOverview")}
                         </TabsTrigger>
                         <TabsTrigger
                           value="rack"
                           className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=active]:bg-card data-[state=active]:shadow-xs px-4 py-1.5"
                         >
-                          Rack &amp; Inventaris
+                          {t("detailPage.ui.tabRackInventory")}
                         </TabsTrigger>
                       </TabsList>
 
@@ -3146,8 +3148,8 @@ if (!category) {
                     <CardHeader className="p-0 pb-4 border-b border-border/40">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <CardTitle className="text-base font-bold">Edit Informasi Customer</CardTitle>
-                          <CardDescription className="text-xs">Ubah data identitas, kontak, atau lokasi customer.</CardDescription>
+                          <CardTitle className="text-base font-bold">{t("detailPage.ui.editCustomerTitle")}</CardTitle>
+                          <CardDescription className="text-xs">{t("detailPage.ui.editCustomerDesc")}</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
@@ -3159,11 +3161,11 @@ if (!category) {
                             }}
                             disabled={saving}
                           >
-                            Batal
+                            {t("common.cancel")}
                           </Button>
                           <Button size="sm" onClick={() => void handleSave()} disabled={saving}>
                             <Save className="mr-1.5 size-3.5" />
-                            {saving ? "Menyimpan..." : "Simpan Perubahan"}
+                            {saving ? t("common.saving") : t("detailPage.ui.saveChanges")}
                           </Button>
                         </div>
                       </div>
@@ -3247,11 +3249,11 @@ if (!category) {
                 <Card className="rounded-[calc(2rem-0.5rem)] border-border/60 shadow-xs glass-inset">
                   <CardHeader>
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <CardTitle>Informasi {category.label}</CardTitle>
+                      <CardTitle>{t("detailPage.ui.categoryInfoTitle", { label: category.label })}</CardTitle>
                       {editable && !isEditing ? (
                         <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
                           <Pencil className="mr-2 size-4" />
-                          Edit
+                          {t("detailPage.ui.edit")}
                         </Button>
                       ) : null}
                     </div>
@@ -3287,11 +3289,11 @@ if (!category) {
                           }}
                           disabled={saving}
                         >
-                          Batal
+                          {t("common.cancel")}
                         </Button>
                         <Button onClick={() => void handleSave()} disabled={saving}>
                           <Save className="mr-2 size-4" />
-                          {saving ? "Menyimpan..." : "Simpan Perubahan"}
+                          {saving ? t("common.saving") : t("detailPage.ui.saveChanges")}
                         </Button>
                       </div>
                     ) : null}
@@ -3307,14 +3309,14 @@ if (!category) {
           showCloseButton={false}
           className="!w-[min(96vw,1200px)] !max-w-[min(96vw,1200px)] p-3 sm:p-4 rounded-2xl border-border/60 glass-inset"
         >
-          <DialogTitle className="sr-only">Preview Gambar Attachment</DialogTitle>
+          <DialogTitle className="sr-only">{t("detailPage.ui.galleryDialogTitle")}</DialogTitle>
           <DialogDescription className="sr-only">
-            Dialog untuk melihat, navigasi, dan mengelola nama file image attachment.
+            {t("detailPage.ui.galleryDialogDesc")}
           </DialogDescription>
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-medium">
-                Image {Math.min(galleryIndex + 1, galleryImageAttachments.length)} / {galleryImageAttachments.length}
+                {t("detailPage.ui.galleryCounter", { current: Math.min(galleryIndex + 1, galleryImageAttachments.length), total: galleryImageAttachments.length })}
               </p>
               <div className="flex items-center gap-2">
                 {galleryImageAttachments[galleryIndex]?.id ? (
@@ -3325,7 +3327,7 @@ if (!category) {
                     onClick={() => void downloadAttachmentFile(galleryImageAttachments[galleryIndex].id, token)}
                   >
                     <Download className="mr-1.5 size-3.5" />
-                    Download
+                    {t("detailPage.ui.download")}
                   </Button>
                 ) : null}
                 <Button
@@ -3333,10 +3335,10 @@ if (!category) {
                   variant="outline"
                   size="icon"
                   onClick={() => setGalleryOpen(false)}
-                  aria-label="Tutup"
+                  aria-label={t("detailPage.ui.close")}
                 >
                   <X className="size-4" />
-                  <span className="sr-only">Tutup</span>
+                  <span className="sr-only">{t("detailPage.ui.close")}</span>
                 </Button>
               </div>
             </div>
@@ -3345,7 +3347,7 @@ if (!category) {
                 <Image
                   key={galleryImageAttachments[galleryIndex].id}
                   src={imagePreviewUrls[galleryImageAttachments[galleryIndex].id]}
-                  alt={galleryImageAttachments[galleryIndex].name || "Attachment tidak tersedia"}
+                  alt={galleryImageAttachments[galleryIndex].name || t("detailPage.ui.attachmentUnavailable")}
                   width={1200}
                   height={800}
                   priority
@@ -3353,7 +3355,7 @@ if (!category) {
                 />
               ) : (
                 <div className="flex h-[56vh] items-center justify-center text-sm text-muted-foreground sm:h-[64vh] lg:h-[70vh]">
-                  Preview belum tersedia
+                  {t("detailPage.ui.previewUnavailable")}
                 </div>
               )}
               {galleryImageAttachments.length > 1 ? (
@@ -3361,22 +3363,22 @@ if (!category) {
                   <button
                     type="button"
                     onClick={handlePrevImage}
-                    aria-label="Previous slide"
+                    aria-label={t("detailPage.ui.prevSlide")}
                     style={{ transform: "none", transition: "none" }}
                     className="no-press pointer-events-auto flex size-9 sm:size-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-md backdrop-blur-sm cursor-pointer hover:bg-muted select-none"
                   >
                     <ArrowLeft className="size-4 sm:size-5" />
-                    <span className="sr-only">Previous slide</span>
+                    <span className="sr-only">{t("detailPage.ui.prevSlide")}</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleNextImage}
-                    aria-label="Next slide"
+                    aria-label={t("detailPage.ui.nextSlide")}
                     style={{ transform: "none", transition: "none" }}
                     className="no-press pointer-events-auto flex size-9 sm:size-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-md backdrop-blur-sm cursor-pointer hover:bg-muted select-none"
                   >
                     <ArrowRight className="size-4 sm:size-5" />
-                    <span className="sr-only">Next slide</span>
+                    <span className="sr-only">{t("detailPage.ui.nextSlide")}</span>
                   </button>
                 </div>
               ) : null}
@@ -3403,7 +3405,7 @@ if (!category) {
                         setRenamingAttachmentId(galleryImageAttachments[galleryIndex].id);
                         setRenameDraft(event.target.value);
                       }}
-                      placeholder="Nama file attachment"
+                      placeholder={t("detailPage.ui.attachmentNamePlaceholder")}
                     />
                     <Button
                       type="button"
@@ -3421,7 +3423,7 @@ if (!category) {
                         void handleRenameAttachment();
                       }}
                     >
-                      {renaming ? "Menyimpan..." : "Rename"}
+                      {renaming ? t("common.saving") : t("detailPage.ui.rename")}
                     </Button>
                   </div>
                 ) : null}
@@ -3437,17 +3439,17 @@ if (!category) {
         sendingReminder={sendingReminder}
         selectedValidatorId={selectedReminderValidatorId}
         error={reminderError}
-        deviceTypeLabel={valueOf(item?.device_type_key, "Perangkat")}
+        deviceTypeLabel={valueOf(item?.device_type_key, t("detailPage.ui.deviceFallback"))}
         onOpenChange={setReminderDialogOpen}
         onSelectedValidatorChange={setSelectedReminderValidatorId}
         onSend={() => void handleSendValidationReminder()}
       />
       <ResponseDialog
         open={successDialogOpen}
-        title="Berhasil"
+        title={t("detailPage.ui.successTitle")}
         description={successDialogText}
         variant="success"
-        actionLabel="Tutup"
+        actionLabel={t("detailPage.ui.close")}
         onOpenChange={setSuccessDialogOpen}
         onAction={() => setSuccessDialogOpen(false)}
       />

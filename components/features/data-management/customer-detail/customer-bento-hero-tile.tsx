@@ -6,6 +6,7 @@ import { Building2, Check, Copy, FolderKanban, Mail, Phone, Tag, User } from "lu
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useTranslate } from "@/lib/use-locale";
 
 type CustomerBentoHeroTileProps = {
   customerName: string;
@@ -44,6 +45,7 @@ export function CustomerBentoHeroTile({
   email,
   tags,
 }: CustomerBentoHeroTileProps) {
+  const { t, locale } = useTranslate();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   function copyText(text: string, key: string) {
@@ -58,7 +60,7 @@ export function CustomerBentoHeroTile({
     try {
       const d = new Date(value);
       if (isNaN(d.getTime())) return value;
-      return d.toLocaleDateString("id-ID", {
+      return d.toLocaleDateString(locale === "en" ? "en-US" : "id-ID", {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -82,7 +84,7 @@ export function CustomerBentoHeroTile({
               <User className="size-4" />
             </div>
             <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
-              Customer Identity &amp; Service
+              {t("detailPage.customerTile.eyebrow")}
             </span>
           </div>
 
@@ -116,7 +118,7 @@ export function CustomerBentoHeroTile({
         <div className="space-y-1">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate">
-              {customerName || "Customer"}
+              {customerName || t("detailPage.customerTile.customerFallback")}
             </h2>
           </div>
 
@@ -145,7 +147,7 @@ export function CustomerBentoHeroTile({
           <div className="flex flex-col justify-between rounded-xl border border-border/40 bg-muted/10 p-2.5">
             <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-mono uppercase tracking-wider">
               <Building2 className="size-3" />
-              <span>POP Gateway</span>
+              <span>{t("detailPage.customer.popGateway")}</span>
             </div>
             <div className="mt-1">
               {popId ? (
@@ -167,7 +169,7 @@ export function CustomerBentoHeroTile({
           <div className="flex flex-col justify-between rounded-xl border border-border/40 bg-muted/10 p-2.5">
             <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-mono uppercase tracking-wider">
               <FolderKanban className="size-3" />
-              <span>Project</span>
+              <span>{t("detailPage.customer.projectLabel")}</span>
             </div>
             <div className="mt-1">
               {projectId ? (
@@ -188,7 +190,7 @@ export function CustomerBentoHeroTile({
           {/* Tanggal Instalasi */}
           <div className="flex flex-col justify-between rounded-xl border border-border/40 bg-muted/10 p-2.5">
             <div className="text-muted-foreground text-[10px] font-mono uppercase tracking-wider">
-              Tanggal Instalasi
+              {t("detailPage.customer.installationDate")}
             </div>
             <span className="mt-1 font-mono text-xs font-medium text-foreground tabular-nums">
               {formatDate(installationDate)}
@@ -200,7 +202,7 @@ export function CustomerBentoHeroTile({
             <div className="flex flex-col justify-between rounded-xl border border-border/40 bg-muted/10 p-2.5">
               <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-mono uppercase tracking-wider">
                 <Phone className="size-3" />
-                <span>Kontak PIC</span>
+                <span>{t("detailPage.customerTile.picContact")}</span>
               </div>
               <div className="mt-1 space-y-0.5">
                 {contactName && <p className="text-xs font-medium text-foreground truncate">{contactName}</p>}
@@ -214,7 +216,7 @@ export function CustomerBentoHeroTile({
             <div className="flex flex-col justify-between rounded-xl border border-border/40 bg-muted/10 p-2.5">
               <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-mono uppercase tracking-wider">
                 <Mail className="size-3" />
-                <span>Email</span>
+                <span>{t("detailPage.customer.email")}</span>
               </div>
               <span className="mt-1 text-xs text-foreground truncate block" title={email}>
                 {email}

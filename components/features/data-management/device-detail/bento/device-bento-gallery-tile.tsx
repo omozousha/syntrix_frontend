@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OptimizedImage } from "@/components/ui/optimized-image";
+import { useTranslate } from "@/lib/use-locale";
 
 type AttachmentRef = {
   id: string;
@@ -45,12 +46,13 @@ export function DeviceBentoGalleryTile({
   onClearNewImages,
   onRemoveNewImage,
 }: DeviceBentoGalleryTileProps) {
+  const { t, locale } = useTranslate();
   function formatTime(val?: string) {
     if (!val) return null;
     try {
       const d = new Date(val);
       if (isNaN(d.getTime())) return null;
-      return d.toLocaleDateString("id-ID", {
+      return d.toLocaleDateString(locale === "en" ? "en-US" : "id-ID", {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -71,14 +73,14 @@ export function DeviceBentoGalleryTile({
               <Images className="size-4" />
             </span>
             <div>
-              <h2 className="text-sm font-bold tracking-tight text-foreground">Galeri &amp; Bukti Validasi Lapangan</h2>
+              <h2 className="text-sm font-bold tracking-tight text-foreground">{t("detailPage.galleryTile.title")}</h2>
               <p className="text-xs text-muted-foreground">
-                Foto fisik perangkat dan evidence validasi approved dari validator mobile.
+                {t("detailPage.galleryTile.description")}
               </p>
             </div>
           </div>
           <Badge variant="outline" className="rounded-full px-2.5 font-mono text-[10px] tabular-nums">
-            {attachments.length} foto terdaftar
+            {t("detailPage.galleryTile.registeredCount", { count: attachments.length })}
           </Badge>
         </div>
 
@@ -88,7 +90,7 @@ export function DeviceBentoGalleryTile({
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
               {attachments.map((attachment, index) => {
                 const src = imagePreviewUrls[attachment.id];
-                const fileName = attachmentNames[attachment.id] || attachment.name || "Foto Perangkat";
+                const fileName = attachmentNames[attachment.id] || attachment.name || t("detailPage.galleryTile.photoFallback");
                 const formattedDate = formatTime(attachment.timestamp);
                 return (
                   <div
@@ -121,9 +123,9 @@ export function DeviceBentoGalleryTile({
           ) : (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/10 p-8 text-center">
               <Images className="size-8 text-muted-foreground/50 mb-2" />
-              <p className="text-xs font-semibold text-foreground">Belum ada foto evidence</p>
+              <p className="text-xs font-semibold text-foreground">{t("detailPage.galleryTile.emptyTitle")}</p>
               <p className="text-xs text-muted-foreground mt-0.5 max-w-sm">
-                Foto fisik perangkat atau bukti inspeksi lapangan akan muncul di sini setelah divalidasi.
+                {t("detailPage.galleryTile.emptyDesc")}
               </p>
             </div>
           )}
@@ -134,11 +136,11 @@ export function DeviceBentoGalleryTile({
           <div className="mt-4 space-y-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-foreground">Unggah Foto Baru</p>
-                <p className="text-[11px] text-muted-foreground">Maksimal {maxImageAttachments} file total, masing-masing maks. 5MB.</p>
+                <p className="text-xs font-semibold text-foreground">{t("detailPage.galleryTile.uploadTitle")}</p>
+                <p className="text-[11px] text-muted-foreground">{t("detailPage.galleryTile.uploadHint", { max: maxImageAttachments })}</p>
               </div>
               <Badge variant="secondary" className="font-mono text-[10px]">
-                {newImageFiles.length} file baru
+                {t("detailPage.galleryTile.newFilesCount", { count: newImageFiles.length })}
               </Badge>
             </div>
 
@@ -153,10 +155,10 @@ export function DeviceBentoGalleryTile({
             {newImageFiles.length > 0 && onClearNewImages ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-foreground">Preview foto baru:</span>
+                  <span className="text-xs font-medium text-foreground">{t("detailPage.galleryTile.newPreviewLabel")}</span>
                   <Button type="button" variant="ghost" size="sm" onClick={onClearNewImages} className="h-7 text-xs text-destructive">
                     <Trash2 className="mr-1 size-3.5" />
-                    Hapus Semua
+                    {t("detailPage.galleryTile.clearAll")}
                   </Button>
                 </div>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">

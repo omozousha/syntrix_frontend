@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, Compass, Copy, MapPin, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useTranslate } from "@/lib/use-locale";
 
 type CustomerBentoLocationTileProps = {
   address?: string | null;
@@ -22,6 +23,7 @@ export function CustomerBentoLocationTile({
   longitude,
   onOpenNavigation,
 }: CustomerBentoLocationTileProps) {
+  const { t } = useTranslate();
   const [copiedCoords, setCopiedCoords] = useState(false);
 
   const numLat = Number(latitude);
@@ -48,7 +50,7 @@ export function CustomerBentoLocationTile({
           <div className="flex items-center justify-between border-b border-border/40 pb-3">
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
               <Compass className="size-4 text-sky-500" />
-              <span>Lokasi &amp; Geotagging</span>
+              <span>{t("detailPage.customer.locationTitle")}</span>
             </div>
             <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">WGS84</span>
           </div>
@@ -57,10 +59,10 @@ export function CustomerBentoLocationTile({
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-mono uppercase tracking-wider">
               <MapPin className="size-3 text-red-500" />
-              <span>Alamat Instalasi</span>
+              <span>{t("detailPage.customerTile.installAddress")}</span>
             </div>
             <p className="text-xs text-foreground font-medium leading-relaxed">
-              {address || "Alamat belum tercatat di sistem."}
+              {address || t("detailPage.customerTile.addressEmpty")}
             </p>
             {(city || province) && (
               <p className="text-[11px] text-muted-foreground">
@@ -73,7 +75,7 @@ export function CustomerBentoLocationTile({
           <div className="flex flex-col justify-between rounded-xl border border-border/40 bg-muted/10 p-2.5">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Koordinat GPS
+                {t("detailPage.customerTile.gpsCoords")}
               </span>
               {hasCoords && (
                 <Button
@@ -86,12 +88,12 @@ export function CustomerBentoLocationTile({
                   {copiedCoords ? (
                     <>
                       <Check className="mr-1 size-2.5 text-emerald-500" />
-                      Tersalin
+                      {t("detailPage.customerTile.copied")}
                     </>
                   ) : (
                     <>
                       <Copy className="mr-1 size-2.5" />
-                      Salin
+                      {t("detailPage.customerTile.copy")}
                     </>
                   )}
                 </Button>
@@ -99,7 +101,7 @@ export function CustomerBentoLocationTile({
             </div>
 
             <div className="mt-1 font-mono text-xs font-medium text-foreground tabular-nums">
-              {hasCoords ? `${numLat.toFixed(6)}, ${numLng.toFixed(6)}` : "— (Belum di-geotag)"}
+              {hasCoords ? `${numLat.toFixed(6)}, ${numLng.toFixed(6)}` : t("detailPage.customerTile.notGeotagged")}
             </div>
           </div>
         </div>
@@ -116,7 +118,7 @@ export function CustomerBentoLocationTile({
                 className="w-full h-8 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
               >
                 <Navigation className="mr-1.5 size-3.5 text-primary" />
-                Navigasi Rute
+                {t("detailPage.ui.routeNavigation")}
               </Button>
             ) : null}
             <Button
@@ -127,7 +129,7 @@ export function CustomerBentoLocationTile({
               className="w-full h-8 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
             >
               <MapPin className="mr-1.5 size-3.5 text-primary" />
-              Google Maps
+              {t("detailPage.customerTile.googleMaps")}
             </Button>
           </div>
         )}

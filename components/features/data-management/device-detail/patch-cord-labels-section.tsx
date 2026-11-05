@@ -14,6 +14,7 @@ import {
 } from "@/lib/qr-label";
 import { toast } from "sonner";
 import QRCodeLib from "qrcode";
+import { useTranslate } from "@/lib/use-locale";
 
 export type CustomerPortItem = {
   id: string;
@@ -44,6 +45,7 @@ export function PatchCordLabelsSection({
   defaultTemplateStyle = "plain",
   loading = false,
 }: PatchCordLabelsSectionProps) {
+  const { t } = useTranslate();
   const [downloadingBulk, setDownloadingBulk] = useState(false);
   const [downloadingPortId, setDownloadingPortId] = useState<string | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
@@ -114,9 +116,9 @@ export function PatchCordLabelsSection({
       const cidSlug = payload.customerCode.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
       link.download = `patch-cord-${portSlug}-${cidSlug}-${selectedVariant}.png`;
       link.click();
-      toast.success(`Label patch cord ${port.port_label || `Port ${port.port_index}`} berhasil diunduh`);
+      toast.success(t("detailPage.patchCord.singleDownloaded", { port: port.port_label || `Port ${port.port_index}` }));
     } catch (err) {
-      toast.error((err as Error).message || "Gagal mengunduh label patch cord");
+      toast.error((err as Error).message || t("detailPage.patchCord.singleDownloadFailed"));
     } finally {
       setDownloadingPortId(null);
     }
@@ -134,7 +136,7 @@ export function PatchCordLabelsSection({
       const dataUrl = await buildPatchCordLabelPngDataUrl(payload);
       setPreviewDataUrl(dataUrl);
     } catch (err) {
-      toast.error((err as Error).message || "Gagal generate preview label");
+      toast.error((err as Error).message || t("detailPage.patchCord.previewFailed"));
     } finally {
       setGeneratingPreview(false);
     }
@@ -158,9 +160,9 @@ export function PatchCordLabelsSection({
       await drawPatchCordLabelPdf(doc, items);
       const odpSlug = (odpCode || odpName || "odp").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
       doc.save(`patch-cord-labels-${odpSlug}-${selectedVariant}.pdf`);
-      toast.success(`${items.length} label patch cord siap dicetak (PDF)`);
+      toast.success(t("detailPage.patchCord.bulkPdfReady", { count: items.length }));
     } catch (err) {
-      toast.error((err as Error).message || "Gagal export bulk PDF patch cord");
+      toast.error((err as Error).message || t("detailPage.patchCord.bulkPdfFailed"));
     } finally {
       setDownloadingBulk(false);
     }
@@ -179,14 +181,14 @@ export function PatchCordLabelsSection({
                 <div>
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-base font-semibold tracking-tight text-foreground">
-                      Label Patch Cord Customer
+                      {t("detailPage.customerTile.labelTitle")}
                     </CardTitle>
                     <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-wider">
-                      {customerPorts.length} Terhubung
+                      {t("detailPage.patchCord.connectedBadge", { count: customerPorts.length })}
                     </Badge>
                   </div>
                   <CardDescription className="text-xs text-muted-foreground">
-                    Label fisik 2 panel untuk kabel drop/patch cord pelanggan di dalam ODP
+                    {t("detailPage.patchCord.description")}
                   </CardDescription>
                 </div>
               </div>
@@ -204,7 +206,7 @@ export function PatchCordLabelsSection({
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  Plain (2-Panel)
+                  {t("detailPage.patchCord.variantPlain")}
                 </button>
                 <button
                   type="button"
@@ -216,7 +218,7 @@ export function PatchCordLabelsSection({
                   }`}
                 >
                   <QrCode className="h-3.5 w-3.5" />
-                  QR Code
+                  {t("detailPage.patchCord.variantQr")}
                 </button>
               </div>
 
@@ -233,7 +235,7 @@ export function PatchCordLabelsSection({
                 ) : (
                   <FileDown className="h-3.5 w-3.5 text-primary" />
                 )}
-                <span>Download Semua (PDF)</span>
+                <span>{t("detailPage.patchCord.downloadAllPdf")}</span>
               </Button>
             </div>
           </div>
@@ -243,16 +245,16 @@ export function PatchCordLabelsSection({
           {loading ? (
             <div className="flex items-center justify-center py-10 text-muted-foreground text-xs gap-2">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              <span>Memuat data port dan customer...</span>
+              <span>{t("detailPage.patchCord.loading")}</span>
             </div>
           ) : customerPorts.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 py-8 px-4 text-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted/60 text-muted-foreground mb-2">
                 <Cable className="h-5 w-5" />
               </div>
-              <p className="text-xs font-medium text-foreground">Belum ada pelanggan terhubung ke port ODP ini</p>
+              <p className="text-xs font-medium text-foreground">{t("detailPage.patchCord.emptyTitle")}</p>
               <p className="text-[11px] text-muted-foreground max-w-sm mt-0.5">
-                Label patch cord otomatis tersedia ketika port ODP di-assign ke data customer atau perangkat ONT.
+                {t("detailPage.patchCord.emptyDesc")}
               </p>
             </div>
           ) : (
@@ -298,7 +300,7 @@ export function PatchCordLabelsSection({
                         className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground"
                       >
                         <Eye className="h-3.5 w-3.5 mr-1" />
-                        Preview
+                        {t("detailPage.patchCord.preview")}
                       </Button>
                       <Button
                         variant="outline"
@@ -312,7 +314,7 @@ export function PatchCordLabelsSection({
                         ) : (
                           <Download className="h-3.5 w-3.5 mr-1 text-primary" />
                         )}
-                        Download PNG
+                        {t("detailPage.patchCord.downloadPng")}
                       </Button>
                     </div>
                   </div>
@@ -328,10 +330,10 @@ export function PatchCordLabelsSection({
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-base">
-              Preview Label Patch Cord — {previewPort?.port_label || `Port ${previewPort?.port_index ?? ""}`}
+              {t("detailPage.patchCord.previewDialogTitle", { port: previewPort?.port_label || `Port ${previewPort?.port_index ?? ""}` })}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Ukuran 720×220px dengan garis potong putus-putus di tengah untuk melilit kabel.
+              {t("detailPage.patchCord.previewDialogDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -339,7 +341,7 @@ export function PatchCordLabelsSection({
             {generatingPreview ? (
               <div className="flex items-center gap-2 py-8 text-xs text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span>Membuat preview...</span>
+                <span>{t("detailPage.customerTile.generatingPreview")}</span>
               </div>
             ) : previewDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -353,7 +355,7 @@ export function PatchCordLabelsSection({
 
           <div className="flex justify-end gap-2 mt-2">
             <Button variant="outline" size="sm" onClick={() => setPreviewDataUrl(null)}>
-              Tutup
+              {t("detailPage.ui.close")}
             </Button>
             {previewPort && (
               <Button
@@ -364,7 +366,7 @@ export function PatchCordLabelsSection({
                 }}
               >
                 <Download className="h-3.5 w-3.5 mr-1" />
-                Download PNG
+                {t("detailPage.patchCord.downloadPng")}
               </Button>
             )}
           </div>
