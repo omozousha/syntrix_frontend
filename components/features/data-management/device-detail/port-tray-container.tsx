@@ -95,11 +95,11 @@ export function PortTrayContainer({
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="rounded-md border bg-green-50/50 p-2 text-center">
               <p className="text-lg font-bold text-green-700">{totalCores}</p>
-              <p className="text-[10px] text-green-600">Total Core</p>
+              <p className="text-[10px] text-green-600">{t("portTray.totalCore")}</p>
             </div>
             <div className="rounded-md border bg-blue-50/50 p-2 text-center">
               <p className="text-lg font-bold text-blue-700">{usedCores}</p>
-              <p className="text-[10px] text-blue-600">Terpakai</p>
+              <p className="text-[10px] text-blue-600">{t("portTray.usedCore")}</p>
             </div>
             <div className="rounded-md border bg-slate-50/50 p-2 text-center">
               <p className="text-lg font-bold text-slate-600">{idleCores}</p>
@@ -114,7 +114,7 @@ export function PortTrayContainer({
       <div className="space-y-2 rounded-md border p-3">
         <p className="text-sm font-medium">{sectionTitle}</p>
         <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-          Tampilan port/tube tidak tersedia untuk device type ini.
+          {t("portTray.unsupportedDeviceType")}
         </div>
       </div>
     );

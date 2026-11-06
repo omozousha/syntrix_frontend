@@ -196,6 +196,29 @@ function parseJsonStringArray(value: string | undefined | null): string[] {
   }
 }
 
+function translateMasterDataSection(section: string, t: TFn): string {
+  switch (section) {
+    case "Identitas":
+      return t("masterData.formSection.identity");
+    case "Klasifikasi":
+      return t("masterData.formSection.classification");
+    case "Konfigurasi":
+      return t("masterData.formSection.configuration");
+    case "Label Arah":
+      return t("masterData.formSection.directionLabels");
+    case "Kapabilitas":
+      return t("masterData.formSection.capabilities");
+    case "Spesifikasi Optik":
+      return t("masterData.formSection.opticalSpecs");
+    case "Kapasitas":
+      return t("masterData.formSection.capacity");
+    case "Lingkungan":
+      return t("masterData.formSection.environment");
+    default:
+      return section;
+  }
+}
+
 export function MasterDataFormFields(props: RenderMasterDataFieldsProps) {
   const { fields, form, setForm, fieldErrors, setFieldError, clearFieldError, lookups, onBlur, isEdit } = props;
   const { t } = useTranslate();
@@ -221,7 +244,7 @@ export function MasterDataFormFields(props: RenderMasterDataFieldsProps) {
           <div key={sectionName || "fields"}>
             {sectionName && (
               <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {sectionName}
+                {translateMasterDataSection(sectionName, t)}
               </h4>
             )}
             <div className={`grid ${hasGrid ? "grid-cols-2 gap-x-4 gap-y-3" : "grid-cols-1 gap-3"}`}>

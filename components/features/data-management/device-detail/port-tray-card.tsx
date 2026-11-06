@@ -45,7 +45,7 @@ export function PortTrayCard({
 
   const tooltipLines = [
     t("portTray.portLabel", { label: port.port_label || `#${port.port_index}` }),
-    `${t("portTray.status")}: ${getPortStatusLabel(status)}`,
+    `${t("portTray.status")}: ${getPortStatusLabel(status, t)}`,
     `${t("portTray.fiber")} #${fiberCoreNum}: ${fiber.name}`,
   ];
   if (hasSplitter) {
@@ -126,13 +126,13 @@ export function PortTrayCard({
           isIdle && "text-muted-foreground/60",
         )}
       >
-        {getPortStatusLabel(status)}
+        {getPortStatusLabel(status, t)}
       </span>
 
       {/* Hover indicator for idle ports */}
       {isIdle && !disabled && (
         <span className="absolute inset-0 flex items-center justify-center rounded-md bg-foreground/5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-          <span className="text-[9px] font-medium text-foreground/70">Assign</span>
+          <span className="text-[9px] font-medium text-foreground/70">{t("portTray.assign")}</span>
         </span>
       )}
     </button>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { translateFieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
 import { useTranslate, type TFn } from "@/lib/use-locale";
 
 // ── Shared Types ──────────────────────────────────────────────────────────
@@ -252,7 +253,7 @@ export const DEVICE_STATUS_OPTIONS = ["draft", "installed", "active", "inactive"
 
 export function getDeviceTechnicalCopy(deviceTypeKey: string, t: TFn) {
   const base = DEVICE_TECHNICAL_COPY[deviceTypeKey] ?? {
-    title: `Technical ${deviceTypeKey}`,
+    title: t("tech.titleWithType", { type: deviceTypeKey }),
     totalPortsLabel: t("tech.defaultTotalPorts"),
     usedPortsLabel: t("tech.defaultUsedPorts"),
     splitterLabel: t("tech.defaultSplitter"),
@@ -263,20 +264,75 @@ export function getDeviceTechnicalCopy(deviceTypeKey: string, t: TFn) {
   if (deviceTypeKey === "ODP") {
     return {
       ...base,
+      title: t("tech.titleWithType", { type: "ODP" }),
       totalPortsLabel: t("tech.odpTotalPorts"),
       usedPortsLabel: t("tech.odpUsedPorts"),
       splitterLabel: t("tech.odpSplitter"),
+      corePlaceholder: t("tech.coreAutoFromChain"),
     };
   }
   if (deviceTypeKey === "ODC") {
     return {
       ...base,
+      title: t("tech.titleWithType", { type: "ODC" }),
+      coreCapacityLabel: t("fieldLabel.capacityCore"),
+      usedCoreLabel: t("fieldLabel.usedCore"),
       totalPortsLabel: t("tech.odcTotalPorts"),
       usedPortsLabel: t("tech.odcUsedPorts"),
       splitterLabel: t("tech.odcSplitter"),
     };
   }
-  return base;
+  if (deviceTypeKey === "OLT") {
+    return {
+      ...base,
+      title: t("tech.titleWithType", { type: "OLT" }),
+      totalPortsLabel: t("tech.oltTotalPorts"),
+      usedPortsLabel: t("tech.defaultUsedPorts"),
+      splitterLabel: t("tech.defaultSplitter"),
+    };
+  }
+  if (deviceTypeKey === "ONT") {
+    return {
+      ...base,
+      title: t("tech.titleWithType", { type: "ONT" }),
+      totalPortsLabel: t("tech.ontTotalPorts"),
+      usedPortsLabel: t("tech.ontUsedPorts"),
+      splitterLabel: t("tech.defaultSplitter"),
+    };
+  }
+  if (deviceTypeKey === "CABLE") {
+    return {
+      ...base,
+      title: t("tech.titleWithType", { type: "Cable" }),
+      totalPortsLabel: t("tech.cableTotalPorts"),
+      usedPortsLabel: t("tech.cableUsedPorts"),
+      splitterLabel: t("tech.defaultSplitter"),
+    };
+  }
+  if (deviceTypeKey === "SWITCH" || deviceTypeKey === "ROUTER") {
+    return {
+      ...base,
+      title: t("tech.titleWithType", { type: deviceTypeKey === "SWITCH" ? "Switch" : "Router" }),
+      totalPortsLabel: t("tech.interfaceCount"),
+      usedPortsLabel: t("tech.usedInterfaces"),
+      splitterLabel: t("tech.defaultSplitter"),
+    };
+  }
+  if (deviceTypeKey === "OTB") {
+    return {
+      ...base,
+      title: t("tech.titleWithType", { type: "OTB" }),
+      coreCapacityLabel: t("fieldLabel.capacityCore"),
+      usedCoreLabel: t("fieldLabel.usedCore"),
+      totalPortsLabel: t("tech.defaultTotalPorts"),
+      usedPortsLabel: t("tech.defaultUsedPorts"),
+      splitterLabel: t("tech.defaultSplitter"),
+    };
+  }
+  return {
+    ...base,
+    title: t("tech.titleWithType", { type: deviceTypeKey }),
+  };
 }
 
 export const DEVICE_TECHNICAL_COPY: Record<string, {
@@ -388,6 +444,7 @@ export function SplitterRatioField({
   onValueChange: (value: string) => void;
 }) {
   const { t } = useTranslate();
+  const displayLabel = translateFieldLabel(label, t);
   const filteredSplitterProfiles = splitterProfiles.filter((profile) => {
     const allowedKeys = profile.allowed_device_type_keys || [];
     if (!allowedKeys.length) return false;
@@ -397,9 +454,9 @@ export function SplitterRatioField({
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1.5">
-        <Label>{label}</Label>
+        <Label>{displayLabel}</Label>
         <Badge variant="outline" className="h-4 rounded px-1.5 text-[9px] uppercase tracking-normal text-blue-700 dark:text-blue-300">
-          Auto-fill
+          {t("fieldLabel.autoFilled")}
         </Badge>
       </div>
       <p className="text-xs text-muted-foreground">
@@ -438,9 +495,11 @@ export function ComboboxField({
   onValueChange: (value: string) => void;
   disabled?: boolean;
 }) {
+  const { t } = useTranslate();
+  const displayLabel = translateFieldLabel(label, t);
   return (
     <div className="space-y-1">
-      <Label>{label}</Label>
+      <Label>{displayLabel}</Label>
       <Combobox
         value={value}
         onValueChange={onValueChange}
@@ -466,9 +525,11 @@ export function DisplayField({
   compact?: boolean;
   loading?: boolean;
 }) {
+  const { t } = useTranslate();
+  const displayLabel = translateFieldLabel(label, t);
   return (
     <div className={`${compact ? "space-y-1" : "space-y-1.5"} ${className}`}>
-      <Label>{label}</Label>
+      <Label>{displayLabel}</Label>
       {loading ? (
         <Skeleton className={compact ? "h-8 w-full rounded-md" : "h-10 w-full rounded-md"} />
       ) : (
@@ -493,12 +554,14 @@ export function LinkedDisplayField({
   compact?: boolean;
   loading?: boolean;
 }) {
+  const { t } = useTranslate();
+  const displayLabel = translateFieldLabel(label, t);
   if (loading) return <DisplayField label={label} value={value} className={className} compact={compact} loading />;
   if (!href || !value || value === "-") return <DisplayField label={label} value={value || "-"} className={className} compact={compact} />;
 
   return (
     <div className={`${compact ? "space-y-1" : "space-y-1.5"} ${className}`}>
-      <Label>{label}</Label>
+      <Label>{displayLabel}</Label>
       <Link
         href={href}
         className={`flex items-center rounded-md border bg-muted px-3 text-xs font-medium text-foreground hover:underline ${compact ? "h-8" : "h-10"}`}
@@ -526,9 +589,11 @@ export function Field({
   className?: string;
   compact?: boolean;
 }) {
+  const { t } = useTranslate();
+  const displayLabel = translateFieldLabel(label, t);
   return (
     <div className={`${compact ? "space-y-1" : "space-y-1.5"} ${className}`}>
-      <Label>{label}</Label>
+      <Label>{displayLabel}</Label>
       <Input
         type={type}
         value={value}
@@ -556,17 +621,18 @@ export function CoordinateField({
   kind: "longitude" | "latitude";
 }) {
   const { t } = useTranslate();
+  const displayLabel = translateFieldLabel(label, t);
   const validation = validateCoordinateFormat(value, kind, t);
   const placeholder = kind === "latitude" ? "-6.200000" : "106.816666";
 
   return (
     <div className={compact ? "space-y-1" : "space-y-1.5"}>
       <div className="flex items-center gap-1.5">
-        <Label>{label}</Label>
+        <Label>{displayLabel}</Label>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button type="button" variant="ghost" size="icon-xs" className="text-muted-foreground" aria-label={t("createForm.fieldInfo", { label })}>
+              <Button type="button" variant="ghost" size="icon-xs" className="text-muted-foreground" aria-label={t("createForm.fieldInfo", { label: displayLabel })}>
                 <CircleHelp className="size-3.5" />
               </Button>
             </TooltipTrigger>
@@ -611,9 +677,11 @@ export function SelectField({
   disabled?: boolean;
   compact?: boolean;
 }) {
+  const { t } = useTranslate();
+  const displayLabel = translateFieldLabel(label, t);
   return (
     <div className={compact ? "space-y-1" : "space-y-1.5"}>
-      <Label>{label}</Label>
+      <Label>{displayLabel}</Label>
       <Combobox
         value={value}
         onValueChange={onValueChange}

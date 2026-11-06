@@ -582,7 +582,7 @@ export default function AsBuiltWorkspacePage() {
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="space-y-4 pr-3">
         <section className="no-print space-y-1">
-          <h2 className="text-2xl font-semibold tracking-tight">As-Built Workspace</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">{t("asBuilt.workspaceTitle")}</h2>
           <p className="text-sm text-muted-foreground">
             {isPersonalDeviceMode ? t("asBuilt.personalModeDesc") : t("asBuilt.openFromTraceDesc")}
           </p>
@@ -590,16 +590,16 @@ export default function AsBuiltWorkspacePage() {
 
         <Card>
           <CardHeader className="px-4 py-3">
-            <CardTitle className="text-base">Device Context</CardTitle>
+            <CardTitle className="text-base">{t("asBuilt.deviceContextTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4 pt-0">
             {isPersonalDeviceMode ? (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                <InfoTile label="Start Device" value={startDeviceLabel} />
-                <InfoTile label="Device Type" value={startNode?.device_type_key || "-"} />
-                <InfoTile label="Region" value={resolvedRegionId || regionId || "all"} />
-                <InfoTile label="Path Found" value={traceResult?.trace.found ? t("asBuilt.yes") : traceResult ? t("asBuilt.no") : "-"} />
-                <InfoTile label="Hop Count" value={traceResult ? String(traceResult.trace.hop_count) : "-"} />
+                <InfoTile label={t("asBuilt.startDevice")} value={startDeviceLabel} />
+                <InfoTile label={t("asBuilt.deviceType")} value={startNode?.device_type_key || "-"} />
+                <InfoTile label={t("asBuilt.region")} value={resolvedRegionId || regionId || "all"} />
+                <InfoTile label={t("asBuilt.pathFound")} value={traceResult?.trace.found ? t("asBuilt.yes") : traceResult ? t("asBuilt.no") : "-"} />
+                <InfoTile label={t("asBuilt.hopCount")} value={traceResult ? String(traceResult.trace.hop_count) : "-"} />
               </div>
             ) : (
               <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
@@ -613,13 +613,13 @@ export default function AsBuiltWorkspacePage() {
         {hasProjectRouteContext ? (
           <Card>
             <CardHeader className="px-4 py-3">
-              <CardTitle className="text-base">Project / Route Context</CardTitle>
+              <CardTitle className="text-base">{t("asBuilt.projectRouteContextTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 px-4 pb-4 pt-0">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <InfoTile label="Project Context" value={projectId || "-"} />
-                <InfoTile label="Route Context" value={routeId || "-"} />
-                <InfoTile label="Region Context" value={resolvedRegionId || regionId || "all"} />
+                <InfoTile label={t("asBuilt.projectContext")} value={projectId || "-"} />
+                <InfoTile label={t("asBuilt.routeContext")} value={routeId || "-"} />
+                <InfoTile label={t("asBuilt.regionContext")} value={resolvedRegionId || regionId || "all"} />
               </div>
               {!isPersonalDeviceMode ? (
                 <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
@@ -637,7 +637,7 @@ export default function AsBuiltWorkspacePage() {
         {!isPersonalDeviceMode ? (
           <Card>
             <CardHeader className="px-4 py-3">
-              <CardTitle className="text-base">Mode Device-Centric</CardTitle>
+              <CardTitle className="text-base">{t("asBuilt.deviceCentricModeTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 px-4 pb-4 pt-0">
               <p className="text-sm text-muted-foreground">
@@ -658,21 +658,21 @@ export default function AsBuiltWorkspacePage() {
         {isPersonalDeviceMode ? (
         <Card>
           <CardHeader className="px-4 py-3">
-            <CardTitle className="text-base">Document Metadata</CardTitle>
+            <CardTitle className="text-base">{t("asBuilt.docMetadataTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-2 px-4 pb-4 pt-0 md:grid-cols-5">
-            <Input value={drawingTitle} onChange={(event) => setDrawingTitle(event.target.value)} placeholder="Drawing title" />
-            <Input value={revisionCode} onChange={(event) => setRevisionCode(event.target.value)} placeholder="Revision" />
-            <Input value={preparedBy} onChange={(event) => setPreparedBy(event.target.value)} placeholder="Prepared by" />
-            <Input value={checkedBy} onChange={(event) => setCheckedBy(event.target.value)} placeholder="Checked by" />
-            <Input value={approvedBy} onChange={(event) => setApprovedBy(event.target.value)} placeholder="Approved by" />
+            <Input value={drawingTitle} onChange={(event) => setDrawingTitle(event.target.value)} placeholder={t("asBuilt.drawingTitlePlaceholder")} />
+            <Input value={revisionCode} onChange={(event) => setRevisionCode(event.target.value)} placeholder={t("asBuilt.revisionPlaceholder")} />
+            <Input value={preparedBy} onChange={(event) => setPreparedBy(event.target.value)} placeholder={t("asBuilt.preparedByPlaceholder")} />
+            <Input value={checkedBy} onChange={(event) => setCheckedBy(event.target.value)} placeholder={t("asBuilt.checkedByPlaceholder")} />
+            <Input value={approvedBy} onChange={(event) => setApprovedBy(event.target.value)} placeholder={t("asBuilt.approvedByPlaceholder")} />
           </CardContent>
         </Card>
         ) : null}
 
         <Card>
           <CardHeader className="px-4 py-3">
-            <CardTitle className="text-base">Revision Context</CardTitle>
+            <CardTitle className="text-base">{t("asBuilt.revisionContextTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 px-4 pb-4 pt-0">
             <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
@@ -702,7 +702,7 @@ export default function AsBuiltWorkspacePage() {
         <Card>
           <CardHeader className="px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle className="text-base">Trace Context</CardTitle>
+              <CardTitle className="text-base">{t("asBuilt.traceContextTitle")}</CardTitle>
               <div className="no-print flex items-center gap-2">
                 <Button asChild type="button" variant="outline" size="sm">
                   <Link href={asBuiltDocumentsHref}>{t("asBuilt.openDocuments")}</Link>
@@ -957,7 +957,7 @@ function AsBuiltRelevantTopologySummary({ summary, t }: { summary: RelevantTopol
   return (
     <Card>
       <CardHeader className="px-4 py-3">
-        <CardTitle className="text-base">Relevant Topology</CardTitle>
+        <CardTitle className="text-base">{t("asBuilt.relevantTopologyTitle")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 px-4 pb-4 pt-0">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -1033,7 +1033,7 @@ function AsBuiltCorePathSummary({
     <div className="rounded-md border bg-background p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold">Core Path & Splice Summary</p>
+          <p className="text-sm font-semibold">{t("asBuilt.corePathTitle")}</p>
           <p className="text-xs text-muted-foreground">
             {t("asBuilt.corePathDesc")}
           </p>
@@ -1078,10 +1078,10 @@ function AsBuiltCorePathSummary({
                   <Badge variant="secondary">{edge.status || "active"}</Badge>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                  <SummaryField label="Type" value={edge.connection_type || "-"} />
+                  <SummaryField label={t("asBuilt.summaryType")} value={edge.connection_type || "-"} />
                   <SummaryField label="Core" value={coreRange} />
                   <SummaryField label="Fiber" value={String(edge.fiber_count || edge.fiber_cores?.total || 0)} />
-                  <SummaryField label="Used" value={String(edge.fiber_cores?.used || 0)} />
+                  <SummaryField label={t("asBuilt.summaryUsed")} value={String(edge.fiber_cores?.used || 0)} />
                 </div>
                 {colorNames.length ? (
                   <div className="mt-2 flex flex-wrap gap-1">
@@ -1171,6 +1171,7 @@ function buildAsBuiltSvg({
   generatedAtLabel,
   context,
   document,
+  t,
 }: {
   data: TopologyTraceResponse["data"];
   generatedAtLabel: string;
@@ -1187,6 +1188,7 @@ function buildAsBuiltSvg({
     checkedBy: string;
     approvedBy: string;
   };
+  t?: TFn;
 }) {
   const path = data.trace.path || [];
   const padding = 24;
@@ -1203,7 +1205,7 @@ function buildAsBuiltSvg({
     .map((node, index) => {
       const x = padding + index * (cardWidth + gap);
       const y = titleBlockHeight + 36;
-      const name = escapeXml(node.device_name || node.device_id || "Node tidak tersedia");
+      const name = escapeXml(node.device_name || node.device_id || (t ? t("asBuilt.nodeUnavailable") : "Node tidak tersedia"));
       const type = escapeXml(node.device_type_key || "-");
       const idLabel = escapeXml(node.device_id || "-");
 

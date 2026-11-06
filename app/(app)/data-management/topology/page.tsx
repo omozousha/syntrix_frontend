@@ -365,12 +365,13 @@ export default function TopologyWorkspacePage() {
     editing: Boolean(editingConnectionId),
     approval: isApprovalMutationRole,
     allowed: canMutateTopology,
+    t,
   });
   const provisionActionLabel = provisioning
-    ? "Processing..."
+    ? t("topology.provisioningAction")
     : isApprovalMutationRole
-      ? "Submit Provision Request"
-      : "Provision";
+      ? t("topology.submitProvisionRequest")
+      : t("topology.provisionAction");
 
   useEffect(() => {
     let cancelled = false;
@@ -418,7 +419,7 @@ export default function TopologyWorkspacePage() {
     return () => {
       cancelled = true;
     };
-  }, [regionId, token]);
+  }, [regionId, token, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -459,7 +460,7 @@ export default function TopologyWorkspacePage() {
     return () => {
       cancelled = true;
     };
-  }, [regionId, token]);
+  }, [regionId, token, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -481,7 +482,7 @@ export default function TopologyWorkspacePage() {
     return () => {
       cancelled = true;
     };
-  }, [regionId, token]);
+  }, [regionId, token, t]);
 
   const regionOptions = useMemo(
     () => {
@@ -528,7 +529,7 @@ export default function TopologyWorkspacePage() {
     } finally {
       setTracing(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   const loadDevicePorts = useCallback(async (deviceUuid: string) => {
     if (!deviceUuid.trim()) return [] as DevicePortItem[];
@@ -875,7 +876,7 @@ export default function TopologyWorkspacePage() {
     <ScrollArea className="h-full min-h-0 w-full">
       <div className="min-w-0 space-y-4 pr-0 sm:pr-3">
         <section className="space-y-1">
-          <h2 className="text-2xl font-semibold tracking-tight">Device Trace Workspace</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">{t("topology.workspaceTitle")}</h2>
           <p className="text-sm text-muted-foreground">
             {isPersonalDeviceMode
               ? t("topology.personalModeDesc")
@@ -904,7 +905,7 @@ export default function TopologyWorkspacePage() {
                   searchPlaceholder={t("topology.searchDevice")}
                 />
                 <Button type="button" onClick={() => void handleTrace()} disabled={tracing || !traceStartDeviceId.trim()}>
-                  Trace Device
+                  {t("topology.btnTraceDevice")}
                 </Button>
               </div>
             </CardContent>
@@ -914,7 +915,7 @@ export default function TopologyWorkspacePage() {
         {!isPersonalDeviceMode ? (
           <Card>
             <CardHeader className="px-4 py-3">
-              <CardTitle className="text-base">Mode Device-Centric</CardTitle>
+              <CardTitle className="text-base">{t("topology.deviceCentricBadge")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 px-4 pb-4 pt-0">
               <p className="text-sm text-muted-foreground">
@@ -933,7 +934,7 @@ export default function TopologyWorkspacePage() {
         <Card>
           <CardHeader className="px-4 py-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-base">Topology Quality</CardTitle>
+              <CardTitle className="text-base">{t("topology.qualityTitle")}</CardTitle>
               <div className="w-full sm:w-80">
                 {isScopedRegionRole ? (
                   <Input value={selectedRegionLabel} disabled aria-label="Region scope" />
@@ -967,13 +968,13 @@ export default function TopologyWorkspacePage() {
               <AppLoading label={error} variant="error" />
             ) : (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                <MetricCard label="Total Ports" value={quality?.metrics.total_ports ?? 0} />
-                <MetricCard label="Idle Ports" value={quality?.metrics.idle_ports ?? 0} />
-                <MetricCard label="Connections" value={quality?.metrics.total_connections ?? 0} />
-                <MetricCard label="Fiber Cores" value={quality?.metrics.total_fiber_cores ?? 0} />
-                <MetricCard label="Used Fiber Cores" value={quality?.metrics.used_fiber_cores ?? 0} />
-                <MetricCard label="Orphan Fiber Cores" value={quality?.metrics.orphan_fiber_cores ?? 0} danger />
-                <MetricCard label="Inconsistent Fiber Cores" value={quality?.metrics.inconsistent_fiber_cores ?? 0} danger />
+                <MetricCard label={t("topology.totalPorts")} value={quality?.metrics.total_ports ?? 0} />
+                <MetricCard label={t("topology.idlePorts")} value={quality?.metrics.idle_ports ?? 0} />
+                <MetricCard label={t("topology.connections")} value={quality?.metrics.total_connections ?? 0} />
+                <MetricCard label={t("topology.fiberCores")} value={quality?.metrics.total_fiber_cores ?? 0} />
+                <MetricCard label={t("topology.usedFiberCores")} value={quality?.metrics.used_fiber_cores ?? 0} />
+                <MetricCard label={t("topology.orphanFiberCores")} value={quality?.metrics.orphan_fiber_cores ?? 0} danger />
+                <MetricCard label={t("topology.inconsistentFiberCores")} value={quality?.metrics.inconsistent_fiber_cores ?? 0} danger />
               </div>
             )}
           </CardContent>
@@ -983,7 +984,7 @@ export default function TopologyWorkspacePage() {
         {isPersonalDeviceMode ? (
         <Card>
           <CardHeader className="px-4 py-3">
-            <CardTitle className="text-base">Topology Trace (Beta)</CardTitle>
+            <CardTitle className="text-base">{t("topology.traceTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4 pt-0">
             <div className="grid grid-cols-1 gap-2 lg:grid-cols-12">
@@ -995,7 +996,7 @@ export default function TopologyWorkspacePage() {
                     setDeviceId(nextValue || "");
                   }}
                   options={withSelectedOptionFallback(traceDeviceOptions, traceStartDeviceId, "Start device", t)}
-                  placeholder={loadingTraceDeviceOptions ? t("topology.loadingDevice") : "Start Device"}
+                  placeholder={loadingTraceDeviceOptions ? t("topology.loadingDevice") : t("topology.startDevicePlaceholder")}
                   searchPlaceholder={t("topology.searchStartDevice")}
                 />
               </div>
@@ -1009,18 +1010,18 @@ export default function TopologyWorkspacePage() {
                 />
               </div>
               <div className="lg:col-span-2">
-                <Input value={traceMaxDepth} onChange={(event) => setTraceMaxDepth(event.target.value)} placeholder="Max depth" />
+                <Input value={traceMaxDepth} onChange={(event) => setTraceMaxDepth(event.target.value)} placeholder={t("topology.maxDepthPlaceholder")} />
               </div>
               <div className="lg:col-span-2">
                 <Combobox
                   value={traceDirection}
                   onValueChange={(nextValue) => setTraceDirection(nextValue || "both")}
                   options={[
-                    { value: "both", label: "Both" },
-                    { value: "upstream", label: "Upstream" },
-                    { value: "downstream", label: "Downstream" },
+                    { value: "both", label: t("topology.directionBoth") },
+                    { value: "upstream", label: t("topology.directionUpstream") },
+                    { value: "downstream", label: t("topology.directionDownstream") },
                   ]}
-                  placeholder="Direction"
+                  placeholder={t("topology.directionPlaceholder")}
                   searchPlaceholder={t("topology.searchDirection")}
                 />
               </div>
@@ -1029,7 +1030,7 @@ export default function TopologyWorkspacePage() {
               <TechnicalIdStrip startDeviceId={traceStartDeviceId} endDeviceId={traceEndDeviceId} />
               <div className="lg:w-40">
                 <Button type="button" className="w-full" onClick={() => void handleTrace()} disabled={tracing || !traceStartDeviceId.trim()}>
-                  Trace
+                  {t("topology.btnTrace")}
                 </Button>
               </div>
             </div>
@@ -1065,10 +1066,10 @@ export default function TopologyWorkspacePage() {
               <div className="space-y-2 rounded-md border bg-muted/30 px-3 py-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <Button asChild type="button" variant="outline" size="sm">
-                    <Link href={asBuiltHref}>Open As-Built From Trace</Link>
+                    <Link href={asBuiltHref}>{t("topology.openAsBuiltFromTrace")}</Link>
                   </Button>
                 </div>
-                <TraceImpactSummary data={traceResult.data} />
+                <TraceImpactSummary data={traceResult.data} t={t} />
                 <TopologyTracePanel data={traceResult.data} />
               </div>
             ) : null}
@@ -1079,7 +1080,7 @@ export default function TopologyWorkspacePage() {
         {isPersonalDeviceMode ? (
           <div className="flex justify-end">
             <Button type="button" variant="outline" size="sm" onClick={() => setShowAdvancedTools((prev) => !prev)}>
-              {showAdvancedTools ? "Hide Advanced Tools" : "Show Advanced Tools"}
+              {showAdvancedTools ? t("topology.hideAdvanced") : t("topology.showAdvanced")}
             </Button>
           </div>
         ) : null}
@@ -1087,18 +1088,18 @@ export default function TopologyWorkspacePage() {
         {showAdvancedTools ? (
           <Tabs defaultValue="connection" className="min-w-0">
             <TabsList className="grid h-auto w-full grid-cols-1 sm:grid-cols-3">
-              <TabsTrigger value="connection" className="min-w-0 whitespace-normal text-xs sm:text-sm">Connection</TabsTrigger>
-              <TabsTrigger value="occupancy" className="min-w-0 whitespace-normal text-xs sm:text-sm">Occupancy</TabsTrigger>
-              <TabsTrigger value="provisioning" className="min-w-0 whitespace-normal text-xs sm:text-sm">Provisioning</TabsTrigger>
+              <TabsTrigger value="connection" className="min-w-0 whitespace-normal text-xs sm:text-sm">{t("topology.tabConnection")}</TabsTrigger>
+              <TabsTrigger value="occupancy" className="min-w-0 whitespace-normal text-xs sm:text-sm">{t("topology.tabOccupancy")}</TabsTrigger>
+              <TabsTrigger value="provisioning" className="min-w-0 whitespace-normal text-xs sm:text-sm">{t("topology.tabProvisioning")}</TabsTrigger>
             </TabsList>
             <TabsContent value="connection" className="mt-2">
         <Card>
           <CardHeader className="px-4 py-3">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-base">Connection Wizard (Actual Topology)</CardTitle>
+              <CardTitle className="text-base">{t("topology.wizardTitle")}</CardTitle>
               <div className="flex flex-wrap gap-1.5">
-                {initialTool === "connection" ? <Badge variant="secondary">Opened from device detail</Badge> : null}
-                {initialRelationMode ? <Badge variant="outline">{formatRelationModeLabel(initialRelationMode)}</Badge> : null}
+                {initialTool === "connection" ? <Badge variant="secondary">{t("topology.openedFromDetail")}</Badge> : null}
+                {initialRelationMode ? <Badge variant="outline">{formatRelationModeLabel(initialRelationMode, t)}</Badge> : null}
               </div>
             </div>
           </CardHeader>
@@ -1114,7 +1115,7 @@ export default function TopologyWorkspacePage() {
                   setTraceStartDeviceId(value);
                 }}
                 options={linkFromDeviceOptions}
-                placeholder={loadingTraceDeviceOptions ? t("topology.loadingDevice") : "From Device"}
+                placeholder={loadingTraceDeviceOptions ? t("topology.loadingDevice") : t("topology.selectFromDevice")}
                 searchPlaceholder={t("topology.searchFromDevice")}
               />
               <Combobox
@@ -1125,7 +1126,7 @@ export default function TopologyWorkspacePage() {
                   setTraceEndDeviceId(value);
                 }}
                 options={linkToDeviceOptions}
-                placeholder={loadingTraceDeviceOptions ? t("topology.loadingDevice") : "To Device"}
+                placeholder={loadingTraceDeviceOptions ? t("topology.loadingDevice") : t("topology.selectToDevice")}
                 searchPlaceholder={t("topology.searchToDevice")}
               />
             </div>
@@ -1134,14 +1135,14 @@ export default function TopologyWorkspacePage() {
                 value={linkFromPortId}
                 onValueChange={(nextValue) => setLinkFromPortId(nextValue || "")}
                 options={fromPortOptions}
-                placeholder={loadingFromPorts ? t("topology.loadingFromPorts") : "From Port"}
+                placeholder={loadingFromPorts ? t("topology.loadingFromPorts") : t("topology.selectFromPort")}
                 searchPlaceholder={t("topology.searchFromPort")}
               />
               <Combobox
                 value={linkToPortId}
                 onValueChange={(nextValue) => setLinkToPortId(nextValue || "")}
                 options={toPortOptions}
-                placeholder={loadingToPorts ? t("topology.loadingToPorts") : "To Port"}
+                placeholder={loadingToPorts ? t("topology.loadingToPorts") : t("topology.selectToPort")}
                 searchPlaceholder={t("topology.searchToPort")}
               />
             </div>
@@ -1156,7 +1157,7 @@ export default function TopologyWorkspacePage() {
                   { value: "crossconnect", label: "crossconnect" },
                   { value: "other", label: "other" },
                 ]}
-                placeholder="Connection type"
+                placeholder={t("topology.connectionTypePlaceholder")}
                 searchPlaceholder={t("topology.searchConnectionType")}
               />
               <Combobox
@@ -1168,7 +1169,7 @@ export default function TopologyWorkspacePage() {
                   { value: "inactive", label: "inactive" },
                   { value: "cutover", label: "cutover" },
                 ]}
-                placeholder="Status"
+                placeholder={t("topology.statusPlaceholder")}
                 searchPlaceholder={t("topology.searchStatus")}
               />
               <Combobox
@@ -1188,13 +1189,13 @@ export default function TopologyWorkspacePage() {
             </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-12">
               <div className="md:col-span-2">
-                <Input value={linkCoreStart} onChange={(event) => setLinkCoreStart(event.target.value)} placeholder="Core start" />
+                <Input value={linkCoreStart} onChange={(event) => setLinkCoreStart(event.target.value)} placeholder={t("topology.coreStartPlaceholder")} />
               </div>
               <div className="md:col-span-2">
-                <Input value={linkCoreEnd} onChange={(event) => setLinkCoreEnd(event.target.value)} placeholder="Core end" />
+                <Input value={linkCoreEnd} onChange={(event) => setLinkCoreEnd(event.target.value)} placeholder={t("topology.coreEndPlaceholder")} />
               </div>
               <div className="md:col-span-2">
-                <Input value={linkFiberCount} onChange={(event) => setLinkFiberCount(event.target.value)} placeholder="Fiber count" />
+                <Input value={linkFiberCount} onChange={(event) => setLinkFiberCount(event.target.value)} placeholder={t("topology.fiberCountPlaceholder")} />
               </div>
               <div className="md:col-span-4">
                 <Input value={linkNotes} onChange={(event) => setLinkNotes(event.target.value)} placeholder={t("topology.notesOptional")} />
@@ -1217,10 +1218,10 @@ export default function TopologyWorkspacePage() {
             {editingConnection ? (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
                 <p className="text-sm text-amber-800">
-                  Editing: {editingConnection.labels?.title || editingConnection.connection_id || editingConnection.id}
+                  {t("topology.editingTitle", { title: editingConnection.labels?.title || editingConnection.connection_id || editingConnection.id })}
                 </p>
                 <Button type="button" variant="outline" size="sm" onClick={handleCancelEditConnection}>
-                  Cancel Edit
+                  {t("topology.cancelEdit")}
                 </Button>
               </div>
             ) : null}
@@ -1280,31 +1281,31 @@ export default function TopologyWorkspacePage() {
             <TabsContent value="occupancy" className="mt-2">
         <Card>
           <CardHeader className="px-4 py-3">
-            <CardTitle className="text-base">Port & Core Occupancy</CardTitle>
+            <CardTitle className="text-base">{t("topology.occupancyTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4 pt-0">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
               <MetricCard
-                label="From Device Ports"
+                label={t("topology.fromDevicePorts")}
                 value={fromPortRows.length}
               />
               <MetricCard
-                label="To Device Ports"
+                label={t("topology.toDevicePorts")}
                 value={toPortRows.length}
               />
               <MetricCard
-                label="Cable Cores"
+                label={t("topology.cableCores")}
                 value={cableCoreRows.length}
               />
             </div>
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
               <div className="rounded-md border bg-muted/20 p-3">
                 <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Endpoint Port Occupancy</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("topology.endpointOccupancyTitle")}</p>
                   <div className="flex flex-wrap gap-1">
-                    <StatusCountBadge label="From used" value={fromPortStatusCounts.used || 0} tone="used" />
-                    <StatusCountBadge label="To used" value={toPortStatusCounts.used || 0} tone="used" />
-                    <StatusCountBadge label="Idle" value={(fromPortStatusCounts.idle || 0) + (toPortStatusCounts.idle || 0)} />
+                    <StatusCountBadge label={t("topology.fromUsed")} value={fromPortStatusCounts.used || 0} tone="used" />
+                    <StatusCountBadge label={t("topology.toUsed")} value={toPortStatusCounts.used || 0} tone="used" />
+                    <StatusCountBadge label={t("topology.statusIdle")} value={(fromPortStatusCounts.idle || 0) + (toPortStatusCounts.idle || 0)} />
                   </div>
                 </div>
                 {loadingFromPorts ? (
@@ -1312,25 +1313,25 @@ export default function TopologyWorkspacePage() {
                 ) : !fromPortRows.length ? (
                   <p className="text-sm text-muted-foreground">{t("topology.noPortsYet")}</p>
                 ) : (
-                  <PortOccupancyGrid title="From Device" ports={fromPortRows} selectedPortId={linkFromPortId} />
+                  <PortOccupancyGrid title={t("topology.fromDevice")} ports={fromPortRows} selectedPortId={linkFromPortId} t={t} />
                 )}
                 {toPortRows.length ? (
                   <div className="mt-3 border-t pt-3">
-                    <PortOccupancyGrid title="To Device" ports={toPortRows} selectedPortId={linkToPortId} />
+                    <PortOccupancyGrid title={t("topology.toDevice")} ports={toPortRows} selectedPortId={linkToPortId} t={t} />
                   </div>
                 ) : null}
               </div>
               <div className="rounded-md border bg-muted/20 p-3">
                 <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cable Core Matrix</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("topology.cableCoreMatrixTitle")}</p>
                     <p className="truncate text-xs text-muted-foreground">{selectedCableLabel || t("topology.pickCableForMatrix")}</p>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    <StatusCountBadge label="Available" value={cableCoreStatusCounts.available || 0} />
-                    <StatusCountBadge label="Used" value={cableCoreStatusCounts.used || 0} tone="used" />
-                    <StatusCountBadge label="Reserved" value={cableCoreStatusCounts.reserved || 0} tone="reserved" />
-                    <StatusCountBadge label="Warning" value={cableCoreWarningTotal} tone="warning" />
+                    <StatusCountBadge label={t("topology.statusAvailable")} value={cableCoreStatusCounts.available || 0} />
+                    <StatusCountBadge label={t("topology.statusUsed")} value={cableCoreStatusCounts.used || 0} tone="used" />
+                    <StatusCountBadge label={t("topology.statusReserved")} value={cableCoreStatusCounts.reserved || 0} tone="reserved" />
+                    <StatusCountBadge label={t("topology.statusWarning")} value={cableCoreWarningTotal} tone="warning" />
                   </div>
                 </div>
                 {linkCableDeviceId === "__none__" ? (
@@ -1351,7 +1352,7 @@ export default function TopologyWorkspacePage() {
             <TabsContent value="provisioning" className="mt-2">
         <Card>
           <CardHeader className="px-4 py-3">
-            <CardTitle className="text-base">Device Port Provisioning (MVP)</CardTitle>
+            <CardTitle className="text-base">{t("topology.provisioningTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4 pt-0">
             <TopologyRoleNotice role={topologyRole} compact t={t} />
@@ -1366,7 +1367,7 @@ export default function TopologyWorkspacePage() {
                 />
               </div>
               <div className="md:col-span-3">
-                <Input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Profile name (default)" />
+                <Input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder={t("topology.profileNamePlaceholder")} />
               </div>
               <div className="flex flex-col gap-2 sm:flex-row md:col-span-4 md:justify-end">
                 <Button
@@ -1376,7 +1377,7 @@ export default function TopologyWorkspacePage() {
                   disabled={provisioning || !canMutateTopology || !deviceId.trim()}
                   onClick={() => void handleProvision(true)}
                 >
-                  Dry Run
+                  {t("topology.btnDryRun")}
                 </Button>
                 <Button
                   type="button"
@@ -1394,6 +1395,7 @@ export default function TopologyWorkspacePage() {
               <ProvisionResultSummary
                 result={provisionResult}
                 device={traceDeviceMap[deviceId] || null}
+                t={t}
               />
             ) : null}
           </CardContent>
@@ -1419,16 +1421,18 @@ function getConnectionActionLabel({
   editing,
   approval,
   allowed,
+  t,
 }: {
   creating: boolean;
   editing: boolean;
   approval: boolean;
   allowed: boolean;
+  t: TFn;
 }) {
-  if (!allowed) return "Read Only";
-  if (creating) return approval ? "Submitting..." : "Saving...";
-  if (editing) return approval ? "Submit Update Request" : "Update Connection";
-  return approval ? "Submit Create Request" : "Create Connection";
+  if (!allowed) return t("topology.readOnly");
+  if (creating) return approval ? t("topology.submitting") : t("topology.saving");
+  if (editing) return approval ? t("topology.submitUpdateRequest") : t("topology.updateConnection");
+  return approval ? t("topology.submitCreateRequest") : t("topology.createConnection");
 }
 
 function getConnectionSuccessMessage(editing: boolean, approval: boolean, t: TFn) {
@@ -1444,16 +1448,16 @@ function TopologyRoleNotice({ role, compact = false, t }: { role: string; compac
   const copy =
     role === "superadmin"
       ? {
-          title: "Superadmin action",
+          title: t("topology.superadminAction"),
           description: t("topology.superadminDirect"),
         }
       : role === "adminregion"
         ? {
-            title: "Admin Region request",
+            title: t("topology.adminRegionRequest"),
             description: t("topology.adminApproval"),
           }
         : {
-            title: "Read-only access",
+            title: t("topology.readOnlyAccess"),
             description: t("topology.readOnlySummary"),
           };
 
@@ -1465,7 +1469,7 @@ function TopologyRoleNotice({ role, compact = false, t }: { role: string; compac
   );
 }
 
-function TraceImpactSummary({ data }: { data: TopologyTraceResponse["data"] }) {
+function TraceImpactSummary({ data, t }: { data: TopologyTraceResponse["data"]; t: TFn }) {
   const nodes = data.graph.nodes || [];
   const edges = data.graph.edges || [];
   const typeCounts = nodes.reduce<Record<string, number>>((acc, node) => {
@@ -1485,20 +1489,20 @@ function TraceImpactSummary({ data }: { data: TopologyTraceResponse["data"] }) {
     <Card>
       <CardHeader className="px-3 py-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-sm">Impact Summary</CardTitle>
-          <Badge variant="outline">Direction: {direction}</Badge>
+          <CardTitle className="text-sm">{t("topology.impactSummary")}</CardTitle>
+          <Badge variant="outline">{t("topology.directionBadge", { direction })}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3 px-3 pb-3 pt-0">
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          <ImpactMetric label="Affected Devices" value={nodes.length} />
-          <ImpactMetric label="Affected ODP/ONT" value={likelyCustomerFacing} />
-          <ImpactMetric label="Connections" value={edges.length} />
-          <ImpactMetric label="Core Links" value={edgesWithCore.length} />
-          <ImpactMetric label="Fiber Total" value={totalFiber} />
-          <ImpactMetric label="Fiber Used" value={usedFiber} />
-          <ImpactMetric label="Loss Warning" value={lossWarnings} danger />
-          <ImpactMetric label="Hop" value={data.trace.hop_count || 0} />
+          <ImpactMetric label={t("topology.affectedDevices")} value={nodes.length} />
+          <ImpactMetric label={t("topology.affectedOdpOnt")} value={likelyCustomerFacing} />
+          <ImpactMetric label={t("topology.connectionsCount")} value={edges.length} />
+          <ImpactMetric label={t("topology.coreLinks")} value={edgesWithCore.length} />
+          <ImpactMetric label={t("topology.fiberTotal")} value={totalFiber} />
+          <ImpactMetric label={t("topology.fiberUsed")} value={usedFiber} />
+          <ImpactMetric label={t("topology.lossWarning")} value={lossWarnings} danger />
+          <ImpactMetric label={t("topology.hop")} value={data.trace.hop_count || 0} />
         </div>
         <div className="flex flex-wrap gap-1.5">
           {Object.entries(typeCounts)
@@ -1508,7 +1512,7 @@ function TraceImpactSummary({ data }: { data: TopologyTraceResponse["data"] }) {
                 {type}: {count}
               </Badge>
             ))}
-          {!Object.keys(typeCounts).length ? <Badge variant="outline">No device reached</Badge> : null}
+          {!Object.keys(typeCounts).length ? <Badge variant="outline">{t("topology.noDeviceReached")}</Badge> : null}
         </div>
         {warnings.length ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -1525,9 +1529,11 @@ function TraceImpactSummary({ data }: { data: TopologyTraceResponse["data"] }) {
 function ProvisionResultSummary({
   result,
   device,
+  t,
 }: {
   result: ProvisionResponse;
   device: DeviceLookupItem | null;
+  t: TFn;
 }) {
   const isDryRun = result.data.created_count == null;
   const changedPortTotal = isDryRun
@@ -1542,14 +1548,14 @@ function ProvisionResultSummary({
           <p className="text-sm font-semibold">{formatDeviceLabel(device)}</p>
           <p className="mt-1 text-sm text-muted-foreground">{result.message}</p>
         </div>
-        <Badge variant={isDryRun ? "outline" : "secondary"}>{isDryRun ? "Dry Run" : "Applied"}</Badge>
+        <Badge variant={isDryRun ? "outline" : "secondary"}>{isDryRun ? t("topology.dryRun") : t("topology.applied")}</Badge>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <ProvisionMetric label="Existing Ports" value={Number(result.data.existing_port_count || 0)} />
-        <ProvisionMetric label={isDryRun ? "Ports To Create" : "Ports Created"} value={changedPortTotal} />
-        <ProvisionMetric label="Missing Ports" value={missingPortIndexes.length} />
+        <ProvisionMetric label={t("topology.existingPorts")} value={Number(result.data.existing_port_count || 0)} />
+        <ProvisionMetric label={isDryRun ? t("topology.portsToCreate") : t("topology.portsCreated")} value={changedPortTotal} />
+        <ProvisionMetric label={t("topology.missingPorts")} value={missingPortIndexes.length} />
         <div className="min-w-0 rounded-md border bg-background p-2">
-          <p className="text-[10px] font-medium uppercase text-muted-foreground">Profile</p>
+          <p className="text-[10px] font-medium uppercase text-muted-foreground">{t("topology.profile")}</p>
           <p className="mt-1 truncate text-sm font-semibold">{result.data.profile_name || "default"}</p>
         </div>
       </div>
@@ -1559,7 +1565,7 @@ function ProvisionResultSummary({
             <Badge key={portIndex} variant="outline">Port {portIndex}</Badge>
           ))}
           {missingPortIndexes.length > 24 ? (
-            <Badge variant="secondary">+{missingPortIndexes.length - 24} lainnya</Badge>
+            <Badge variant="secondary">{t("topology.andMorePorts", { count: missingPortIndexes.length - 24 })}</Badge>
           ) : null}
         </div>
       ) : null}
@@ -1635,7 +1641,7 @@ function ConnectionPreview({
     <div className="rounded-lg border bg-muted/20 p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold">Connection Preview</p>
+          <p className="text-sm font-semibold">{t("topology.connectionPreview")}</p>
           <p className="text-xs text-muted-foreground">{t("topology.previewDesc")}</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -1645,27 +1651,27 @@ function ConnectionPreview({
       </div>
       <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
         <PreviewCell
-          label="From"
+          label={t("topology.from")}
           value={formatDeviceLabel(fromDevice)}
           detail={formatPortLabel(fromPort)}
         />
         <PreviewCell
-          label="To"
+          label={t("topology.to")}
           value={formatDeviceLabel(toDevice)}
           detail={formatPortLabel(toPort)}
         />
         <PreviewCell
-          label="Connection"
+          label={t("topology.connection")}
           value={`${connectionType || "fiber"} / ${status || "active"}`}
           detail={`Region: ${regionId || "-"}`}
         />
         <PreviewCell
-          label="Cable & Core"
+          label={t("topology.cableAndCore")}
           value={cableLabel || t("topology.withoutCable")}
           detail={`Core ${coreStart || "-"}-${coreEnd || "-"} | Fiber ${fiberCount || "-"}`}
         />
         <PreviewCell
-          label="Route"
+          label={t("topology.route")}
           value={routeLabel || t("topology.withoutRouteValue")}
           detail={t("topology.routeOptionalContext")}
         />
@@ -1717,16 +1723,18 @@ function PortOccupancyGrid({
   title,
   ports,
   selectedPortId,
+  t,
 }: {
   title: string;
   ports: DevicePortItem[];
   selectedPortId: string;
+  t: TFn;
 }) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-2">
         <p className="text-xs font-medium">{title}</p>
-        <Badge variant="outline">{ports.length} port</Badge>
+        <Badge variant="outline">{t("topology.portsCount", { count: ports.length })}</Badge>
       </div>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
         {ports.slice(0, 24).map((port) => {
@@ -1748,7 +1756,7 @@ function PortOccupancyGrid({
         })}
       </div>
       {ports.length > 24 ? (
-        <p className="mt-2 text-xs text-muted-foreground">Menampilkan 24 dari {ports.length} port.</p>
+        <p className="mt-2 text-xs text-muted-foreground">{t("topology.showingPorts", { shown: 24, total: ports.length })}</p>
       ) : null}
     </div>
   );
@@ -1823,26 +1831,26 @@ function TopologyRelationOverview({
     <div className="rounded-lg border bg-muted/10 p-3">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-semibold">Topology Relation Overview</p>
+          <p className="text-sm font-semibold">{t("topology.relationOverviewTitle")}</p>
           <p className="text-xs text-muted-foreground">{t("topology.relationOverview")}</p>
         </div>
-        <Badge variant="outline">{connections.length} connection</Badge>
+        <Badge variant="outline">{t("topology.connectionsCountBadge", { count: connections.length })}</Badge>
       </div>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-        <DeviceOccupancyCard title="From Device" device={fromDevice} ports={fromPorts} />
-        <DeviceOccupancyCard title="To Device" device={toDevice} ports={toPorts} />
+        <DeviceOccupancyCard title={t("topology.fromDevice")} device={fromDevice} ports={fromPorts} />
+        <DeviceOccupancyCard title={t("topology.toDevice")} device={toDevice} ports={toPorts} />
         <div className="rounded-md border bg-background p-3">
-          <p className="text-[10px] font-medium uppercase text-muted-foreground">Route & Cable</p>
+          <p className="text-[10px] font-medium uppercase text-muted-foreground">{t("topology.routeAndCable")}</p>
           <div className="mt-2 space-y-2 text-sm">
             <RelationLine label="Route" value={routeLabel || "-"} />
             <RelationLine label="Cable" value={cableLabel || "-"} />
-            <RelationLine label="Core total" value={String(cableCores.length)} />
+            <RelationLine label={t("topology.coreTotal")} value={String(cableCores.length)} />
             <div className="flex flex-wrap gap-1 pt-1">
-              <StatusCountBadge label="Available" value={cableCoreStatusCounts.available || 0} />
-              <StatusCountBadge label="Used" value={cableCoreStatusCounts.used || 0} tone="used" />
-              <StatusCountBadge label="Reserved" value={cableCoreStatusCounts.reserved || 0} tone="reserved" />
-              <StatusCountBadge label="Warning" value={cableCoreWarningTotal} tone="warning" />
+              <StatusCountBadge label={t("topology.statusAvailable")} value={cableCoreStatusCounts.available || 0} />
+              <StatusCountBadge label={t("topology.statusUsed")} value={cableCoreStatusCounts.used || 0} tone="used" />
+              <StatusCountBadge label={t("topology.statusReserved")} value={cableCoreStatusCounts.reserved || 0} tone="reserved" />
+              <StatusCountBadge label={t("topology.statusWarning")} value={cableCoreWarningTotal} tone="warning" />
             </div>
           </div>
         </div>
@@ -1850,8 +1858,8 @@ function TopologyRelationOverview({
 
       <div className="mt-3 rounded-md border bg-background p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[10px] font-medium uppercase text-muted-foreground">Customer / ONT Assignment</p>
-          <Badge variant={assignmentRows.length ? "secondary" : "outline"}>{assignmentRows.length} assignment</Badge>
+          <p className="text-[10px] font-medium uppercase text-muted-foreground">{t("topology.customerOntAssignment")}</p>
+          <Badge variant={assignmentRows.length ? "secondary" : "outline"}>{t("topology.assignmentsCount", { count: assignmentRows.length })}</Badge>
         </div>
         {assignmentRows.length ? (
           <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
@@ -1903,7 +1911,7 @@ function DeviceTypeOccupancyPanel({
   return (
     <div className="rounded-lg border bg-background p-3">
       <div className="mb-3 flex flex-col gap-1">
-        <p className="text-sm font-semibold">ODP / ODC / OLT Occupancy</p>
+        <p className="text-sm font-semibold">{t("topology.odpOdcOltOccupancy")}</p>
         <p className="text-xs text-muted-foreground">{t("topology.occupancyFromEndpoint")}</p>
       </div>
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
@@ -1913,7 +1921,7 @@ function DeviceTypeOccupancyPanel({
             <div key={deviceType} className="rounded-md border bg-muted/10 p-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold">{deviceType}</p>
-                <Badge variant={matched.length ? "secondary" : "outline"}>{matched.length} device</Badge>
+                <Badge variant={matched.length ? "secondary" : "outline"}>{t("topology.devicesCount", { count: matched.length })}</Badge>
               </div>
               {matched.length ? (
                 <div className="mt-2 space-y-2">
@@ -1955,10 +1963,10 @@ function SpliceMatrixPanel({
     <div className="rounded-lg border bg-background p-3">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-semibold">Splice Matrix</p>
+          <p className="text-sm font-semibold">{t("topology.spliceMatrix")}</p>
           <p className="text-xs text-muted-foreground">{t("topology.spliceMatrixDesc")}</p>
         </div>
-        <Badge variant={mappedConnections.length ? "secondary" : "outline"}>{mappedConnections.length} mapped connection</Badge>
+        <Badge variant={mappedConnections.length ? "secondary" : "outline"}>{t("topology.mappedConnectionsCount", { count: mappedConnections.length })}</Badge>
       </div>
 
       {mappedConnections.length ? (
@@ -2019,7 +2027,7 @@ function SpliceMatrixConnectionRow({
         </div>
       </div>
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">
-        <SpliceEndpointBox title="Input / From" primary={fromLabel} secondary={formatPortLabel(connection.from_port || null)} />
+        <SpliceEndpointBox title={t("topology.inputFrom")} primary={fromLabel} secondary={formatPortLabel(connection.from_port || null)} />
         <div className="grid grid-cols-2 gap-1 rounded-md border bg-background p-2 sm:grid-cols-4 lg:w-56">
           {cores.length ? (
             cores.map((coreNo) => {
@@ -2036,7 +2044,7 @@ function SpliceMatrixConnectionRow({
             <p className="col-span-2 text-xs text-muted-foreground sm:col-span-4">{t("topology.coreRangeIncomplete")}</p>
           )}
         </div>
-        <SpliceEndpointBox title="Output / To" primary={toLabel} secondary={formatPortLabel(connection.to_port || null)} />
+        <SpliceEndpointBox title={t("topology.outputTo")} primary={toLabel} secondary={formatPortLabel(connection.to_port || null)} />
       </div>
     </div>
   );
@@ -2176,10 +2184,10 @@ function ExistingConnectionsPanel({
     <div className="rounded-lg border bg-background p-3">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold">Existing Connections</p>
+          <p className="text-sm font-semibold">{t("topology.existingConnections")}</p>
           <p className="text-xs text-muted-foreground">{t("topology.existingConnectionsDesc")}</p>
         </div>
-        <Badge variant={connections.length ? "secondary" : "outline"}>{connections.length} connection</Badge>
+        <Badge variant={connections.length ? "secondary" : "outline"}>{t("topology.connectionsCountBadge", { count: connections.length })}</Badge>
       </div>
       {loading ? (
         <div role="status" aria-label={t("topology.loadingConnections")} className="space-y-2">
@@ -2232,10 +2240,10 @@ function ExistingConnectionsPanel({
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={() => onEdit(connection)} disabled={busy || !canMutate}>
-                      Edit
+                      {t("topology.btnEdit")}
                     </Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => onArchive(connection)} disabled={busy || !canMutate}>
-                      Archive/Delete
+                      {t("topology.btnArchiveDelete")}
                     </Button>
                   </div>
                 </div>
@@ -2338,10 +2346,10 @@ function normalizeRelationMode(value: unknown): RelationMode {
   return mode === "feeder" || mode === "distribution" ? mode : null;
 }
 
-function formatRelationModeLabel(mode: RelationMode) {
-  if (mode === "feeder") return "Feeder: OTB/POP -> ODC";
-  if (mode === "distribution") return "Distribution: ODC -> ODP";
-  return "Connection";
+function formatRelationModeLabel(mode: RelationMode, t: TFn) {
+  if (mode === "feeder") return t("topology.modeFeederLabel");
+  if (mode === "distribution") return t("topology.modeDistributionLabel");
+  return t("topology.modeConnectionLabel");
 }
 
 function filterDeviceOptionsForRelationMode(

@@ -136,7 +136,7 @@ export function PortAssignmentDrawer({
                     {port.port_label || `Port #${port.port_index}`}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Status: {getPortStatusLabel(port.status)}
+                    {t("portTray.status")}: {getPortStatusLabel(port.status, t)}
                     {port.port_type ? ` · Tipe: ${port.port_type}` : ""}
                     {port.direction ? ` · ${port.direction}` : ""}
                   </p>

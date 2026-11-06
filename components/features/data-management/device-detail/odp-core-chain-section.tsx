@@ -121,21 +121,21 @@ export function OdpCoreChainSummarySection({
       ) : coreChainSummary ? (
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-            <ChainCheck label="Port Inventory" ok={coreChainSummary.checks.has_ports} />
-            <ChainCheck label="Upstream Link" ok={coreChainSummary.checks.has_upstream_link} />
-            <ChainCheck label="Main Splitter" ok={coreChainSummary.checks.has_main_splitter} />
-            <ChainCheck label="Distribution Cable" ok={coreChainSummary.checks.has_distribution_cable} />
-            <ChainCheck label="Core Mapping" ok={coreChainSummary.checks.has_core_mapping} />
-            <ChainCheck label="ODC Source Path" ok={coreChainSummary.checks.has_odc_source_path} />
+            <ChainCheck label={t("coreChain.check.portInventory")} ok={coreChainSummary.checks.has_ports} />
+            <ChainCheck label={t("coreChain.check.upstreamLink")} ok={coreChainSummary.checks.has_upstream_link} />
+            <ChainCheck label={t("coreChain.check.mainSplitter")} ok={coreChainSummary.checks.has_main_splitter} />
+            <ChainCheck label={t("coreChain.check.distributionCable")} ok={coreChainSummary.checks.has_distribution_cable} />
+            <ChainCheck label={t("coreChain.check.coreMapping")} ok={coreChainSummary.checks.has_core_mapping} />
+            <ChainCheck label={t("coreChain.check.odcSourcePath")} ok={coreChainSummary.checks.has_odc_source_path} />
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground md:grid-cols-3">
-            <p>Upstream Devices: <span className="font-medium text-foreground">{coreChainSummary.summary?.upstream_device_count ?? 0}</span></p>
-            <p>Distribution Cables: <span className="font-medium text-foreground">{coreChainSummary.summary?.distribution_cable_count ?? 0}</span></p>
-            <p>Fiber Cores Used/Total: <span className="font-medium text-foreground">{coreChainSummary.summary?.fiber_core_used ?? 0}/{coreChainSummary.summary?.fiber_core_total ?? 0}</span></p>
+            <p>{t("coreChain.metric.upstreamDevices")}: <span className="font-medium text-foreground">{coreChainSummary.summary?.upstream_device_count ?? 0}</span></p>
+            <p>{t("coreChain.metric.distributionCables")}: <span className="font-medium text-foreground">{coreChainSummary.summary?.distribution_cable_count ?? 0}</span></p>
+            <p>{t("coreChain.metric.fiberCoresUsedTotal")}: <span className="font-medium text-foreground">{coreChainSummary.summary?.fiber_core_used ?? 0}/{coreChainSummary.summary?.fiber_core_total ?? 0}</span></p>
           </div>
           {coreChainSummary.suggestions?.length ? (
             <div className="space-y-1 rounded-md border bg-muted/20 p-2">
-              <p className="text-xs font-medium">Auto Suggest Actions</p>
+              <p className="text-xs font-medium">{t("coreChain.autoSuggestActions")}</p>
               {coreChainSummary.suggestions.map((item) => (
                 <p key={item.key} className="text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">{item.title}:</span> {item.description}

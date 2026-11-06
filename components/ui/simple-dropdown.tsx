@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 
 export type SimpleDropdownOption = {
   label: string;
@@ -30,11 +31,13 @@ export function SimpleDropdown({
   value,
   onValueChange,
   options,
-  placeholder = "Pilih",
+  placeholder,
   disabled = false,
   className,
 }: SimpleDropdownProps) {
-  const selectedLabel = options.find((o) => o.value === value)?.label || placeholder;
+  const { t } = useTranslate();
+  const resolvedPlaceholder = placeholder ?? t("ui.dropdown.placeholder");
+  const selectedLabel = options.find((o) => o.value === value)?.label || resolvedPlaceholder;
 
   return (
     <DropdownMenu>

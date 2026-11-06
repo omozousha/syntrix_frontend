@@ -456,13 +456,12 @@ export function getPortStatusClass(status?: string | null): string {
   return "bg-slate-300";
 }
 
-export function getPortStatusLabel(status?: string | null): string {
-  if (status === "used") return "used";
-  if (status === "reserved") return "reserved";
-  if (status === "down") return "down";
-  if (status === "maintenance") return "maintenance";
-  if (status === "faulty") return "faulty";
-  return "idle";
+export function getPortStatusLabel(status?: string | null, t?: TFn): string {
+  const key =
+    status === "used" || status === "reserved" || status === "down" || status === "maintenance" || status === "faulty"
+      ? status
+      : "idle";
+  return t ? t(`portTray.${key}`) : key;
 }
 
 /** Build a Map<portId, PortConnection> from an array of connections. */

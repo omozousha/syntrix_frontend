@@ -2,6 +2,7 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useTranslate } from "@/lib/use-locale";
 
 export interface DataTableSkeletonProps {
   columnCount?: number;
@@ -34,17 +35,19 @@ export function DataTableSkeleton({
   showMobileCards = true,
   mobileRowCount = 4,
   className,
-  ariaLabel = "Memuat data tabel...",
+  ariaLabel,
 }: DataTableSkeletonProps) {
+  const { t } = useTranslate();
+  const resolvedAriaLabel = ariaLabel ?? t("ui.tableSkeleton.ariaLabel");
   const widths = columnWidths || DEFAULT_WIDTHS;
 
   return (
     <div
       role="status"
-      aria-label={ariaLabel}
+      aria-label={resolvedAriaLabel}
       className={cn("w-full space-y-3", className)}
     >
-      <span className="sr-only">{ariaLabel}</span>
+      <span className="sr-only">{resolvedAriaLabel}</span>
 
       {/* Desktop Table View (>= 768px) */}
       <div className="hidden md:block rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-xs dark:bg-white/[0.02]">

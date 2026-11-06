@@ -27,26 +27,27 @@ export function DataListKpiStrip({
   archivedCount?: number;
   customerCount?: number;
 }) {
-  const { t } = useTranslate();
+  const { t, locale } = useTranslate();
+  const numberLocale = locale === "en" ? "en-US" : "id-ID";
   const cards = [
-    <OperationalKpiCard key="total" label={t("deviceList.kpi.totalData")} value={total.toLocaleString("id-ID")} caption={t("deviceList.kpi.totalCaption", { category: categoryLabel })} icon={Boxes} tone="blue" />,
+    <OperationalKpiCard key="total" label={t("deviceList.kpi.totalData")} value={total.toLocaleString(numberLocale)} caption={t("deviceList.kpi.totalCaption", { category: categoryLabel })} icon={Boxes} tone="blue" />,
   ];
 
   if (isMasterCategory) {
     cards.push(
-      <OperationalKpiCard key="active" label="Active" value={String(activeCount ?? 0)} caption={t("deviceList.kpi.activeItems")} icon={CheckSquare} tone="emerald" />,
-      <OperationalKpiCard key="inactive" label="Inactive" value={String(archivedCount ?? 0)} caption={t("deviceList.kpi.inactiveItems")} icon={Shield} tone={archivedCount ? "rose" : "slate"} />,
+      <OperationalKpiCard key="active" label={t("deviceList.kpi.active")} value={String(activeCount ?? 0)} caption={t("deviceList.kpi.activeItems")} icon={CheckSquare} tone="emerald" />,
+      <OperationalKpiCard key="inactive" label={t("deviceList.kpi.inactive")} value={String(archivedCount ?? 0)} caption={t("deviceList.kpi.inactiveItems")} icon={Shield} tone={archivedCount ? "rose" : "slate"} />,
     );
   } else {
     cards.push(
-      <OperationalKpiCard key="filter" label="POP Filter" value={supportsPopFilter && isPopFilterActive ? "Active" : "All"} caption={selectedPopLabel || t("deviceList.kpi.allPop")} icon={MapPin} tone={supportsPopFilter && isPopFilterActive ? "emerald" : "slate"} />,
+      <OperationalKpiCard key="filter" label={t("deviceList.kpi.popFilter")} value={supportsPopFilter && isPopFilterActive ? t("deviceList.kpi.active") : t("deviceList.kpi.all")} caption={selectedPopLabel || t("deviceList.kpi.allPop")} icon={MapPin} tone={supportsPopFilter && isPopFilterActive ? "emerald" : "slate"} />,
     );
     if (customerCount !== undefined) {
       cards.push(
         <OperationalKpiCard
           key="customers"
           label={t("deviceList.kpi.totalCustomers")}
-          value={customerCount.toLocaleString("id-ID")}
+          value={customerCount.toLocaleString(numberLocale)}
           caption={t("deviceList.kpi.customerCaption")}
           icon={Users}
           tone="emerald"
@@ -56,8 +57,8 @@ export function DataListKpiStrip({
     cards.push(
       <OperationalKpiCard
         key="selected"
-        label="Selected"
-        value={selectedCount.toLocaleString("id-ID")}
+        label={t("deviceList.kpi.selected")}
+        value={selectedCount.toLocaleString(numberLocale)}
         caption={t("deviceList.kpi.selectedCaption")}
         icon={CheckSquare}
         tone={selectedCount > 0 ? "amber" : "slate"}

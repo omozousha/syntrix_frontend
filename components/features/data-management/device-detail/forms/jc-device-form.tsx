@@ -46,8 +46,8 @@ export function JcDeviceForm(props: JcDeviceFormProps) {
   const fromCable = lookup.devices?.find((d) => d.id === props.form.from_cable_id);
   const toCable = lookup.devices?.find((d) => d.id === props.form.to_cable_id);
   
-  const fromCableName = fromCable ? (fromCable.device_name || fromCable.device_id) : "Cable A";
-  const toCableName = toCable ? (toCable.device_name || toCable.device_id) : "Cable B";
+  const fromCableName = fromCable ? (fromCable.device_name || fromCable.device_id) : t("deviceForm.jc.cableA");
+  const toCableName = toCable ? (toCable.device_name || toCable.device_id) : t("deviceForm.jc.cableB");
 
   const coreStart = Number(props.form.core_start) || 0;
   const coreEnd = Number(props.form.core_end) || 0;

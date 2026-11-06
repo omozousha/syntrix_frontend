@@ -102,7 +102,7 @@ export function DevicePortSummarySection({
           <div className="min-w-0">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Network className="size-4 text-muted-foreground" />
-              Port Inventory
+              {t("portSummary.title")}
             </CardTitle>
             <CardDescription className="text-xs">
               {t("portSummary.description", { device: deviceTypeLabel || "device" })}
@@ -120,10 +120,10 @@ export function DevicePortSummarySection({
         ) : totalPorts ? (
           <>
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              <PortMetric label="Total" value={totalPorts} />
-              <PortMetric label="Connected" value={connectedPorts} tone="used" />
-              <PortMetric label="Idle" value={statusCounts.idle || 0} tone="idle" />
-              <PortMetric label="Reserved" value={statusCounts.reserved || 0} tone="reserved" />
+              <PortMetric label={t("portSummary.metricTotal")} value={totalPorts} />
+              <PortMetric label={t("portSummary.metricConnected")} value={connectedPorts} tone="used" />
+              <PortMetric label={t("portSummary.metricIdle")} value={statusCounts.idle || 0} tone="idle" />
+              <PortMetric label={t("portSummary.metricReserved")} value={statusCounts.reserved || 0} tone="reserved" />
             </div>
             <TopologyReadinessStrip
               connections={connections.length}
@@ -173,12 +173,12 @@ export function DevicePortSummarySection({
           {selectedPort ? (
             <div className="mt-4 space-y-3">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <PortDetail label="Status" value={selectedPort.status || "idle"} />
-                <PortDetail label="Type" value={selectedPort.port_type || "-"} />
-                <PortDetail label="Direction" value={selectedPort.direction || "-"} />
-                <PortDetail label="Core" value={`${selectedPort.core_used ?? 0}/${selectedPort.core_capacity ?? "-"}`} />
-                <PortDetail label="Customer" value={customerLabel(selectedPort)} />
-                <PortDetail label="ONT" value={selectedPort.ont_device_id ? "Assigned" : "-"} />
+                <PortDetail label={t("portSummary.detailStatus")} value={selectedPort.status || "idle"} />
+                <PortDetail label={t("portSummary.detailType")} value={selectedPort.port_type || "-"} />
+                <PortDetail label={t("portSummary.detailDirection")} value={selectedPort.direction || "-"} />
+                <PortDetail label={t("portSummary.detailCore")} value={`${selectedPort.core_used ?? 0}/${selectedPort.core_capacity ?? "-"}`} />
+                <PortDetail label={t("portSummary.detailCustomer")} value={customerLabel(selectedPort, t)} />
+                <PortDetail label={t("portSummary.detailOnt")} value={selectedPort.ont_device_id ? t("portSummary.assigned") : "-"} />
               </div>
               <div className="rounded-md border bg-muted/20 p-3">
                 <div className="flex items-center justify-between gap-2">
@@ -194,9 +194,9 @@ export function DevicePortSummarySection({
                           <p className="text-xs font-medium">{connection.connection_id || connection.id}</p>
                         </div>
                         <div className="mt-1 grid grid-cols-1 gap-1 text-xs text-muted-foreground sm:grid-cols-2">
-                          <span>Type: {connection.connection_type || "-"}</span>
-                          <span>Role: {connection.from_port_id === selectedPort.id ? "From port" : "To port"}</span>
-                          <span>Core: {formatCoreRange(connection)}</span>
+                          <span>{t("portSummary.detailType")}: {connection.connection_type || "-"}</span>
+                          <span>Role: {connection.from_port_id === selectedPort.id ? t("portSummary.fromPort") : t("portSummary.toPort")}</span>
+                          <span>{t("portSummary.detailCore")}: {formatCoreRange(connection)}</span>
                           <span>Fiber: {connection.fiber_count ?? "-"}</span>
                         </div>
                         {connection.notes ? <p className="mt-1 text-xs text-muted-foreground">{connection.notes}</p> : null}
@@ -208,7 +208,7 @@ export function DevicePortSummarySection({
                 )}
               </div>
               <div className="rounded-md border bg-muted/20 p-3">
-                <p className="text-[10px] font-medium uppercase text-muted-foreground">Notes</p>
+                <p className="text-[10px] font-medium uppercase text-muted-foreground">{t("portSummary.notes")}</p>
                 <p className="mt-1 text-sm">{selectedPort.notes || "-"}</p>
               </div>
               <div className="flex justify-end">
@@ -278,14 +278,14 @@ function formatCoreRange(connection: DevicePortConnection) {
   return `${connection.core_start}-${connection.core_end}`;
 }
 
-function customerLabel(port: DevicePort) {
+function customerLabel(port: DevicePort, t: TFn) {
   const { customer_id: assignedCustomerId } = port;
-  return port.customer_name || port.customer_number || (assignedCustomerId ? "Assigned" : "-");
+  return port.customer_name || port.customer_number || (assignedCustomerId ? t("portSummary.assigned") : "-");
 }
 
 function portAssignmentLabel(port: DevicePort, t: TFn) {
   const { ont_device_id: assignedOntDeviceId } = port;
-  const customer = customerLabel(port);
+  const customer = customerLabel(port, t);
   if (customer !== "-") return customer;
   return assignedOntDeviceId ? t("portSummary.ontAssigned") : t("portSummary.noAssignment");
 }

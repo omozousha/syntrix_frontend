@@ -83,7 +83,7 @@ export function OdcDeviceCreate({
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label={t("createForm.odcCabinetCoreCapacity")} tooltip="Pilih total kapasitas core optik ODC dari master data." required />
+        <FieldLabel label={t("createForm.odcCabinetCoreCapacity")} tooltip={t("createForm.tip.odcCoreCapacity")} required />
         <Combobox
           value={values.capacity_core || "__none__"}
           onValueChange={(val) => onChange({ capacity_core: val === "__none__" ? "" : val })}
@@ -100,7 +100,7 @@ export function OdcDeviceCreate({
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label={t("createForm.totalPortsCabinet")} tooltip="Jumlah port adaptor/terminasi pada frame ODC." />
+        <FieldLabel label={t("createForm.totalPortsCabinet")} tooltip={t("createForm.tip.odcTotalPorts")} />
         <Input
           type="number"
           value={values.total_ports || ""}
@@ -110,7 +110,7 @@ export function OdcDeviceCreate({
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label={t("createForm.odcMountingType")} tooltip="Jenis instalasi fisik cabinet di lapangan." />
+        <FieldLabel label={t("createForm.odcMountingType")} tooltip={t("createForm.tip.odcMountingType")} />
         <Combobox
           value={values.installation_type || "__none__"}
           onValueChange={(val) => onChange({ installation_type: val === "__none__" ? "" : val })}

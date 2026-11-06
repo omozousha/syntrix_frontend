@@ -37,7 +37,7 @@ export function ProjectCreateForm({
 }) {
   const { t } = useTranslate();
   const popOptions: ComboboxOption[] = [
-    { value: "__none__", label: "None" },
+    { value: "__none__", label: t("createForm.noneOption") },
     ...pops
       .filter((pop) => !values.region_id || pop.region_id === values.region_id)
       .map((pop) => ({

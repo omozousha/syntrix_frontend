@@ -308,14 +308,14 @@ function buildTechnicalMetrics(typeKey: string, item: Record<string, unknown>, s
 
   if (typeKey === "CABLE") {
     return [
-      { label: "Capacity Core", value: formatNumber(capacityCore, numberLocale), hint: t("deviceSummary.hint.cableCapacityCore") },
+      { label: t("deviceSummary.metric.capacityCore"), value: formatNumber(capacityCore, numberLocale), hint: t("deviceSummary.hint.cableCapacityCore") },
       {
-        label: "Used / Reserved",
+        label: t("deviceSummary.metric.usedReserved"),
         value: `${formatNumber(usedCore, numberLocale)} / ${formatNumber(reservedCore, numberLocale)}`,
         hint: t("deviceSummary.hint.cableDamagedLoss", { damaged: formatNumber(damagedCore, numberLocale), loss: formatNumber(lossWarnings, numberLocale) }),
       },
-      { label: "Route", value: routeLabel || "-", hint: cableLabel ? `Cable: ${cableLabel}` : t("deviceSummary.hint.noRoute") },
-      { label: "Core / Endpoint", value: coreRangeLabel || "-", hint: endpointLabel || t("deviceSummary.hint.noEndpoint") },
+      { label: t("deviceSummary.metric.route"), value: routeLabel || "-", hint: cableLabel ? `Cable: ${cableLabel}` : t("deviceSummary.hint.noRoute") },
+      { label: t("deviceSummary.metric.coreEndpoint"), value: coreRangeLabel || "-", hint: endpointLabel || t("deviceSummary.hint.noEndpoint") },
     ];
   }
 
@@ -326,20 +326,20 @@ function buildTechnicalMetrics(typeKey: string, item: Record<string, unknown>, s
     const primaryDownstream = firstOdcRelation(odcRelations?.downstream);
     const splitterRatio = odcRelations?.splitter_ratio || null;
     return [
-      { label: "Port Cabinet", value: formatNumber(totalPorts, numberLocale), hint: `${formatNumber(idlePorts, numberLocale)} idle.` },
-      { label: "Feeder Upstream", value: formatNumber(upstreamTotal, numberLocale), hint: formatOdcRelationHint(primaryUpstream, t("deviceSummary.hint.noUpstream"), t) },
+      { label: t("deviceSummary.metric.portCabinet"), value: formatNumber(totalPorts, numberLocale), hint: `${formatNumber(idlePorts, numberLocale)} idle.` },
+      { label: t("deviceSummary.metric.feederUpstream"), value: formatNumber(upstreamTotal, numberLocale), hint: formatOdcRelationHint(primaryUpstream, t("deviceSummary.hint.noUpstream"), t) },
       {
-        label: "Distribution Downstream",
+        label: t("deviceSummary.metric.distributionDownstream"),
         value: formatNumber(downstreamTotal, numberLocale),
         hint: formatOdcRelationHint(primaryDownstream, t("deviceSummary.hint.noDownstream"), t),
       },
       {
-        label: "Core / Route",
+        label: t("deviceSummary.metric.coreRoute"),
         value: formatNumber(numeric(summary?.core_management?.summary?.core_count), numberLocale),
         hint: routeLabel || t("deviceSummary.hint.coreApproved"),
       },
       {
-        label: "Splitter Ratio",
+        label: t("deviceSummary.metric.splitterRatio"),
         value: splitterRatio || "-",
         hint: splitterRatio ? t("deviceSummary.hint.splitterConfigured") : t("deviceSummary.hint.splitterNotConfigured"),
       },
@@ -348,27 +348,27 @@ function buildTechnicalMetrics(typeKey: string, item: Record<string, unknown>, s
 
   if (typeKey === "ONT") {
     return [
-      { label: "Serial Number", value: valueOf(item.serial_number, "-"), hint: t("deviceSummary.hint.ontSerial") },
-      { label: "Service Ports", value: formatNumber(totalPorts, numberLocale), hint: `${formatNumber(usedPorts, numberLocale)} used.` },
-      { label: "Connection", value: formatNumber(connectionTotal, numberLocale), hint: t("deviceSummary.hint.ontConnection") },
-      { label: "Installed", value: formatDate(valueOf(item.installation_date), numberLocale), hint: t("deviceSummary.hint.installedDate") },
+      { label: t("deviceSummary.metric.serialNumber"), value: valueOf(item.serial_number, "-"), hint: t("deviceSummary.hint.ontSerial") },
+      { label: t("deviceSummary.metric.servicePorts"), value: formatNumber(totalPorts, numberLocale), hint: `${formatNumber(usedPorts, numberLocale)} used.` },
+      { label: t("deviceSummary.metric.connection"), value: formatNumber(connectionTotal, numberLocale), hint: t("deviceSummary.hint.ontConnection") },
+      { label: t("deviceSummary.metric.installed"), value: formatDate(valueOf(item.installation_date), numberLocale), hint: t("deviceSummary.hint.installedDate") },
     ];
   }
 
   if (typeKey === "OLT" || typeKey === "SWITCH" || typeKey === "ROUTER") {
     return [
-      { label: "Management IP", value: valueOf(item.management_ip, "-"), hint: t("deviceSummary.hint.mgmtIp") },
-      { label: "Interfaces", value: formatNumber(totalPorts, numberLocale), hint: `${formatNumber(usedPorts, numberLocale)} used, ${formatNumber(idlePorts, numberLocale)} idle.` },
-      { label: "Connection", value: formatNumber(connectionTotal, numberLocale), hint: endpointLabel || t("deviceSummary.hint.uplinkDownlink") },
-      { label: "Status", value: valueOf(item.status, "-"), hint: t("deviceSummary.hint.operationalStatus") },
+      { label: t("deviceSummary.metric.managementIp"), value: valueOf(item.management_ip, "-"), hint: t("deviceSummary.hint.mgmtIp") },
+      { label: t("deviceSummary.metric.interfaces"), value: formatNumber(totalPorts, numberLocale), hint: `${formatNumber(usedPorts, numberLocale)} used, ${formatNumber(idlePorts, numberLocale)} idle.` },
+      { label: t("deviceSummary.metric.connection"), value: formatNumber(connectionTotal, numberLocale), hint: endpointLabel || t("deviceSummary.hint.uplinkDownlink") },
+      { label: t("deviceSummary.metric.status"), value: valueOf(item.status, "-"), hint: t("deviceSummary.hint.operationalStatus") },
     ];
   }
 
   return [
-    { label: "Total Ports", value: formatNumber(totalPorts, numberLocale), hint: `${formatNumber(usedPorts, numberLocale)} used.` },
-    { label: "Capacity Core", value: formatNumber(capacityCore, numberLocale), hint: t("deviceSummary.hint.coreCapacity") },
-    { label: "Connection", value: formatNumber(connectionTotal, numberLocale), hint: t("deviceSummary.hint.topologyApproved") },
-    { label: "Status", value: valueOf(item.status, "-"), hint: t("deviceSummary.hint.operationalStatus") },
+    { label: t("deviceSummary.metric.totalPorts"), value: formatNumber(totalPorts, numberLocale), hint: `${formatNumber(usedPorts, numberLocale)} used.` },
+    { label: t("deviceSummary.metric.capacityCore"), value: formatNumber(capacityCore, numberLocale), hint: t("deviceSummary.hint.coreCapacity") },
+    { label: t("deviceSummary.metric.connection"), value: formatNumber(connectionTotal, numberLocale), hint: t("deviceSummary.hint.topologyApproved") },
+    { label: t("deviceSummary.metric.status"), value: valueOf(item.status, "-"), hint: t("deviceSummary.hint.operationalStatus") },
   ];
 }
 
@@ -381,11 +381,11 @@ function OdcRelationSummary({ relations, coreOverlapConflicts = [] }: { relation
   const portSummary = relations.port_summary || {};
   const coreSummary = relations.core_summary || {};
   const readinessItems = [
-    { label: "Upstream", ready: Boolean(readiness.has_upstream_source) },
-    { label: "Downstream ODP", ready: Boolean(readiness.has_downstream_odp) },
-    { label: "Cable", ready: Boolean(readiness.has_cable_context) },
-    { label: "Core", ready: Boolean(readiness.has_core_mapping) },
-    { label: "Splitter", ready: Boolean(readiness.has_splitter_configured), hint: splitterRatio },
+    { label: t("deviceSummary.odc.upstream"), ready: Boolean(readiness.has_upstream_source) },
+    { label: t("deviceSummary.odc.downstreamOdp"), ready: Boolean(readiness.has_downstream_odp) },
+    { label: t("deviceSummary.odc.cable"), ready: Boolean(readiness.has_cable_context) },
+    { label: t("deviceSummary.odc.core"), ready: Boolean(readiness.has_core_mapping) },
+    { label: t("deviceSummary.odc.splitter"), ready: Boolean(readiness.has_splitter_configured), hint: splitterRatio, isSplitter: true },
   ];
 
   return (
@@ -420,8 +420,8 @@ function OdcRelationSummary({ relations, coreOverlapConflicts = [] }: { relation
               variant="outline"
               className={item.ready ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-600"}
             >
-              {item.label}: {item.ready ? "ready" : "pending"}
-              {item.label === "Splitter" && item.hint && item.hint !== "-" ? ` (${item.hint})` : null}
+              {item.label}: {item.ready ? t("deviceSummary.odc.ready") : t("deviceSummary.odc.pending")}
+              {item.isSplitter && item.hint && item.hint !== "-" ? ` (${item.hint})` : null}
             </Badge>
           ))}
         </div>
@@ -431,7 +431,7 @@ function OdcRelationSummary({ relations, coreOverlapConflicts = [] }: { relation
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="rounded-md border bg-background p-2.5">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Port Summary
+            {t("deviceSummary.odc.portSummary")}
           </p>
           <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
             <div>
@@ -439,34 +439,34 @@ function OdcRelationSummary({ relations, coreOverlapConflicts = [] }: { relation
               <p className="text-base font-semibold">{portSummary.total ?? 0}</p>
             </div>
             <div>
-              <p className="text-[11px] text-muted-foreground">Active</p>
+              <p className="text-[11px] text-muted-foreground">{t("deviceSummary.odc.active")}</p>
               <p className="text-base font-semibold text-emerald-600">{portSummary.active ?? 0}</p>
             </div>
             <div>
-              <p className="text-[11px] text-muted-foreground">Feeder (in)</p>
+              <p className="text-[11px] text-muted-foreground">{t("deviceSummary.odc.feederIn")}</p>
               <p className="text-base font-semibold text-blue-600">{portSummary.feeder ?? 0}</p>
             </div>
             <div>
-              <p className="text-[11px] text-muted-foreground">Distribution (out)</p>
+              <p className="text-[11px] text-muted-foreground">{t("deviceSummary.odc.distributionOut")}</p>
               <p className="text-base font-semibold text-amber-600">{portSummary.distribution ?? 0}</p>
             </div>
           </div>
         </div>
         <div className="rounded-md border bg-background p-2.5">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Core Usage
+            {t("deviceSummary.odc.coreUsage")}
           </p>
           <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
             <div>
-              <p className="text-[11px] text-muted-foreground">Mappings</p>
+              <p className="text-[11px] text-muted-foreground">{t("deviceSummary.odc.mappings")}</p>
               <p className="text-base font-semibold">{coreSummary.total_mappings ?? 0}</p>
             </div>
             <div>
-              <p className="text-[11px] text-muted-foreground">Cores Used</p>
+              <p className="text-[11px] text-muted-foreground">{t("deviceSummary.odc.coresUsed")}</p>
               <p className="text-base font-semibold">{coreSummary.total_cores_used ?? 0}</p>
             </div>
             <div>
-              <p className="text-[11px] text-muted-foreground">Unique Cables</p>
+              <p className="text-[11px] text-muted-foreground">{t("deviceSummary.odc.uniqueCables")}</p>
               <p className="text-base font-semibold">{coreSummary.unique_cables ?? 0}</p>
             </div>
           </div>

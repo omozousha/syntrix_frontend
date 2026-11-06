@@ -6,6 +6,7 @@ import { XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useTranslate } from "@/lib/use-locale"
 
 function Dialog(props: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -46,6 +47,7 @@ function DialogContent({
   showCloseButton?: boolean
   container?: HTMLElement | null
 }) {
+  const { t } = useTranslate()
   return (
     <DialogPortal container={container ?? undefined}>
       <DialogOverlay />
@@ -62,7 +64,7 @@ function DialogContent({
           <DialogPrimitive.Close asChild>
             <Button type="button" variant="ghost" size="icon-sm" className="absolute right-3 top-3">
               <XIcon />
-              <span className="sr-only">Tutup</span>
+              <span className="sr-only">{t("ui.dialog.close")}</span>
             </Button>
           </DialogPrimitive.Close>
         ) : null}

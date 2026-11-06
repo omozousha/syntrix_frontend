@@ -55,7 +55,7 @@ export function OltPortContainer({
   if (loading) {
     return (
       <div className="space-y-2 rounded-md border p-3">
-        <p className="text-sm font-medium">Port OLT</p>
+        <p className="text-sm font-medium">{t("portContainer.oltTitle")}</p>
         <TrayPillSkeleton trays={3} pillsPerTray={10} ariaLabel={t("portContainer.loadingOlt")} />
       </div>
     );
@@ -63,7 +63,7 @@ export function OltPortContainer({
 
   return (
     <div className="space-y-2 rounded-md border p-3">
-      <p className="text-sm font-medium">Port OLT</p>
+      <p className="text-sm font-medium">{t("portContainer.oltTitle")}</p>
 
       {layoutConfig.trays.map((tray) => {
         const portsInTray = groupedPorts.get(tray.id) || [];

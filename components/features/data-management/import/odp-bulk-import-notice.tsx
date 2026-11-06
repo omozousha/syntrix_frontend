@@ -113,8 +113,7 @@ export function OdpBulkImportNoticeDialog({
                     {t("import.odpNotice.prerequisite")}
                   </p>
                 <p className="text-amber-800 dark:text-amber-300 text-sm">
-                  Setiap ODP harus terhubung ke POP yang valid. Jika belum
-                  ada data POP, silakan buat terlebih dahulu di menu
+                  {t("import.odpNotice.prereqDetailLead")}{" "}
                   <code className="px-1 rounded bg-amber-100 dark:bg-amber-900/50 font-mono text-xs">
                     +(Add) → POP
                   </code>.

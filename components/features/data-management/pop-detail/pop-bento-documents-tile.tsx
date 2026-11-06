@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { downloadAttachmentFile } from "@/lib/attachment-utils";
-import { useTranslate } from "@/lib/use-locale";
+import { useTranslate, type TFn } from "@/lib/use-locale";
 
 export type PopDocumentRef = {
   id: string;
@@ -43,6 +43,25 @@ export const POP_DOCUMENT_CATEGORIES = [
   { value: "kelistrikan_pln", label: "SOP & Dokumen Kelistrikan PLN" },
   { value: "lainnya", label: "Dokumen Lainnya" },
 ] as const;
+
+function getPopDocumentCategoryLabel(value: string | null | undefined, t: TFn): string {
+  switch (value) {
+    case "kontrak_sewa":
+      return t("documentsTile.cat.kontrakSewa");
+    case "pbb_pajak":
+      return t("documentsTile.cat.pbbPajak");
+    case "perizinan_imb":
+      return t("documentsTile.cat.perizinanImb");
+    case "bast_teknis":
+      return t("documentsTile.cat.bastTeknis");
+    case "kelistrikan_pln":
+      return t("documentsTile.cat.kelistrikanPln");
+    case "lainnya":
+      return t("documentsTile.cat.lainnya");
+    default:
+      return t("documentsTile.defaultLabel");
+  }
+}
 
 function formatBytes(bytes?: number | null) {
   if (!bytes || bytes <= 0) return "-";
@@ -144,7 +163,7 @@ export function PopBentoDocumentsTile({
             <div>
               <h2 className="text-sm font-bold text-foreground">{t("documentsTile.title")}</h2>
               <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Kontrak Sewa, Surat Izin PBG, Bukti PBB &amp; BAST
+                {t("documentsTile.subtitle")}
               </p>
             </div>
           </div>
@@ -186,7 +205,7 @@ export function PopBentoDocumentsTile({
                   <SelectContent className="rounded-xl border-border/60">
                     {POP_DOCUMENT_CATEGORIES.map((cat) => (
                       <SelectItem key={cat.value} value={cat.value} className="text-xs">
-                        {cat.label}
+                        {getPopDocumentCategoryLabel(cat.value, t)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -256,7 +275,7 @@ export function PopBentoDocumentsTile({
 
                   <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-border/40">
                     <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground truncate">
-                      {POP_DOCUMENT_CATEGORIES.find((c) => c.value === doc.document_tag)?.label || t("documentsTile.defaultLabel")}
+                      {getPopDocumentCategoryLabel(doc.document_tag, t)}
                     </span>
 
                     <div className="flex items-center gap-1">

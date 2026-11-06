@@ -1,3 +1,5 @@
+import type { TFn } from "@/lib/use-locale";
+
 export const RELATION_LABEL_FALLBACK = {
   loading: "Memuat...",
   missing: "Data tidak tersedia",
@@ -13,6 +15,7 @@ type RelationDisplayInput = {
   loading?: boolean;
   optional?: boolean;
   fields: string[];
+  t?: TFn;
 };
 
 export function getRelationDisplay({
@@ -21,8 +24,9 @@ export function getRelationDisplay({
   loading = false,
   optional = false,
   fields,
+  t,
 }: RelationDisplayInput) {
-  if (loading) return RELATION_LABEL_FALLBACK.loading;
+  if (loading) return t ? t("relation.loading") : RELATION_LABEL_FALLBACK.loading;
 
   const relationValue = firstUsableValue(relation, fields);
   if (relationValue) return relationValue;
@@ -30,7 +34,11 @@ export function getRelationDisplay({
   const fallbackValue = normalizeDisplayValue(fallback);
   if (fallbackValue && !isUuidLike(fallbackValue)) return fallbackValue;
 
-  return optional ? RELATION_LABEL_FALLBACK.empty : RELATION_LABEL_FALLBACK.missing;
+  return optional
+    ? RELATION_LABEL_FALLBACK.empty
+    : t
+      ? t("relation.missing")
+      : RELATION_LABEL_FALLBACK.missing;
 }
 
 export function getRegionLabel(input: { relation?: RelationSource; fallback?: unknown; loading?: boolean; optional?: boolean }) {

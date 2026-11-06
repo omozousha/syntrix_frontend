@@ -48,7 +48,7 @@ export function RouteCreateForm({
 }) {
   const { t } = useTranslate();
   const routeTypeOptions: ComboboxOption[] = [
-    { value: "__none__", label: "None" },
+    { value: "__none__", label: t("createForm.noneOption") },
     ...routeTypes.map((item) => ({
       value: item.route_type_code || item.route_type_name,
       label: item.route_type_code ? `${item.route_type_name} (${item.route_type_code})` : item.route_type_name,
@@ -56,7 +56,7 @@ export function RouteCreateForm({
   ];
 
   const popOptions: ComboboxOption[] = [
-    { value: "__none__", label: "None" },
+    { value: "__none__", label: t("createForm.noneOption") },
     ...pops
       .filter((pop) => !values.region_id || pop.region_id === values.region_id)
       .map((pop) => ({
@@ -66,7 +66,7 @@ export function RouteCreateForm({
   ];
 
   const projectOptions: ComboboxOption[] = [
-    { value: "__none__", label: "None" },
+    { value: "__none__", label: t("createForm.noneOption") },
     ...projects
       .filter((project) => !values.region_id || !project.region_id || project.region_id === values.region_id)
       .map((project) => ({

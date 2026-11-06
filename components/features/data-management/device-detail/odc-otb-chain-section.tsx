@@ -86,7 +86,7 @@ export function OdcCoreChainSummarySection({
           <div className="flex items-center gap-2">
             {chainSummary && (
               <Badge variant={chainSummary.is_complete ? "secondary" : "outline"}>
-                {chainSummary.is_complete ? "Complete" : "Incomplete"}
+                {chainSummary.is_complete ? t("coreChain.complete") : t("coreChain.incomplete")}
               </Badge>
             )}
             {onRefresh && (
@@ -111,23 +111,23 @@ export function OdcCoreChainSummarySection({
           <div className="space-y-3">
             {/* 6 Check Status */}
             <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-              <ChainCheckBadge label="Port Inventory" ok={chainSummary.checks.has_ports} />
-              <ChainCheckBadge label="Upstream OTB" ok={chainSummary.checks.has_upstream_otb} />
-              <ChainCheckBadge label="Splitter Profile" ok={chainSummary.checks.has_splitter} />
-              <ChainCheckBadge label="Feeder Cable" ok={chainSummary.checks.has_feeder_cable} />
-              <ChainCheckBadge label="Downstream ODP" ok={chainSummary.checks.has_downstream_odp} />
-              <ChainCheckBadge label="Core Mapping" ok={chainSummary.checks.has_core_mapping} />
+              <ChainCheckBadge label={t("chainSection.check.portInventory")} ok={chainSummary.checks.has_ports} />
+              <ChainCheckBadge label={t("chainSection.check.upstreamOtb")} ok={chainSummary.checks.has_upstream_otb} />
+              <ChainCheckBadge label={t("chainSection.check.splitterProfile")} ok={chainSummary.checks.has_splitter} />
+              <ChainCheckBadge label={t("chainSection.check.feederCable")} ok={chainSummary.checks.has_feeder_cable} />
+              <ChainCheckBadge label={t("chainSection.check.downstreamOdp")} ok={chainSummary.checks.has_downstream_odp} />
+              <ChainCheckBadge label={t("chainSection.check.coreMapping")} ok={chainSummary.checks.has_core_mapping} />
             </div>
 
             {/* Metrics */}
             {chainSummary.summary && (
               <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground md:grid-cols-6">
-                <MetricCell label="Ports" value={chainSummary.summary.port_count ?? 0} />
-                <MetricCell label="OTB Upstream" value={chainSummary.summary.upstream_otb_count ?? 0} />
-                <MetricCell label="ODP Downstream" value={chainSummary.summary.downstream_odp_count ?? 0} />
-                <MetricCell label="Connections" value={chainSummary.summary.total_connection_count ?? 0} />
+                <MetricCell label={t("chainSection.metric.ports")} value={chainSummary.summary.port_count ?? 0} />
+                <MetricCell label={t("chainSection.metric.otbUpstream")} value={chainSummary.summary.upstream_otb_count ?? 0} />
+                <MetricCell label={t("chainSection.metric.odpDownstream")} value={chainSummary.summary.downstream_odp_count ?? 0} />
+                <MetricCell label={t("chainSection.metric.connections")} value={chainSummary.summary.total_connection_count ?? 0} />
                 <MetricCell
-                  label="Core Used/Total"
+                  label={t("chainSection.metric.coreUsedTotal")}
                   value={`${chainSummary.summary.fiber_core_used ?? 0}/${chainSummary.summary.fiber_core_total ?? 0}`}
                 />
               </div>
@@ -136,7 +136,7 @@ export function OdcCoreChainSummarySection({
             {/* Upstream OTB Detail */}
             {chainSummary.upstream_connections && chainSummary.upstream_connections.length > 0 && (
               <div className="rounded-md border p-2">
-                <p className="mb-1.5 text-xs font-medium">Upstream OTB Connections</p>
+                <p className="mb-1.5 text-xs font-medium">{t("chainSection.upstreamOtbConnections")}</p>
                 <div className="space-y-1">
                   {chainSummary.upstream_connections.map((conn, idx) => (
                     <div key={conn.connection_id || idx} className="flex items-center justify-between gap-2 rounded border px-2 py-1 text-xs">
@@ -161,7 +161,7 @@ export function OdcCoreChainSummarySection({
             {chainSummary.downstream_odp_devices && chainSummary.downstream_odp_devices.length > 0 && (
               <div className="rounded-md border p-2">
                 <p className="mb-1.5 text-xs font-medium">
-                  Downstream ODP ({chainSummary.downstream_odp_devices.length})
+                  {t("chainSection.downstreamOdpCount", { count: chainSummary.downstream_odp_devices.length })}
                 </p>
                 <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
                   {chainSummary.downstream_odp_devices.slice(0, 10).map((odp) => (
@@ -176,7 +176,7 @@ export function OdcCoreChainSummarySection({
                   ))}
                   {chainSummary.downstream_odp_devices.length > 10 && (
                     <p className="col-span-full text-xs text-muted-foreground">
-                      +{chainSummary.downstream_odp_devices.length - 10} ODP lainnya
+                      {t("chainSection.moreOdp", { count: chainSummary.downstream_odp_devices.length - 10 })}
                     </p>
                   )}
                 </div>
@@ -248,11 +248,11 @@ export function OtbCoreChainSummarySection({
     <Card className="bg-transparent">
       <CardHeader className="px-3 py-2">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm">OTB Chain Downstream</CardTitle>
+          <CardTitle className="text-sm">{t("chainSection.otbTitle")}</CardTitle>
           <div className="flex items-center gap-2">
             {chainSummary && (
               <Badge variant={chainSummary.is_connected ? "secondary" : "outline"}>
-                {chainSummary.is_connected ? "Connected" : "No Downstream"}
+                {chainSummary.is_connected ? t("chainSection.otbConnected") : t("chainSection.otbNoDownstream")}
               </Badge>
             )}
             {onRefresh && (
@@ -277,10 +277,10 @@ export function OtbCoreChainSummarySection({
           <div className="space-y-3">
             {/* Metrics */}
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              <MetricCell label="ODC Terhubung" value={chainSummary.downstream_odc_count} />
-              <MetricCell label="ODP via ODC" value={chainSummary.downstream_odp_count} />
+              <MetricCell label={t("chainSection.metric.connectedOdc")} value={chainSummary.downstream_odc_count} />
+              <MetricCell label={t("chainSection.metric.odpViaOdc")} value={chainSummary.downstream_odp_count} />
               <MetricCell
-                label="Core Terpakai"
+                label={t("chainSection.metric.usedCore")}
                 value={`${chainSummary.total_core_used}/${chainSummary.total_core_capacity}`}
               />
               <div className="rounded-md border bg-background p-2">
@@ -302,7 +302,7 @@ export function OtbCoreChainSummarySection({
             {/* ODC List */}
             {chainSummary.odc_list && chainSummary.odc_list.length > 0 && (
               <div className="rounded-md border p-2">
-                <p className="mb-1.5 text-xs font-medium">ODC yang Terhubung</p>
+                <p className="mb-1.5 text-xs font-medium">{t("chainSection.connectedOdcTitle")}</p>
                 <div className="space-y-1">
                   {chainSummary.odc_list.map((odc) => (
                     <div key={odc.id} className="flex items-center justify-between gap-2 rounded border px-2 py-1 text-xs">
@@ -317,7 +317,7 @@ export function OtbCoreChainSummarySection({
                             : "border-amber-300 bg-amber-50 text-amber-700"
                         }`}
                       >
-                        {odc.is_chain_complete ? "Complete" : "Incomplete"}
+                        {odc.is_chain_complete ? t("coreChain.complete") : t("coreChain.incomplete")}
                       </Badge>
                     </div>
                   ))}
@@ -327,7 +327,7 @@ export function OtbCoreChainSummarySection({
 
             {!chainSummary.is_connected && (
               <p className="text-xs text-muted-foreground">
-                OTB ini belum memiliki koneksi ke ODC. Hubungkan port OTB ke port ODC untuk membentuk chain.
+                {t("chainSection.otbNoConnectionHint")}
               </p>
             )}
           </div>

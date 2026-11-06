@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useTranslate } from "@/lib/use-locale"
 import { DownloadIcon, Maximize2Icon, ImageIcon } from "lucide-react"
 
 export interface OptimizedImageProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -26,7 +27,7 @@ export function OptimizedImage({
   src,
   thumbUrl,
   blurDataUrl,
-  alt = "Attachment image",
+  alt,
   aspectRatio = "auto",
   size = "auto",
   allowLightbox = true,
@@ -38,6 +39,8 @@ export function OptimizedImage({
   fallbackIconClass,
   ...props
 }: OptimizedImageProps) {
+  const { t } = useTranslate()
+  const resolvedAlt = alt ?? t("ui.image.defaultAlt")
   const [isLoaded, setIsLoaded] = React.useState(false)
   const [hasError, setHasError] = React.useState(false)
   const [lightboxOpen, setLightboxOpen] = React.useState(false)
@@ -74,7 +77,7 @@ export function OptimizedImage({
     if (!targetUrl) return
     const a = document.createElement("a")
     a.href = targetUrl
-    a.download = alt.replace(/\s+/g, "_") + ".webp"
+    a.download = resolvedAlt.replace(/\s+/g, "_") + ".webp"
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -110,7 +113,7 @@ export function OptimizedImage({
         {primarySrc && !hasError ? (
           <img
             src={primarySrc}
-            alt={alt}
+            alt={resolvedAlt}
             loading="lazy"
             decoding="async"
             onLoad={handleImageLoad}
@@ -124,7 +127,7 @@ export function OptimizedImage({
           <div className="flex h-full min-h-[80px] w-full flex-col items-center justify-center gap-1.5 p-3 text-muted-foreground">
             <ImageIcon className={cn("size-6 opacity-40", fallbackIconClass)} />
             <span className="font-mono text-[9px] uppercase tracking-[0.12em] opacity-60">
-              {hasError ? "Gambar gagal dimuat" : "Tidak ada foto"}
+              {hasError ? t("ui.image.loadError") : t("ui.image.noPhoto")}
             </span>
           </div>
         )}
@@ -134,7 +137,7 @@ export function OptimizedImage({
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
             <div className="flex items-center gap-1.5 rounded-full bg-background/80 px-2.5 py-1 text-xs font-medium text-foreground backdrop-blur-md shadow-xs">
               <Maximize2Icon className="size-3.5" />
-              <span className="font-mono text-[9px] uppercase tracking-[0.12em]">Buka Preview</span>
+              <span className="font-mono text-[9px] uppercase tracking-[0.12em]">{t("ui.image.openPreview")}</span>
             </div>
           </div>
         )}
@@ -147,7 +150,7 @@ export function OptimizedImage({
             <DialogHeader className="px-2 pt-1 pb-2 flex flex-row items-center justify-between border-b border-border/40">
               <div>
                 <DialogTitle className="font-heading text-sm font-medium flex items-center gap-2">
-                  <span>{alt}</span>
+                  <span>{resolvedAlt}</span>
                   <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em]">
                     WebP Optimized
                   </Badge>
@@ -155,7 +158,7 @@ export function OptimizedImage({
                 <DialogDescription className="font-mono text-[10px] tabular-nums text-muted-foreground mt-0.5">
                   {width && height ? `${width} × ${height} px` : null}
                   {sizeBytes ? ` • ${formatFileSize(sizeBytes)}` : null}
-                  {originalSizeBytes && sizeBytes ? ` (hemat ${Math.round(((originalSizeBytes - sizeBytes) / originalSizeBytes) * 100)}%)` : null}
+                  {originalSizeBytes && sizeBytes ? ` ${t("ui.image.savedPercent", { percent:Math.round(((originalSizeBytes - sizeBytes) / originalSizeBytes) * 100) })}` : null}
                 </DialogDescription>
               </div>
 
@@ -168,7 +171,7 @@ export function OptimizedImage({
                   className="rounded-full font-mono text-[10px] uppercase tracking-[0.12em] gap-1.5 mr-6"
                 >
                   <DownloadIcon className="size-3.5" />
-                  Unduh
+                  {t("ui.image.download")}
                 </Button>
               )}
             </DialogHeader>
@@ -176,7 +179,7 @@ export function OptimizedImage({
             <div className="relative flex max-h-[75vh] w-full items-center justify-center overflow-hidden rounded-xl bg-black/5 p-2">
               <img
                 src={src || primarySrc || ""}
-                alt={alt}
+                alt={resolvedAlt}
                 className="max-h-[70vh] w-auto max-w-full rounded-lg object-contain shadow-sm"
               />
             </div>

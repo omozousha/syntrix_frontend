@@ -117,7 +117,7 @@ function DeviceIdentitySection({
           disabled={!editing}
           compact
         />
-        <DisplayField label="Validation Status" value={mapValidationStatus(effectiveValidationStatus).label} compact />
+        <DisplayField label="Validation Status" value={mapValidationStatus(effectiveValidationStatus, t).label} compact />
         <Field
           label="Validation Date"
           type="date"

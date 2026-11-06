@@ -1,3 +1,5 @@
+import type { TFn } from "@/lib/use-locale";
+
 export type NormalizedRole = "superadmin" | "adminregion" | "validator" | string;
 
 export type VerificationInput = {
@@ -49,9 +51,9 @@ export function shortId(value: string) {
   return value.length > 13 ? `${value.slice(0, 8)}...${value.slice(-4)}` : value;
 }
 
-export function valueText(value: unknown, fallback = "-") {
+export function valueText(value: unknown, fallback = "-", t?: TFn) {
   if (value === null || value === undefined || value === "") return fallback;
-  if (typeof value === "boolean") return value ? "Ya" : "Tidak";
+  if (typeof value === "boolean") return value ? (t ? t("common.yes") : "Ya") : (t ? t("common.no") : "Tidak");
   return String(value);
 }
 

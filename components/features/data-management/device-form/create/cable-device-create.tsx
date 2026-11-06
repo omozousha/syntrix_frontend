@@ -110,7 +110,7 @@ export function CableDeviceCreate({
 
       {/* Kategori Kabel */}
       <div className="space-y-1.5">
-        <FieldLabel label={t("createForm.cableCategory")} tooltip="Kategori fungsi kabel dalam jaringan. Menggunakan data Route Types dari master data." />
+        <FieldLabel label={t("createForm.cableCategory")} tooltip={t("createForm.tip.cableCategory")} />
         <Combobox
           value={values.route_type || "__none__"}
           onValueChange={(v) => onChange({ route_type: v === "__none__" ? "" : v })}
@@ -128,7 +128,7 @@ export function CableDeviceCreate({
 
       {/* Tipe Kabel */}
       <div className="space-y-1.5">
-        <FieldLabel label={t("createForm.cableType")} tooltip="Pilih tipe kabel fiber optik dari master data." />
+        <FieldLabel label={t("createForm.cableType")} tooltip={t("createForm.tip.cableType")} />
         <Combobox
           value={values.cable_type || "__none__"}
           onValueChange={(v) => onChange({ cable_type: v === "__none__" ? "" : v })}
@@ -146,7 +146,7 @@ export function CableDeviceCreate({
 
       {/* Kapasitas Core */}
       <div className="space-y-1.5">
-        <FieldLabel label={t("createForm.coreCapacityLabel")} tooltip="Pilih total core optik dalam kabel." required />
+        <FieldLabel label={t("createForm.coreCapacityLabel")} tooltip={t("createForm.tip.coreCapacity")} required />
         <Combobox
           value={values.capacity_core || "__none__"}
           onValueChange={(v) => onChange({ capacity_core: v === "__none__" ? "" : v })}
@@ -167,7 +167,7 @@ export function CableDeviceCreate({
         label={t("createForm.routeNameLabel")}
         value={values.route_name}
         onChange={(v) => onChange({ route_name: v })}
-        tooltip="Nama route kabel (contoh: Jakarta-Bogor Segmen A)."
+        tooltip={t("createForm.tip.cableRouteName")}
       />
 
       {/* ═══ 3. UPLOAD ROUTE FILE ═══ */}
@@ -192,7 +192,7 @@ export function CableDeviceCreate({
         type="number"
         value={values.cable_length_m}
         onChange={(v) => onChange({ cable_length_m: v })}
-        tooltip="Panjang kabel dalam meter. Terisi otomatis dari upload file KML/KMZ."
+        tooltip={t("createForm.tip.cableLength")}
       />
 
       {/* ═══ 4. SPESIFIKASI KABEL ═══ */}

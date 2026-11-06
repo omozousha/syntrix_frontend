@@ -43,7 +43,7 @@ export function DeviceBentoQrTile({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
               <QrCode className="size-4 text-primary" />
-              <span>QR Label Asset</span>
+              <span>{t("qrBento.title")}</span>
             </div>
             <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">ISO/IEC 18004</span>
           </div>

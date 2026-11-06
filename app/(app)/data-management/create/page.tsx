@@ -1941,7 +1941,7 @@ export default function CreateDataManagementPage() {
                   <div className={`space-y-1.5 ${sectionSpanClass}`}>
                     <ImageAttachmentField
                       label="Image Attachments"
-                      tooltip="Upload maksimal 10 foto POP (masing-masing max 5MB)."
+                      tooltip={t("createPage.popImageTooltip")}
                       files={imageFiles}
                       previewUrls={imagePreviewUrls}
                       onChange={handleImageFilesChange}
@@ -1952,7 +1952,7 @@ export default function CreateDataManagementPage() {
                   <div className={`space-y-1.5 ${sectionSpanClass}`}>
                     <SupportDocumentField
                       label="Support Documents"
-                      tooltip="Upload dokumen pendukung POP: image, excel, word, atau pdf."
+                      tooltip={t("createPage.popSupportDocTooltip")}
                       files={supportFiles}
                       onChange={setSupportFiles}
                     />
@@ -1964,7 +1964,7 @@ export default function CreateDataManagementPage() {
                   <div className={`space-y-1.5 ${sectionSpanClass}`}>
                     <ImageAttachmentField
                       label="Image Attachments"
-                      tooltip="Upload maksimal 10 foto project (masing-masing max 5MB)."
+                      tooltip={t("createPage.projectImageTooltip")}
                       files={imageFiles}
                       previewUrls={imagePreviewUrls}
                       onChange={handleImageFilesChange}
@@ -1975,7 +1975,7 @@ export default function CreateDataManagementPage() {
                   <div className={`space-y-1.5 ${sectionSpanClass}`}>
                     <SupportDocumentField
                       label="Document Attachments"
-                      tooltip="Upload dokumen pendukung project."
+                      tooltip={t("createPage.projectDocTooltip")}
                       files={supportFiles}
                       onChange={setSupportFiles}
                     />
@@ -2153,8 +2153,8 @@ export default function CreateDataManagementPage() {
                 value={customDraft.layout_span}
                 onValueChange={(v) => setCustomDraft((p) => ({ ...p, layout_span: v }))}
                 options={toOptions([
-                  { value: "6", label: "Half (6)" },
-                  { value: "12", label: "Full (12)" },
+                  { value: "6", label: t("createPage.widthHalf") },
+                  { value: "12", label: t("createPage.widthFull") },
                 ])}
                 searchPlaceholder={t("createPage.searchLayoutSpan")}
               />
@@ -2165,8 +2165,8 @@ export default function CreateDataManagementPage() {
                 value={customDraft.is_required}
                 onValueChange={(v) => setCustomDraft((p) => ({ ...p, is_required: v }))}
                 options={toOptions([
-                  { value: "false", label: "No" },
-                  { value: "true", label: "Yes" },
+                  { value: "false", label: t("asBuilt.no") },
+                  { value: "true", label: t("asBuilt.yes") },
                 ])}
                 searchPlaceholder={t("createPage.searchOption")}
               />

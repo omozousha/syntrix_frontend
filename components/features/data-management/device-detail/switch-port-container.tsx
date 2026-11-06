@@ -50,7 +50,7 @@ export function SwitchPortContainer({
   if (loading) {
     return (
       <div className="space-y-2 rounded-md border p-3">
-        <p className="text-sm font-medium">Port Switch</p>
+        <p className="text-sm font-medium">{t("portContainer.switchTitle")}</p>
         <TrayPillSkeleton trays={3} pillsPerTray={12} ariaLabel={t("portContainer.loadingSwitch")} />
       </div>
     );
@@ -58,7 +58,7 @@ export function SwitchPortContainer({
 
   return (
     <div className={cn("space-y-2 rounded-md border p-3", className)}>
-      <p className="text-sm font-medium">Port Switch</p>
+      <p className="text-sm font-medium">{t("portContainer.switchTitle")}</p>
 
       {layoutConfig.trays.map((tray, trayIndex) => {
         const portsInTray = groupedPorts.get(tray.id) || [];

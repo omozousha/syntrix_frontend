@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { validateCoordinateFormat } from "./helpers";
+import { translateFieldLabel } from "@/components/features/data-management/device-form/form-field-grid";
 import { useTranslate } from "@/lib/use-locale";
 
 export function DisplayField({
@@ -22,9 +23,11 @@ export function DisplayField({
   compact?: boolean;
   loading?: boolean;
 }) {
+  const { t } = useTranslate();
+  const displayLabel = translateFieldLabel(label, t);
   return (
     <div className={`${compact ? "space-y-1" : "space-y-1.5"} ${className}`}>
-      <Label>{label}</Label>
+      <Label>{displayLabel}</Label>
       {loading ? (
         <Skeleton className={compact ? "h-8 w-full rounded-md" : "h-10 w-full rounded-md"} />
       ) : (
@@ -51,9 +54,11 @@ export function Field({
   className?: string;
   compact?: boolean;
 }) {
+  const { t } = useTranslate();
+  const displayLabel = translateFieldLabel(label, t);
   return (
     <div className={`${compact ? "space-y-1" : "space-y-1.5"} ${className}`}>
-      <Label>{label}</Label>
+      <Label>{displayLabel}</Label>
       <Input
         type={type}
         value={value}
@@ -81,17 +86,18 @@ export function CoordinateField({
   kind: "longitude" | "latitude";
 }) {
   const { t } = useTranslate();
+  const displayLabel = translateFieldLabel(label, t);
   const validation = validateCoordinateFormat(value, kind, t);
   const placeholder = kind === "latitude" ? "-6.200000" : "106.816666";
 
   return (
     <div className={compact ? "space-y-1" : "space-y-1.5"}>
       <div className="flex items-center gap-1.5">
-        <Label>{label}</Label>
+        <Label>{displayLabel}</Label>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button type="button" variant="ghost" size="icon-xs" className="text-muted-foreground" aria-label={`Info ${label}`}>
+              <Button type="button" variant="ghost" size="icon-xs" className="text-muted-foreground" aria-label={t("createForm.fieldInfo", { label: displayLabel })}>
                 <CircleHelp className="size-3.5" />
               </Button>
             </TooltipTrigger>
@@ -136,9 +142,11 @@ export function SelectField({
   disabled?: boolean;
   compact?: boolean;
 }) {
+  const { t } = useTranslate();
+  const displayLabel = translateFieldLabel(label, t);
   return (
     <div className={compact ? "space-y-1" : "space-y-1.5"}>
-      <Label>{label}</Label>
+      <Label>{displayLabel}</Label>
       <Combobox
         value={value}
         onValueChange={onValueChange}

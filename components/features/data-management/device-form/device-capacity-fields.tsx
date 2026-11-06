@@ -178,7 +178,7 @@ export function DeviceCapacityFields({
           <FieldLabel
             label={splitterLabel}
             tooltip={t("createForm.splitterTip")}
-            badge={<AutoFilledBadge label="Auto-fill" />}
+            badge={<AutoFilledBadge label={t("fieldLabel.autoFilled")} />}
           />
           <p className="text-xs text-muted-foreground">
             {t("createForm.splitterHint")}

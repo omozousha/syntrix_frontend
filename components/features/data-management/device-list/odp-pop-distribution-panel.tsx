@@ -117,7 +117,7 @@ export function OdpPopDistributionPanel({
                   type="button"
                   onClick={() => scrollByAmount("left")}
                   disabled={!canScrollLeft}
-                  aria-label="Scroll left"
+                  aria-label={t("ui.scroll.left")}
                   className="inline-flex size-6 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground shadow-2xs transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted/40 active:scale-[0.95] disabled:pointer-events-none disabled:opacity-35"
                 >
                   <ChevronLeft className="size-3.5" />
@@ -126,7 +126,7 @@ export function OdpPopDistributionPanel({
                   type="button"
                   onClick={() => scrollByAmount("right")}
                   disabled={!canScrollRight}
-                  aria-label="Scroll right"
+                  aria-label={t("ui.scroll.right")}
                   className="inline-flex size-6 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground shadow-2xs transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-muted/40 active:scale-[0.95] disabled:pointer-events-none disabled:opacity-35"
                 >
                   <ChevronRight className="size-3.5" />

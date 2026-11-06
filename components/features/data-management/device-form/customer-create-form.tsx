@@ -49,7 +49,7 @@ export function CustomerCreateForm({
 }) {
   const { t } = useTranslate();
   const serviceTypeOptions: ComboboxOption[] = [
-    { value: "__none__", label: "None" },
+    { value: "__none__", label: t("createForm.noneOption") },
     ...serviceTypes.map((item) => ({
       value: item.id,
       label: item.service_type_code ? `${item.service_type_name} (${item.service_type_code})` : item.service_type_name,
@@ -67,7 +67,7 @@ export function CustomerCreateForm({
   ];
 
   const projectOptions: ComboboxOption[] = [
-    { value: "__none__", label: "None" },
+    { value: "__none__", label: t("createForm.noneOption") },
     ...projects
       .filter((project) => !values.region_id || !project.region_id || project.region_id === values.region_id)
       .map((project) => ({

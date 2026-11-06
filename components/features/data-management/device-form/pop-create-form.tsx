@@ -60,7 +60,7 @@ export function PopCreateOperationalFields({
 }) {
   const { t } = useTranslate();
   const tenantOptions: ComboboxOption[] = [
-    { value: "__none__", label: "None" },
+    { value: "__none__", label: t("createForm.noneOption") },
     ...tenants.map((item) => ({
       value: item.tenant_name,
       label: item.tenant_code ? `${item.tenant_name} (${item.tenant_code})` : item.tenant_name,
@@ -68,7 +68,7 @@ export function PopCreateOperationalFields({
   ];
 
   const popTypeOptions: ComboboxOption[] = [
-    { value: "__none__", label: "None" },
+    { value: "__none__", label: t("createForm.noneOption") },
     ...popTypes.map((item) => ({
       value: item.id,
       label: item.pop_type_code ? `${item.pop_type_name} (${item.pop_type_code})` : item.pop_type_name,

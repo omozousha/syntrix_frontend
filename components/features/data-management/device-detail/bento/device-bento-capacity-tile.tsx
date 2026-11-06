@@ -386,7 +386,7 @@ export function DeviceBentoCapacityTile({
               </Badge>
             </div>
             <div className="space-y-0.5">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Model / Tipe</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.modelType")}</p>
               <p className="truncate font-semibold text-foreground" title={modelName || "-"}>
                 {modelName || "-"}
               </p>
@@ -460,8 +460,8 @@ export function DeviceBentoCapacityTile({
                 />
               </div>
               <div className="flex items-center justify-between font-mono text-[9px] text-muted-foreground pt-0.5">
-                <span>{idleCores} Idle</span>
-                <span>{uCores} Terpakai</span>
+                <span>{t("deviceDetail.capacity.idle", { count: idleCores })}</span>
+                <span>{t("deviceDetail.capacity.used", { count: uCores })}</span>
               </div>
             </div>
           ) : null}
@@ -470,7 +470,7 @@ export function DeviceBentoCapacityTile({
         {/* Hardware Details Grid */}
         <div className="mt-5 grid grid-cols-2 gap-2 border-t border-border/40 pt-4 text-xs">
           <div className="space-y-0.5">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Model / Tipe</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("deviceDetail.capacity.modelType")}</p>
             <p className="truncate font-semibold text-foreground" title={modelName || odpType || "-"}>
               {modelName || odpType || "-"}
             </p>

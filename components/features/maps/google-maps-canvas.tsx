@@ -181,8 +181,9 @@ const DeviceMarker = React.memo(
         homepassedConfig?.odpRadiusMeters ?? 250,
         homepassedConfig?.densityPerSqMeter ?? 0.003,
         buildingPois,
+        t,
       );
-    }, [homepassedEnabled, isHovered, device, homepassedConfig, buildingPois]);
+    }, [homepassedEnabled, isHovered, device, homepassedConfig, buildingPois, t]);
 
     return (
       <>

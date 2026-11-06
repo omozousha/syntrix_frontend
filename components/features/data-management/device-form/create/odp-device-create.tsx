@@ -90,7 +90,7 @@ export function OdpDeviceCreate({
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label={t("createForm.odpSplitterRatio")} tooltip="Pilih rasio splitter optik terpasang pada ODP." />
+        <FieldLabel label={t("createForm.odpSplitterRatio")} tooltip={t("createForm.tip.odpSplitterRatio")} />
         <Combobox
           value={values.splitter_ratio || "__none__"}
           onValueChange={(val) => {
@@ -112,7 +112,7 @@ export function OdpDeviceCreate({
       </div>
 
       <div className="space-y-1.5">
-        <FieldLabel label={t("createForm.odpDistributionPorts")} tooltip="Total port ODP yang dapat melayani sambungan drop pelanggan." />
+        <FieldLabel label={t("createForm.odpDistributionPorts")} tooltip={t("createForm.tip.odpDistributionPorts")} />
         <Input
           type="number"
           value={values.total_ports || ""}

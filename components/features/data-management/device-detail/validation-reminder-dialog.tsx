@@ -21,7 +21,7 @@ export function ValidationReminderDialog({
   sendingReminder,
   selectedValidatorId,
   error,
-  deviceTypeLabel = "Perangkat",
+  deviceTypeLabel,
   onOpenChange,
   onSelectedValidatorChange,
   onSend,
@@ -38,6 +38,7 @@ export function ValidationReminderDialog({
   onSend: () => void;
 }) {
   const { t } = useTranslate();
+  const resolvedDeviceTypeLabel = deviceTypeLabel || t("validationReminder.defaultDeviceType");
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-md rounded-2xl border-border/60 shadow-lg glass-inset p-5 sm:p-6">
@@ -47,7 +48,7 @@ export function ValidationReminderDialog({
           </div>
           <div>
             <AlertDialogTitle className="text-base font-semibold">{t("validationReminder.title")}</AlertDialogTitle>
-            <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{deviceTypeLabel}</p>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{resolvedDeviceTypeLabel}</p>
           </div>
         </div>
 

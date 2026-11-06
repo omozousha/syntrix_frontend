@@ -45,7 +45,7 @@ export function DeviceBentoHeroTile({
   notes,
   tags,
 }: DeviceBentoHeroTileProps) {
-  const { t } = useTranslate();
+  const { t, locale } = useTranslate();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   function copyText(text: string, key: string) {
@@ -59,7 +59,7 @@ export function DeviceBentoHeroTile({
     if (!value) return "-";
     try {
       const d = new Date(value);
-      return d.toLocaleDateString("id-ID", {
+      return d.toLocaleDateString(locale === "en" ? "en-US" : "id-ID", {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -69,7 +69,7 @@ export function DeviceBentoHeroTile({
     }
   }
 
-  const valUi = mapValidationStatus(validationStatus);
+  const valUi = mapValidationStatus(validationStatus, t);
   const statusLower = (operationalStatus || "active").toLowerCase();
   const statusColorClass =
     statusLower === "active"

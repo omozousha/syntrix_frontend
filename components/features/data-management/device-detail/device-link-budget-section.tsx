@@ -583,7 +583,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                     id="calculatedLoss"
                     type="number"
                     step="0.001"
-                    placeholder="Hitung otomatis"
+                    placeholder={t("linkBudget.autoCalculate")}
                     value={calculatedLoss}
                     onChange={(e) => setCalculatedLoss(e.target.value)}
                     className="rounded-none border-visible bg-surface font-mono text-xs"
@@ -659,7 +659,7 @@ export function DeviceLinkBudgetSection({ deviceId, regionId, token }: DeviceLin
                       <div key={idx} className="grid grid-cols-12 gap-2 items-center border-b border-visible/50 pb-2">
                         <div className="col-span-4">
                           <Input
-                            placeholder="Nama Segmen"
+                            placeholder={t("linkBudget.segmentName")}
                             value={seg.label}
                             onChange={(e) => handleSegmentChange(idx, "label", e.target.value)}
                             className="rounded-none border-visible bg-surface font-sans text-xs h-7"

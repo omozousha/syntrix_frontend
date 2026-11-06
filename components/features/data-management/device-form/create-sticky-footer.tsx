@@ -28,9 +28,10 @@ export function CreateStickyFooter({
   onSave: () => void;
   onCancel?: () => void;
 }) {
+  const { t } = useTranslate();
+
   if (!flags.isDevice) return null;
 
-  const { t } = useTranslate();
   const label = getSaveLabel(flags, t);
   const hasWarning = missingCount > 0;
 

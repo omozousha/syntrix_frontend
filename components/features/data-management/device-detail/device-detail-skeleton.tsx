@@ -1,6 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslate } from "@/lib/use-locale";
 
 export function DeviceDetailSkeleton({
   categoryLabel = "Device",
@@ -9,13 +10,15 @@ export function DeviceDetailSkeleton({
   categoryLabel?: string;
   isOdp?: boolean;
 }) {
+  const { t } = useTranslate();
+  const loadingLabel = t("deviceDetail.loadingAria", { category: categoryLabel });
   return (
     <div
       role="status"
-      aria-label={`Memuat detail ${categoryLabel}...`}
+      aria-label={loadingLabel}
       className="space-y-4 w-full"
     >
-      <span className="sr-only">Memuat detail {categoryLabel}...</span>
+      <span className="sr-only">{loadingLabel}</span>
 
       {/* Double-Bezel Hero Header Skeleton */}
       <div className="rounded-[1.5rem] border border-border/40 bg-muted/10 p-1 shadow-2xs dark:bg-white/[0.01]">

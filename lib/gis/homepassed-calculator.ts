@@ -2,6 +2,7 @@ import * as turf from "@turf/turf";
 import type { Feature, Polygon, MultiPolygon, FeatureCollection } from "geojson";
 import type { MapDevice, MapRoute } from "@/components/features/maps/topology-map-canvas";
 import type { OverpassPOI } from "@/components/features/maps/google-maps-canvas";
+import type { TFn } from "@/lib/use-locale";
 
 export type HomepassedCalculationConfig = {
   odpRadiusMeters: number;
@@ -146,7 +147,8 @@ export function calculateIndividualDeviceHomepassed(
   device: MapDevice,
   radiusMeters: number = 250,
   densityPerSqMeter: number = 0.003,
-  buildingPois: OverpassPOI[] = []
+  buildingPois: OverpassPOI[] = [],
+  t?: TFn,
 ) {
   const isOdp = isOdpDevice(device);
   const portCapacity = getDevicePortCapacity(device);
@@ -168,7 +170,7 @@ export function calculateIndividualDeviceHomepassed(
 
   const lat = Number(device.latitude);
   const lng = Number(device.longitude);
-  
+
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) {
     return {
       radiusMeters,
@@ -177,7 +179,7 @@ export function calculateIndividualDeviceHomepassed(
       estimatedHomepassed: 0,
       portCapacity: 0,
       isInWater: true,
-      waterWarning: "Koordinat Tidak Valid",
+      waterWarning: t ? t("gis.invalidCoordsTitle") : "Koordinat Tidak Valid",
       source: "estimate" as const,
       isOdp: true,
     };
@@ -192,7 +194,7 @@ export function calculateIndividualDeviceHomepassed(
       estimatedHomepassed: 0,
       portCapacity,
       isInWater: true,
-      waterWarning: "Koordinat di Perairan / Laut",
+      waterWarning: t ? t("gis.waterCoordsTitle") : "Koordinat di Perairan / Laut",
       source: "estimate" as const,
       isOdp: true,
     };

@@ -150,7 +150,7 @@ export function GenericDeviceCreate({
           />
 
           <div className="space-y-1.5">
-            <FieldLabel label={t("deviceDetail.rack.height")} tooltip="Tinggi form factor perangkat di dalam rak POP." />
+            <FieldLabel label={t("deviceDetail.rack.height")} tooltip={t("createForm.tip.rackHeight")} />
             <Combobox
               value={values.u_height || "1"}
               onValueChange={(val) => onChange({ u_height: val === "__none__" ? "1" : val })}
@@ -169,7 +169,7 @@ export function GenericDeviceCreate({
           </div>
 
           <div className="space-y-1.5">
-            <FieldLabel label={t("createForm.coreCapacityLabel")} tooltip="Pilih total kapasitas core terminasi OTB dari master data." required />
+            <FieldLabel label={t("createForm.coreCapacityLabel")} tooltip={t("createForm.tip.otbCoreCapacity")} required />
             <Combobox
               value={values.capacity_core || "__none__"}
               onValueChange={(val) => onChange({ capacity_core: val === "__none__" ? "" : val })}
@@ -186,7 +186,7 @@ export function GenericDeviceCreate({
           </div>
 
           <div className="space-y-1.5">
-            <FieldLabel label={t("createForm.otbAdapterConnectorType")} tooltip="Pilih tipe adaptor konektor optik pada panel OTB." />
+            <FieldLabel label={t("createForm.otbAdapterConnectorType")} tooltip={t("createForm.tip.otbConnectorType")} />
             <Combobox
               value={values.odp_type || "__none__"}
               onValueChange={(val) => onChange({ odp_type: val === "__none__" ? "" : val })}
@@ -196,7 +196,7 @@ export function GenericDeviceCreate({
           </div>
 
           <div className="space-y-1.5">
-            <FieldLabel label={t("deviceDetail.rack.height")} tooltip="Ukuran slot rack OTB di dalam POP." />
+            <FieldLabel label={t("deviceDetail.rack.height")} tooltip={t("createForm.tip.otbRackHeight")} />
             <Combobox
               value={values.u_height || "1"}
               onValueChange={(val) => onChange({ u_height: val === "__none__" ? "1" : val })}
@@ -215,7 +215,7 @@ export function GenericDeviceCreate({
           </div>
 
           <div className="space-y-1.5">
-            <FieldLabel label={t("deviceDetail.capacity.closureType")} tooltip="Pilih model fisik closure (Dome / Inline) dari master data." required />
+            <FieldLabel label={t("deviceDetail.capacity.closureType")} tooltip={t("createForm.tip.jcClosureType")} required />
             <Combobox
               value={values.closure_type_id || "__none__"}
               onValueChange={(val) => onChange({ closure_type_id: val === "__none__" ? "" : val })}
@@ -232,7 +232,7 @@ export function GenericDeviceCreate({
           </div>
 
           <div className="space-y-1.5">
-            <FieldLabel label={t("createForm.jcSpliceCoreCapacity")} tooltip="Total core fiber yang dapat disambung dalam closure ini." required />
+            <FieldLabel label={t("createForm.jcSpliceCoreCapacity")} tooltip={t("createForm.tip.jcSpliceCoreCapacity")} required />
             <Combobox
               value={values.capacity_core || "__none__"}
               onValueChange={(val) => onChange({ capacity_core: val === "__none__" ? "" : val })}
@@ -249,7 +249,7 @@ export function GenericDeviceCreate({
           </div>
 
           <div className="space-y-1.5">
-            <FieldLabel label={t("createForm.jcPlacementEnv")} tooltip="Lokasi instalasi fisik closure di lapangan." />
+            <FieldLabel label={t("createForm.jcPlacementEnv")} tooltip={t("createForm.tip.jcPlacementEnv")} />
             <Combobox
               value={values.installation_type || "__none__"}
               onValueChange={(val) => onChange({ installation_type: val === "__none__" ? "" : val })}

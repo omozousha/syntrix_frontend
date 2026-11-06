@@ -4,6 +4,7 @@ import * as React from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useTranslate } from "@/lib/use-locale"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -30,13 +31,17 @@ export function Combobox({
   value,
   onValueChange,
   options,
-  placeholder = "Pilih opsi",
-  searchPlaceholder = "Cari...",
-  emptyText = "Tidak ada data.",
+  placeholder,
+  searchPlaceholder,
+  emptyText,
   disabled = false,
   className,
   triggerClassName,
 }: ComboboxProps) {
+  const { t } = useTranslate()
+  const resolvedPlaceholder = placeholder ?? t("ui.combobox.placeholder")
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t("ui.combobox.searchPlaceholder")
+  const resolvedEmptyText = emptyText ?? t("ui.combobox.emptyText")
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
 
@@ -46,7 +51,7 @@ export function Combobox({
   }, [options])
 
   const selectedLabel =
-    options.find((option) => option.value === value)?.label || placeholder
+    options.find((option) => option.value === value)?.label || resolvedPlaceholder
 
   const filtered = React.useMemo(() => {
     const keyword = query.trim().toLowerCase()
@@ -79,7 +84,7 @@ export function Combobox({
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder={searchPlaceholder}
+          placeholder={resolvedSearchPlaceholder}
           className="mb-2 h-8"
         />
         <ScrollArea className="h-64 pr-1">
@@ -107,7 +112,7 @@ export function Combobox({
                 </Button>
               ))
             ) : (
-              <p className="px-2 py-3 text-sm text-muted-foreground">{emptyText}</p>
+              <p className="px-2 py-3 text-sm text-muted-foreground">{resolvedEmptyText}</p>
             )}
           </div>
         </ScrollArea>
