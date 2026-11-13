@@ -15,7 +15,6 @@ import {
 } from "@/components/features/data-management/asset-overview";
 import { useSession } from "@/components/session-context";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch, type PaginatedResponse, type RegionsListResponse } from "@/lib/api";
 import { ASSET_DATA_CATEGORIES, buildCategoryApiPath, deviceTypeKeyToSlug, type DataCategory } from "@/lib/data-management-config";
@@ -649,57 +648,56 @@ export default function DataManagementPage() {
   }
 
   return (
-    <ScrollArea className="h-full min-h-0 w-full">
-      <div className="space-y-4 px-3 pb-3 md:px-4 md:pb-4">
-        {/* Double-Bezel Hero Header */}
-        <div className="rounded-[1.5rem] border border-border/40 bg-muted/10 p-1 shadow-2xs dark:bg-white/[0.01]">
-          <div className="rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card p-4 shadow-xs glass-inset md:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 space-y-2">
-                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{t("assetOverview.eyebrow")}</p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className="border-border/60 bg-background/50 font-mono text-[9px] uppercase tracking-[0.12em]">{subtitle}</Badge>
-                  {!isSuperadmin ? <Badge variant="secondary" className="font-mono text-[9px] tabular-nums tracking-[0.12em]">{t("assetOverview.regionScope", { count: regions.length })}</Badge> : null}
-                </div>
-                <div className="space-y-1">
-                  <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("assetOverview.title")}</h2>
-                  <p className="max-w-2xl text-sm text-muted-foreground leading-normal">
-                    {t("assetOverview.description")}
-                  </p>
-                </div>
+    <div className="space-y-4 pb-4">
+      {/* Double-Bezel Hero Header */}
+      <div className="rounded-[1.5rem] border border-border/40 bg-muted/10 p-1 shadow-2xs dark:bg-white/[0.01]">
+        <div className="rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card p-4 shadow-xs glass-inset md:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 space-y-2">
+              <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{t("assetOverview.eyebrow")}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="border-border/60 bg-background/50 font-mono text-[9px] uppercase tracking-[0.12em]">{subtitle}</Badge>
+                {!isSuperadmin ? <Badge variant="secondary" className="font-mono text-[9px] tabular-nums tracking-[0.12em]">{t("assetOverview.regionScope", { count: regions.length })}</Badge> : null}
               </div>
-              <AddDataMenu
-                canCreatePop={isSuperadmin || isAdminRegion}
-                canCreateDevice={isSuperadmin || isAdminRegion}
-                canManageMaster={isSuperadmin}
-              />
+              <div className="space-y-1">
+                <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("assetOverview.title")}</h2>
+                <p className="max-w-2xl text-sm text-muted-foreground leading-normal">
+                  {t("assetOverview.description")}
+                </p>
+              </div>
             </div>
+            <AddDataMenu
+              canCreatePop={isSuperadmin || isAdminRegion}
+              canCreateDevice={isSuperadmin || isAdminRegion}
+              canManageMaster={isSuperadmin}
+            />
           </div>
         </div>
+      </div>
 
-        {loading ? (
-          <div className="space-y-4">
-            <div className="inline-grid w-fit grid-cols-2 rounded-full border border-border/50 bg-muted/20 p-1">
-              <div className="h-7 w-28 rounded-full bg-muted/40 animate-pulse" />
-              <div className="h-7 w-24 rounded-full bg-muted/20 animate-pulse" />
-            </div>
-            {!isValidator ? <AssetSummaryLoading /> : null}
-            {isSuperadmin ? (
-              <RegionCardGridSkeleton count={8} />
-            ) : (
-              <FocusedRegionSkeleton />
-            )}
+      {loading ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:inline-grid sm:w-fit rounded-full border border-border/50 bg-muted/20 p-1">
+            <div className="h-7 w-28 rounded-full bg-muted/40 animate-pulse" />
+            <div className="h-7 w-24 rounded-full bg-muted/20 animate-pulse" />
           </div>
-        ) : null}
-        {!loading && error ? <AppLoading label={error.message || t("assetOverview.loadFailed")} variant="error" /> : null}
+          {!isValidator ? <AssetSummaryLoading /> : null}
+          {isSuperadmin ? (
+            <RegionCardGridSkeleton count={8} />
+          ) : (
+            <FocusedRegionSkeleton />
+          )}
+        </div>
+      ) : null}
+      {!loading && error ? <AppLoading label={error.message || t("assetOverview.loadFailed")} variant="error" /> : null}
 
-        {!loading && !error ? (
-          <div className="space-y-3">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3">
-              <TabsList className={`inline-grid w-fit ${canViewQuality ? "grid-cols-2" : "grid-cols-1"} rounded-full border border-border/50 bg-muted/20 p-1`}>
-                <TabsTrigger value="overview" className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">{t(isValidator ? "assetOverview.tab.validatorHome" : "assetOverview.tab.overview")}</TabsTrigger>
-                {canViewQuality ? <TabsTrigger value="quality" className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">{t("assetOverview.tab.quality")}</TabsTrigger> : null}
-              </TabsList>
+      {!loading && !error ? (
+        <div className="space-y-3">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3">
+            <TabsList className={`grid ${canViewQuality ? "grid-cols-2" : "grid-cols-1"} sm:inline-grid sm:w-fit rounded-full border border-border/50 bg-muted/20 p-1`}>
+              <TabsTrigger value="overview" className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">{t(isValidator ? "assetOverview.tab.validatorHome" : "assetOverview.tab.overview")}</TabsTrigger>
+              {canViewQuality ? <TabsTrigger value="quality" className="rounded-full px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]">{t("assetOverview.tab.quality")}</TabsTrigger> : null}
+            </TabsList>
 
               <TabsContent value="overview" className="space-y-3">
                 {!isValidator ? <AssetSummaryStrip title={t(isSuperadmin ? "assetOverview.summary.global" : "assetOverview.summary.regionScope")} stats={summaryStats} /> : null}
@@ -761,8 +759,7 @@ export default function DataManagementPage() {
           </Tabs>
         </div>
       ) : null}
-      </div>
-    </ScrollArea>
+    </div>
   );
 }
 

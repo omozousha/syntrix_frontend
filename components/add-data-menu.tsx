@@ -153,13 +153,13 @@ export function AddDataMenu({
     <>
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
-          <Button type="button" className="gap-2">
+          <Button type="button" className="w-full sm:w-auto justify-center gap-2">
             <Plus className="size-4" />
             {t("addMenu.trigger")}
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="w-80 p-2">
+        <DropdownMenuContent align="end" collisionPadding={12} className="w-[calc(100vw-2rem)] sm:w-80 max-w-sm p-2">
           <div className="mb-1 flex items-center justify-between px-1">
             <DropdownMenuLabel className="px-0">{t("addMenu.header")}</DropdownMenuLabel>
             <Button

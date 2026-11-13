@@ -57,14 +57,14 @@ export function AssetSummaryLoading() {
           <Skeleton className="h-3.5 w-36" />
           <Skeleton className="h-3.5 w-14" />
         </div>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
           {Array.from({ length: 7 }).map((_, index) => (
-            <div key={index} className="rounded-xl border border-border/60 bg-card p-3 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <Skeleton className="size-8 shrink-0 rounded-lg" />
+            <div key={index} className="rounded-2xl border border-border/60 bg-card p-3 shadow-2xs glass-inset">
+              <div className="flex items-center gap-3">
+                <Skeleton className="size-9 shrink-0 rounded-xl" />
                 <div className="min-w-0 flex-1 space-y-2">
                   <Skeleton className="h-3 w-16" />
-                  <Skeleton className="h-6 w-12" />
+                  <Skeleton className="h-5 w-12" />
                   <Skeleton className="h-3 w-20" />
                 </div>
               </div>

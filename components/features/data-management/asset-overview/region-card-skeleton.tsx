@@ -80,16 +80,16 @@ export function RegionCardGridSkeleton({ count = 6 }: { count?: number }) {
       <span className="sr-only">Memuat daftar region...</span>
 
       {/* Filter / Search Bar Skeleton */}
-      <div className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-card p-3 shadow-xs glass-inset sm:flex-row sm:items-center sm:justify-between">
-        <Skeleton className="h-9 w-full sm:w-64 rounded-xl" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-8 w-20 rounded-full" />
-          <Skeleton className="h-8 w-20 rounded-full" />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <Skeleton className="h-3 w-28 rounded" />
+          <Skeleton className="h-3 w-40 rounded" />
         </div>
+        <Skeleton className="h-9 w-full sm:w-72 rounded-full" />
       </div>
 
-      {/* Responsive 12-column Region Grid */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+      {/* Responsive Region Grid matching RegionCardGrid */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: count }).map((_, index) => (
           <RegionCardSkeleton key={`region-skel-${index}`} />
         ))}
@@ -109,47 +109,58 @@ export function FocusedRegionSkeleton() {
 
       {/* Section Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Skeleton className="h-4 w-36 rounded" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="size-4 rounded" />
+          <Skeleton className="h-3 w-32 rounded" />
+        </div>
         <Skeleton className="h-9 w-full sm:w-80 rounded-xl" />
       </div>
 
       {/* Region Identity Bar */}
-      <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-card p-3 shadow-2xs glass-inset">
-        <div className="flex items-center gap-2">
-          <Skeleton className="size-7 rounded-xl" />
-          <div className="space-y-1">
-            <Skeleton className="h-4 w-40 rounded" />
-            <Skeleton className="h-3 w-28 rounded" />
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/60 bg-card p-3 shadow-2xs glass-inset">
+        <div className="flex min-w-0 items-center gap-2">
+          <Skeleton className="size-7 shrink-0 rounded-xl" />
+          <div className="space-y-1 min-w-0">
+            <Skeleton className="h-4 w-36 rounded" />
+            <Skeleton className="h-3 w-24 rounded" />
           </div>
         </div>
-        <Skeleton className="h-5 w-16 rounded-full" />
+        <Skeleton className="h-5 w-16 rounded-md" />
       </div>
 
       {/* Quick Actions Card */}
       <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-xs glass-inset space-y-3">
-        <Skeleton className="h-4 w-28 rounded" />
+        <div className="flex items-center gap-2 border-b border-border/50 pb-2.5">
+          <Skeleton className="size-4 rounded" />
+          <Skeleton className="h-3 w-28 rounded" />
+        </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-16 rounded-2xl" />
+          <Skeleton className="h-16 rounded-2xl" />
+          <Skeleton className="h-16 rounded-2xl" />
         </div>
       </div>
 
-      {/* Category Grid */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={`cat-skel-${i}`}
-            className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-card p-3 shadow-2xs glass-inset"
-          >
-            <div className="flex items-center justify-between">
-              <Skeleton className="size-6 rounded-lg" />
-              <Skeleton className="h-4 w-8 rounded-full" />
-            </div>
-            <Skeleton className="h-4 w-20 rounded" />
-            <Skeleton className="h-3 w-14 rounded" />
-          </div>
-        ))}
+      {/* Asset Inventory Category Grid */}
+      <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-xs glass-inset space-y-3">
+        <div className="flex items-center gap-2 border-b border-border/50 pb-2.5">
+          <Skeleton className="size-4 rounded" />
+          <Skeleton className="h-3 w-32 rounded" />
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={`cat-skel-${i}`} className="h-9 w-full rounded-xl" />
+          ))}
+        </div>
+      </div>
+
+      {/* Info Footer */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/10 px-3.5 py-2.5 shadow-2xs glass-inset">
+        <div className="flex items-center gap-2">
+          <Skeleton className="size-3 rounded" />
+          <Skeleton className="h-3 w-40 rounded" />
+        </div>
+        <Skeleton className="h-5 w-24 rounded-md" />
       </div>
     </div>
   );

@@ -60,12 +60,12 @@ export function OdpCreateModeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full sm:max-w-lg rounded-2xl border border-border/60 bg-card shadow-xs glass-inset">
+      <DialogContent className="w-[calc(100%-1.5rem)] sm:max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-border/60 bg-card p-4 sm:p-6 shadow-xs glass-inset">
         <DialogHeader className="space-y-2">
-          <DialogTitle className="text-lg font-semibold">
+          <DialogTitle className="text-base sm:text-lg font-semibold">
             {t("deviceCreate.title", { entity: ODP_CONFIG.createLabel })}
           </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
+          <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
             {t("deviceCreate.description", { entity: ODP_CONFIG.createLabel })}
           </DialogDescription>
         </DialogHeader>
@@ -89,16 +89,18 @@ export function OdpCreateModeDialog({
           />
         </div>
 
-        <DialogFooter className="pt-2">
+        <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-2">
           <Button
             type="button"
             variant="outline"
+            className="w-full sm:w-auto"
             onClick={() => onOpenChange(false)}
           >
             {t("deviceCreate.cancel")}
           </Button>
           <Button
             type="button"
+            className="w-full sm:w-auto"
             onClick={() => (selected === "bulk" ? handleBulk() : handleSingle())}
             disabled={!selected}
           >
@@ -139,7 +141,7 @@ function OptionCard({
       aria-label={title}
       onClick={onSelect}
       className={cn(
-        "flex w-full items-start gap-4 rounded-xl border p-4 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]",
+        "flex w-full items-start gap-3 sm:gap-4 rounded-xl border p-3 sm:p-4 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]",
         selected
           ? "border-primary/60 bg-primary/5 shadow-xs"
           : "border-border/60 bg-background/80 dark:bg-white/[0.03] glass-inset",
@@ -147,7 +149,7 @@ function OptionCard({
     >
       <div
         className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-300",
+          "flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-300",
           selected
             ? "border-primary bg-primary text-primary-foreground"
             : "border-input bg-muted text-muted-foreground dark:bg-white/10",
@@ -169,7 +171,7 @@ function OptionCard({
             {value === "single" ? "01" : "02"}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="text-xs sm:text-sm text-muted-foreground leading-normal">{description}</p>
       </div>
     </button>
   );

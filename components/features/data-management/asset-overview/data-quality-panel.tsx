@@ -111,7 +111,7 @@ export function DataQualityPanel({
   return (
     <section className="space-y-4">
       <div className="rounded-[1.5rem] border border-border/40 bg-muted/10 p-1 shadow-2xs dark:bg-white/[0.01]">
-        <div className="rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card p-4 shadow-xs glass-inset lg:flex lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 rounded-[calc(1.5rem-0.25rem)] border border-border/60 bg-card p-4 shadow-xs glass-inset lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="gap-1 border-border/60 bg-background/50">
@@ -129,7 +129,7 @@ export function DataQualityPanel({
               </p>
             </div>
           </div>
-          <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto] lg:w-[38rem]">
+          <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto] lg:w-auto lg:min-w-[30rem] lg:max-w-2xl">
             <Combobox value={qualityRegionId} onValueChange={onRegionChange} options={regionOptions} />
             <Select value={severityFilter} onValueChange={(value) => setSeverityFilter(value as SeverityFilter)}>
               <SelectTrigger size="sm" className="w-full h-9 rounded-xl border-border/60 shadow-2xs">

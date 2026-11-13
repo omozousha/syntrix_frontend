@@ -73,16 +73,16 @@ export function RegionInventoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="grid max-h-[calc(100dvh-1.5rem)] max-w-6xl grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden rounded-2xl border border-border/60 p-0 shadow-lg glass-inset">
-        <DialogHeader className="border-b px-5 pb-4 pt-5 pr-14">
+      <DialogContent className="flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-3rem)] w-[calc(100%-1.5rem)] sm:w-[calc(100%-3rem)] max-w-6xl overflow-hidden rounded-2xl border border-border/60 p-0 shadow-lg glass-inset gap-0">
+        <DialogHeader className="shrink-0 border-b border-border/50 px-4 py-3 sm:px-6 sm:py-4 pr-12 sm:pr-14">
           <div className="flex flex-wrap items-center gap-2">
-            <DialogTitle className="text-lg">{t("regionDialog.titlePrefix")} {display.name}</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">{t("regionDialog.titlePrefix")} {display.name}</DialogTitle>
             {display.code ? <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-[0.12em] glass-inset">{display.code}</Badge> : null}
           </div>
-          <DialogDescription>{t("regionDialog.description")}</DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">{t("regionDialog.description")}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-2 px-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="shrink-0 flex flex-col gap-2 px-4 py-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between border-b border-border/30 bg-muted/5">
           <div className="relative w-full sm:max-w-sm">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -98,13 +98,13 @@ export function RegionInventoryDialog({
         </div>
 
         {/* Customer Quick Summary Strip */}
-        <div className="px-5 pt-1">
-          <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/10 p-3 glass-inset">
+        <div className="shrink-0 px-4 py-2 sm:px-6">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-border/60 bg-muted/10 p-3 glass-inset">
             <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
                 <Users className="size-4" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">{t("regionDialog.regionCustomers")}</p>
                 <p className="font-mono text-base font-bold tabular-nums text-foreground">
                   {customerCountQuery.isPending ? "..." : (customerCountQuery.data ?? 0).toLocaleString("id-ID")}
@@ -114,7 +114,7 @@ export function RegionInventoryDialog({
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full font-mono text-[10px] uppercase tracking-[0.08em] gap-1.5 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+              className="w-full sm:w-auto rounded-full font-mono text-[10px] uppercase tracking-[0.08em] gap-1.5 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
               onClick={() => {
                 if (!region?.id) return;
                 onOpenChange(false);
@@ -127,7 +127,7 @@ export function RegionInventoryDialog({
           </div>
         </div>
 
-        <div className="min-h-0 overflow-y-auto px-5">
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2 sm:px-6">
           <DeviceTypeOverview
             deviceTypes={visibleDeviceTypes}
             counts={typeCountQuery.data}
@@ -138,7 +138,7 @@ export function RegionInventoryDialog({
           />
         </div>
 
-        <div className="border-t border-border/60 bg-muted/30 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground glass-inset">
+        <div className="shrink-0 border-t border-border/60 bg-muted/30 px-4 py-2.5 sm:px-6 sm:py-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground glass-inset">
           {typeCountQuery.isPending ? t("regionDialog.countingDevice") : t("regionDialog.footerCount", { total: totalRegionDevices.toLocaleString("id-ID"), count: deviceTypes.length })}
         </div>
       </DialogContent>
