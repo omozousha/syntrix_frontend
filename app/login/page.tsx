@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Toggle } from "@/components/ui/toggle";
 import { useTranslate } from "@/lib/use-locale";
 
 const AUTH_DIALOG_INTERVAL_MS = 5000;
@@ -242,16 +243,15 @@ export default function LoginPage() {
                           className="pr-10"
                           required
                         />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
+                        <Toggle
+                          pressed={showPassword}
+                          onPressedChange={setShowPassword}
+                          size="sm"
                           className="absolute right-1 top-1/2 size-8 -translate-y-1/2"
-                          onClick={() => setShowPassword((value) => !value)}
                           aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
                         >
                           {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                        </Button>
+                        </Toggle>
                       </div>
                     </Field>
 
