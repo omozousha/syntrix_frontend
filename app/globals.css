@@ -1,3 +1,8 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Cobalt (inferred) · job: sign in · draw: <seed>
+ * hero: split-pipeline · nav: wordmark-inline · footer: trust-note · imagery: none · signature: 3-step ops pipeline
+ * axes: light/grotesk-sans/cool · posture: restrained · contrast: pass · fold: pass · v2.0.0 */
+/* Hallmark · waive 2b · hero gradient from-foreground to-foreground/55 single-hue ramp · guard 40 41 pass on the syntrix tokens */
+/* Hallmark · waive 64 · Secure badge mono face matches the Vanguard micro-label family the page already uses · consistent with the syntrix brand system */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";

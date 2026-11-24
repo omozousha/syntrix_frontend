@@ -142,7 +142,7 @@ export default function LoginPage() {
       ) : (
     <>
       <div className="mx-auto grid min-h-dvh w-full max-w-7xl gap-10 px-4 py-6 sm:px-6 lg:grid-cols-12 lg:px-8">
-        <section className="hidden items-center lg:col-span-7 lg:flex animate-smooth-reveal">
+        <section className="hidden items-center lg:col-span-7 lg:flex motion-reduce:animate-none animate-smooth-reveal">
           <div className="w-full space-y-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 py-1.5 pl-1.5 pr-3 shadow-2xs glass-inset backdrop-blur-md">
               <span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -188,7 +188,7 @@ export default function LoginPage() {
           </div>
         </section>
 
-        <section className="flex items-center justify-center lg:col-span-5 animate-smooth-reveal-delayed">
+        <section className="flex items-center justify-center lg:col-span-5 motion-reduce:animate-none animate-smooth-reveal-delayed">
           <div className="w-full max-w-md space-y-4">
             <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-card/80 px-3 py-2 shadow-2xs glass-inset backdrop-blur-md lg:hidden">
               <div className="flex min-w-0 items-center gap-2">
@@ -262,7 +262,7 @@ export default function LoginPage() {
                         <Button
                           type="submit"
                           disabled={loading}
-                          className="h-10 w-full rounded-full shadow-sm shadow-primary/20 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-md hover:shadow-primary/25 active:scale-[0.98]"
+                          className="h-10 w-full rounded-full shadow-sm shadow-primary/20 transition-[color,background-color,border-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-md hover:shadow-primary/25 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none"
                         >
                           {loading ? <ButtonLoader className="mr-2" /> : null}
                           {loading ? t("login.submitting") : t("login.submit")}
@@ -273,7 +273,7 @@ export default function LoginPage() {
                           variant="ghost"
                           onClick={() => void onResetPassword()}
                           disabled={resetLoading}
-                          className="h-9 w-full rounded-full text-xs text-muted-foreground transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-foreground active:scale-[0.98]"
+                          className="h-9 w-full rounded-full text-xs text-muted-foreground transition-[color,background-color,border-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none"
                         >
                           {resetLoading ? <ButtonLoader className="mr-2" /> : null}
                           {resetLoading ? t("login.sendingReset") : t("login.resetPassword")}
@@ -359,7 +359,7 @@ function MatrixNode({
   description: string;
 }) {
   return (
-    <div className="group min-w-0 rounded-2xl border border-border/60 bg-card p-3.5 shadow-2xs glass-inset transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 hover:border-primary/45">
+    <div className="group min-w-0 rounded-2xl border border-border/60 bg-card p-3.5 shadow-2xs glass-inset transition-[color,background-color,border-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 hover:border-primary/45 focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transform-none">
       <div className="mb-3 flex items-center justify-between">
         <span className="flex size-8 items-center justify-center rounded-lg border border-primary/15 bg-primary/10 text-primary">
           <Icon className="size-4" />
