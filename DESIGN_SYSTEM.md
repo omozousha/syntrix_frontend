@@ -99,6 +99,27 @@ Desain Syntrix berpusat pada estetika minimalis, presisi teknis, dan keterbacaan
 
 ## 3. Komponen & Pola Visual Utama
 
+### 0. Komponen UI (Wajib Shadcn)
+
+- Seluruh elemen UI dasar **wajib** memakai komponen dari `@/components/ui/*`
+  (`Button`, `Input`, `Card`, `Field`, `Dialog`, `Select`, `Table`, `Tabs`, `Toggle`, `Badge`, dll.).
+- Dilarang membuat `<button>`, `<input>`, `<div role="button">`, atau card kustom di luar
+  `components/ui/`, kecuali tidak ada komponen Shadcn yang sesuai untuk kasus tersebut.
+- Kustomisasi dilakukan lewat `className` dan CVA variant pada komponen yang sudah ada.
+  Jangan membuat komponen duplikat dengan `Button`/`Input`/`Card` versi sendiri.
+- Radix UI adalah primitive di balik Shadcn. Jangan di-import langsung dari halaman
+  atau komponen feature, kecuali komponen Shadcn untuk primitive tersebut belum tersedia.
+- `lucide-react` adalah satu-satunya library ikon. Tanpa emoji.
+- Komponen domain di `components/features/*` dan `components/dashboard/*` boleh ada,
+  tetapi tetap harus memakai komponen dasar Shadcn di dalamnya.
+- Contoh:
+  ```tsx
+  import { Button } from "@/components/ui/button";
+  import { Input } from "@/components/ui/input";
+  import { Card, CardContent } from "@/components/ui/card";
+  import { Network } from "lucide-react";
+  ```
+
 ### A. Pola Card Standar (Single-Level)
 ```tsx
 className="rounded-2xl border border-border/60 bg-card shadow-xs"
